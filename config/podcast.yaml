@@ -1,0 +1,9 @@
+title: "今日のテックニュース"
+description: "毎日5分のニュースラジオ"
+language: ja
+author: vox-radio
+category: News
+explicit: false
+cover_image_url: https://example.github.io/vox-radio/cover.jpg
+site_url: https://example.github.io/vox-radio/
+max_items: 7                  # feedに載せる最大件数（=保持件数）
