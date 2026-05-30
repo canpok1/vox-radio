@@ -218,3 +218,78 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		t.Errorf("expected writer called 1 time, got %d", mw.callCount)
 	}
 }
+
+func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
+	rundown := model.Rundown{
+		Corners: []model.Corner{
+			{Title: "C", Topic: "T", TargetChars: 100},
+		},
+	}
+	gen := script.NewLLMScriptGenerator(
+		&mockSummarizer{},
+		&mockPlanner{rundown: rundown},
+		&mockWriter{lines: []model.Line{{SpeakerRole: "host", Text: "テスト"}}},
+		&mockDirector{},
+		model.SECatalog{},
+		"",
+	)
+
+	got, err := gen.Generate(context.Background(), []model.Article{}, model.ShowConfig{TargetChars: 100})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// no articles → no summaries; planner still called with empty summaries
+	if len(got.Segments) == 0 {
+		t.Error("expected non-empty segments from planner+writer+director")
+	}
+}
+
+func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
+	gen := script.NewLLMScriptGenerator(
+		&mockSummarizer{},
+		&mockPlanner{rundown: model.Rundown{Corners: []model.Corner{}}},
+		&mockWriter{},
+		&mockDirector{},
+		model.SECatalog{},
+		"",
+	)
+
+	got, err := gen.Generate(context.Background(), []model.Article{{URL: "u"}}, model.ShowConfig{TargetChars: 100})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// no corners → no lines → director gets empty input → empty script
+	if got.Segments == nil {
+		t.Error("segments should be non-nil (empty slice expected)")
+	}
+}
+
+func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *testing.T) {
+	articles := []model.Article{{URL: "https://example.com/1"}}
+	// corners with TargetChars=0 should skip regen even with bad total char count
+	rundown := model.Rundown{
+		Corners: []model.Corner{
+			{Title: "C", Topic: "T", TargetChars: 0, SummaryURLs: []string{"https://example.com/1"}},
+		},
+	}
+	lines := []model.Line{{SpeakerRole: "host", Text: "A"}} // 1 char, show target=100
+
+	mw := &mockWriter{lines: lines}
+	gen := script.NewLLMScriptGenerator(
+		&mockSummarizer{},
+		&mockPlanner{rundown: rundown},
+		mw,
+		&mockDirector{},
+		model.SECatalog{},
+		"",
+	)
+
+	_, err := gen.Generate(context.Background(), articles, model.ShowConfig{TargetChars: 100})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// corners with TargetChars=0 → no regen triggered
+	if mw.callCount != 1 {
+		t.Errorf("expected writer called 1 time (no regen), got %d", mw.callCount)
+	}
+}

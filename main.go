@@ -487,7 +487,7 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 	summaryByURL := script.SummaryByURL(sums.Summaries)
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg, "write"))
-	var allLines []model.Line
+	allLines := make([]model.Line, 0)
 	for _, corner := range rundown.Corners {
 		relevant := script.CornerSummaries(corner, summaryByURL)
 		lines, err := w.Write(ctx, corner, relevant, cfg.Show)
@@ -555,6 +555,7 @@ func stepTemp(cfg *config.Config, name string) float64 {
 	if s, ok := cfg.LLM.Steps[name]; ok && s.Temperature != nil {
 		return *s.Temperature
 	}
+	// 0 causes the LLM client to fall back to its configured global temperature.
 	return 0
 }
 

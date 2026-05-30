@@ -138,6 +138,10 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 			worstIdx = i
 		}
 	}
+	// All corners have TargetChars=0 — nothing to regenerate.
+	if worstDev == 0 {
+		return cornerLines
+	}
 
 	corner := rundown.Corners[worstIdx]
 	relevant := CornerSummaries(corner, summaryByURL)
