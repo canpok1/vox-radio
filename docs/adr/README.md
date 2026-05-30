@@ -14,3 +14,4 @@
 | [0006](0006-ghpages-hosting-github-actions-runtime.md) | ホスティングを ghpages、実行基盤を GitHub Actions に一本化する | 採用 | 2026-05-30 |
 | [0007](0007-ffmpeg-audio-assembly.md) | 音声整形に ffmpeg を採用する | 採用 | 2026-05-30 |
 | [0008](0008-collect-rss-html-parser-libraries.md) | collect パッケージの RSS/HTML パースライブラリ選定 | 採用 | 2026-05-30 |
+| [0009](0009-cli-framework-cobra.md) | CLIフレームワークにcobraを採用 | 採用 | 2026-05-30 |
