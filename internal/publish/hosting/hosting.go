@@ -14,3 +14,8 @@ type Hosting interface {
 	SaveEpisodes(ctx context.Context, e model.Episodes) error
 	DeleteAudio(ctx context.Context, name string) error
 }
+
+// Pusher is implemented by Hosting backends that require a post-publish push step.
+type Pusher interface {
+	Push(ctx context.Context) error
+}

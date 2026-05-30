@@ -6,6 +6,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/publish"
+	"github.com/canpok1/vox-radio/internal/publish/hosting"
 	"github.com/canpok1/vox-radio/internal/publish/hosting/ghpages"
 	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
 	"github.com/spf13/cobra"
@@ -49,26 +50,26 @@ Example:
 				Description: descFlag,
 			}
 
-			ctx := context.Background()
-
+			var h hosting.Hosting
 			switch hostingType {
 			case "local":
-				h := local.New(outDir, siteURL)
-				publisher := publish.New(h, p.Podcast)
-				if err := publisher.Run(ctx, in, opts); err != nil {
-					return err
-				}
+				h = local.New(outDir, siteURL)
 			case "ghpages":
-				h := ghpages.New(outDir, siteURL)
-				publisher := publish.New(h, p.Podcast)
-				if err := publisher.Run(ctx, in, opts); err != nil {
-					return err
-				}
-				if err := h.Push(ctx); err != nil {
-					return fmt.Errorf("push to gh-pages: %w", err)
-				}
+				h = ghpages.New(outDir, siteURL)
 			default:
 				return fmt.Errorf("unknown hosting type %q: must be \"local\" or \"ghpages\"", hostingType)
+			}
+
+			ctx := context.Background()
+			publisher := publish.New(h, p.Podcast)
+			if err := publisher.Run(ctx, in, opts); err != nil {
+				return err
+			}
+
+			if pusher, ok := h.(hosting.Pusher); ok {
+				if err := pusher.Push(ctx); err != nil {
+					return fmt.Errorf("push to gh-pages: %w", err)
+				}
 			}
 
 			effectiveDate := date
