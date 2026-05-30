@@ -24,6 +24,7 @@ synthesizing voice clips, assembling audio, and publishing RSS feeds.`,
 		newAssembleCmd(),
 		newPublishCmd(),
 		newPruneCmd(),
+		newRunCmd(),
 	)
 
 	return root

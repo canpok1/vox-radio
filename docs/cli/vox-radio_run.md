@@ -1,0 +1,39 @@
+## vox-radio run
+
+Run the full podcast production pipeline
+
+### Synopsis
+
+Run collect → script → synth → assemble → publish → prune in one shot.
+
+Intermediate files are written to <out-dir>/intermediate/ and the final
+episode.mp3 is placed directly under <out-dir>/.
+
+Example:
+  vox-radio run
+  vox-radio run --out-dir output --profile profiles/tech/profile.yaml
+  vox-radio run --hosting ghpages --date 2026-01-01
+
+```
+vox-radio run [flags]
+```
+
+### Options
+
+```
+      --base-url string      base URL for audio/feed URLs (default: site_url from profile)
+      --config string        common config YAML file path (LLM settings) (default "vox-radio.yaml")
+      --date string          episode date YYYY-MM-DD (default: today)
+      --description string   episode description
+  -h, --help                 help for run
+      --hosting string       hosting type: local or ghpages (default "local")
+      --out-dir string       output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/) (default "output")
+      --profile string       profile YAML file path (default "profiles/test/profile.yaml")
+      --prompts string       directory containing prompt templates (default "prompts")
+      --title string         episode title (default: <date> <podcast.title>)
+```
+
+### SEE ALSO
+
+* [vox-radio](vox-radio.md)	 - AI-powered podcast production tool
+

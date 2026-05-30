@@ -21,6 +21,7 @@ synthesizing voice clips, assembling audio, and publishing RSS feeds.
 * [vox-radio collect](vox-radio_collect.md)	 - Collect articles from RSS feeds and URLs
 * [vox-radio prune](vox-radio_prune.md)	 - Remove old episodes, keeping only the most recent N
 * [vox-radio publish](vox-radio_publish.md)	 - Publish an episode to the hosting directory
+* [vox-radio run](vox-radio_run.md)	 - Run the full podcast production pipeline
 * [vox-radio script](vox-radio_script.md)	 - Generate a script from collected articles using LLM
 * [vox-radio synth](vox-radio_synth.md)	 - Synthesize voice clips from a script
 

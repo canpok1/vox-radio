@@ -70,6 +70,29 @@ func TestEnsureDir(t *testing.T) {
 	}
 }
 
+func TestWriteJSON(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "sub", "out.json")
+
+	v := map[string]string{"key": "value"}
+	if err := fileio.WriteJSON(path, v); err != nil {
+		t.Fatalf("WriteJSON failed: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("file not created: %v", err)
+	}
+	if string(data) == "" {
+		t.Error("file is empty")
+	}
+
+	// idempotent overwrite
+	if err := fileio.WriteJSON(path, v); err != nil {
+		t.Fatalf("WriteJSON (overwrite) failed: %v", err)
+	}
+}
+
 func TestEnsureOutputDirs(t *testing.T) {
 	tmp := t.TempDir()
 	outDir := filepath.Join(tmp, "output")

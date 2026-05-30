@@ -30,10 +30,7 @@ Example:
 				return fmt.Errorf("load profile: %w", err)
 			}
 
-			keep := p.Podcast.MaxItems
-			if keep <= 0 {
-				keep = publish.DefaultKeep
-			}
+			keep := resolveKeep(p.Podcast.MaxItems)
 
 			h := local.New(outDir, resolveSiteURL(baseURL, p.Podcast.SiteURL))
 			pruner := publish.NewPruner(h, keep)
@@ -53,11 +50,4 @@ Example:
 	_ = cmd.MarkFlagRequired("out-dir")
 
 	return cmd
-}
-
-func resolveSiteURL(override, configURL string) string {
-	if override != "" {
-		return override
-	}
-	return configURL
 }
