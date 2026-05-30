@@ -99,6 +99,15 @@ func TestPublishMissingOutDir(t *testing.T) {
 	}
 }
 
+func TestPublishInvalidHosting(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"publish", "--in", "/tmp/ep.mp3", "--out-dir", "/tmp", "--hosting", "invalid"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid --hosting value")
+	}
+}
+
 func TestPruneMissingOutDir(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"prune"})
