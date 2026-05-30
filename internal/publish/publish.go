@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/publish/feed"
 	"github.com/canpok1/vox-radio/internal/publish/hosting"
@@ -35,8 +33,8 @@ func New(h hosting.Hosting, podcast config.PodcastConfig) *Publisher {
 	return &Publisher{
 		Hosting:     h,
 		Podcast:     podcast,
-		getDuration: ffprobeDuration,
-		getFileSize: osFileSize,
+		getDuration: mediainfo.Duration,
+		getFileSize: mediainfo.FileSize,
 	}
 }
 
@@ -122,30 +120,4 @@ func formatDuration(sec float64) string {
 	m := (total % 3600) / 60
 	s := total % 60
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-}
-
-func ffprobeDuration(path string) (float64, error) {
-	out, err := exec.Command("ffprobe",
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		path,
-	).Output()
-	if err != nil {
-		return 0, fmt.Errorf("ffprobe: %w", err)
-	}
-	s := strings.TrimSpace(string(out))
-	dur, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse duration %q: %w", s, err)
-	}
-	return dur, nil
-}
-
-func osFileSize(path string) (int64, error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return fi.Size(), nil
 }

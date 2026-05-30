@@ -6,10 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -36,8 +35,8 @@ func New(assetsConfig config.AssetsConfig, showConfig model.ShowConfig) *Assembl
 		AssetsConfig: assetsConfig,
 		ShowConfig:   showConfig,
 		runFFmpeg:    runFFmpegCmd,
-		getDuration:  ffprobeDuration,
-		getFileSize:  osFileSize,
+		getDuration:  mediainfo.Duration,
+		getFileSize:  mediainfo.FileSize,
 	}
 }
 
@@ -101,30 +100,4 @@ func runFFmpegCmd(ctx context.Context, args []string) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-func ffprobeDuration(path string) (float64, error) {
-	out, err := exec.Command("ffprobe",
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		path,
-	).Output()
-	if err != nil {
-		return 0, fmt.Errorf("ffprobe: %w", err)
-	}
-	s := strings.TrimSpace(string(out))
-	dur, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse duration %q: %w", s, err)
-	}
-	return dur, nil
-}
-
-func osFileSize(path string) (int64, error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return fi.Size(), nil
 }
