@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 
+	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -25,7 +23,7 @@ func New(engineURL string, showConfig model.ShowConfig) *Synth {
 	return &Synth{
 		Client:      NewClient(engineURL),
 		ShowConfig:  showConfig,
-		getDuration: ffprobeDuration,
+		getDuration: mediainfo.Duration,
 	}
 }
 
@@ -102,22 +100,4 @@ func (s *Synth) resolveSpeakerID(role string) int {
 		return id
 	}
 	return s.ShowConfig.DefaultSpeaker
-}
-
-func ffprobeDuration(path string) (float64, error) {
-	out, err := exec.Command("ffprobe",
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		path,
-	).Output()
-	if err != nil {
-		return 0, fmt.Errorf("ffprobe: %w", err)
-	}
-	s := strings.TrimSpace(string(out))
-	dur, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse duration %q: %w", s, err)
-	}
-	return dur, nil
 }
