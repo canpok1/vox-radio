@@ -12,6 +12,15 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
+// testRequiredNameSchema is a minimal JSON Schema requiring a "name" string field.
+var testRequiredNameSchema = json.RawMessage(`{
+	"type": "object",
+	"properties": {
+		"name": {"type": "string"}
+	},
+	"required": ["name"]
+}`)
+
 func makeAPIResponse(t *testing.T, content string) []byte {
 	t.Helper()
 	type msgWrapper struct {
@@ -82,14 +91,6 @@ func TestComplete_SetsAuthorizationHeader(t *testing.T) {
 }
 
 func TestComplete_WithSchema_Success(t *testing.T) {
-	schema := json.RawMessage(`{
-		"type": "object",
-		"properties": {
-			"name": {"type": "string"}
-		},
-		"required": ["name"]
-	}`)
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(makeAPIResponse(t, `{"name":"hello"}`))
@@ -105,7 +106,7 @@ func TestComplete_WithSchema_Success(t *testing.T) {
 
 	result, err := c.Complete(context.Background(), llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: "hello"}},
-		JSONSchema: schema,
+		JSONSchema: testRequiredNameSchema,
 	})
 
 	if err != nil {
@@ -122,14 +123,6 @@ func TestComplete_WithSchema_Success(t *testing.T) {
 }
 
 func TestComplete_ValidationRetrySuccess(t *testing.T) {
-	schema := json.RawMessage(`{
-		"type": "object",
-		"properties": {
-			"name": {"type": "string"}
-		},
-		"required": ["name"]
-	}`)
-
 	var callCount atomic.Int32
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -151,7 +144,7 @@ func TestComplete_ValidationRetrySuccess(t *testing.T) {
 
 	result, err := c.Complete(context.Background(), llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: "hello"}},
-		JSONSchema: schema,
+		JSONSchema: testRequiredNameSchema,
 	})
 
 	if err != nil {
@@ -171,14 +164,6 @@ func TestComplete_ValidationRetrySuccess(t *testing.T) {
 }
 
 func TestComplete_RetryIncludesRepairContext(t *testing.T) {
-	schema := json.RawMessage(`{
-		"type": "object",
-		"properties": {
-			"name": {"type": "string"}
-		},
-		"required": ["name"]
-	}`)
-
 	var requestBodies [][]byte
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -201,7 +186,7 @@ func TestComplete_RetryIncludesRepairContext(t *testing.T) {
 
 	_, err := c.Complete(context.Background(), llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: "hello"}},
-		JSONSchema: schema,
+		JSONSchema: testRequiredNameSchema,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -236,14 +221,6 @@ func TestComplete_RetryIncludesRepairContext(t *testing.T) {
 }
 
 func TestComplete_ExhaustsRetries(t *testing.T) {
-	schema := json.RawMessage(`{
-		"type": "object",
-		"properties": {
-			"name": {"type": "string"}
-		},
-		"required": ["name"]
-	}`)
-
 	var callCount atomic.Int32
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -262,7 +239,7 @@ func TestComplete_ExhaustsRetries(t *testing.T) {
 
 	_, err := c.Complete(context.Background(), llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: "hello"}},
-		JSONSchema: schema,
+		JSONSchema: testRequiredNameSchema,
 	})
 
 	if err == nil {
