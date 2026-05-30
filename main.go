@@ -21,7 +21,7 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: vox-radio <command>")
-		fmt.Fprintln(os.Stderr, "Commands: collect, synth, assemble, publish")
+		fmt.Fprintln(os.Stderr, "Commands: collect, synth, assemble, publish, prune")
 		os.Exit(1)
 	}
 
@@ -41,6 +41,10 @@ func main() {
 	case "publish":
 		if err := runPublish(os.Args[2:]); err != nil {
 			log.Fatalf("publish: %v", err)
+		}
+	case "prune":
+		if err := runPrune(os.Args[2:]); err != nil {
+			log.Fatalf("prune: %v", err)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
@@ -264,5 +268,49 @@ func runPublish(args []string) error {
 		effectiveDate = "(today)"
 	}
 	fmt.Printf("published episode for %s to %s\n", effectiveDate, *outDir)
+	return nil
+}
+
+func runPrune(args []string) error {
+	fs := flag.NewFlagSet("prune", flag.ContinueOnError)
+	outDir := fs.String("out-dir", "", "output directory for local hosting (required)")
+	configDir := fs.String("config", "config", "config directory containing podcast.yaml")
+	baseURL := fs.String("base-url", "", "base URL for audio/feed URLs (default: site_url from podcast.yaml)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage: vox-radio prune --out-dir <dir> [--config <dir>] [--base-url <url>]")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *outDir == "" {
+		fs.Usage()
+		return fmt.Errorf("--out-dir is required")
+	}
+
+	cfg, err := config.Load(*configDir)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	siteURL := *baseURL
+	if siteURL == "" {
+		siteURL = cfg.Podcast.SiteURL
+	}
+
+	keep := cfg.Podcast.MaxItems
+	if keep <= 0 {
+		keep = 7
+	}
+
+	h := local.New(*outDir, siteURL)
+	pruner := publish.NewPruner(h, keep)
+
+	if err := pruner.Run(context.Background()); err != nil {
+		return err
+	}
+
+	fmt.Printf("pruned to %d episodes in %s\n", keep, *outDir)
 	return nil
 }
