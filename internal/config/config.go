@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -69,32 +68,62 @@ type PodcastConfig struct {
 	MaxItems      int    `yaml:"max_items"`
 }
 
+// Config holds genre-independent common settings (LLM only).
+// It is loaded from vox-radio.yaml at the repository root.
 type Config struct {
-	Feeds   FeedsConfig
-	Show    model.ShowConfig
-	Assets  AssetsConfig
-	LLM     LLMConfig
-	Podcast PodcastConfig
+	LLM LLMConfig `yaml:"llm"`
 }
 
-func Load(dir string) (*Config, error) {
+// Profile holds genre-specific settings (feeds, show, assets, podcast).
+// It is loaded from profiles/<genre>/profile.yaml.
+type Profile struct {
+	Podcast  PodcastConfig    `yaml:"podcast"`
+	Show     model.ShowConfig `yaml:"show"`
+	Feeds    []FeedEntry      `yaml:"feeds"`
+	Articles []string         `yaml:"articles"`
+	Assets   AssetsConfig     `yaml:"assets"`
+}
+
+// LoadConfig loads common settings from the given YAML file path.
+func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{}
-	loaders := []struct {
-		name string
-		dest any
-	}{
-		{"feeds.yaml", &cfg.Feeds},
-		{"show.yaml", &cfg.Show},
-		{"assets.yaml", &cfg.Assets},
-		{"llm.yaml", &cfg.LLM},
-		{"podcast.yaml", &cfg.Podcast},
-	}
-	for _, l := range loaders {
-		if err := loadYAML(filepath.Join(dir, l.name), l.dest); err != nil {
-			return nil, fmt.Errorf("loading %s: %w", l.name, err)
-		}
+	if err := loadYAML(path, cfg); err != nil {
+		return nil, err
 	}
 	return cfg, nil
+}
+
+// LoadProfile loads genre-specific settings from the given YAML file path.
+// Relative asset file paths are resolved relative to the profile file's directory.
+func LoadProfile(path string) (*Profile, error) {
+	p := &Profile{}
+	if err := loadYAML(path, p); err != nil {
+		return nil, err
+	}
+	resolveAssetPaths(filepath.Dir(path), &p.Assets)
+	return p, nil
+}
+
+func resolveAssetPaths(base string, assets *AssetsConfig) {
+	for name, entry := range assets.Jingle {
+		entry.File = resolveFile(base, entry.File)
+		assets.Jingle[name] = entry
+	}
+	for name, entry := range assets.SE {
+		entry.File = resolveFile(base, entry.File)
+		assets.SE[name] = entry
+	}
+	for name, entry := range assets.BGM {
+		entry.File = resolveFile(base, entry.File)
+		assets.BGM[name] = entry
+	}
+}
+
+func resolveFile(base, file string) string {
+	if file != "" && !filepath.IsAbs(file) {
+		return filepath.Join(base, file)
+	}
+	return file
 }
 
 func loadYAML(path string, dest any) error {
