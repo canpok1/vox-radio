@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Articles",
+  "type": "object",
+  "required": ["articles"],
+  "properties": {
+    "articles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Article"
+      }
+    }
+  },
+  "$defs": {
+    "Article": {
+      "type": "object",
+      "required": ["url", "title", "body"],
+      "properties": {
+        "url":   { "type": "string", "format": "uri" },
+        "title": { "type": "string", "minLength": 1 },
+        "body":  { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

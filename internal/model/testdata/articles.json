@@ -1,0 +1,14 @@
+{
+  "articles": [
+    {
+      "url": "https://example.com/article/1",
+      "title": "AIチップの最新動向",
+      "body": "新型AIチップが発表された。従来比2倍の性能を実現する。"
+    },
+    {
+      "url": "https://example.com/article/2",
+      "title": "オープンソース活動の活発化",
+      "body": "オープンソースプロジェクトへの参加者が増加している。"
+    }
+  ]
+}

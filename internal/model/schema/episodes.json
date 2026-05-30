@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Episodes",
+  "type": "object",
+  "required": ["episodes"],
+  "properties": {
+    "episodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Episode"
+      }
+    }
+  },
+  "$defs": {
+    "Episode": {
+      "type": "object",
+      "required": ["guid", "title", "description", "pub_date", "audio_url", "bytes", "duration"],
+      "properties": {
+        "guid":        { "type": "string", "minLength": 1 },
+        "title":       { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "pub_date":    { "type": "string", "format": "date-time" },
+        "audio_url":   { "type": "string", "format": "uri" },
+        "bytes":       { "type": "integer", "minimum": 0 },
+        "duration":    { "type": "string", "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

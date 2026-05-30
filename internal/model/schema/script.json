@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Script",
+  "description": "演出台本。synthへの入力として使用する。",
+  "type": "object",
+  "required": ["segments"],
+  "properties": {
+    "segments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ScriptSegment"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "ScriptSegment": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["speech", "se"]
+        },
+        "speaker_role": { "type": "string" },
+        "text":         { "type": "string" },
+        "se_name":      { "type": "string" }
+      },
+      "if": {
+        "properties": { "type": { "const": "speech" } }
+      },
+      "then": {
+        "required": ["speaker_role", "text"]
+      },
+      "else": {
+        "required": ["se_name"]
+      },
+      "additionalProperties": false
+    }
+  }
+}

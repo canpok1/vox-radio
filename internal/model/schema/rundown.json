@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rundown",
+  "type": "object",
+  "required": ["corners"],
+  "properties": {
+    "corners": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Corner"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "Corner": {
+      "type": "object",
+      "required": ["title", "topic", "points", "target_chars", "summary_urls"],
+      "properties": {
+        "title":       { "type": "string", "minLength": 1 },
+        "topic":       { "type": "string", "minLength": 1 },
+        "points": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "target_chars": { "type": "integer", "minimum": 1 },
+        "summary_urls": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
