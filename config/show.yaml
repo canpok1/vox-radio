@@ -1,0 +1,10 @@
+title_format: "今日のテックニュース {date}"
+target_chars: 1700            # 約5分相当（[A]が各コーナーへ配分）
+corners: 3                    # コーナー数の目安（[A]への指示）
+default_speaker: 3
+speakers:
+  host: 3                     # ずんだもん
+  guest: 2                    # 四国めたん（ノーマル）
+persona: |
+  hostは元気で親しみやすい進行役。guestは落ち着いた解説役。
+segment_pause_sec: 0.3        # セリフ間の無音（秒）
