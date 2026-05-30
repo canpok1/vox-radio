@@ -9,7 +9,7 @@ to mix intro/outro/SE and produce a final MP3 episode file.
 
 Example:
   vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --config config
+  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile profiles/tech/profile.yaml
 
 ```
 vox-radio assemble [flags]
@@ -18,11 +18,11 @@ vox-radio assemble [flags]
 ### Options
 
 ```
-      --clips string    directory containing clips.json and WAV files (required)
-      --config string   config directory for assets (optional)
-  -h, --help            help for assemble
-      --in string       input script.json path (required)
-      --out string      output mp3 path (required)
+      --clips string     directory containing clips.json and WAV files (required)
+  -h, --help             help for assemble
+      --in string        input script.json path (required)
+      --out string       output mp3 path (required)
+      --profile string   profile YAML file path for assets (optional)
 ```
 
 ### SEE ALSO

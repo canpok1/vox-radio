@@ -4,12 +4,12 @@ Collect articles from RSS feeds and URLs
 
 ### Synopsis
 
-Collect articles from RSS feeds and web URLs defined in feeds.yaml,
+Collect articles from RSS feeds and web URLs defined in the profile,
 extract their body text, and write the result to articles.json.
 
 Example:
   vox-radio collect --out work/articles.json
-  vox-radio collect --out work/articles.json --config config
+  vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
 
 ```
 vox-radio collect [flags]
@@ -18,9 +18,9 @@ vox-radio collect [flags]
 ### Options
 
 ```
-      --config string   config directory containing feeds.yaml (default "config")
-  -h, --help            help for collect
-      --out string      output articles.json path (required)
+  -h, --help             help for collect
+      --out string       output articles.json path (required)
+      --profile string   profile YAML file path (default "profiles/test/profile.yaml")
 ```
 
 ### SEE ALSO
