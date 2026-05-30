@@ -117,6 +117,13 @@ func TestScriptMissingOut(t *testing.T) {
 	}
 }
 
+func TestRootCmdDisableAutoGenTag(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	if !cmd.DisableAutoGenTag {
+		t.Error("DisableAutoGenTag must be true to keep make docs idempotent")
+	}
+}
+
 func TestSubcommandHelp(t *testing.T) {
 	for _, sub := range []string{"collect", "synth", "assemble", "publish", "prune", "script"} {
 		t.Run(sub, func(t *testing.T) {
