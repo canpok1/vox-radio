@@ -7,3 +7,9 @@
 | 番号 | タイトル | ステータス | 日付 |
 |------|----------|------------|------|
 | [0001](0001-remove-vox-actor-dependency.md) | vox-actor 依存の除去 | 採用 | 2026-05-30 |
+| [0002](0002-openai-compatible-llm-abstraction.md) | LLM プロバイダ抽象と OpenAI 互換ワイヤープロトコル | 採用 | 2026-05-30 |
+| [0003](0003-multi-stage-llm-script-pipeline.md) | 台本生成を多段 LLM パイプラインに分割する | 採用 | 2026-05-30 |
+| [0004](0004-file-based-intermediate-artifacts.md) | 中間生成物をファイルで疎結合に繋ぎ、入出力規約を定める | 採用 | 2026-05-30 |
+| [0005](0005-podcast-rss-only-distribution.md) | 配信を Podcast(RSS) に一本化する | 採用 | 2026-05-30 |
+| [0006](0006-ghpages-hosting-github-actions-runtime.md) | ホスティングを ghpages、実行基盤を GitHub Actions に一本化する | 採用 | 2026-05-30 |
+| [0007](0007-ffmpeg-audio-assembly.md) | 音声整形に ffmpeg を採用する | 採用 | 2026-05-30 |
