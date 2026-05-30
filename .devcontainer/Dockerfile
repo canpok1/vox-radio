@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/devcontainers/base:noble
 ENV CLAUDE_CONFIG_DIR=/home/vscode/.claude
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends shellcheck libasound2-dev ffmpeg && \
+    apt-get install -y --no-install-recommends shellcheck ffmpeg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
