@@ -1,0 +1,41 @@
+podcast:
+  title: "今日のテックニュース"
+  description: "毎日5分のニュースラジオ"
+  language: ja
+  author: vox-radio
+  category: News
+  explicit: false
+  cover_image_url: https://example.github.io/vox-radio/cover.jpg
+  site_url: https://example.github.io/vox-radio/
+  max_items: 7
+
+show:
+  title_format: "今日のテックニュース {date}"
+  target_chars: 1700
+  corners: 3
+  default_speaker: 3
+  speakers:
+    host: 3
+    guest: 2
+  persona: |
+    hostは元気で親しみやすい進行役。guestは落ち着いた解説役。
+  segment_pause_sec: 0.3
+
+feeds:
+  - url: https://example.com/rss.xml
+    max_items: 5
+  - url: https://another.example.com/feed
+    max_items: 3
+
+articles:
+  - https://example.com/articles/123
+
+assets:
+  jingle:
+    opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
+    ending:  { file: assets/jingle/ending.mp3,  fade_in: 0.5, fade_out: 1.0 }
+  se:
+    chime:      { file: assets/se/chime.wav,      volume: 0.8 }
+    transition: { file: assets/se/transition.wav, volume: 0.8 }
+  bgm:
+    talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }

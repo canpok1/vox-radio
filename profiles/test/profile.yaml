@@ -1,0 +1,36 @@
+podcast:
+  title: "テスト番組"
+  description: "動作確認用の最小プロファイル"
+  language: ja
+  author: vox-radio
+  category: News
+  explicit: false
+  cover_image_url: https://example.github.io/vox-radio/cover.jpg
+  site_url: https://example.github.io/vox-radio/
+  max_items: 3
+
+show:
+  title_format: "テスト {date}"
+  target_chars: 300
+  corners: 1
+  default_speaker: 3
+  speakers:
+    host: 3
+  persona: "hostは元気で親しみやすい進行役。"
+  segment_pause_sec: 0.3
+
+feeds:
+  - url: https://example.com/rss.xml
+    max_items: 1
+
+articles: []
+
+assets:
+  jingle:
+    opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
+    ending:  { file: assets/jingle/ending.mp3,  fade_in: 0.5, fade_out: 1.0 }
+  se:
+    chime:      { file: assets/se/chime.wav,      volume: 0.8 }
+    transition: { file: assets/se/transition.wav, volume: 0.8 }
+  bgm:
+    talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }
