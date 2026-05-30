@@ -7,8 +7,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/publish"
 	"github.com/canpok1/vox-radio/internal/publish/hosting"
-	"github.com/canpok1/vox-radio/internal/publish/hosting/ghpages"
-	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
 	"github.com/spf13/cobra"
 )
 
@@ -50,14 +48,9 @@ Example:
 				Description: descFlag,
 			}
 
-			var h hosting.Hosting
-			switch hostingType {
-			case "local":
-				h = local.New(outDir, siteURL)
-			case "ghpages":
-				h = ghpages.New(outDir, siteURL)
-			default:
-				return fmt.Errorf("unknown hosting type %q: must be \"local\" or \"ghpages\"", hostingType)
+			h, err := newHosting(hostingType, outDir, siteURL)
+			if err != nil {
+				return err
 			}
 
 			ctx := context.Background()

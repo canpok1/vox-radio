@@ -1,22 +1,40 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/publish"
+	"github.com/canpok1/vox-radio/internal/publish/hosting"
+	"github.com/canpok1/vox-radio/internal/publish/hosting/ghpages"
+	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
 )
 
 func writeJSON(path string, v any) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create dir: %w", err)
+	return fileio.WriteJSON(path, v)
+}
+
+func resolveSiteURL(override, configURL string) string {
+	if override != "" {
+		return override
 	}
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
+	return configURL
+}
+
+func resolveKeep(maxItems int) int {
+	if maxItems <= 0 {
+		return publish.DefaultKeep
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
+	return maxItems
+}
+
+func newHosting(hostingType, outDir, siteURL string) (hosting.Hosting, error) {
+	switch hostingType {
+	case "local":
+		return local.New(outDir, siteURL), nil
+	case "ghpages":
+		return ghpages.New(outDir, siteURL), nil
+	default:
+		return nil, fmt.Errorf("unknown hosting type %q: must be \"local\" or \"ghpages\"", hostingType)
 	}
-	return nil
 }
