@@ -28,8 +28,9 @@ type Config struct {
 }
 
 type openAIClient struct {
-	cfg Config
-	hc  *http.Client
+	cfg      Config
+	hc       *http.Client
+	endpoint string
 }
 
 // NewClient creates a new OpenAI-compatible LLM client.
@@ -41,8 +42,9 @@ func NewClient(cfg Config) Client {
 		cfg.Model = DefaultModel
 	}
 	return &openAIClient{
-		cfg: cfg,
-		hc:  &http.Client{Timeout: 60 * time.Second},
+		cfg:      cfg,
+		hc:       &http.Client{Timeout: 60 * time.Second},
+		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
 	}
 }
 
@@ -80,6 +82,10 @@ func (c *openAIClient) Complete(ctx context.Context, req CompletionRequest) (jso
 	msgs := make([]Message, len(req.Messages))
 	copy(msgs, req.Messages)
 
+	if len(req.JSONSchema) == 0 {
+		return c.callAPI(ctx, req, msgs)
+	}
+
 	maxRetries := c.cfg.MaxRetries
 	if maxRetries < 0 {
 		maxRetries = 0
@@ -89,10 +95,6 @@ func (c *openAIClient) Complete(ctx context.Context, req CompletionRequest) (jso
 		raw, err := c.callAPI(ctx, req, msgs)
 		if err != nil {
 			return nil, err
-		}
-
-		if len(req.JSONSchema) == 0 {
-			return raw, nil
 		}
 
 		errs, err := validateAgainstSchema(raw, req.JSONSchema)
@@ -131,18 +133,13 @@ func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs 
 		Temperature: temperature,
 	}
 
+	apiReq.ResponseFormat = &responseFormat{Type: "json_object"}
 	if len(req.JSONSchema) > 0 {
-		apiReq.ResponseFormat = &responseFormat{
-			Type: "json_schema",
-			JSONSchema: &schemaSpec{
-				Name:   "output",
-				Schema: req.JSONSchema,
-				Strict: true,
-			},
-		}
-	} else {
-		apiReq.ResponseFormat = &responseFormat{
-			Type: "json_object",
+		apiReq.ResponseFormat.Type = "json_schema"
+		apiReq.ResponseFormat.JSONSchema = &schemaSpec{
+			Name:   "output",
+			Schema: req.JSONSchema,
+			Strict: true,
 		}
 	}
 
@@ -151,8 +148,7 @@ func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs 
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	url := strings.TrimRight(c.cfg.BaseURL, "/") + "/chat/completions"
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
