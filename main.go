@@ -13,13 +13,15 @@ import (
 	"github.com/canpok1/vox-radio/internal/collect"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/publish"
+	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
 	"github.com/canpok1/vox-radio/internal/synth"
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: vox-radio <command>")
-		fmt.Fprintln(os.Stderr, "Commands: collect, synth, assemble")
+		fmt.Fprintln(os.Stderr, "Commands: collect, synth, assemble, publish")
 		os.Exit(1)
 	}
 
@@ -35,6 +37,10 @@ func main() {
 	case "assemble":
 		if err := runAssemble(os.Args[2:]); err != nil {
 			log.Fatalf("assemble: %v", err)
+		}
+	case "publish":
+		if err := runPublish(os.Args[2:]); err != nil {
+			log.Fatalf("publish: %v", err)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
@@ -201,5 +207,62 @@ func runAssemble(args []string) error {
 	}
 
 	fmt.Printf("assembled episode: duration=%.1fs, bytes=%d\n", result.DurationSec, result.Bytes)
+	return nil
+}
+
+func runPublish(args []string) error {
+	fs := flag.NewFlagSet("publish", flag.ContinueOnError)
+	in := fs.String("in", "", "input mp3 path (required)")
+	date := fs.String("date", "", "episode date YYYY-MM-DD (default: today)")
+	titleFlag := fs.String("title", "", "episode title (default: <date> <podcast.title>)")
+	descFlag := fs.String("description", "", "episode description")
+	configDir := fs.String("config", "config", "config directory containing podcast.yaml")
+	outDir := fs.String("out-dir", "", "output directory for local hosting (required)")
+	baseURL := fs.String("base-url", "", "base URL for audio/feed URLs (default: site_url from podcast.yaml)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage: vox-radio publish --in <mp3> --out-dir <dir> [--date <YYYY-MM-DD>] [options]")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *in == "" {
+		fs.Usage()
+		return fmt.Errorf("--in is required")
+	}
+	if *outDir == "" {
+		fs.Usage()
+		return fmt.Errorf("--out-dir is required")
+	}
+
+	cfg, err := config.Load(*configDir)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	siteURL := *baseURL
+	if siteURL == "" {
+		siteURL = cfg.Podcast.SiteURL
+	}
+
+	h := local.New(*outDir, siteURL)
+	publisher := publish.New(h, cfg.Podcast)
+
+	opts := publish.Options{
+		Date:        *date,
+		Title:       *titleFlag,
+		Description: *descFlag,
+	}
+
+	if err := publisher.Run(context.Background(), *in, opts); err != nil {
+		return err
+	}
+
+	effectiveDate := *date
+	if effectiveDate == "" {
+		effectiveDate = "(today)"
+	}
+	fmt.Printf("published episode for %s to %s\n", effectiveDate, *outDir)
 	return nil
 }
