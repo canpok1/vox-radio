@@ -12,8 +12,9 @@ func NewRootCmd() *cobra.Command {
 
 It covers the full pipeline: collecting articles, generating scripts via LLM,
 synthesizing voice clips, assembling audio, and publishing RSS feeds.`,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
+		DisableAutoGenTag: true,
 	}
 
 	root.AddCommand(
