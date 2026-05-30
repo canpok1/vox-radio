@@ -114,3 +114,19 @@ func TestPruner_Run_EmptyEpisodes(t *testing.T) {
 		t.Errorf("expected no deletions, got %v", h.deletedAudio)
 	}
 }
+
+func TestPruner_Run_DeletesMultipleExcessEpisodes(t *testing.T) {
+	h := &pruneHosting{episodes: makeTestEpisodes(10)}
+	p := NewPruner(h, 7)
+
+	if err := p.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(h.deletedAudio) != 3 {
+		t.Fatalf("expected 3 deletions, got %d: %v", len(h.deletedAudio), h.deletedAudio)
+	}
+	if len(h.savedEps.Episodes) != 7 {
+		t.Errorf("expected 7 saved episodes, got %d", len(h.savedEps.Episodes))
+	}
+}

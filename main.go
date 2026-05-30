@@ -305,9 +305,9 @@ func runPrune(args []string) error {
 	return nil
 }
 
-func resolveSiteURL(flag, configURL string) string {
-	if flag != "" {
-		return flag
+func resolveSiteURL(override, configURL string) string {
+	if override != "" {
+		return override
 	}
 	return configURL
 }
