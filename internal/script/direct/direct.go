@@ -48,10 +48,11 @@ type seInsertionsResponse struct {
 type LLMDirector struct {
 	client         llm.Client
 	promptTemplate string
+	temperature    float64
 }
 
-func NewLLMDirector(client llm.Client, promptTemplate string) *LLMDirector {
-	return &LLMDirector{client: client, promptTemplate: promptTemplate}
+func NewLLMDirector(client llm.Client, promptTemplate string, temperature float64) *LLMDirector {
+	return &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
 func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, se model.SECatalog) (model.Script, error) {
@@ -69,8 +70,9 @@ func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, se model.S
 	prompt = strings.ReplaceAll(prompt, "{{se_catalog}}", string(seJSON))
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
-		Messages:   []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema: seInsertionsSchema,
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  seInsertionsSchema,
+		Temperature: d.temperature,
 	})
 	if err != nil {
 		return model.Script{}, fmt.Errorf("llm complete: %w", err)

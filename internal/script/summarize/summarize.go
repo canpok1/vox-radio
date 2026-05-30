@@ -27,10 +27,11 @@ type Summarizer interface {
 type LLMSummarizer struct {
 	client         llm.Client
 	promptTemplate string
+	temperature    float64
 }
 
-func NewLLMSummarizer(client llm.Client, promptTemplate string) *LLMSummarizer {
-	return &LLMSummarizer{client: client, promptTemplate: promptTemplate}
+func NewLLMSummarizer(client llm.Client, promptTemplate string, temperature float64) *LLMSummarizer {
+	return &LLMSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
 type summaryResponse struct {
@@ -47,8 +48,9 @@ func (s *LLMSummarizer) Summarize(ctx context.Context, a model.Article) (model.S
 	prompt := strings.ReplaceAll(s.promptTemplate, "{{article}}", string(articleJSON))
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{
-		Messages:   []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema: summarySchema,
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  summarySchema,
+		Temperature: s.temperature,
 	})
 	if err != nil {
 		return model.Summary{}, fmt.Errorf("llm complete: %w", err)

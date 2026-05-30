@@ -38,10 +38,11 @@ type Writer interface {
 type LLMWriter struct {
 	client         llm.Client
 	promptTemplate string
+	temperature    float64
 }
 
-func NewLLMWriter(client llm.Client, promptTemplate string) *LLMWriter {
-	return &LLMWriter{client: client, promptTemplate: promptTemplate}
+func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64) *LLMWriter {
+	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
 func (w *LLMWriter) Write(ctx context.Context, corner model.Corner, summaries []model.Summary, show model.ShowConfig) ([]model.Line, error) {
@@ -56,13 +57,13 @@ func (w *LLMWriter) Write(ctx context.Context, corner model.Corner, summaries []
 	}
 
 	prompt := strings.ReplaceAll(w.promptTemplate, "{{corner}}", string(cornerJSON))
-	prompt = strings.ReplaceAll(prompt, "{{summaries}}", string(summariesJSON))
 	prompt = strings.ReplaceAll(prompt, "{{summary}}", string(summariesJSON))
 	prompt = strings.ReplaceAll(prompt, "{{persona}}", show.Persona)
 
 	raw, err := w.client.Complete(ctx, llm.CompletionRequest{
-		Messages:   []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema: linesSchema,
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  linesSchema,
+		Temperature: w.temperature,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("llm complete: %w", err)

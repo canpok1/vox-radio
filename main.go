@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/collect"
@@ -394,10 +395,10 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		summarize.NewLLMSummarizer(c, prompts["summarize"]),
-		plan.NewLLMPlanner(c, prompts["plan"]),
-		write.NewLLMWriter(c, prompts["write"]),
-		direct.NewLLMDirector(c, prompts["direct"]),
+		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg, "summarize")),
+		plan.NewLLMPlanner(c, prompts["plan"], stepTemp(cfg, "plan")),
+		write.NewLLMWriter(c, prompts["write"], stepTemp(cfg, "write")),
+		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg, "direct")),
 		seCatalog,
 		workDir,
 	)
@@ -419,7 +420,7 @@ func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, c
 		return err
 	}
 
-	s := summarize.NewLLMSummarizer(c, prompts["summarize"])
+	s := summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg, "summarize"))
 	summaries := make([]model.Summary, 0, len(articles.Articles))
 	for _, a := range articles.Articles {
 		sum, err := s.Summarize(ctx, a)
@@ -448,7 +449,7 @@ func runScriptPlan(ctx context.Context, workDir string, c llm.Client, cfg *confi
 		return fmt.Errorf("parse summaries.json: %w", err)
 	}
 
-	p := plan.NewLLMPlanner(c, prompts["plan"])
+	p := plan.NewLLMPlanner(c, prompts["plan"], stepTemp(cfg, "plan"))
 	rundown, err := p.Plan(ctx, sums.Summaries, cfg.Show)
 	if err != nil {
 		return fmt.Errorf("plan: %w", err)
@@ -483,20 +484,12 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 		return fmt.Errorf("parse rundown.json: %w", err)
 	}
 
-	summaryByURL := make(map[string]model.Summary, len(sums.Summaries))
-	for _, s := range sums.Summaries {
-		summaryByURL[s.URL] = s
-	}
+	summaryByURL := script.SummaryByURL(sums.Summaries)
 
-	w := write.NewLLMWriter(c, prompts["write"])
+	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg, "write"))
 	var allLines []model.Line
 	for _, corner := range rundown.Corners {
-		relevant := make([]model.Summary, 0, len(corner.SummaryURLs))
-		for _, u := range corner.SummaryURLs {
-			if s, ok := summaryByURL[u]; ok {
-				relevant = append(relevant, s)
-			}
-		}
+		relevant := script.CornerSummaries(corner, summaryByURL)
 		lines, err := w.Write(ctx, corner, relevant, cfg.Show)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
@@ -523,7 +516,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, cfg
 		return fmt.Errorf("parse lines.json: %w", err)
 	}
 
-	d := direct.NewLLMDirector(c, prompts["direct"])
+	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg, "direct"))
 	scr, err := d.Direct(ctx, linesWrapper.Lines, seCatalog)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
@@ -554,7 +547,15 @@ func buildSECatalog(assets config.AssetsConfig) model.SECatalog {
 	for name := range assets.SE {
 		names = append(names, name)
 	}
+	sort.Strings(names)
 	return model.SECatalog{Names: names}
+}
+
+func stepTemp(cfg *config.Config, name string) float64 {
+	if s, ok := cfg.LLM.Steps[name]; ok && s.Temperature != nil {
+		return *s.Temperature
+	}
+	return 0
 }
 
 func readArticles(path string) (model.Articles, error) {

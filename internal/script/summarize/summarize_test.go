@@ -3,6 +3,7 @@ package summarize_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -25,7 +26,7 @@ func TestLLMSummarizer_Summarize_Success(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"AIチップ要約","points":["性能2倍","省電力"]}`),
 	}
-	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}")
+	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}", 0)
 
 	article := model.Article{
 		URL:   "https://example.com/1",
@@ -52,7 +53,7 @@ func TestLLMSummarizer_Summarize_PromptContainsArticleJSON(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"要約","points":["p1"]}`),
 	}
-	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}")
+	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}", 0)
 
 	article := model.Article{URL: "https://example.com/1", Title: "タイトル", Body: "本文"}
 	_, _ = s.Summarize(context.Background(), article)
@@ -64,32 +65,18 @@ func TestLLMSummarizer_Summarize_PromptContainsArticleJSON(t *testing.T) {
 	if len(prompt) == 0 {
 		t.Fatal("prompt is empty")
 	}
-	// プロンプトにarticle JSONが含まれることを確認
 	articleJSON, _ := json.Marshal(article)
-	if !containsString(prompt, string(articleJSON)) {
+	if !strings.Contains(prompt, string(articleJSON)) {
 		t.Errorf("prompt should contain article JSON, got: %s", prompt)
 	}
 }
 
 func TestLLMSummarizer_Summarize_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	s := summarize.NewLLMSummarizer(mc, "{{article}}")
+	s := summarize.NewLLMSummarizer(mc, "{{article}}", 0)
 
 	_, err := s.Summarize(context.Background(), model.Article{URL: "u"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-}
-
-func containsString(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(s) > 0 && containsSubstring(s, sub))
-}
-
-func containsSubstring(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }

@@ -41,10 +41,11 @@ type Planner interface {
 type LLMPlanner struct {
 	client         llm.Client
 	promptTemplate string
+	temperature    float64
 }
 
-func NewLLMPlanner(client llm.Client, promptTemplate string) *LLMPlanner {
-	return &LLMPlanner{client: client, promptTemplate: promptTemplate}
+func NewLLMPlanner(client llm.Client, promptTemplate string, temperature float64) *LLMPlanner {
+	return &LLMPlanner{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
 func (p *LLMPlanner) Plan(ctx context.Context, summaries []model.Summary, show model.ShowConfig) (model.Rundown, error) {
@@ -62,8 +63,9 @@ func (p *LLMPlanner) Plan(ctx context.Context, summaries []model.Summary, show m
 	prompt = strings.ReplaceAll(prompt, "{{show_config}}", string(showJSON))
 
 	raw, err := p.client.Complete(ctx, llm.CompletionRequest{
-		Messages:   []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema: rundownSchema,
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  rundownSchema,
+		Temperature: p.temperature,
 	})
 	if err != nil {
 		return model.Rundown{}, fmt.Errorf("llm complete: %w", err)

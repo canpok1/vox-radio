@@ -40,7 +40,7 @@ var linesJSON = json.RawMessage(`{
 
 func TestLLMWriter_Write_Success(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summaries}} persona={{persona}}")
+	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summary}} persona={{persona}}", 0)
 
 	corner := model.Corner{Title: "コーナー1", Topic: "AI", Points: []string{"p1"}, TargetChars: 100}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "要約", Points: []string{"p1"}}}
@@ -60,7 +60,7 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 
 func TestLLMWriter_Write_PromptContainsCornerAndSummaries(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "c={{corner}} s={{summaries}} p={{persona}}")
+	w := write.NewLLMWriter(mc, "c={{corner}} s={{summary}} p={{persona}}", 0)
 
 	corner := model.Corner{Title: "AIコーナー", Topic: "AI", Points: []string{"p1"}, TargetChars: 100}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "AI要約", Points: []string{"p1"}}}
@@ -85,7 +85,7 @@ func TestLLMWriter_Write_PromptContainsCornerAndSummaries(t *testing.T) {
 
 func TestLLMWriter_Write_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	w := write.NewLLMWriter(mc, "{{corner}}")
+	w := write.NewLLMWriter(mc, "{{corner}}", 0)
 
 	_, err := w.Write(context.Background(), model.Corner{}, nil, model.ShowConfig{})
 	if err == nil {

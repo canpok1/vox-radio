@@ -36,7 +36,7 @@ var rundownJSON = json.RawMessage(`{
 
 func TestLLMPlanner_Plan_Success(t *testing.T) {
 	mc := &mockClient{response: rundownJSON}
-	p := plan.NewLLMPlanner(mc, "summaries={{summaries}} config={{show_config}}")
+	p := plan.NewLLMPlanner(mc, "summaries={{summaries}} config={{show_config}}", 0)
 
 	summaries := []model.Summary{
 		{URL: "https://example.com/1", Summary: "要約", Points: []string{"p1"}},
@@ -57,7 +57,7 @@ func TestLLMPlanner_Plan_Success(t *testing.T) {
 
 func TestLLMPlanner_Plan_PromptContainsSummariesAndConfig(t *testing.T) {
 	mc := &mockClient{response: rundownJSON}
-	p := plan.NewLLMPlanner(mc, "s={{summaries}} c={{show_config}}")
+	p := plan.NewLLMPlanner(mc, "s={{summaries}} c={{show_config}}", 0)
 
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "要約", Points: []string{"p1"}}}
 	show := model.ShowConfig{TargetChars: 1000, Corners: 1, Persona: "ホスト"}
@@ -78,7 +78,7 @@ func TestLLMPlanner_Plan_PromptContainsSummariesAndConfig(t *testing.T) {
 
 func TestLLMPlanner_Plan_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	p := plan.NewLLMPlanner(mc, "{{summaries}}")
+	p := plan.NewLLMPlanner(mc, "{{summaries}}", 0)
 
 	_, err := p.Plan(context.Background(), nil, model.ShowConfig{})
 	if err == nil {

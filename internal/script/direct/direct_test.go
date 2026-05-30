@@ -23,7 +23,7 @@ func TestLLMDirector_Direct_NoSEInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"se_insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "lines={{lines}} se={{se_catalog}}")
+	d := direct.NewLLMDirector(mc, "lines={{lines}} se={{se_catalog}}", 0)
 
 	lines := []model.Line{
 		{SpeakerRole: "host", Text: "こんにちは"},
@@ -49,7 +49,7 @@ func TestLLMDirector_Direct_WithSEInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"se_insertions":[{"after_line_index":0,"se_name":"chime","reason":"コーナー開始"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}")
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
 	lines := []model.Line{
 		{SpeakerRole: "host", Text: "開始"},
@@ -83,7 +83,7 @@ func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"se_insertions":[{"after_line_index":1,"se_name":"transition"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}")
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
 	lines := []model.Line{
 		{SpeakerRole: "host", Text: "A"},
@@ -106,7 +106,7 @@ func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
 
 func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	d := direct.NewLLMDirector(mc, "{{lines}}")
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
 	_, err := d.Direct(context.Background(), nil, model.SECatalog{})
 	if err == nil {
@@ -118,7 +118,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"se_insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}")
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
 	lines := []model.Line{
 		{SpeakerRole: "host", Text: "テストテキスト"},
