@@ -17,7 +17,7 @@ func newAssembleCmd() *cobra.Command {
 	var in string
 	var clipsDir string
 	var out string
-	var configDir string
+	var profilePath string
 
 	cmd := &cobra.Command{
 		Use:   "assemble",
@@ -27,7 +27,7 @@ to mix intro/outro/SE and produce a final MP3 episode file.
 
 Example:
   vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --config config`,
+  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			scriptData, err := os.ReadFile(in)
 			if err != nil {
@@ -49,13 +49,13 @@ Example:
 
 			var assetsConfig config.AssetsConfig
 			var showConfig model.ShowConfig
-			if configDir != "" {
-				cfg, err := config.Load(configDir)
+			if profilePath != "" {
+				p, err := config.LoadProfile(profilePath)
 				if err != nil {
-					return fmt.Errorf("load config: %w", err)
+					return fmt.Errorf("load profile: %w", err)
 				}
-				assetsConfig = cfg.Assets
-				showConfig = cfg.Show
+				assetsConfig = p.Assets
+				showConfig = p.Show
 			} else {
 				showConfig = model.ShowConfig{SegmentPauseSec: 0.3}
 			}
@@ -74,7 +74,7 @@ Example:
 	cmd.Flags().StringVar(&in, "in", "", "input script.json path (required)")
 	cmd.Flags().StringVar(&clipsDir, "clips", "", "directory containing clips.json and WAV files (required)")
 	cmd.Flags().StringVar(&out, "out", "", "output mp3 path (required)")
-	cmd.Flags().StringVar(&configDir, "config", "", "config directory for assets (optional)")
+	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path for assets (optional)")
 	_ = cmd.MarkFlagRequired("in")
 	_ = cmd.MarkFlagRequired("clips")
 	_ = cmd.MarkFlagRequired("out")

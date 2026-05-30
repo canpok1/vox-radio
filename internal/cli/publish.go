@@ -15,7 +15,7 @@ func newPublishCmd() *cobra.Command {
 	var date string
 	var titleFlag string
 	var descFlag string
-	var configDir string
+	var profilePath string
 	var outDir string
 	var baseURL string
 
@@ -27,15 +27,16 @@ and regenerate feed.xml for RSS distribution.
 
 Example:
   vox-radio publish --in work/episode.mp3 --out-dir public
-  vox-radio publish --in work/episode.mp3 --out-dir public --date 2026-01-01 --title "Episode title"`,
+  vox-radio publish --in work/episode.mp3 --out-dir public --date 2026-01-01 --title "Episode title"
+  vox-radio publish --in work/episode.mp3 --out-dir public --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load(configDir)
+			p, err := config.LoadProfile(profilePath)
 			if err != nil {
-				return fmt.Errorf("load config: %w", err)
+				return fmt.Errorf("load profile: %w", err)
 			}
 
-			h := local.New(outDir, resolveSiteURL(baseURL, cfg.Podcast.SiteURL))
-			publisher := publish.New(h, cfg.Podcast)
+			h := local.New(outDir, resolveSiteURL(baseURL, p.Podcast.SiteURL))
+			publisher := publish.New(h, p.Podcast)
 
 			opts := publish.Options{
 				Date:        date,
@@ -60,9 +61,9 @@ Example:
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
 	cmd.Flags().StringVar(&titleFlag, "title", "", "episode title (default: <date> <podcast.title>)")
 	cmd.Flags().StringVar(&descFlag, "description", "", "episode description")
-	cmd.Flags().StringVar(&configDir, "config", "config", "config directory containing podcast.yaml")
+	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for local hosting (required)")
-	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from podcast.yaml)")
+	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	_ = cmd.MarkFlagRequired("in")
 	_ = cmd.MarkFlagRequired("out-dir")
 

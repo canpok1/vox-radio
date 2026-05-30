@@ -23,7 +23,8 @@ func newScriptCmd() *cobra.Command {
 	var in string
 	var out string
 	var step string
-	var configDir string
+	var configPath string
+	var profilePath string
 	var promptsDir string
 
 	cmd := &cobra.Command{
@@ -40,11 +41,17 @@ Use --step to run a single stage independently:
 
 Example:
   vox-radio script --in work/articles.json --out work/script.json
-  vox-radio script --out work/script.json --step plan`,
+  vox-radio script --out work/script.json --step plan
+  vox-radio script --in work/articles.json --out work/script.json --config vox-radio.yaml --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load(configDir)
+			cfg, err := config.LoadConfig(configPath)
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
+			}
+
+			p, err := config.LoadProfile(profilePath)
+			if err != nil {
+				return fmt.Errorf("load profile: %w", err)
 			}
 
 			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
@@ -66,19 +73,19 @@ Example:
 				return fmt.Errorf("create work dir: %w", err)
 			}
 
-			seCatalog := buildSECatalog(cfg.Assets)
+			seCatalog := buildSECatalog(p.Assets)
 
 			switch step {
 			case "":
-				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg, prompts, seCatalog)
+				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, prompts, seCatalog)
 			case "summarize":
-				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg, prompts)
+				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg.LLM, prompts)
 			case "plan":
-				return runScriptPlan(context.Background(), workDir, llmClient, cfg, prompts)
+				return runScriptPlan(context.Background(), workDir, llmClient, cfg.LLM, p, prompts)
 			case "write":
-				return runScriptWrite(context.Background(), workDir, llmClient, cfg, prompts)
+				return runScriptWrite(context.Background(), workDir, llmClient, cfg.LLM, p, prompts)
 			case "direct":
-				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg, prompts, seCatalog)
+				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, seCatalog)
 			default:
 				return fmt.Errorf("unknown step %q: use summarize|plan|write|direct", step)
 			}
@@ -88,14 +95,15 @@ Example:
 	cmd.Flags().StringVar(&in, "in", "", "input articles.json path (required for full pipeline or summarize step)")
 	cmd.Flags().StringVar(&out, "out", "", "output script.json path (required)")
 	cmd.Flags().StringVar(&step, "step", "", "run a single step: summarize|plan|write|direct")
-	cmd.Flags().StringVar(&configDir, "config", "config", "config directory containing llm.yaml, show.yaml, assets.yaml")
+	cmd.Flags().StringVar(&configPath, "config", "vox-radio.yaml", "common config YAML file path (LLM settings)")
+	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	_ = cmd.MarkFlagRequired("out")
 
 	return cmd
 }
 
-func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, cfg *config.Config, prompts map[string]string, seCatalog model.SECatalog) error {
+func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, prompts map[string]string, seCatalog model.SECatalog) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
@@ -105,15 +113,15 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg, "summarize")),
-		plan.NewLLMPlanner(c, prompts["plan"], stepTemp(cfg, "plan")),
-		write.NewLLMWriter(c, prompts["write"], stepTemp(cfg, "write")),
-		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg, "direct")),
+		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize")),
+		plan.NewLLMPlanner(c, prompts["plan"], stepTemp(llmCfg, "plan")),
+		write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write")),
+		direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct")),
 		seCatalog,
 		workDir,
 	)
 
-	scr, err := gen.Generate(ctx, articles.Articles, cfg.Show)
+	scr, err := gen.Generate(ctx, articles.Articles, p.Show)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -121,7 +129,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	return writeJSON(out, scr)
 }
 
-func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, cfg *config.Config, prompts map[string]string) error {
+func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for summarize step")
 	}
@@ -130,7 +138,7 @@ func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, c
 		return err
 	}
 
-	s := summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg, "summarize"))
+	s := summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize"))
 	summaries := make([]model.Summary, 0, len(articles.Articles))
 	for _, a := range articles.Articles {
 		sum, err := s.Summarize(ctx, a)
@@ -148,7 +156,7 @@ func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, c
 	return nil
 }
 
-func runScriptPlan(ctx context.Context, workDir string, c llm.Client, cfg *config.Config, prompts map[string]string) error {
+func runScriptPlan(ctx context.Context, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, prompts map[string]string) error {
 	summariesPath := filepath.Join(workDir, "summaries.json")
 	data, err := os.ReadFile(summariesPath)
 	if err != nil {
@@ -159,8 +167,8 @@ func runScriptPlan(ctx context.Context, workDir string, c llm.Client, cfg *confi
 		return fmt.Errorf("parse summaries.json: %w", err)
 	}
 
-	p := plan.NewLLMPlanner(c, prompts["plan"], stepTemp(cfg, "plan"))
-	rundown, err := p.Plan(ctx, sums.Summaries, cfg.Show)
+	planner := plan.NewLLMPlanner(c, prompts["plan"], stepTemp(llmCfg, "plan"))
+	rundown, err := planner.Plan(ctx, sums.Summaries, p.Show)
 	if err != nil {
 		return fmt.Errorf("plan: %w", err)
 	}
@@ -173,7 +181,7 @@ func runScriptPlan(ctx context.Context, workDir string, c llm.Client, cfg *confi
 	return nil
 }
 
-func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *config.Config, prompts map[string]string) error {
+func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, prompts map[string]string) error {
 	summariesPath := filepath.Join(workDir, "summaries.json")
 	summariesData, err := os.ReadFile(summariesPath)
 	if err != nil {
@@ -196,11 +204,11 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 
 	summaryByURL := script.SummaryByURL(sums.Summaries)
 
-	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg, "write"))
+	w := write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write"))
 	allLines := make([]model.Line, 0)
 	for _, corner := range rundown.Corners {
 		relevant := script.CornerSummaries(corner, summaryByURL)
-		lines, err := w.Write(ctx, corner, relevant, cfg.Show)
+		lines, err := w.Write(ctx, corner, relevant, p.Show)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
@@ -215,7 +223,7 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 	return nil
 }
 
-func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, cfg *config.Config, prompts map[string]string, seCatalog model.SECatalog) error {
+func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, seCatalog model.SECatalog) error {
 	linesPath := filepath.Join(workDir, "lines.json")
 	data, err := os.ReadFile(linesPath)
 	if err != nil {
@@ -226,7 +234,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, cfg
 		return fmt.Errorf("parse lines.json: %w", err)
 	}
 
-	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg, "direct"))
+	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"))
 	scr, err := d.Direct(ctx, linesWrapper.Lines, seCatalog)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
@@ -261,8 +269,8 @@ func buildSECatalog(assets config.AssetsConfig) model.SECatalog {
 	return model.SECatalog{Names: names}
 }
 
-func stepTemp(cfg *config.Config, name string) float64 {
-	if s, ok := cfg.LLM.Steps[name]; ok && s.Temperature != nil {
+func stepTemp(llmCfg config.LLMConfig, name string) float64 {
+	if s, ok := llmCfg.Steps[name]; ok && s.Temperature != nil {
 		return *s.Temperature
 	}
 	return 0
@@ -278,18 +286,4 @@ func readArticles(path string) (model.Articles, error) {
 		return model.Articles{}, fmt.Errorf("parse %s: %w", path, err)
 	}
 	return articles, nil
-}
-
-func writeJSON(path string, v any) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create dir: %w", err)
-	}
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	return nil
 }
