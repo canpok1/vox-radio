@@ -12,7 +12,7 @@ import (
 
 func newPruneCmd() *cobra.Command {
 	var outDir string
-	var configDir string
+	var profilePath string
 	var baseURL string
 
 	cmd := &cobra.Command{
@@ -23,19 +23,19 @@ then update episodes.json and regenerate feed.xml.
 
 Example:
   vox-radio prune --out-dir public
-  vox-radio prune --out-dir public --config config`,
+  vox-radio prune --out-dir public --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load(configDir)
+			p, err := config.LoadProfile(profilePath)
 			if err != nil {
-				return fmt.Errorf("load config: %w", err)
+				return fmt.Errorf("load profile: %w", err)
 			}
 
-			keep := cfg.Podcast.MaxItems
+			keep := p.Podcast.MaxItems
 			if keep <= 0 {
 				keep = publish.DefaultKeep
 			}
 
-			h := local.New(outDir, resolveSiteURL(baseURL, cfg.Podcast.SiteURL))
+			h := local.New(outDir, resolveSiteURL(baseURL, p.Podcast.SiteURL))
 			pruner := publish.NewPruner(h, keep)
 
 			if err := pruner.Run(context.Background()); err != nil {
@@ -48,8 +48,8 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for local hosting (required)")
-	cmd.Flags().StringVar(&configDir, "config", "config", "config directory containing podcast.yaml")
-	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from podcast.yaml)")
+	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	_ = cmd.MarkFlagRequired("out-dir")
 
 	return cmd

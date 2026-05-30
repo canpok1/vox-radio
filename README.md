@@ -51,6 +51,42 @@ collect → script → synth → assemble → publish
 | `publish` | MP3 をホスティングディレクトリへコピーし、`episodes.json` と `feed.xml` を更新する |
 | `prune` | 直近 N 件を残して古いエピソードを削除し、`episodes.json` と `feed.xml` を更新する |
 
+### 設定ファイル
+
+設定は2種類に分かれています。
+
+| 種別 | ファイル | 内容 |
+|------|---------|------|
+| 共通設定 (config) | `vox-radio.yaml`（リポジトリ直下） | LLM のみ（ジャンル非依存） |
+| ジャンル別設定 (profile) | `profiles/<genre>/profile.yaml` | feeds / show / assets / podcast |
+
+プロファイルは `profiles/` ディレクトリに配置します。サンプルは `profiles/tech/`（技術ニュース用）と `profiles/test/`（動作確認用）です。詳細は [profiles/README.md](profiles/README.md) を参照してください。
+
+### 実行例
+
+```bash
+# 記事を収集（デフォルトは profiles/test/profile.yaml を使用）
+vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
+
+# 台本を生成
+vox-radio script --in work/articles.json --out work/script.json \
+    --config vox-radio.yaml --profile profiles/tech/profile.yaml
+
+# 音声合成（設定不要）
+vox-radio synth --in work/script.json --out-dir work/clips
+
+# 音声結合
+vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 \
+    --profile profiles/tech/profile.yaml
+
+# 公開
+vox-radio publish --in work/episode.mp3 --out-dir public \
+    --profile profiles/tech/profile.yaml
+
+# 古いエピソードを削除
+vox-radio prune --out-dir public --profile profiles/tech/profile.yaml
+```
+
 ### 詳細リファレンス
 
 各コマンドのフラグ一覧は自動生成ドキュメントを参照してください。

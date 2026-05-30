@@ -15,3 +15,4 @@
 | [0007](0007-ffmpeg-audio-assembly.md) | 音声整形に ffmpeg を採用する | 採用 | 2026-05-30 |
 | [0008](0008-collect-rss-html-parser-libraries.md) | collect パッケージの RSS/HTML パースライブラリ選定 | 採用 | 2026-05-30 |
 | [0009](0009-cli-framework-cobra.md) | CLIフレームワークにcobraを採用 | 採用 | 2026-05-30 |
+| [0010](0010-split-config-into-common-and-profile.md) | 設定を共通設定(Config)とジャンル別設定(Profile)に二分割する | 採用 | 2026-05-30 |

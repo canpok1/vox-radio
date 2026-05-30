@@ -16,6 +16,7 @@ Use --step to run a single stage independently:
 Example:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step plan
+  vox-radio script --in work/articles.json --out work/script.json --config vox-radio.yaml --profile profiles/tech/profile.yaml
 
 ```
 vox-radio script [flags]
@@ -24,10 +25,11 @@ vox-radio script [flags]
 ### Options
 
 ```
-      --config string    config directory containing llm.yaml, show.yaml, assets.yaml (default "config")
+      --config string    common config YAML file path (LLM settings) (default "vox-radio.yaml")
   -h, --help             help for script
       --in string        input articles.json path (required for full pipeline or summarize step)
       --out string       output script.json path (required)
+      --profile string   profile YAML file path (default "profiles/test/profile.yaml")
       --prompts string   directory containing prompt templates (default "prompts")
       --step string      run a single step: summarize|plan|write|direct
 ```
