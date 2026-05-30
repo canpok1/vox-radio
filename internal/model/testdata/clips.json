@@ -1,0 +1,18 @@
+{
+  "clips": [
+    {
+      "index": 0,
+      "file": "clip_000.wav",
+      "duration_sec": 2.5,
+      "speaker_role": "host",
+      "text": "今日のテックニュースを始めましょう。"
+    },
+    {
+      "index": 1,
+      "file": "clip_001.wav",
+      "duration_sec": 3.1,
+      "speaker_role": "guest",
+      "text": "新型AIチップについてお話しします。"
+    }
+  ]
+}

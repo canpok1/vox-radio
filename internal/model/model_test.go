@@ -152,6 +152,30 @@ func TestScript_Fields(t *testing.T) {
 	}
 }
 
+func TestClipsMeta_RoundTrip(t *testing.T) {
+	roundTrip[model.ClipsMeta](t, loadFixture(t, "clips.json"))
+}
+
+func TestClipsMeta_Fields(t *testing.T) {
+	v := unmarshalFixture[model.ClipsMeta](t, "clips.json")
+	if len(v.Clips) == 0 {
+		t.Error("expected at least one clip")
+	}
+	c := v.Clips[0]
+	if c.File == "" {
+		t.Error("File must not be empty")
+	}
+	if c.DurationSec <= 0 {
+		t.Error("DurationSec must be positive")
+	}
+	if c.SpeakerRole == "" {
+		t.Error("SpeakerRole must not be empty")
+	}
+	if c.Text == "" {
+		t.Error("Text must not be empty")
+	}
+}
+
 func TestEpisodes_RoundTrip(t *testing.T) {
 	roundTrip[model.Episodes](t, loadFixture(t, "episodes.json"))
 }
