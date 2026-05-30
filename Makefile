@@ -4,7 +4,7 @@ setup:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
 
 build:
-	go build -o $(BINARY_NAME) .
+	go build -o $(BINARY_NAME) ./cmd/vox-radio
 
 clean:
 	go clean
@@ -20,7 +20,7 @@ lint:
 	golangci-lint run ./...
 
 install:
-	go install .
+	go install ./cmd/vox-radio
 
 docs:
 	go run ./tools/gendocs
