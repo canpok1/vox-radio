@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
+	"github.com/canpok1/vox-radio/internal/collect"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/synth"
@@ -18,11 +19,15 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: vox-radio <command>")
-		fmt.Fprintln(os.Stderr, "Commands: synth, assemble")
+		fmt.Fprintln(os.Stderr, "Commands: collect, synth, assemble")
 		os.Exit(1)
 	}
 
 	switch os.Args[1] {
+	case "collect":
+		if err := runCollect(os.Args[2:]); err != nil {
+			log.Fatalf("collect: %v", err)
+		}
 	case "synth":
 		if err := runSynth(os.Args[2:]); err != nil {
 			log.Fatalf("synth: %v", err)
@@ -35,6 +40,50 @@ func main() {
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
 		os.Exit(1)
 	}
+}
+
+func runCollect(args []string) error {
+	fs := flag.NewFlagSet("collect", flag.ContinueOnError)
+	configDir := fs.String("config", "config", "config directory containing feeds.yaml (default: config)")
+	out := fs.String("out", "", "output articles.json path (required)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage: vox-radio collect --out <articles.json> [--config <config_dir>]")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *out == "" {
+		fs.Usage()
+		return fmt.Errorf("--out is required")
+	}
+
+	cfg, err := config.Load(*configDir)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	c := collect.New(nil)
+	articles, err := c.Run(context.Background(), cfg.Feeds)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	data, err := json.MarshalIndent(articles, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal articles: %w", err)
+	}
+	if err := os.WriteFile(*out, data, 0o644); err != nil {
+		return fmt.Errorf("write articles: %w", err)
+	}
+
+	fmt.Printf("collected %d articles to %s\n", len(articles.Articles), *out)
+	return nil
 }
 
 func runSynth(args []string) error {
