@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>テストフィード</title>
+    <link>https://example.com</link>
+    <description>テスト用RSSフィード</description>
+    <item>
+      <title>AIチップの最新動向</title>
+      <link>https://example.com/article/1</link>
+      <description>新型AIチップが発表された。従来比2倍の性能を実現する。</description>
+    </item>
+    <item>
+      <title>オープンソース活動の活発化</title>
+      <link>https://example.com/article/2</link>
+      <description>オープンソースプロジェクトへの参加者が増加している。</description>
+    </item>
+    <item>
+      <title>第三の記事</title>
+      <link>https://example.com/article/3</link>
+      <description>この記事はmax_itemsで除外される。</description>
+    </item>
+  </channel>
+</rss>
