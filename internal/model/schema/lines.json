@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lines",
+  "type": "object",
+  "required": ["lines"],
+  "properties": {
+    "lines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Line"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "Line": {
+      "type": "object",
+      "required": ["speaker_role", "text"],
+      "properties": {
+        "speaker_role": { "type": "string", "minLength": 1 },
+        "text":         { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

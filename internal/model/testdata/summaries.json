@@ -1,0 +1,21 @@
+{
+  "summaries": [
+    {
+      "url": "https://example.com/article/1",
+      "summary": "新型AIチップが従来比2倍の性能を実現",
+      "points": [
+        "従来比2倍の性能",
+        "電力効率も向上",
+        "2027年量産予定"
+      ]
+    },
+    {
+      "url": "https://example.com/article/2",
+      "summary": "オープンソース参加者が増加傾向",
+      "points": [
+        "参加者数が前年比30%増",
+        "企業からの貢献も増加"
+      ]
+    }
+  ]
+}

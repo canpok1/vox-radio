@@ -1,0 +1,27 @@
+{
+  "segments": [
+    {
+      "type": "speech",
+      "speaker_role": "host",
+      "text": "今日のテックニュースを始めましょう。"
+    },
+    {
+      "type": "se",
+      "se_name": "chime"
+    },
+    {
+      "type": "speech",
+      "speaker_role": "guest",
+      "text": "新型AIチップについてお話しします。"
+    },
+    {
+      "type": "se",
+      "se_name": "transition"
+    },
+    {
+      "type": "speech",
+      "speaker_role": "host",
+      "text": "本日のニュースは以上です。また明日！"
+    }
+  ]
+}

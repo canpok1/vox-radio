@@ -1,0 +1,28 @@
+{
+  "corners": [
+    {
+      "title": "AIチップ特集",
+      "topic": "新型AIチップの性能と普及",
+      "points": [
+        "従来比2倍の性能",
+        "電力効率向上"
+      ],
+      "target_chars": 600,
+      "summary_urls": [
+        "https://example.com/article/1"
+      ]
+    },
+    {
+      "title": "オープンソース動向",
+      "topic": "オープンソース活動の活発化",
+      "points": [
+        "参加者数増加",
+        "企業貢献増加"
+      ],
+      "target_chars": 500,
+      "summary_urls": [
+        "https://example.com/article/2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Summaries",
+  "type": "object",
+  "required": ["summaries"],
+  "properties": {
+    "summaries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Summary"
+      }
+    }
+  },
+  "$defs": {
+    "Summary": {
+      "type": "object",
+      "required": ["url", "summary", "points"],
+      "properties": {
+        "url":     { "type": "string", "format": "uri" },
+        "summary": { "type": "string", "minLength": 1 },
+        "points": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
