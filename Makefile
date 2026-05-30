@@ -22,6 +22,9 @@ lint:
 install:
 	go install .
 
+docs:
+	go run ./tools/gendocs
+
 all: build
 
-.PHONY: all setup build clean test fmt lint install
+.PHONY: all setup build clean test fmt lint install docs
