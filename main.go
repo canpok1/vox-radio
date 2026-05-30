@@ -245,12 +245,7 @@ func runPublish(args []string) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	siteURL := *baseURL
-	if siteURL == "" {
-		siteURL = cfg.Podcast.SiteURL
-	}
-
-	h := local.New(*outDir, siteURL)
+	h := local.New(*outDir, resolveSiteURL(*baseURL, cfg.Podcast.SiteURL))
 	publisher := publish.New(h, cfg.Podcast)
 
 	opts := publish.Options{
@@ -294,17 +289,12 @@ func runPrune(args []string) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	siteURL := *baseURL
-	if siteURL == "" {
-		siteURL = cfg.Podcast.SiteURL
-	}
-
 	keep := cfg.Podcast.MaxItems
 	if keep <= 0 {
-		keep = 7
+		keep = publish.DefaultKeep
 	}
 
-	h := local.New(*outDir, siteURL)
+	h := local.New(*outDir, resolveSiteURL(*baseURL, cfg.Podcast.SiteURL))
 	pruner := publish.NewPruner(h, keep)
 
 	if err := pruner.Run(context.Background()); err != nil {
@@ -313,4 +303,11 @@ func runPrune(args []string) error {
 
 	fmt.Printf("pruned to %d episodes in %s\n", keep, *outDir)
 	return nil
+}
+
+func resolveSiteURL(flag, configURL string) string {
+	if flag != "" {
+		return flag
+	}
+	return configURL
 }

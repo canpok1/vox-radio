@@ -9,6 +9,9 @@ import (
 	"github.com/canpok1/vox-radio/internal/publish/hosting"
 )
 
+// DefaultKeep is the number of episodes retained when no explicit limit is configured.
+const DefaultKeep = 7
+
 // Pruner trims episodes.json to at most Keep entries and deletes evicted audio files.
 type Pruner struct {
 	Hosting hosting.Hosting
