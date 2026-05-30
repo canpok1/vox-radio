@@ -1,0 +1,17 @@
+{
+	"name": "vox-radio",
+	"dockerComposeFile": "compose.yml",
+	"service": "dev",
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"runServices": ["voicevox"],
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/go:1": {}
+	},
+	"remoteUser": "vscode",
+	"mounts": [
+		"source=${devcontainerId}-claude-code-config,target=/home/vscode/.claude,type=volume"
+	],
+	"postCreateCommand": ".devcontainer/post-create.sh",
+	"waitFor": "postCreateCommand"
+}

@@ -30,3 +30,12 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Binary
+/vox-radio
+
+# GoReleaser
+/dist/
+
+# 一時ファイル
+.tmp/
