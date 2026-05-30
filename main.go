@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
+	"github.com/canpok1/vox-radio/internal/assemble"
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/synth"
 )
@@ -15,7 +18,7 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: vox-radio <command>")
-		fmt.Fprintln(os.Stderr, "Commands: synth")
+		fmt.Fprintln(os.Stderr, "Commands: synth, assemble")
 		os.Exit(1)
 	}
 
@@ -23,6 +26,10 @@ func main() {
 	case "synth":
 		if err := runSynth(os.Args[2:]); err != nil {
 			log.Fatalf("synth: %v", err)
+		}
+	case "assemble":
+		if err := runAssemble(os.Args[2:]); err != nil {
+			log.Fatalf("assemble: %v", err)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
@@ -77,5 +84,73 @@ func runSynth(args []string) error {
 	}
 
 	fmt.Printf("synthesized %d clips to %s\n", len(meta.Clips), *outDir)
+	return nil
+}
+
+func runAssemble(args []string) error {
+	fs := flag.NewFlagSet("assemble", flag.ContinueOnError)
+	in := fs.String("in", "", "input script.json path (required)")
+	clipsDir := fs.String("clips", "", "directory containing clips.json and WAV files (required)")
+	out := fs.String("out", "", "output mp3 path (required)")
+	configDir := fs.String("config", "", "config directory for assets (optional)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage: vox-radio assemble --in <script.json> --clips <dir> --out <mp3>")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *in == "" {
+		fs.Usage()
+		return fmt.Errorf("--in is required")
+	}
+	if *clipsDir == "" {
+		fs.Usage()
+		return fmt.Errorf("--clips is required")
+	}
+	if *out == "" {
+		fs.Usage()
+		return fmt.Errorf("--out is required")
+	}
+
+	scriptData, err := os.ReadFile(*in)
+	if err != nil {
+		return fmt.Errorf("read script: %w", err)
+	}
+	var script model.Script
+	if err := json.Unmarshal(scriptData, &script); err != nil {
+		return fmt.Errorf("parse script: %w", err)
+	}
+
+	clipsData, err := os.ReadFile(filepath.Join(*clipsDir, "clips.json"))
+	if err != nil {
+		return fmt.Errorf("read clips.json: %w", err)
+	}
+	var clips model.ClipsMeta
+	if err := json.Unmarshal(clipsData, &clips); err != nil {
+		return fmt.Errorf("parse clips.json: %w", err)
+	}
+
+	var assetsConfig config.AssetsConfig
+	var showConfig model.ShowConfig
+	if *configDir != "" {
+		cfg, err := config.Load(*configDir)
+		if err != nil {
+			return fmt.Errorf("load config: %w", err)
+		}
+		assetsConfig = cfg.Assets
+		showConfig = cfg.Show
+	} else {
+		showConfig = model.ShowConfig{SegmentPauseSec: 0.3}
+	}
+
+	a := assemble.New(assetsConfig, showConfig)
+	result, err := a.Run(context.Background(), script, clips, *clipsDir, *out)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("assembled episode: duration=%.1fs, bytes=%d\n", result.DurationSec, result.Bytes)
 	return nil
 }
