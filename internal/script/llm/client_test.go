@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
@@ -247,6 +248,78 @@ func TestComplete_ExhaustsRetries(t *testing.T) {
 	}
 	if int(callCount.Load()) != maxRetries+1 {
 		t.Errorf("expected %d API calls, got %d", maxRetries+1, callCount.Load())
+	}
+}
+
+func TestComplete_ThrottlesRequests(t *testing.T) {
+	var receivedAt []time.Time
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAt = append(receivedAt, time.Now())
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(makeAPIResponse(t, `{"value":"hello"}`))
+	}))
+	defer ts.Close()
+
+	const intervalMS = 50
+	c := llm.NewClient(llm.Config{
+		BaseURL:              ts.URL,
+		APIKey:               "test-key",
+		Model:                "test-model",
+		MinRequestIntervalMS: intervalMS,
+	})
+
+	req := llm.CompletionRequest{
+		Messages: []llm.Message{{Role: "user", Content: "hello"}},
+	}
+
+	_, err := c.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("first request failed: %v", err)
+	}
+	_, err = c.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("second request failed: %v", err)
+	}
+
+	if len(receivedAt) != 2 {
+		t.Fatalf("expected 2 requests, got %d", len(receivedAt))
+	}
+	gap := receivedAt[1].Sub(receivedAt[0])
+	minGap := time.Duration(intervalMS) * time.Millisecond
+	if gap < minGap {
+		t.Errorf("requests too close: gap=%v, want >= %v", gap, minGap)
+	}
+}
+
+func TestComplete_ThrottleContextCancellation(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(makeAPIResponse(t, `{"value":"hello"}`))
+	}))
+	defer ts.Close()
+
+	const intervalMS = 10000 // 10 seconds
+	c := llm.NewClient(llm.Config{
+		BaseURL:              ts.URL,
+		APIKey:               "test-key",
+		Model:                "test-model",
+		MinRequestIntervalMS: intervalMS,
+	})
+
+	req := llm.CompletionRequest{
+		Messages: []llm.Message{{Role: "user", Content: "hello"}},
+	}
+
+	if _, err := c.Complete(context.Background(), req); err != nil {
+		t.Fatalf("first request failed: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := c.Complete(ctx, req)
+	if err == nil {
+		t.Fatal("expected error from cancelled context, got nil")
 	}
 }
 
