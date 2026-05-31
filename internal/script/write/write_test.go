@@ -41,7 +41,7 @@ var linesJSON = json.RawMessage(`{
 
 func TestLLMWriter_Write_Success(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summary}} cast={{cast_info}}", 0)
+	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summary}} cast={{cast_info}}", 0, nil)
 
 	corner := config.CornerConfig{Title: "コーナー1", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "要約", Points: []string{"p1"}}}
@@ -63,7 +63,7 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 
 func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "c={{corner}} s={{summary}} cast={{cast_info}}", 0)
+	w := write.NewLLMWriter(mc, "c={{corner}} s={{summary}} cast={{cast_info}}", 0, nil)
 
 	corner := config.CornerConfig{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "AI要約", Points: []string{"p1"}}}
@@ -93,7 +93,7 @@ func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 
 func TestLLMWriter_Write_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0)
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
 	_, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
 	if err == nil {
@@ -103,7 +103,7 @@ func TestLLMWriter_Write_LLMError(t *testing.T) {
 
 func TestLLMWriter_Write_PromptContainsStyles(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "cast={{cast_info}}", 0)
+	w := write.NewLLMWriter(mc, "cast={{cast_info}}", 0, nil)
 
 	corner := config.CornerConfig{Cast: map[string]string{"zundamon": "司会"}}
 	chars := map[string]config.CharacterConfig{
@@ -136,7 +136,7 @@ func TestLLMWriter_Write_LineStyleParsed(t *testing.T) {
 		]
 	}`)
 	mc := &mockClient{response: linesWithStyleJSON}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0)
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
 	got, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
 	if err != nil {
@@ -160,7 +160,7 @@ func TestLLMWriter_Write_LinePresetFieldsParsed(t *testing.T) {
 		]
 	}`)
 	mc := &mockClient{response: linesWithPresetsJSON}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0)
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
 	got, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
 	if err != nil {
@@ -242,7 +242,7 @@ func TestLLMWriter_Write_PromptContainsPresetInfo(t *testing.T) {
 
 func TestLLMWriter_Write_NoConfigUsesDefaultPresetSchema(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0) // no config
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil) // no config
 
 	_, _ = w.Write(context.Background(), config.CornerConfig{}, nil, nil)
 
@@ -258,7 +258,7 @@ func TestLLMWriter_Write_NoConfigUsesDefaultPresetSchema(t *testing.T) {
 
 func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "c={{corner}}", 0)
+	w := write.NewLLMWriter(mc, "c={{corner}}", 0, nil)
 
 	// 14sec * 7chars/sec = 98 chars
 	corner := config.CornerConfig{Title: "Test", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}

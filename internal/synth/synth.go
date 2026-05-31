@@ -64,6 +64,11 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 
 	logger.Info(fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
 
+	var presets config.VoicevoxPresets
+	if s.Config != nil {
+		presets = s.Config.Voicevox.EffectivePresets()
+	}
+
 	clips := make([]model.ClipMeta, 0, len(speechSegs))
 
 	for i, seg := range speechSegs {
@@ -74,7 +79,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		clipFile := fmt.Sprintf("clip_%03d.wav", i)
 		clipPath := filepath.Join(outDir, clipFile)
 
-		if err := s.synthesize(ctx, seg, speakerID, clipPath); err != nil {
+		if err := s.synthesize(ctx, seg, speakerID, clipPath, presets); err != nil {
 			return nil, fmt.Errorf("synthesize clip %d: %w", i, err)
 		}
 
@@ -110,23 +115,20 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 	return meta, nil
 }
 
-func (s *Synth) synthesize(ctx context.Context, seg model.ScriptSegment, speakerID int, outPath string) error {
+func (s *Synth) synthesize(ctx context.Context, seg model.ScriptSegment, speakerID int, outPath string, presets config.VoicevoxPresets) error {
 	query, err := s.Client.AudioQuery(ctx, seg.Text, speakerID)
 	if err != nil {
 		return fmt.Errorf("audio query: %w", err)
 	}
 
-	if s.Config != nil {
-		presets := s.Config.Voicevox.EffectivePresets()
-		if v, ok := presets.ResolveIntonation(seg.Intonation); ok {
-			query.IntonationScale = v
-		}
-		if v, ok := presets.ResolvePitch(seg.Pitch); ok {
-			query.PitchScale = v
-		}
-		if v, ok := presets.ResolveSpeed(seg.Speed); ok {
-			query.SpeedScale = v
-		}
+	if v, ok := presets.ResolveIntonation(seg.Intonation); ok {
+		query.IntonationScale = v
+	}
+	if v, ok := presets.ResolvePitch(seg.Pitch); ok {
+		query.PitchScale = v
+	}
+	if v, ok := presets.ResolveSpeed(seg.Speed); ok {
+		query.SpeedScale = v
 	}
 
 	wavBytes, err := s.Client.Synthesis(ctx, query, speakerID)

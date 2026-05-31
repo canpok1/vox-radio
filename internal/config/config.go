@@ -113,31 +113,27 @@ type VoicevoxPresets struct {
 	Speed      map[string]float64 `yaml:"speed"`
 }
 
-// ResolveIntonation returns (value, true) if name is non-empty and found in Intonation.
-func (p VoicevoxPresets) ResolveIntonation(name string) (float64, bool) {
+func resolvePreset(m map[string]float64, name string) (float64, bool) {
 	if name == "" {
 		return 0, false
 	}
-	v, ok := p.Intonation[name]
+	v, ok := m[name]
 	return v, ok
+}
+
+// ResolveIntonation returns (value, true) if name is non-empty and found in Intonation.
+func (p VoicevoxPresets) ResolveIntonation(name string) (float64, bool) {
+	return resolvePreset(p.Intonation, name)
 }
 
 // ResolvePitch returns (value, true) if name is non-empty and found in Pitch.
 func (p VoicevoxPresets) ResolvePitch(name string) (float64, bool) {
-	if name == "" {
-		return 0, false
-	}
-	v, ok := p.Pitch[name]
-	return v, ok
+	return resolvePreset(p.Pitch, name)
 }
 
 // ResolveSpeed returns (value, true) if name is non-empty and found in Speed.
 func (p VoicevoxPresets) ResolveSpeed(name string) (float64, bool) {
-	if name == "" {
-		return 0, false
-	}
-	v, ok := p.Speed[name]
-	return v, ok
+	return resolvePreset(p.Speed, name)
 }
 
 var defaultIntonationPresets = map[string]float64{
@@ -273,19 +269,21 @@ func validateVoicevoxPresets(p *VoicevoxPresets) error {
 	if p == nil {
 		return nil
 	}
-	for name, v := range p.Intonation {
-		if v < 0.0 || v > 2.0 {
-			return fmt.Errorf("voicevox.presets.intonation[%q]: value %g is out of range [0.0, 2.0]", name, v)
-		}
+	axes := []struct {
+		name string
+		m    map[string]float64
+		lo   float64
+		hi   float64
+	}{
+		{"intonation", p.Intonation, 0.0, 2.0},
+		{"pitch", p.Pitch, -0.15, 0.15},
+		{"speed", p.Speed, 0.5, 2.0},
 	}
-	for name, v := range p.Pitch {
-		if v < -0.15 || v > 0.15 {
-			return fmt.Errorf("voicevox.presets.pitch[%q]: value %g is out of range [-0.15, 0.15]", name, v)
-		}
-	}
-	for name, v := range p.Speed {
-		if v < 0.5 || v > 2.0 {
-			return fmt.Errorf("voicevox.presets.speed[%q]: value %g is out of range [0.5, 2.0]", name, v)
+	for _, ax := range axes {
+		for name, v := range ax.m {
+			if v < ax.lo || v > ax.hi {
+				return fmt.Errorf("voicevox.presets.%s[%q]: value %g is out of range [%g, %g]", ax.name, name, v, ax.lo, ax.hi)
+			}
 		}
 	}
 	return nil

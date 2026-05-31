@@ -32,13 +32,8 @@ type LLMWriter struct {
 	config         *config.Config
 }
 
-// NewLLMWriter creates an LLMWriter. An optional *config.Config may be passed as the 4th argument
-// to enable dynamic schema generation and preset info in the prompt.
-func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64, cfgs ...*config.Config) *LLMWriter {
-	var cfg *config.Config
-	if len(cfgs) > 0 {
-		cfg = cfgs[0]
-	}
+// NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
+func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64, cfg *config.Config) *LLMWriter {
 	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature, config: cfg}
 }
 
