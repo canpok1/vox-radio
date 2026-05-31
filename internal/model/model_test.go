@@ -3,6 +3,7 @@ package model_test
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -242,28 +243,15 @@ func TestLine_PresetFields_OmitEmpty(t *testing.T) {
 		t.Fatalf("marshal failed: %v", err)
 	}
 	s := string(b)
-	if contains(s, "intonation") {
+	if strings.Contains(s, "intonation") {
 		t.Errorf("should omit intonation when empty, got: %s", s)
 	}
-	if contains(s, "pitch") {
+	if strings.Contains(s, "pitch") {
 		t.Errorf("should omit pitch when empty, got: %s", s)
 	}
-	if contains(s, "speed") {
+	if strings.Contains(s, "speed") {
 		t.Errorf("should omit speed when empty, got: %s", s)
 	}
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(s) > 0 && containsStr(s, sub))
-}
-
-func containsStr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
 
 func TestLine_PresetFields_Present(t *testing.T) {
@@ -279,13 +267,13 @@ func TestLine_PresetFields_Present(t *testing.T) {
 		t.Fatalf("marshal failed: %v", err)
 	}
 	s := string(b)
-	if !containsStr(s, "表現豊か") {
+	if !strings.Contains(s, "表現豊か") {
 		t.Errorf("should contain intonation value, got: %s", s)
 	}
-	if !containsStr(s, "高め") {
+	if !strings.Contains(s, "高め") {
 		t.Errorf("should contain pitch value, got: %s", s)
 	}
-	if !containsStr(s, "早口") {
+	if !strings.Contains(s, "早口") {
 		t.Errorf("should contain speed value, got: %s", s)
 	}
 
@@ -311,13 +299,13 @@ func TestScriptSegment_PresetFields_OmitEmpty(t *testing.T) {
 		t.Fatalf("marshal failed: %v", err)
 	}
 	s := string(b)
-	if containsStr(s, "intonation") {
+	if strings.Contains(s, "intonation") {
 		t.Errorf("should omit intonation when empty, got: %s", s)
 	}
-	if containsStr(s, "pitch") {
+	if strings.Contains(s, "pitch") {
 		t.Errorf("should omit pitch when empty, got: %s", s)
 	}
-	if containsStr(s, "speed") {
+	if strings.Contains(s, "speed") {
 		t.Errorf("should omit speed when empty, got: %s", s)
 	}
 }
