@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
 )
@@ -311,7 +312,7 @@ func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, name := range []string{"02_summaries.json", "03_lines.json"} {
+	for _, name := range []string{fileio.FileSummaries, fileio.FileLines} {
 		path := filepath.Join(workDir, name)
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("expected intermediate file %q to exist: %v", name, err)
