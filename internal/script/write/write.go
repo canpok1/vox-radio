@@ -52,7 +52,9 @@ func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summa
 		return nil, fmt.Errorf("marshal corner: %w", err)
 	}
 
-	summariesJSON, err := json.Marshal(model.Summaries{Summaries: summaries})
+	summariesJSON, err := json.Marshal(struct {
+		Summaries []model.Summary `json:"summaries"`
+	}{Summaries: summaries})
 	if err != nil {
 		return nil, fmt.Errorf("marshal summaries: %w", err)
 	}

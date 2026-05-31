@@ -35,7 +35,7 @@ vox-radio.yaml is automatically loaded from the current directory.
 Corner definitions come from the profile (no plan step).
 
 Use --step to run a single stage independently:
-  summarize  Summarize each article (writes summaries.json)
+  summarize  Summarize each article per corner (writes summaries.json)
   write      Write lines per corner (writes lines.json)
   direct     Assign SE/speakers to lines (writes script.json)
 
@@ -112,7 +112,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, l
 		workDir,
 	)
 
-	scr, err := gen.Generate(ctx, articles.Articles, p.Corners, chars)
+	scr, err := gen.Generate(ctx, articles, p.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -130,20 +130,29 @@ func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, l
 	}
 
 	s := summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize"))
-	summaries := make([]model.Summary, 0, len(articles.Articles))
-	for _, a := range articles.Articles {
-		sum, err := s.Summarize(ctx, a)
-		if err != nil {
-			return fmt.Errorf("summarize %q: %w", a.URL, err)
+	cornerSummaries := make([]model.CornerSummaries, 0, len(articles.Corners))
+	totalCount := 0
+	for _, ca := range articles.Corners {
+		sums := make([]model.Summary, 0, len(ca.Articles))
+		for _, a := range ca.Articles {
+			sum, err := s.Summarize(ctx, a)
+			if err != nil {
+				return fmt.Errorf("summarize %q: %w", a.URL, err)
+			}
+			sums = append(sums, sum)
 		}
-		summaries = append(summaries, sum)
+		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
+			CornerTitle: ca.CornerTitle,
+			Summaries:   sums,
+		})
+		totalCount += len(sums)
 	}
 
 	outPath := filepath.Join(workDir, "summaries.json")
-	if err := writeJSON(outPath, model.Summaries{Summaries: summaries}); err != nil {
+	if err := writeJSON(outPath, model.Summaries{Corners: cornerSummaries}); err != nil {
 		return err
 	}
-	fmt.Printf("summarized %d articles to %s\n", len(summaries), outPath)
+	fmt.Printf("summarized %d articles to %s\n", totalCount, outPath)
 	return nil
 }
 
@@ -158,10 +167,12 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg co
 		return fmt.Errorf("parse summaries.json: %w", err)
 	}
 
+	cornerSumsMap := sums.CornerMap()
+
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write"))
 	allLines := make([]model.Line, 0)
 	for _, corner := range p.Corners {
-		lines, err := w.Write(ctx, corner, sums.Summaries, chars)
+		lines, err := w.Write(ctx, corner, cornerSumsMap[corner.Title], chars)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}

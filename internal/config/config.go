@@ -69,6 +69,12 @@ type ProgramConfig struct {
 	SegmentPauseSec float64 `yaml:"segment_pause_sec"`
 }
 
+// SourceConfig defines the data sources for a corner (feeds and individual article URLs).
+type SourceConfig struct {
+	Feeds    []FeedEntry `yaml:"feeds"`
+	Articles []string    `yaml:"articles"`
+}
+
 // CornerConfig defines a fixed corner in the program structure.
 // target_chars is provisional; will be replaced by target_duration_sec in #4.
 type CornerConfig struct {
@@ -76,6 +82,7 @@ type CornerConfig struct {
 	Content     string            `yaml:"content"`
 	Cast        map[string]string `yaml:"cast"`
 	TargetChars int               `yaml:"target_chars"`
+	Source      *SourceConfig     `yaml:"source,omitempty"`
 }
 
 type VoicevoxConfig struct {
@@ -108,14 +115,13 @@ type Config struct {
 	Characters map[string]CharacterConfig `yaml:"characters"`
 }
 
-// Profile holds genre-specific settings (feeds, program, corners, assets).
+// Profile holds genre-specific settings (program, corners, assets).
 // It is loaded from profiles/<genre>/profile.yaml.
+// Data sources (feeds, articles) are defined per-corner in corners[].source.
 type Profile struct {
-	Program  ProgramConfig  `yaml:"program"`
-	Corners  []CornerConfig `yaml:"corners"`
-	Feeds    []FeedEntry    `yaml:"feeds"`
-	Articles []string       `yaml:"articles"`
-	Assets   AssetsConfig   `yaml:"assets"`
+	Program ProgramConfig  `yaml:"program"`
+	Corners []CornerConfig `yaml:"corners"`
+	Assets  AssetsConfig   `yaml:"assets"`
 }
 
 // LoadConfig loads common settings from the given YAML file path.

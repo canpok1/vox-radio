@@ -11,7 +11,7 @@ vox-radio.yaml is automatically loaded from the current directory.
 Corner definitions come from the profile (no plan step).
 
 Use --step to run a single stage independently:
-  summarize  Summarize each article (writes summaries.json)
+  summarize  Summarize each article per corner (writes summaries.json)
   write      Write lines per corner (writes lines.json)
   direct     Assign SE/speakers to lines (writes script.json)
 

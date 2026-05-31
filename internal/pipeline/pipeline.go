@@ -11,14 +11,14 @@ import (
 	"github.com/canpok1/vox-radio/internal/publish"
 )
 
-// Collector gathers articles from configured feeds.
+// Collector gathers articles per corner from configured sources.
 type Collector interface {
-	Run(ctx context.Context, cfg config.FeedsConfig) (model.Articles, error)
+	RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error)
 }
 
-// Scripter generates a radio script from articles.
+// Scripter generates a radio script from corner-attributed articles.
 type Scripter interface {
-	Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -67,10 +67,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("create output dirs: %w", err)
 	}
 
-	articles, err := r.Collector.Run(ctx, config.FeedsConfig{
-		Feeds:    r.Profile.Feeds,
-		Articles: r.Profile.Articles,
-	})
+	articles, err := r.Collector.RunAll(ctx, r.Profile.Corners)
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
 	}
@@ -83,7 +80,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		chars = r.Config.Characters
 	}
 
-	scr, err := r.Scripter.Generate(ctx, articles.Articles, r.Profile.Corners, chars)
+	scr, err := r.Scripter.Generate(ctx, articles, r.Profile.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}

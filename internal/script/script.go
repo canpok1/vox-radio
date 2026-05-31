@@ -18,7 +18,7 @@ import (
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 type LLMScriptGenerator struct {
@@ -45,20 +45,31 @@ func NewLLMScriptGenerator(
 	}
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
-	summaries, err := g.summarizeAll(ctx, articles)
-	if err != nil {
-		return model.Script{}, err
+func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
+	cornerArticlesMap := articles.CornerMap()
+
+	cornerSummaries := make([]model.CornerSummaries, 0, len(corners))
+	for _, corner := range corners {
+		arts := cornerArticlesMap[corner.Title]
+		sums, err := g.summarizeAll(ctx, arts)
+		if err != nil {
+			return model.Script{}, err
+		}
+		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
+			CornerTitle: corner.Title,
+			Summaries:   sums,
+		})
 	}
-	if err := g.saveIntermediate("summaries.json", model.Summaries{Summaries: summaries}); err != nil {
+	allSummaries := model.Summaries{Corners: cornerSummaries}
+	if err := g.saveIntermediate("summaries.json", allSummaries); err != nil {
 		return model.Script{}, err
 	}
 
-	cornerLines, err := g.writeAll(ctx, corners, summaries, chars)
+	cornerLines, err := g.writeAll(ctx, corners, allSummaries, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, summaries, chars)
+	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, allSummaries, chars)
 	allLines := flatten(cornerLines)
 	if err := g.saveIntermediate("lines.json", model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
@@ -84,10 +95,11 @@ func (g *LLMScriptGenerator) summarizeAll(ctx context.Context, articles []model.
 	return summaries, nil
 }
 
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
+func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
+	cornerSumsMap := sums.CornerMap()
 	result := make([][]model.Line, len(corners))
 	for i, corner := range corners {
-		lines, err := g.writer.Write(ctx, corner, summaries, chars)
+		lines, err := g.writer.Write(ctx, corner, cornerSumsMap[corner.Title], chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
@@ -96,7 +108,7 @@ func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.Corn
 	return result, nil
 }
 
-func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, corners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) [][]model.Line {
+func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) [][]model.Line {
 	if len(corners) == 0 {
 		return cornerLines
 	}
@@ -117,6 +129,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 		return cornerLines
 	}
 
+	cornerSumsMap := sums.CornerMap()
 	worstIdx := 0
 	worstDev := 0.0
 	for i, corner := range corners {
@@ -135,7 +148,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 	}
 
 	corner := corners[worstIdx]
-	if newLines, err := g.writer.Write(ctx, corner, summaries, chars); err == nil {
+	if newLines, err := g.writer.Write(ctx, corner, cornerSumsMap[corner.Title], chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines

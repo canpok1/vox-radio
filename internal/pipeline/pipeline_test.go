@@ -22,21 +22,21 @@ type stubCollector struct {
 	called   bool
 }
 
-func (s *stubCollector) Run(_ context.Context, _ config.FeedsConfig) (model.Articles, error) {
+func (s *stubCollector) RunAll(_ context.Context, _ []config.CornerConfig) (model.Articles, error) {
 	s.called = true
 	return s.articles, s.err
 }
 
 type stubScripter struct {
-	script   model.Script
-	err      error
-	called   bool
-	gotSlice []model.Article
+	script      model.Script
+	err         error
+	called      bool
+	gotArticles model.Articles
 }
 
-func (s *stubScripter) Generate(_ context.Context, articles []model.Article, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
+func (s *stubScripter) Generate(_ context.Context, articles model.Articles, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
 	s.called = true
-	s.gotSlice = articles
+	s.gotArticles = articles
 	return s.script, s.err
 }
 
@@ -103,7 +103,7 @@ type stubs struct {
 
 func defaultStubs() stubs {
 	return stubs{
-		col: &stubCollector{articles: model.Articles{Articles: make([]model.Article, 0)}},
+		col: &stubCollector{articles: model.Articles{Corners: make([]model.CornerArticles, 0)}},
 		scr: &stubScripter{script: model.Script{Segments: make([]model.ScriptSegment, 0)}},
 		syn: &stubSynther{clips: &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}},
 		asm: &stubAssembler{result: &assemble.Result{}},
@@ -135,7 +135,7 @@ func TestRunner_Run_CallsAllSteps(t *testing.T) {
 	}
 
 	if !s.col.called {
-		t.Error("Collector.Run not called")
+		t.Error("Collector.RunAll not called")
 	}
 	if !s.scr.called {
 		t.Error("Scripter.Generate not called")
@@ -194,14 +194,22 @@ func TestRunner_Run_PassesArticlesToScripter(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	article := model.Article{URL: "http://example.com", Title: "Test", Body: "body"}
-	s.col.articles = model.Articles{Articles: []model.Article{article}}
+	s.col.articles = model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "テストコーナー", Articles: []model.Article{article}},
+		},
+	}
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(s.scr.gotSlice) != 1 || s.scr.gotSlice[0].URL != article.URL {
-		t.Errorf("Scripter.Generate received %v, want [%v]", s.scr.gotSlice, article)
+	if len(s.scr.gotArticles.Corners) != 1 {
+		t.Fatalf("Scripter.Generate received %d corners, want 1", len(s.scr.gotArticles.Corners))
+	}
+	got := s.scr.gotArticles.Corners[0]
+	if len(got.Articles) != 1 || got.Articles[0].URL != article.URL {
+		t.Errorf("Scripter.Generate corner articles = %v, want [%v]", got.Articles, article)
 	}
 }
 

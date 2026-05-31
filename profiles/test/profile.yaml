@@ -16,12 +16,10 @@ corners:
     cast:
       zundamon: "進行役"
     target_chars: 300
-
-feeds:
-  - url: https://example.com/rss.xml
-    max_items: 1
-
-articles: []
+    source:
+      feeds:
+        - url: https://example.com/rss.xml
+          max_items: 1
 
 assets:
   jingle:

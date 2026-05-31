@@ -21,12 +21,13 @@ corners:
     cast:
       zundamon: "司会"
     target_chars: 200
+    source:
+      feeds:
+        - url: https://example.com/rss.xml
+          max_items: 3
+      articles:
+        - https://example.com/articles/1
 
-feeds:
-  - url: https://example.com/rss.xml
-    max_items: 3
-articles:
-  - https://example.com/articles/1
 assets:
   jingle:
     opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
