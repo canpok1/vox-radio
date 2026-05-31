@@ -25,13 +25,13 @@ vox-radio manifest [flags]
 ### Options
 
 ```
-      --articles string   articles.json のパス（任意）省略するとコーナーの記事は空になる
+      --articles string   articles.json のパス（任意）。省略するとコーナーの記事は空になる
       --audio string      音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）
   -h, --help              help for manifest
       --out string        manifest.json の出力先パス（必須）
       --profile string    プロファイル YAML ファイルのパス（必須）
       --prompts string    プロンプトテンプレートを含むディレクトリ（--script 指定時に使用） (default "prompts")
-      --script string     script.json のパス（任意）指定すると LLM が台本から要約を生成する
+      --script string     script.json のパス（任意）。指定すると LLM が台本から要約を生成する
 ```
 
 ### SEE ALSO

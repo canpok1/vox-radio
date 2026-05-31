@@ -99,10 +99,10 @@ LLM が生成した要約をマニフェストに追加します。
 	}
 
 	registerProfileFlag(cmd, &profilePath)
-	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json のパス（任意）省略するとコーナーの記事は空になる")
+	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json のパス（任意）。省略するとコーナーの記事は空になる")
 	cmd.Flags().StringVar(&audioPath, "audio", "", "音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）")
 	cmd.Flags().StringVar(&out, "out", "", "manifest.json の出力先パス（必須）")
-	cmd.Flags().StringVar(&scriptPath, "script", "", "script.json のパス（任意）指定すると LLM が台本から要約を生成する")
+	cmd.Flags().StringVar(&scriptPath, "script", "", "script.json のパス（任意）。指定すると LLM が台本から要約を生成する")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ（--script 指定時に使用）")
 	_ = cmd.MarkFlagRequired("audio")
 	_ = cmd.MarkFlagRequired("out")
