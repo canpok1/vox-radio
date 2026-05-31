@@ -12,6 +12,11 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+// ProgramSummarizer generates a summary of the episode from the final script.
+type ProgramSummarizer interface {
+	Summarize(ctx context.Context, scr model.Script) (string, error)
+}
+
 // Collector gathers articles per corner from configured sources.
 type Collector interface {
 	RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error)
@@ -40,12 +45,13 @@ type Options struct {
 
 // Runner orchestrates the full collect→script→synth→assemble→manifest pipeline.
 type Runner struct {
-	Profile   *config.Profile
-	Config    *config.Config
-	Collector Collector
-	Scripter  Scripter
-	Synther   Synther
-	Assembler Assembler
+	Profile           *config.Profile
+	Config            *config.Config
+	Collector         Collector
+	Scripter          Scripter
+	Synther           Synther
+	Assembler         Assembler
+	ProgramSummarizer ProgramSummarizer // optional; if nil, summary is omitted from manifest
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
@@ -93,7 +99,16 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
 	}
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt)
+
+	var programSummary string
+	if r.ProgramSummarizer != nil {
+		programSummary, err = r.ProgramSummarizer.Summarize(ctx, scr)
+		if err != nil {
+			return fmt.Errorf("summarize program: %w", err)
+		}
+	}
+
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt, programSummary)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

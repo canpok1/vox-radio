@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
@@ -67,6 +68,17 @@ func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta
 	return s.result, s.err
 }
 
+type stubProgramSummarizer struct {
+	summary string
+	err     error
+	called  bool
+}
+
+func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (string, error) {
+	s.called = true
+	return s.summary, s.err
+}
+
 // --- helpers ---
 
 type stubs struct {
@@ -74,6 +86,7 @@ type stubs struct {
 	scr *stubScripter
 	syn *stubSynther
 	asm *stubAssembler
+	sum *stubProgramSummarizer
 }
 
 func defaultStubs() stubs {
@@ -86,13 +99,17 @@ func defaultStubs() stubs {
 }
 
 func newRunner(s stubs) *pipeline.Runner {
-	return &pipeline.Runner{
+	r := &pipeline.Runner{
 		Profile:   &config.Profile{},
 		Collector: s.col,
 		Scripter:  s.scr,
 		Synther:   s.syn,
 		Assembler: s.asm,
 	}
+	if s.sum != nil {
+		r.ProgramSummarizer = s.sum
+	}
+	return r
 }
 
 // --- tests ---
@@ -222,5 +239,64 @@ func TestRunner_Run_AssembleError(t *testing.T) {
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from Assembler, got nil")
+	}
+}
+
+func TestRunner_Run_CallsProgramSummarizer(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.sum = &stubProgramSummarizer{summary: "今回は技術ニュースを紹介しました。"}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !s.sum.called {
+		t.Error("ProgramSummarizer.Summarize not called")
+	}
+}
+
+func TestRunner_Run_ManifestIncludesSummary(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	wantSummary := "今回は技術ニュースを紹介しました。"
+	s.sum = &stubProgramSummarizer{summary: wantSummary}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	manifestPath := fileio.ManifestPath(outDir)
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if !strings.Contains(string(data), wantSummary) {
+		t.Errorf("manifest should contain summary %q, got: %s", wantSummary, data)
+	}
+}
+
+func TestRunner_Run_SkipsSummaryWhenSummarizerIsNil(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	// s.sum is nil — no summarizer set
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	manifestPath := fileio.ManifestPath(outDir)
+	if _, err := os.Stat(manifestPath); err != nil {
+		t.Fatalf("manifest should exist: %v", err)
+	}
+}
+
+func TestRunner_Run_ProgramSummarizerError(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.sum = &stubProgramSummarizer{err: errors.New("llm error")}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
+		t.Fatal("expected error from ProgramSummarizer, got nil")
 	}
 }
