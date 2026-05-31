@@ -27,6 +27,19 @@ var insertionsSchema = json.RawMessage(`{
         },
         "additionalProperties": false
       }
+    },
+    "pause_insertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["after_line_index", "duration_sec"],
+        "properties": {
+          "after_line_index": {"type": "integer", "minimum": 0},
+          "duration_sec":     {"type": "number", "exclusiveMinimum": 0, "maximum": 5.0},
+          "reason":           {"type": "string"}
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false
@@ -43,8 +56,15 @@ type insertion struct {
 	Reason         string            `json:"reason,omitempty"`
 }
 
+type pauseInsertion struct {
+	AfterLineIndex int     `json:"after_line_index"`
+	DurationSec    float64 `json:"duration_sec"`
+	Reason         string  `json:"reason,omitempty"`
+}
+
 type insertionsResponse struct {
-	Insertions []insertion `json:"insertions"`
+	Insertions      []insertion      `json:"insertions"`
+	PauseInsertions []pauseInsertion `json:"pause_insertions"`
 }
 
 type LLMDirector struct {
@@ -87,16 +107,23 @@ func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog mo
 		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
-	return buildScript(lines, resp.Insertions), nil
+	return buildScript(lines, resp.Insertions, resp.PauseInsertions), nil
 }
 
-func buildScript(lines []model.Line, insertions []insertion) model.Script {
+func buildScript(lines []model.Line, insertions []insertion, pauseInsertions []pauseInsertion) model.Script {
 	insertionMap := make(map[int][]insertion, len(insertions))
 	for _, ins := range insertions {
 		insertionMap[ins.AfterLineIndex] = append(insertionMap[ins.AfterLineIndex], ins)
 	}
 
-	segments := make([]model.ScriptSegment, 0, len(lines)+len(insertions))
+	pauseMap := make(map[int][]pauseInsertion, len(pauseInsertions))
+	for _, p := range pauseInsertions {
+		if p.DurationSec > 0 {
+			pauseMap[p.AfterLineIndex] = append(pauseMap[p.AfterLineIndex], p)
+		}
+	}
+
+	segments := make([]model.ScriptSegment, 0, len(lines)+len(insertions)+len(pauseInsertions))
 	for i, line := range lines {
 		segments = append(segments, model.ScriptSegment{
 			Type:        model.SegmentTypeSpeech,
@@ -111,6 +138,12 @@ func buildScript(lines []model.Line, insertions []insertion) model.Script {
 			segments = append(segments, model.ScriptSegment{
 				Type:      ins.Type,
 				AssetName: ins.AssetName,
+			})
+		}
+		for _, p := range pauseMap[i] {
+			segments = append(segments, model.ScriptSegment{
+				Type:        model.SegmentTypePause,
+				DurationSec: p.DurationSec,
 			})
 		}
 	}

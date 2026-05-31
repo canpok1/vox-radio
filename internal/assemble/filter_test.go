@@ -766,3 +766,172 @@ func TestBuildFFmpegArgs_LoudnormAfterJingleConcat(t *testing.T) {
 		t.Errorf("loudnorm (index %d) must appear AFTER concat (index %d)", loudnormIdx, concatIdx)
 	}
 }
+
+// TestBuildFFmpegArgs_PauseSegment_AddsExtraSilence verifies that a pause segment
+// injects extra silence into the speech timeline beyond the default segment_pause_sec gap.
+func TestBuildFFmpegArgs_PauseSegment_AddsExtraSilence(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypePause, DurationSec: 1.2},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should have two anullsrc entries: one for pauseSec(0.5s) and one for the explicit pause(1.2s)
+	silenceCount := strings.Count(args.FilterComplex, "anullsrc")
+	if silenceCount < 2 {
+		t.Errorf("expected at least 2 anullsrc entries (pauseSec + explicit pause), got %d: %s", silenceCount, args.FilterComplex)
+	}
+	// Explicit pause duration must appear in filter
+	if !strings.Contains(args.FilterComplex, "atrim=duration=1.200") {
+		t.Errorf("filter_complex missing explicit pause duration 1.200: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SEAfterPause_HasShiftedOffset verifies that the SE placed
+// after a pause segment has its adelay shifted by the pause duration_sec.
+func TestBuildFFmpegArgs_SEAfterPause_HasShiftedOffset(t *testing.T) {
+	// speech(2s) + pauseSec(0.5s) = 2500ms before pause segment
+	// pause(1.2s) → durationMs becomes 3700ms
+	// SE at that point should have adelay=3700
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypePause, DurationSec: 1.2},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 1.0},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// SE offset should be 3700ms (2000 + 500 + 1200)
+	if !strings.Contains(args.FilterComplex, "adelay=3700|3700") {
+		t.Errorf("SE adelay should be 3700 (shifted by pause), filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_PauseSegment_ZeroDurationIgnored verifies that a pause segment
+// with duration_sec <= 0 does not add silence to the speech timeline.
+func TestBuildFFmpegArgs_PauseSegment_ZeroDurationIgnored(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypePause, DurationSec: 0},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Only one anullsrc (the default pauseSec between the two clips), no extra silence
+	silenceCount := strings.Count(args.FilterComplex, "anullsrc")
+	if silenceCount != 1 {
+		t.Errorf("zero-duration pause should not add extra silence, got %d anullsrc: %s", silenceCount, args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_PauseSegment_BGMContinues verifies that BGM continues through
+// a pause segment without interruption (the BGM interval covers the pause duration).
+func TestBuildFFmpegArgs_PauseSegment_BGMContinues(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypePause, DurationSec: 1.2},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// BGM should be present and loop (continues through pause)
+	foundBGM := false
+	for _, inp := range args.Inputs {
+		if inp == "/assets/bgm.mp3" {
+			foundBGM = true
+		}
+	}
+	if !foundBGM {
+		t.Errorf("BGM input not found in inputs: %v", args.Inputs)
+	}
+	if !strings.Contains(args.FilterComplex, "aloop") {
+		t.Errorf("BGM should loop (aloop), filter: %s", args.FilterComplex)
+	}
+	// BGM duration: 2s(clip0) + 0.5s(pauseSec) + 1.2s(pause) + 3s(clip1) + 0.5s(pauseSec) = 7.2s
+	// atrim=duration=7.200 confirms BGM covers the explicit pause duration.
+	if !strings.Contains(args.FilterComplex, "atrim=duration=7.200") {
+		t.Errorf("BGM atrim duration should be 7.200 (covers pause), filter: %s", args.FilterComplex)
+	}
+}

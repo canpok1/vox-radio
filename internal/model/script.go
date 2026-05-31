@@ -7,6 +7,7 @@ const (
 	SegmentTypeSE     SegmentType = "se"
 	SegmentTypeBGM    SegmentType = "bgm"
 	SegmentTypeJingle SegmentType = "jingle"
+	SegmentTypePause  SegmentType = "pause"
 )
 
 type ScriptSegment struct {
@@ -17,7 +18,8 @@ type ScriptSegment struct {
 	Pitch       string      `json:"pitch,omitempty"`
 	Speed       string      `json:"speed,omitempty"`
 	Text        string      `json:"text,omitempty"`
-	AssetName   string      `json:"asset_name,omitempty"` // se/bgm/jingle のアセットキー。bgm かつ空 = 停止
+	AssetName   string      `json:"asset_name,omitempty"`   // se/bgm/jingle のアセットキー。bgm かつ空 = 停止
+	DurationSec float64     `json:"duration_sec,omitempty"` // pause セグメントの無音秒数
 }
 
 type Script struct {

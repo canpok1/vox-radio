@@ -354,3 +354,105 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 		t.Errorf("Segment[1].Speed: got %q, want empty", seg1.Speed)
 	}
 }
+
+func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":1.2,"reason":"オチの前の溜め"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "オチの前"},
+		{SpeakerRole: "guest", Text: "オチ"},
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech(host), pause(1.2s), speech(guest)]
+	if len(got.Segments) != 3 {
+		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[0].Type: got %q, want speech", got.Segments[0].Type)
+	}
+	if got.Segments[1].Type != model.SegmentTypePause {
+		t.Errorf("Segment[1].Type: got %q, want pause", got.Segments[1].Type)
+	}
+	if got.Segments[1].DurationSec != 1.2 {
+		t.Errorf("Segment[1].DurationSec: got %v, want 1.2", got.Segments[1].DurationSec)
+	}
+	if got.Segments[2].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[2].Type: got %q, want speech", got.Segments[2].Type)
+	}
+}
+
+func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"se","asset_name":"chime"}],"pause_insertions":[{"after_line_index":0,"duration_sec":1.0}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "A"},
+		{SpeakerRole: "guest", Text: "B"},
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech, se, pause, speech] — SE before pause at same index
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeSE {
+		t.Errorf("Segment[1].Type: got %q, want se (SE should come before pause)", got.Segments[1].Type)
+	}
+	if got.Segments[2].Type != model.SegmentTypePause {
+		t.Errorf("Segment[2].Type: got %q, want pause", got.Segments[2].Type)
+	}
+}
+
+func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":0}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "A"},
+		{SpeakerRole: "guest", Text: "B"},
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// duration_sec=0 is ignored → only 2 speech segments
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2 (zero-duration pause should be ignored)", len(got.Segments))
+	}
+}
+
+func TestLLMDirector_Direct_PauseNegativeDurationIgnored(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":-1.0}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "A"},
+		{SpeakerRole: "guest", Text: "B"},
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// negative duration_sec is ignored → only 2 speech segments
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2 (negative-duration pause should be ignored)", len(got.Segments))
+	}
+}
