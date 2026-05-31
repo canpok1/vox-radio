@@ -280,12 +280,13 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 	}
 }
 
-// newJingleTestGen creates a generator with a single-speech-segment director for jingle injection tests.
+// newJingleTestGen creates a generator with a fixed-script director for jingle injection tests.
+// The mockDirector returns its fixed script, so mockWriter content is irrelevant.
 func newJingleTestGen() *script.LLMScriptGenerator {
 	speechSeg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"}
 	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{speechSeg}}}
 	return script.NewLLMScriptGenerator(
-		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
+		&mockWriter{},
 		md,
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
