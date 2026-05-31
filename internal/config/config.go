@@ -64,17 +64,10 @@ type LLMConfig struct {
 	Steps       map[string]LLMStepConfig `yaml:"steps"`
 }
 
-// ProgramConfig holds program-wide settings (formerly PodcastConfig + SegmentPauseSec from ShowConfig).
+// ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
 	Title             string  `yaml:"title"`
 	Description       string  `yaml:"description"`
-	Language          string  `yaml:"language"`
-	Author            string  `yaml:"author"`
-	Category          string  `yaml:"category"`
-	Explicit          bool    `yaml:"explicit"`
-	CoverImageURL     string  `yaml:"cover_image_url"`
-	SiteURL           string  `yaml:"site_url"`
-	MaxItems          int     `yaml:"max_items"`
 	SegmentPauseSec   float64 `yaml:"segment_pause_sec"`
 	TargetDurationSec int     `yaml:"target_duration_sec"`
 }

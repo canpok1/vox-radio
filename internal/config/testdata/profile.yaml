@@ -1,13 +1,6 @@
 program:
   title: "テストニュース"
   description: "テスト用"
-  language: ja
-  author: test
-  category: News
-  explicit: false
-  cover_image_url: https://example.com/cover.jpg
-  site_url: https://example.com/
-  max_items: 5
   segment_pause_sec: 0.3
   target_duration_sec: 75
 
