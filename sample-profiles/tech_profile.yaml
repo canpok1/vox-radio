@@ -1,13 +1,6 @@
 program:
   title: "今日のテックニュース"
   description: "毎日5分のニュースラジオ"
-  language: ja
-  author: vox-radio
-  category: News
-  explicit: false
-  cover_image_url: https://example.github.io/vox-radio/cover.jpg
-  site_url: https://example.github.io/vox-radio/
-  max_items: 7
   segment_pause_sec: 0.3
   target_duration_sec: 240
 

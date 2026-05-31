@@ -35,13 +35,6 @@ vox-radio collect --out work/articles.json --profile sample-profiles/tech_profil
 program:
   title: "番組タイトル"
   description: "番組の説明"
-  language: ja
-  author: vox-radio
-  category: News
-  explicit: false
-  cover_image_url: https://example.com/cover.jpg
-  site_url: https://example.com/
-  max_items: 7             # フィードに載せる最大件数
   segment_pause_sec: 0.3   # セリフ間の無音（秒）
   target_duration_sec: 240 # 番組全体の目標再生時間（秒）
 
@@ -78,7 +71,7 @@ assets:
 
 ### フィールド説明
 
-- `program`: 番組全体の設定（旧 `podcast` + `show.segment_pause_sec`）
+- `program`: 番組コンテンツ生成に必要な設定（title/description/segment_pause_sec/target_duration_sec のみ。配信専用フィールドは配信リポジトリ側で管理）
   - `target_duration_sec`: 番組全体の目標再生時間（秒）
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）

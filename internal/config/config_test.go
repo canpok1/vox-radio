@@ -67,12 +67,6 @@ func TestLoadProfile(t *testing.T) {
 		if profile.Program.Title == "" {
 			t.Error("Program.Title must not be empty")
 		}
-		if profile.Program.Language == "" {
-			t.Error("Program.Language must not be empty")
-		}
-		if profile.Program.MaxItems <= 0 {
-			t.Error("Program.MaxItems must be positive")
-		}
 		if profile.Program.SegmentPauseSec <= 0 {
 			t.Error("Program.SegmentPauseSec must be positive")
 		}
