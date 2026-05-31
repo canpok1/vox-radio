@@ -23,7 +23,7 @@ Corners without a source field are skipped.
 
 Example:
   vox-radio collect --out work/articles.json
-  vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml`,
+  vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p, err := config.LoadProfile(profilePath)
 			if err != nil {
@@ -49,7 +49,7 @@ Example:
 		},
 	}
 
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&out, "out", "", "output articles.json path (required)")
 	_ = cmd.MarkFlagRequired("out")
 

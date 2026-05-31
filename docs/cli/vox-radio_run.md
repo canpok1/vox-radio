@@ -13,7 +13,7 @@ vox-radio.yaml is automatically loaded from the current directory.
 
 Example:
   vox-radio run
-  vox-radio run --out-dir output --profile profiles/tech/profile.yaml
+  vox-radio run --out-dir output --profile sample-profiles/tech_profile.yaml
   vox-radio run --hosting ghpages --date 2026-01-01
 
 ```
@@ -29,7 +29,7 @@ vox-radio run [flags]
   -h, --help                 help for run
       --hosting string       hosting type: local or ghpages (default "local")
       --out-dir string       output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/) (default "output")
-      --profile string       profile YAML file path (default "profiles/test/profile.yaml")
+      --profile string       profile YAML file path (required)
       --prompts string       directory containing prompt templates (default "prompts")
       --title string         episode title (default: <date> <program.title>)
 ```

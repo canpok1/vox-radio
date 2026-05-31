@@ -42,7 +42,7 @@ Use --step to run a single stage independently:
 Example:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step write
-  vox-radio script --in work/articles.json --out work/script.json --profile profiles/tech/profile.yaml`,
+  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, p, err := loadConfigAndProfile(profilePath)
 			if err != nil {
@@ -88,7 +88,7 @@ Example:
 	cmd.Flags().StringVar(&in, "in", "", "input articles.json path (required for full pipeline or summarize step)")
 	cmd.Flags().StringVar(&out, "out", "", "output script.json path (required)")
 	cmd.Flags().StringVar(&step, "step", "", "run a single step: summarize|write|direct")
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	_ = cmd.MarkFlagRequired("out")
 

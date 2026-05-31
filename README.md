@@ -60,7 +60,7 @@ collect → script → synth → assemble → manifest → publish
 | 種別 | ファイル | 内容 |
 |------|---------|------|
 | 共通設定 (config) | `vox-radio.yaml`（カレントディレクトリ、自動読込） | LLM / VOICEVOX URL / キャラカタログ |
-| ジャンル別設定 (profile) | `profiles/<genre>/profile.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
+| ジャンル別設定 (profile) | `sample-profiles/<genre>_profile.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
 
 `vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
 
@@ -84,31 +84,31 @@ characters:
 
 台本生成（`script` コマンド）では、LLM がセリフの感情に応じてスタイルを選択します。`synth` コマンドは行ごとの `style` フィールドを読み取り、指定されたスタイルの `speaker_id` で合成します。`style` が未指定または不正な場合は `default_style` にフォールバックします。
 
-プロファイルは `profiles/` ディレクトリに配置します。サンプルは `profiles/tech/`（技術ニュース用）と `profiles/test/`（動作確認用）です。詳細は [profiles/README.md](profiles/README.md) を参照してください。
+プロファイルのサンプルは `sample-profiles/` ディレクトリに用意しています。`sample-profiles/tech_profile.yaml`（技術ニュース用）を、共通アセット（`sample-profiles/assets/`）とあわせて配置しています。これらをコピー・編集して利用してください。詳細は [sample-profiles/README.md](sample-profiles/README.md) を参照してください。
 
 ### 実行例
 
 ```bash
-# 記事を収集（デフォルトは profiles/test/profile.yaml を使用）
-vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
+# 記事を収集（--profile は必須）
+vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
 
 # 台本を生成
 vox-radio script --in work/articles.json --out work/script.json \
-    --profile profiles/tech/profile.yaml
+    --profile sample-profiles/tech_profile.yaml
 
 # 音声合成（設定不要）
 vox-radio synth --in work/script.json --out-dir work/clips
 
 # 音声結合
 vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 \
-    --profile profiles/tech/profile.yaml
+    --profile sample-profiles/tech_profile.yaml
 
 # 公開
 vox-radio publish --in work/episode.mp3 --out-dir public \
-    --profile profiles/tech/profile.yaml
+    --profile sample-profiles/tech_profile.yaml
 
 # 古いエピソードを削除
-vox-radio prune --out-dir public --profile profiles/tech/profile.yaml
+vox-radio prune --out-dir public --profile sample-profiles/tech_profile.yaml
 ```
 
 ### 詳細リファレンス

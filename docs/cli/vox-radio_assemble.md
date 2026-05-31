@@ -9,7 +9,7 @@ to mix intro/outro/SE and produce a final MP3 episode file.
 
 Example:
   vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile profiles/tech/profile.yaml
+  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile sample-profiles/tech_profile.yaml
 
 ```
 vox-radio assemble [flags]

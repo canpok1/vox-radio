@@ -18,7 +18,7 @@ Use --step to run a single stage independently:
 Example:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step write
-  vox-radio script --in work/articles.json --out work/script.json --profile profiles/tech/profile.yaml
+  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml
 
 ```
 vox-radio script [flags]
@@ -30,7 +30,7 @@ vox-radio script [flags]
   -h, --help             help for script
       --in string        input articles.json path (required for full pipeline or summarize step)
       --out string       output script.json path (required)
-      --profile string   profile YAML file path (default "profiles/test/profile.yaml")
+      --profile string   profile YAML file path (required)
       --prompts string   directory containing prompt templates (default "prompts")
       --step string      run a single step: summarize|write|direct
 ```

@@ -14,7 +14,7 @@ Hosting types:
 Example:
   vox-radio publish --in work/episode.mp3 --out-dir public
   vox-radio publish --in work/episode.mp3 --out-dir public --date 2026-01-01 --title "Episode title"
-  vox-radio publish --in work/episode.mp3 --out-dir public --profile profiles/tech/profile.yaml
+  vox-radio publish --in work/episode.mp3 --out-dir public --profile sample-profiles/tech_profile.yaml
   vox-radio publish --in work/episode.mp3 --out-dir public --hosting ghpages
 
 ```
@@ -31,7 +31,7 @@ vox-radio publish [flags]
       --hosting string       hosting type: local or ghpages (default "local")
       --in string            input mp3 path (required)
       --out-dir string       output directory for hosting (required)
-      --profile string       profile YAML file path (default "profiles/test/profile.yaml")
+      --profile string       profile YAML file path (required)
       --title string         episode title (default: <date> <program.title>)
 ```
 

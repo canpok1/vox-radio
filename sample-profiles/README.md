@@ -1,40 +1,33 @@
-# profiles/
+# sample-profiles/
 
-ジャンル別設定（プロファイル）を格納するディレクトリです。
+ジャンル別設定（プロファイル）のサンプルを格納するディレクトリです。
+
+プロファイルはジャンルごとに `<genre>_profile.yaml` として直下に配置し、音声素材（`assets/`）はジャンル間で共通利用できるよう直下に1つだけ置く構成です。
 
 ## ディレクトリ構成
 
 ```
-profiles/
-  tech/
-    profile.yaml        # 技術ニュース用プロファイル
-    assets/
-      bgm/              # BGM ファイル
-      se/               # SE ファイル
-      jingle/           # ジングルファイル
-  test/
-    profile.yaml        # 動作確認用の最小プロファイル
-    assets/
-      ...               # ダミー素材（tech/ と同じファイルを使用）
+sample-profiles/
+  tech_profile.yaml     # 技術ニュース用プロファイル
+  assets/               # 全ジャンル共通の音声素材
+    bgm/                # BGM ファイル
+    se/                 # SE ファイル
+    jingle/             # ジングルファイル
 ```
 
 ## プロファイルの切り替え
 
-コマンドの `--profile` フラグでプロファイルファイルのパスを指定します。
+コマンドの `--profile` フラグでプロファイルファイルのパスを指定します（必須）。
 
 ```bash
 # 技術ニュース用プロファイルで実行
-vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
-
-# 動作確認用プロファイルで実行（デフォルト）
-vox-radio collect --out work/articles.json
+vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
 ```
 
 ## 新しいジャンルの追加
 
-1. `profiles/<genre>/` ディレクトリを作成する
-2. `profile.yaml` を作成する（既存プロファイルをコピーして編集）
-3. `assets/` に音声素材を配置する
+1. `sample-profiles/<genre>_profile.yaml` を作成する（既存プロファイルをコピーして編集）
+2. 必要に応じて共通の `assets/` に音声素材を追加する（既存素材を流用する場合は不要）
 
 ## profile.yaml のスキーマ
 

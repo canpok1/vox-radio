@@ -180,7 +180,7 @@ func buildSpeechConcat(b *filterBuilder, clips []model.ClipMeta, inputIdx []int,
 	for i := range clips {
 		parts = append(parts, fmt.Sprintf("[%d:a]", inputIdx[i]))
 		if i < len(clips)-1 {
-			b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=d=%.3f[p%d]", pauseSec, i))
+			b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[p%d]", pauseSec, i))
 			parts = append(parts, fmt.Sprintf("[p%d]", i))
 		}
 	}

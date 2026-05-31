@@ -136,7 +136,7 @@ type Config struct {
 }
 
 // Profile holds genre-specific settings (program, corners, assets).
-// It is loaded from profiles/<genre>/profile.yaml.
+// It is loaded from sample-profiles/<genre>_profile.yaml.
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
 type Profile struct {
 	Program ProgramConfig  `yaml:"program"`

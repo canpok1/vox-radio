@@ -23,7 +23,7 @@ then update episodes.json and regenerate feed.xml.
 
 Example:
   vox-radio prune --out-dir public
-  vox-radio prune --out-dir public --profile profiles/tech/profile.yaml`,
+  vox-radio prune --out-dir public --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p, err := config.LoadProfile(profilePath)
 			if err != nil {
@@ -45,7 +45,7 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for local hosting (required)")
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	_ = cmd.MarkFlagRequired("out-dir")
 

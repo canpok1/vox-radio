@@ -33,7 +33,7 @@ Hosting types:
 Example:
   vox-radio publish --in work/episode.mp3 --out-dir public
   vox-radio publish --in work/episode.mp3 --out-dir public --date 2026-01-01 --title "Episode title"
-  vox-radio publish --in work/episode.mp3 --out-dir public --profile profiles/tech/profile.yaml
+  vox-radio publish --in work/episode.mp3 --out-dir public --profile sample-profiles/tech_profile.yaml
   vox-radio publish --in work/episode.mp3 --out-dir public --hosting ghpages`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p, err := config.LoadProfile(profilePath)
@@ -78,7 +78,7 @@ Example:
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
 	cmd.Flags().StringVar(&titleFlag, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&descFlag, "description", "", "episode description")
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for hosting (required)")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	cmd.Flags().StringVar(&hostingType, "hosting", "local", "hosting type: local or ghpages")
