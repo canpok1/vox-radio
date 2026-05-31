@@ -25,12 +25,12 @@ type ScriptGenerator interface {
 }
 
 type LLMScriptGenerator struct {
-	summarizer summarize.Summarizer
-	writer     write.Writer
-	director   direct.Director
-	seCatalog  model.SECatalog
-	workDir    string
-	logger     *slog.Logger
+	summarizer   summarize.Summarizer
+	writer       write.Writer
+	director     direct.Director
+	assetCatalog model.AssetCatalog
+	workDir      string
+	logger       *slog.Logger
 }
 
 // GeneratorOption configures a LLMScriptGenerator.
@@ -45,17 +45,17 @@ func NewLLMScriptGenerator(
 	s summarize.Summarizer,
 	w write.Writer,
 	d direct.Director,
-	seCatalog model.SECatalog,
+	assetCatalog model.AssetCatalog,
 	workDir string,
 	opts ...GeneratorOption,
 ) *LLMScriptGenerator {
 	g := &LLMScriptGenerator{
-		summarizer: s,
-		writer:     w,
-		director:   d,
-		seCatalog:  seCatalog,
-		workDir:    workDir,
-		logger:     slog.Default(),
+		summarizer:   s,
+		writer:       w,
+		director:     d,
+		assetCatalog: assetCatalog,
+		workDir:      workDir,
+		logger:       slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(g)
@@ -115,7 +115,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	}
 
 	g.logger.With("step", "script/direct").Info("開始")
-	scr, err := g.director.Direct(ctx, allLines, g.seCatalog)
+	scr, err := g.director.Direct(ctx, allLines, g.assetCatalog)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("direct: %w", err)
 	}

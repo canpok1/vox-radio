@@ -19,19 +19,23 @@ func (m *mockClient) Complete(_ context.Context, _ llm.CompletionRequest) (json.
 	return m.response, m.err
 }
 
-func TestLLMDirector_Direct_NoSEInsertions(t *testing.T) {
+func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"se_insertions":[]}`),
+		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "lines={{lines}} se={{se_catalog}}", 0)
+	d := direct.NewLLMDirector(mc, "lines={{lines}} catalog={{asset_catalog}}", 0)
 
 	lines := []model.Line{
 		{SpeakerRole: "host", Text: "こんにちは"},
 		{SpeakerRole: "guest", Text: "よろしく"},
 	}
-	se := model.SECatalog{Names: []string{"chime"}}
+	catalog := model.AssetCatalog{
+		SE:     []string{"chime"},
+		BGM:    []string{"talk_bgm"},
+		Jingle: []string{},
+	}
 
-	got, err := d.Direct(context.Background(), lines, se)
+	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,9 +49,9 @@ func TestLLMDirector_Direct_NoSEInsertions(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_WithSEInsertions(t *testing.T) {
+func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"se_insertions":[{"after_line_index":0,"se_name":"chime","reason":"コーナー開始"}]}`),
+		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"se","asset_name":"chime","reason":"コーナー開始"}]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
@@ -55,9 +59,9 @@ func TestLLMDirector_Direct_WithSEInsertions(t *testing.T) {
 		{SpeakerRole: "host", Text: "開始"},
 		{SpeakerRole: "guest", Text: "続き"},
 	}
-	se := model.SECatalog{Names: []string{"chime"}}
+	catalog := model.AssetCatalog{SE: []string{"chime"}, BGM: []string{}, Jingle: []string{}}
 
-	got, err := d.Direct(context.Background(), lines, se)
+	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,9 +83,71 @@ func TestLLMDirector_Direct_WithSEInsertions(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
+func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"se_insertions":[{"after_line_index":1,"se_name":"transition"}]}`),
+		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"bgm","asset_name":"talk_bgm"},{"after_line_index":1,"type":"bgm","asset_name":""}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "BGM開始"},
+		{SpeakerRole: "guest", Text: "BGM停止"},
+	}
+	catalog := model.AssetCatalog{SE: []string{}, BGM: []string{"talk_bgm"}, Jingle: []string{}}
+
+	got, err := d.Direct(context.Background(), lines, catalog)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech, bgm(start), speech, bgm(stop)]
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeBGM {
+		t.Errorf("Segment[1].Type: got %q, want bgm", got.Segments[1].Type)
+	}
+	if got.Segments[1].AssetName != "talk_bgm" {
+		t.Errorf("Segment[1].AssetName: got %q, want talk_bgm", got.Segments[1].AssetName)
+	}
+	if got.Segments[3].Type != model.SegmentTypeBGM {
+		t.Errorf("Segment[3].Type: got %q, want bgm", got.Segments[3].Type)
+	}
+	if got.Segments[3].AssetName != "" {
+		t.Errorf("Segment[3].AssetName: got %q, want empty (stop)", got.Segments[3].AssetName)
+	}
+}
+
+func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"jingle","asset_name":"eyecatch"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "コーナー1"},
+		{SpeakerRole: "guest", Text: "コーナー2"},
+	}
+	catalog := model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{"eyecatch"}}
+
+	got, err := d.Direct(context.Background(), lines, catalog)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech, jingle(eyecatch), speech]
+	if len(got.Segments) != 3 {
+		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeJingle {
+		t.Errorf("Segment[1].Type: got %q, want jingle", got.Segments[1].Type)
+	}
+	if got.Segments[1].AssetName != "eyecatch" {
+		t.Errorf("Segment[1].AssetName: got %q, want eyecatch", got.Segments[1].AssetName)
+	}
+}
+
+func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[{"after_line_index":1,"type":"se","asset_name":"transition"}]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
@@ -89,9 +155,9 @@ func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
 		{SpeakerRole: "host", Text: "A"},
 		{SpeakerRole: "guest", Text: "B"},
 	}
-	se := model.SECatalog{Names: []string{"transition"}}
+	catalog := model.AssetCatalog{SE: []string{"transition"}, BGM: []string{}, Jingle: []string{}}
 
-	got, err := d.Direct(context.Background(), lines, se)
+	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -106,7 +172,7 @@ func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
 
 func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"se_insertions":[]}`),
+		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
@@ -115,7 +181,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 		{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.SECatalog{})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -134,7 +200,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, model.SECatalog{})
+	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -142,7 +208,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 
 func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"se_insertions":[]}`),
+		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
@@ -150,7 +216,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 		{SpeakerRole: "host", Text: "テストテキスト"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.SECatalog{})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
