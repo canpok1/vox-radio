@@ -18,7 +18,7 @@ func TestRootHelp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	for _, sub := range []string{"collect", "script", "synth", "assemble", "manifest", "run"} {
+	for _, sub := range []string{"init", "collect", "script", "synth", "assemble", "manifest", "run"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("root help missing subcommand %q", sub)
 		}
@@ -123,7 +123,7 @@ func TestRootCmdDisableAutoGenTag(t *testing.T) {
 }
 
 func TestSubcommandHelp(t *testing.T) {
-	for _, sub := range []string{"collect", "synth", "assemble", "manifest", "script", "run"} {
+	for _, sub := range []string{"init", "collect", "synth", "assemble", "manifest", "script", "run"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			buf := &bytes.Buffer{}
