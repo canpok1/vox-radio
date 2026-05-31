@@ -102,8 +102,8 @@ func buildScript(lines []model.Line, insertions []seInsertion) model.Script {
 		})
 		for _, ins := range insertionMap[i] {
 			segments = append(segments, model.ScriptSegment{
-				Type:   model.SegmentTypeSE,
-				SEName: ins.SEName,
+				Type:      model.SegmentTypeSE,
+				AssetName: ins.SEName,
 			})
 		}
 	}

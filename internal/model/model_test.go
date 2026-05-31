@@ -222,9 +222,11 @@ func TestScript_Fields(t *testing.T) {
 				t.Errorf("segment[%d]: Text must not be empty for speech", i)
 			}
 		case model.SegmentTypeSE:
-			if seg.SEName == "" {
-				t.Errorf("segment[%d]: SEName must not be empty for se", i)
+			if seg.AssetName == "" {
+				t.Errorf("segment[%d]: AssetName must not be empty for se", i)
 			}
+		case model.SegmentTypeBGM:
+			// asset_name empty = stop; non-empty = start/switch
 		case model.SegmentTypeJingle:
 			if seg.AssetName == "" {
 				t.Errorf("segment[%d]: AssetName must not be empty for jingle", i)

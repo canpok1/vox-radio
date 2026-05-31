@@ -258,7 +258,7 @@ func computeSEEvents(script model.Script, clips []model.ClipMeta, pauseSec float
 			offsetMs += pauseSec * 1000
 		case model.SegmentTypeSE:
 			events = append(events, seEvent{
-				seName:   seg.SEName,
+				seName:   seg.AssetName,
 				offsetMs: int(offsetMs),
 			})
 		}

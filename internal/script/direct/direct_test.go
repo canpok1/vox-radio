@@ -71,8 +71,8 @@ func TestLLMDirector_Direct_WithSEInsertions(t *testing.T) {
 	if got.Segments[1].Type != model.SegmentTypeSE {
 		t.Errorf("Segment[1].Type: got %q, want se", got.Segments[1].Type)
 	}
-	if got.Segments[1].SEName != "chime" {
-		t.Errorf("Segment[1].SEName: got %q, want chime", got.Segments[1].SEName)
+	if got.Segments[1].AssetName != "chime" {
+		t.Errorf("Segment[1].AssetName: got %q, want chime", got.Segments[1].AssetName)
 	}
 	if got.Segments[2].Type != model.SegmentTypeSpeech {
 		t.Errorf("Segment[2].Type: got %q, want speech", got.Segments[2].Type)

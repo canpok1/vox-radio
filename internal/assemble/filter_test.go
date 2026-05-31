@@ -122,7 +122,7 @@ func TestBuildFFmpegArgs_SESegment(t *testing.T) {
 		Script: model.Script{
 			Segments: []model.ScriptSegment{
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
-				{Type: model.SegmentTypeSE, SEName: "chime"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
 			},
 		},
@@ -169,7 +169,7 @@ func TestBuildFFmpegArgs_UnknownSEIgnored(t *testing.T) {
 		Script: model.Script{
 			Segments: []model.ScriptSegment{
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hi"},
-				{Type: model.SegmentTypeSE, SEName: "unknown_se"},
+				{Type: model.SegmentTypeSE, AssetName: "unknown_se"},
 			},
 		},
 		Clips: model.ClipsMeta{
@@ -423,7 +423,7 @@ func TestComputeSEEvents_PositionsAfterSpeech(t *testing.T) {
 	script := model.Script{
 		Segments: []model.ScriptSegment{
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "first"},
-			{Type: model.SegmentTypeSE, SEName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "second"},
 		},
 	}
@@ -452,9 +452,9 @@ func TestBuildFFmpegArgs_DuplicateSEUsesDistinctInputs(t *testing.T) {
 		Script: model.Script{
 			Segments: []model.ScriptSegment{
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
-				{Type: model.SegmentTypeSE, SEName: "chime"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "middle"},
-				{Type: model.SegmentTypeSE, SEName: "chime"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
 				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "end"},
 			},
 		},

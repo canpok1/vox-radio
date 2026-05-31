@@ -5,6 +5,7 @@ type SegmentType string
 const (
 	SegmentTypeSpeech SegmentType = "speech"
 	SegmentTypeSE     SegmentType = "se"
+	SegmentTypeBGM    SegmentType = "bgm"
 	SegmentTypeJingle SegmentType = "jingle"
 )
 
@@ -13,8 +14,7 @@ type ScriptSegment struct {
 	SpeakerRole string      `json:"speaker_role,omitempty"`
 	Style       string      `json:"style,omitempty"`
 	Text        string      `json:"text,omitempty"`
-	SEName      string      `json:"se_name,omitempty"`
-	AssetName   string      `json:"asset_name,omitempty"`
+	AssetName   string      `json:"asset_name,omitempty"` // se/bgm/jingle のアセットキー。bgm かつ空 = 停止
 }
 
 type Script struct {
