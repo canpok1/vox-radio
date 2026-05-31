@@ -283,6 +283,40 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 	}
 }
 
+func TestBuildScriptLines(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "C1", Direction: "演出1", Content: "内容1"},
+		{Title: "C2", Direction: "", Content: "内容2"},
+	}
+	lines1 := []model.Line{{SpeakerRole: "zundamon", Text: "line1"}}
+	lines2 := []model.Line{{SpeakerRole: "metan", Text: "line2"}, {SpeakerRole: "metan", Text: "line3"}}
+	cornerLines := [][]model.Line{lines1, lines2}
+
+	got := script.BuildScriptLines(corners, cornerLines)
+
+	if len(got) != 2 {
+		t.Fatalf("len: got %d, want 2", len(got))
+	}
+	if got[0].Title != "C1" {
+		t.Errorf("got[0].Title: got %q, want C1", got[0].Title)
+	}
+	if got[0].Direction != "演出1" {
+		t.Errorf("got[0].Direction: got %q, want 演出1", got[0].Direction)
+	}
+	if len(got[0].Lines) != 1 || got[0].Lines[0].Text != "line1" {
+		t.Errorf("got[0].Lines: unexpected %+v", got[0].Lines)
+	}
+	if got[1].Title != "C2" {
+		t.Errorf("got[1].Title: got %q, want C2", got[1].Title)
+	}
+	if got[1].Direction != "" {
+		t.Errorf("got[1].Direction: got %q, want empty", got[1].Direction)
+	}
+	if len(got[1].Lines) != 2 {
+		t.Errorf("got[1].Lines: got %d lines, want 2", len(got[1].Lines))
+	}
+}
+
 func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) {
 	workDir := t.TempDir()
 	rundown := corneredRundown("AIコーナー",

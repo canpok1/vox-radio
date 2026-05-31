@@ -14,15 +14,6 @@ type Lines struct {
 	Lines []Line `json:"lines"`
 }
 
-// TotalLines returns the total number of lines across all corners.
-func (s ScriptLines) TotalLines() int {
-	total := 0
-	for _, c := range s.Corners {
-		total += len(c.Lines)
-	}
-	return total
-}
-
 // CornerLines holds the lines and direction for one corner.
 type CornerLines struct {
 	Title     string `json:"title"`
@@ -33,4 +24,13 @@ type CornerLines struct {
 // ScriptLines is the root structure of 03_lines.json.
 type ScriptLines struct {
 	Corners []CornerLines `json:"corners"`
+}
+
+// TotalLines returns the total number of lines across all corners.
+func (s ScriptLines) TotalLines() int {
+	total := 0
+	for _, c := range s.Corners {
+		total += len(c.Lines)
+	}
+	return total
 }

@@ -132,6 +132,47 @@ func TestScriptLines_DirectionOmittedWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestScriptLines_TotalLines(t *testing.T) {
+	tests := []struct {
+		name string
+		sl   model.ScriptLines
+		want int
+	}{
+		{
+			name: "empty corners",
+			sl:   model.ScriptLines{},
+			want: 0,
+		},
+		{
+			name: "single corner with lines",
+			sl: model.ScriptLines{
+				Corners: []model.CornerLines{
+					{Title: "C1", Lines: []model.Line{{SpeakerRole: "a", Text: "x"}, {SpeakerRole: "b", Text: "y"}}},
+				},
+			},
+			want: 2,
+		},
+		{
+			name: "multiple corners",
+			sl: model.ScriptLines{
+				Corners: []model.CornerLines{
+					{Title: "C1", Lines: []model.Line{{SpeakerRole: "a", Text: "x"}}},
+					{Title: "C2", Lines: []model.Line{{SpeakerRole: "b", Text: "y"}, {SpeakerRole: "c", Text: "z"}}},
+				},
+			},
+			want: 3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.sl.TotalLines()
+			if got != tt.want {
+				t.Errorf("TotalLines() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestArticles_CornerMap(t *testing.T) {
 	art1 := model.Article{URL: "https://example.com/1", Title: "T1", Body: "B1"}
 	art2 := model.Article{URL: "https://example.com/2", Title: "T2", Body: "B2"}
