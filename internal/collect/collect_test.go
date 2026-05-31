@@ -2,6 +2,7 @@ package collect_test
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -142,6 +143,94 @@ func TestCollector_Run_ArticleExtractsBody(t *testing.T) {
 	}
 	if strings.Contains(art.Body, "ナビゲーション") {
 		t.Errorf("body should not contain nav text, got: %q", art.Body)
+	}
+}
+
+func TestCollector_Run_AtomAppliesMaxItems(t *testing.T) {
+	atomData := loadTestdata(t, "feed_atom.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/atom+xml")
+		_, _ = w.Write(atomData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed_atom.xml", MaxItems: 2},
+		},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("articles count: got %d, want 2", len(result))
+	}
+}
+
+func TestCollector_Run_AtomParsesFields(t *testing.T) {
+	atomData := loadTestdata(t, "feed_atom.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/atom+xml")
+		_, _ = w.Write(atomData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed_atom.xml", MaxItems: 1},
+		},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	art := result[0]
+	if art.Title != "Atomフィード記事1" {
+		t.Errorf("title: got %q, want %q", art.Title, "Atomフィード記事1")
+	}
+	if art.URL != "https://example.com/atom/1" {
+		t.Errorf("url: got %q, want %q", art.URL, "https://example.com/atom/1")
+	}
+	if art.Body == "" {
+		t.Error("body must not be empty")
+	}
+}
+
+func TestCollector_Run_WarnOnEmptyFeed(t *testing.T) {
+	emptyFeed := `<?xml version="1.0"?><rss version="2.0"><channel><title>Empty</title></channel></rss>`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write([]byte(emptyFeed))
+	}))
+	defer server.Close()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/empty.xml", MaxItems: 5},
+		},
+	}
+
+	c := collect.New(server.Client(), collect.WithLogger(logger))
+	result, err := c.Run(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("expected no error for empty feed, got: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("articles count: got %d, want 0", len(result))
+	}
+	if !strings.Contains(buf.String(), "WARN") {
+		t.Errorf("expected WARN log for empty feed, got: %q", buf.String())
 	}
 }
 
