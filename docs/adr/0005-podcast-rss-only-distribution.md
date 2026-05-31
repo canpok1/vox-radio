@@ -2,6 +2,7 @@
 
 - ステータス: 採用
 - 日付: 2026-05-30
+- 補足: [ADR-0012](0012-separate-distribution-and-content-manifest.md) により配信機能は vox-radio 本体から別リポジトリへ分離する。本 ADR の配信判断（RSS 一本化）は分離先の配信リポジトリで引き継ぐ。
 
 ## コンテキスト
 
