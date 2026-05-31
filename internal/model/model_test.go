@@ -70,6 +70,39 @@ func TestArticles_Fields(t *testing.T) {
 	}
 }
 
+func TestArticles_CornerMap(t *testing.T) {
+	art1 := model.Article{URL: "https://example.com/1", Title: "T1", Body: "B1"}
+	art2 := model.Article{URL: "https://example.com/2", Title: "T2", Body: "B2"}
+	a := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "ニュース", Articles: []model.Article{art1}},
+			{CornerTitle: "エンディング", Articles: []model.Article{art2}},
+		},
+	}
+
+	m := a.CornerMap()
+
+	if len(m) != 2 {
+		t.Fatalf("map length: got %d, want 2", len(m))
+	}
+	if arts := m["ニュース"]; len(arts) != 1 || arts[0].URL != art1.URL {
+		t.Errorf("CornerMap[\"ニュース\"]: got %v, want [%v]", arts, art1)
+	}
+	if arts := m["エンディング"]; len(arts) != 1 || arts[0].URL != art2.URL {
+		t.Errorf("CornerMap[\"エンディング\"]: got %v, want [%v]", arts, art2)
+	}
+	if _, ok := m["存在しないコーナー"]; ok {
+		t.Error("missing key should not exist in map")
+	}
+}
+
+func TestArticles_CornerMap_Empty(t *testing.T) {
+	m := model.Articles{}.CornerMap()
+	if len(m) != 0 {
+		t.Errorf("empty Articles.CornerMap() should return empty map, got %d entries", len(m))
+	}
+}
+
 func TestSummaries_RoundTrip(t *testing.T) {
 	roundTrip[model.Summaries](t, loadFixture(t, "summaries.json"))
 }
@@ -95,6 +128,36 @@ func TestSummaries_Fields(t *testing.T) {
 	}
 	if len(s.Points) == 0 {
 		t.Error("Points must not be empty")
+	}
+}
+
+func TestSummaries_CornerMap(t *testing.T) {
+	sum1 := model.Summary{URL: "https://example.com/1", Summary: "S1", Points: []string{"p1"}}
+	sum2 := model.Summary{URL: "https://example.com/2", Summary: "S2", Points: []string{"p2"}}
+	s := model.Summaries{
+		Corners: []model.CornerSummaries{
+			{CornerTitle: "ニュース", Summaries: []model.Summary{sum1}},
+			{CornerTitle: "エンディング", Summaries: []model.Summary{sum2}},
+		},
+	}
+
+	m := s.CornerMap()
+
+	if len(m) != 2 {
+		t.Fatalf("map length: got %d, want 2", len(m))
+	}
+	if sums := m["ニュース"]; len(sums) != 1 || sums[0].URL != sum1.URL {
+		t.Errorf("CornerMap[\"ニュース\"]: got %v, want [%v]", sums, sum1)
+	}
+	if sums := m["エンディング"]; len(sums) != 1 || sums[0].URL != sum2.URL {
+		t.Errorf("CornerMap[\"エンディング\"]: got %v, want [%v]", sums, sum2)
+	}
+}
+
+func TestSummaries_CornerMap_Empty(t *testing.T) {
+	m := model.Summaries{}.CornerMap()
+	if len(m) != 0 {
+		t.Errorf("empty Summaries.CornerMap() should return empty map, got %d entries", len(m))
 	}
 }
 

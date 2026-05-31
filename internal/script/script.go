@@ -60,16 +60,16 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 			Summaries:   sums,
 		})
 	}
-	sumsModel := model.Summaries{Corners: cornerSummaries}
-	if err := g.saveIntermediate("summaries.json", sumsModel); err != nil {
+	allSummaries := model.Summaries{Corners: cornerSummaries}
+	if err := g.saveIntermediate("summaries.json", allSummaries); err != nil {
 		return model.Script{}, err
 	}
 
-	cornerLines, err := g.writeAll(ctx, corners, sumsModel, chars)
+	cornerLines, err := g.writeAll(ctx, corners, allSummaries, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, sumsModel, chars)
+	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, allSummaries, chars)
 	allLines := flatten(cornerLines)
 	if err := g.saveIntermediate("lines.json", model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
