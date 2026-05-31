@@ -16,3 +16,4 @@
 | [0008](0008-collect-rss-html-parser-libraries.md) | collect パッケージの RSS/HTML パースライブラリ選定 | 採用 | 2026-05-30 |
 | [0009](0009-cli-framework-cobra.md) | CLIフレームワークにcobraを採用 | 採用 | 2026-05-30 |
 | [0010](0010-split-config-into-common-and-profile.md) | 設定を共通設定(Config)とジャンル別設定(Profile)に二分割する | 採用 | 2026-05-30 |
+| [0011](0011-restructure-config-schema-characters-program-corners.md) | 設定スキーマを全面再編し、キャラカタログ・番組(program)・コーナー(corners)を導入する | 採用 | 2026-05-31 |
