@@ -21,7 +21,7 @@ import (
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 type LLMScriptGenerator struct {
@@ -63,7 +63,7 @@ func NewLLMScriptGenerator(
 	return g
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
+func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
 	start := time.Now()
 
 	cornerArticlesMap := articles.CornerMap()
@@ -104,11 +104,11 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	}
 
 	g.logger.With("step", "script/write").Info("開始")
-	cornerLines, err := g.writeAll(ctx, corners, allSummaries, chars)
+	cornerLines, err := g.writeAll(ctx, program, corners, allSummaries, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, allSummaries, chars)
+	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allSummaries, chars)
 	allLines := flatten(cornerLines)
 	if err := g.saveIntermediate(fileio.FileLines, model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
@@ -125,11 +125,11 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	return scr, nil
 }
 
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
+func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
 	cornerSumsMap := sums.CornerMap()
 	result := make([][]model.Line, len(corners))
 	for i, corner := range corners {
-		lines, err := g.writer.Write(ctx, corner, cornerSumsMap[corner.Title], chars)
+		lines, err := g.writer.Write(ctx, program, corner, corners, cornerSumsMap[corner.Title], chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
@@ -138,7 +138,7 @@ func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.Corn
 	return result, nil
 }
 
-func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) [][]model.Line {
+func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.ProgramConfig, cornerLines [][]model.Line, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) [][]model.Line {
 	if len(corners) == 0 {
 		return cornerLines
 	}
@@ -179,7 +179,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 	}
 
 	corner := corners[worstIdx]
-	if newLines, err := g.writer.Write(ctx, corner, cornerSumsMap[corner.Title], chars); err == nil {
+	if newLines, err := g.writer.Write(ctx, program, corner, corners, cornerSumsMap[corner.Title], chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines

@@ -114,7 +114,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		script.WithLogger(logger),
 	)
 
-	scr, err := gen.Generate(ctx, articles, p.Corners, cfg.Characters)
+	scr, err := gen.Generate(ctx, p.Program, articles, p.Corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -174,7 +174,7 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	allLines := make([]model.Line, 0)
 	for _, corner := range p.Corners {
-		lines, err := w.Write(ctx, corner, cornerSumsMap[corner.Title], cfg.Characters)
+		lines, err := w.Write(ctx, p.Program, corner, p.Corners, cornerSumsMap[corner.Title], cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}

@@ -38,7 +38,7 @@ type mockWriter struct {
 	responses [][]model.Line
 }
 
-func (m *mockWriter) Write(_ context.Context, _ config.CornerConfig, _ []model.Summary, _ map[string]config.CharacterConfig) ([]model.Line, error) {
+func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, _ config.CornerConfig, _ []config.CornerConfig, _ []model.Summary, _ map[string]config.CharacterConfig) ([]model.Line, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -103,7 +103,7 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), articles, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestLLMScriptGenerator_Generate_SummarizeError(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -136,7 +136,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -164,7 +164,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), model.Articles{}, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Articles{}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), []config.CornerConfig{}, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), []config.CornerConfig{}, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -251,7 +251,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 
 	gen := script.NewLLMScriptGenerator(ms, mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
 
-	_, err := gen.Generate(context.Background(), articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -308,7 +308,7 @@ func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T
 		workDir,
 	)
 
-	if _, err := gen.Generate(context.Background(), articles, testCorners, testChars); err != nil {
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, testCorners, testChars); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

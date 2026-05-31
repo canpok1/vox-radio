@@ -35,7 +35,7 @@ type stubScripter struct {
 	gotArticles model.Articles
 }
 
-func (s *stubScripter) Generate(_ context.Context, articles model.Articles, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
+func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, articles model.Articles, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
 	s.called = true
 	s.gotArticles = articles
 	return s.script, s.err
