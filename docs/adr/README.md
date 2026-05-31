@@ -20,3 +20,4 @@
 | [0012](0012-separate-distribution-and-content-manifest.md) | 配信機能を別リポジトリへ分離し、vox-radio はコンテンツ manifest を出力する | 採用 | 2026-05-31 |
 | [0013](0013-migrate-feed-parser-to-gofeed.md) | フィードパーサを自作XMLパーサからgofeedへ移行する | 採用 | 2026-05-31 |
 | [0014](0014-audio-asset-segment-type-unification.md) | 音声アセット（SE/BGM/Jingle）を script.json のセグメント型に統一し、ジングルをラン単位の serial 再生に変更する | 採用 | 2026-05-31 |
+| [0015](0015-rundown-step-as-single-source-of-truth.md) | 番組構成(rundown)ステップを新設し、扱う記事の正とする | 採用 | 2026-05-31 |
