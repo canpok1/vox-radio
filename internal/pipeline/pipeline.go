@@ -25,7 +25,7 @@ type Collector interface {
 
 // Scripter generates a radio script from corner-attributed articles.
 type Scripter interface {
-	Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -77,7 +77,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		chars = r.Config.Characters
 	}
 
-	scr, err := r.Scripter.Generate(ctx, articles, r.Profile.Corners, chars)
+	scr, err := r.Scripter.Generate(ctx, r.Profile.Program, articles, r.Profile.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}

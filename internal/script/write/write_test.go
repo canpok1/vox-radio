@@ -49,7 +49,7 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
 	}
 
-	got, err := w.Write(context.Background(), corner, summaries, chars)
+	got, err := w.Write(context.Background(), config.ProgramConfig{}, corner, nil, summaries, chars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
 	}
 
-	_, _ = w.Write(context.Background(), corner, summaries, chars)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, summaries, chars)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -95,7 +95,7 @@ func TestLLMWriter_Write_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
-	_, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -114,7 +114,7 @@ func TestLLMWriter_Write_PromptContainsStyles(t *testing.T) {
 		},
 	}
 
-	_, _ = w.Write(context.Background(), corner, nil, chars)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, chars)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -138,7 +138,7 @@ func TestLLMWriter_Write_LineStyleParsed(t *testing.T) {
 	mc := &mockClient{response: linesWithStyleJSON}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
-	got, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	got, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestLLMWriter_Write_LinePresetFieldsParsed(t *testing.T) {
 	mc := &mockClient{response: linesWithPresetsJSON}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
-	got, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	got, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestLLMWriter_Write_SchemaIncludesPresetEnums(t *testing.T) {
 	}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, cfg)
 
-	_, _ = w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -223,7 +223,7 @@ func TestLLMWriter_Write_PromptContainsPresetInfo(t *testing.T) {
 	}
 	w := write.NewLLMWriter(mc, "preset={{preset_info}}", 0, cfg)
 
-	_, _ = w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -244,7 +244,7 @@ func TestLLMWriter_Write_NoConfigUsesDefaultPresetSchema(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil) // no config
 
-	_, _ = w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -262,7 +262,7 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 
 	// 14sec * 7chars/sec = 98 chars
 	corner := config.CornerConfig{Title: "Test", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
-	_, _ = w.Write(context.Background(), corner, nil, nil)
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -273,5 +273,43 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	}
 	if strings.Contains(prompt, "target_duration_sec") {
 		t.Errorf("prompt should not expose target_duration_sec to LLM, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_PromptContainsProgramInfo(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "program={{program}}", 0, nil)
+
+	program := config.ProgramConfig{
+		Title:       "今日のテックニュース",
+		Description: "毎日5分のニュースラジオ",
+	}
+	allCorners := []config.CornerConfig{
+		{Title: "オープニング", Content: "番組の挨拶"},
+		{Title: "テックニュース", Content: "記事紹介"},
+		{Title: "エンディング", Content: "まとめ"},
+	}
+	corner := config.CornerConfig{Title: "オープニング", Content: "番組の挨拶"}
+
+	_, _ = w.Write(context.Background(), program, corner, allCorners, nil, nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "今日のテックニュース") {
+		t.Errorf("prompt should contain program title, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "毎日5分のニュースラジオ") {
+		t.Errorf("prompt should contain program description, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "オープニング") {
+		t.Errorf("prompt should contain corner title 'オープニング', got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "テックニュース") {
+		t.Errorf("prompt should contain corner title 'テックニュース', got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "エンディング") {
+		t.Errorf("prompt should contain corner title 'エンディング', got: %s", prompt)
 	}
 }

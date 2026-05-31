@@ -21,8 +21,21 @@ type cornerForPrompt struct {
 	TargetChars int               `json:"target_chars"`
 }
 
+// cornerOutline is the program-level outline of a corner (title+content only, no cast).
+type cornerOutline struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+// programForPrompt is the program structure passed to the LLM to prevent fabrication.
+type programForPrompt struct {
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Corners     []cornerOutline `json:"corners"`
+}
+
 type Writer interface {
-	Write(ctx context.Context, corner config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error)
+	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
 
 type LLMWriter struct {
@@ -37,7 +50,7 @@ func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64,
 	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature, config: cfg}
 }
 
-func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error) {
+func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error) {
 	promptCorner := cornerForPrompt{
 		Title:       corner.Title,
 		Content:     corner.Content,
@@ -56,11 +69,26 @@ func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summa
 		return nil, fmt.Errorf("marshal summaries: %w", err)
 	}
 
+	outlines := make([]cornerOutline, len(allCorners))
+	for i, c := range allCorners {
+		outlines[i] = cornerOutline{Title: c.Title, Content: c.Content}
+	}
+	promptProgram := programForPrompt{
+		Title:       program.Title,
+		Description: program.Description,
+		Corners:     outlines,
+	}
+	programJSON, err := json.Marshal(promptProgram)
+	if err != nil {
+		return nil, fmt.Errorf("marshal program: %w", err)
+	}
+
 	presets := w.effectivePresets()
 	castInfo := buildCastInfo(corner.Cast, chars)
 	presetInfo := buildPresetInfo(presets)
 
 	prompt := strings.NewReplacer(
+		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
 		"{{summary}}", string(summariesJSON),
 		"{{cast_info}}", castInfo,
