@@ -2,6 +2,8 @@ package script_test
 
 import (
 	"context"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -252,5 +254,38 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 	}
 	if mw.callCount != 1 {
 		t.Errorf("expected writer called 1 time (no regen), got %d", mw.callCount)
+	}
+}
+
+func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
+	ms := &mockSummarizer{}
+	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}}
+	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{{Type: model.SegmentTypeSpeech, Text: "テスト"}}}}
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "ニュース",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{{Title: "ニュース"}}
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	gen := script.NewLLMScriptGenerator(ms, mw, md, model.SECatalog{}, "", script.WithLogger(logger))
+
+	_, err := gen.Generate(context.Background(), articles, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "完了") {
+		t.Errorf("should log complete: %q", logs)
 	}
 }

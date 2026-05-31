@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/mediainfo"
@@ -17,31 +19,65 @@ type Synth struct {
 	Client      VoicevoxClient
 	Config      *config.Config
 	getDuration func(path string) (float64, error)
+	logger      *slog.Logger
+}
+
+// Option configures a Synth.
+type Option func(*Synth)
+
+// WithLogger sets the logger used for progress messages.
+func WithLogger(l *slog.Logger) Option {
+	return func(s *Synth) { s.logger = l }
 }
 
 // New creates a new Synth with an HTTP VOICEVOX client.
-func New(engineURL string, cfg *config.Config) *Synth {
-	return &Synth{
+func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
+	s := &Synth{
 		Client:      NewClient(engineURL),
 		Config:      cfg,
 		getDuration: mediainfo.Duration,
+		logger:      slog.Default(),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // Run synthesizes all speech segments and saves clip_NNN.wav files to outDir.
 // It also writes clips.json with metadata including durations.
 func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*model.ClipsMeta, error) {
+	l := s.logger
+	if l == nil {
+		l = slog.Default()
+	}
+	logger := l.With("step", "synth")
+	start := time.Now()
+
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
+	total := 0
+	for _, seg := range script.Segments {
+		if seg.Type == model.SegmentTypeSpeech {
+			total++
+		}
+	}
+
+	logger.Info(fmt.Sprintf("開始 (%dクリップ)", total))
+
 	clips := make([]model.ClipMeta, 0)
 	clipIdx := 0
+	done := 0
 
 	for _, seg := range script.Segments {
 		if seg.Type != model.SegmentTypeSpeech {
 			continue
 		}
+
+		done++
+		logger.Info(fmt.Sprintf("クリップを合成中 (%d/%d)", done, total))
 
 		speakerID := s.resolveSpeakerID(seg.SpeakerRole, seg.Style)
 		clipFile := fmt.Sprintf("clip_%03d.wav", clipIdx)
@@ -76,6 +112,8 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 	if err := os.WriteFile(filepath.Join(outDir, "clips.json"), b, 0o644); err != nil {
 		return nil, fmt.Errorf("write clips.json: %w", err)
 	}
+
+	logger.Info(fmt.Sprintf("完了 (%dクリップ, %.1fs)", len(clips), time.Since(start).Seconds()))
 
 	return meta, nil
 }

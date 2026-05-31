@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -44,6 +45,12 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
   vox-radio script --out work/script.json --step write
   vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger, logFile, err := setupLogger("script", "")
+			if err != nil {
+				return fmt.Errorf("setup logger: %w", err)
+			}
+			defer func() { _ = logFile.Close() }()
+
 			cfg, p, err := loadConfigAndProfile(profilePath)
 			if err != nil {
 				return err
@@ -72,7 +79,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			switch step {
 			case "":
-				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts, seCatalog)
+				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts, seCatalog, logger)
 			case "summarize":
 				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg.LLM, prompts)
 			case "write":
@@ -95,7 +102,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 	return cmd
 }
 
-func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string, seCatalog model.SECatalog) error {
+func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string, seCatalog model.SECatalog, logger *slog.Logger) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
@@ -110,6 +117,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, l
 		direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct")),
 		seCatalog,
 		workDir,
+		script.WithLogger(logger),
 	)
 
 	scr, err := gen.Generate(ctx, articles, p.Corners, chars)

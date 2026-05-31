@@ -339,3 +339,79 @@ func TestCollector_Run_CombinesFeedsAndArticles(t *testing.T) {
 		t.Errorf("articles count: got %d, want 2 (1 RSS + 1 individual)", len(result))
 	}
 }
+
+func TestCollector_RunAll_LogsStartAndComplete(t *testing.T) {
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	corners := []config.CornerConfig{
+		{
+			Title: "テックニュース",
+			Source: &config.SourceConfig{
+				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			},
+		},
+	}
+
+	c := collect.New(server.Client(), collect.WithLogger(logger))
+	_, err := c.RunAll(context.Background(), corners)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "開始") {
+		t.Errorf("should log start: %q", logs)
+	}
+	if !strings.Contains(logs, "完了") {
+		t.Errorf("should log complete: %q", logs)
+	}
+}
+
+func TestCollector_RunAll_LogsPerCornerProgress(t *testing.T) {
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	corners := []config.CornerConfig{
+		{
+			Title: "コーナーA",
+			Source: &config.SourceConfig{
+				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			},
+		},
+		{
+			Title: "コーナーB",
+			Source: &config.SourceConfig{
+				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			},
+		},
+	}
+
+	c := collect.New(server.Client(), collect.WithLogger(logger))
+	_, err := c.RunAll(context.Background(), corners)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "1/2") {
+		t.Errorf("should log per-corner progress (1/2): %q", logs)
+	}
+	if !strings.Contains(logs, "2/2") {
+		t.Errorf("should log per-corner progress (2/2): %q", logs)
+	}
+}

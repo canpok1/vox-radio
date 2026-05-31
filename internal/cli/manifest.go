@@ -40,6 +40,15 @@ LLM が生成した要約をマニフェストに追加します。
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/script.json --audio output/episode.mp3 --out output/manifest.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger, logFile, err := setupLogger("manifest", "")
+			if err != nil {
+				return fmt.Errorf("setup logger: %w", err)
+			}
+			defer func() { _ = logFile.Close() }()
+
+			manifestLogger := logger.With("step", "manifest")
+			manifestLogger.Info("開始")
+
 			p, err := config.LoadProfile(profilePath)
 			if err != nil {
 				return fmt.Errorf("load profile: %w", err)
@@ -93,6 +102,7 @@ LLM が生成した要約をマニフェストに追加します。
 				return err
 			}
 
+			manifestLogger.Info("完了")
 			fmt.Printf("manifest written to %s\n", out)
 			return nil
 		},

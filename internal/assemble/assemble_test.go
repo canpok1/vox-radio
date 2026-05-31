@@ -3,8 +3,11 @@ package assemble
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -15,7 +18,7 @@ func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler 
 	return &Assembler{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
-		runFFmpeg:    func(_ context.Context, _ []string) error { return ffmpegErr },
+		runFFmpeg:    func(_ context.Context, _ []string, _ io.Writer) error { return ffmpegErr },
 		getDuration:  func(_ string) (float64, error) { return duration, nil },
 		getFileSize:  func(_ string) (int64, error) { return size, nil },
 	}
@@ -26,7 +29,7 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
-		runFFmpeg: func(_ context.Context, args []string) error {
+		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
 			capturedArgs = args
 			return nil
 		},
@@ -138,7 +141,7 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{SegmentPauseSec: 0}, // zero → default
-		runFFmpeg: func(_ context.Context, args []string) error {
+		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
 			capturedArgs = args
 			return nil
 		},
@@ -166,5 +169,74 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	}
 	if len(capturedArgs) == 0 {
 		t.Error("ffmpeg was not called")
+	}
+}
+
+func TestAssembler_Run_LogsStartAndComplete(t *testing.T) {
+	a := newTestAssembler(nil, 30.0, 1024*1024)
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	a.logger = logger
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, Text: "テスト"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "開始") {
+		t.Errorf("should log start: %q", logs)
+	}
+	if !strings.Contains(logs, "完了") {
+		t.Errorf("should log complete: %q", logs)
+	}
+}
+
+func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
+	var ffmpegOutput strings.Builder
+	a := &Assembler{
+		AssetsConfig: config.AssetsConfig{},
+		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
+		runFFmpeg: func(_ context.Context, _ []string, w io.Writer) error {
+			if w != nil {
+				_, _ = io.WriteString(w, "ffmpeg output here")
+			}
+			return nil
+		},
+		getDuration:  func(_ string) (float64, error) { return 30.0, nil },
+		getFileSize:  func(_ string) (int64, error) { return 512, nil },
+		ffmpegWriter: &ffmpegOutput,
+	}
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, Text: "テスト"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(ffmpegOutput.String(), "ffmpeg output here") {
+		t.Errorf("ffmpeg output should go to writer: %q", ffmpegOutput.String())
 	}
 }

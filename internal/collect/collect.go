@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -64,12 +65,28 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig) ([]model.Ar
 
 // RunAll collects articles per corner, skipping corners with no source.
 func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error) {
+	logger := c.logger.With("step", "collect")
+	start := time.Now()
+
+	withSource := 0
+	for _, corner := range corners {
+		if corner.Source != nil {
+			withSource++
+		}
+	}
+
+	logger.Info("開始")
+
 	result := make([]model.CornerArticles, 0, len(corners))
+	done := 0
 
 	for _, corner := range corners {
 		if corner.Source == nil {
 			continue
 		}
+		done++
+		logger.Info(fmt.Sprintf("コーナー「%s」を収集中 (%d/%d)", corner.Title, done, withSource))
+
 		articles, err := c.Run(ctx, config.FeedsConfig{
 			Feeds:    corner.Source.Feeds,
 			Articles: corner.Source.Articles,
@@ -82,6 +99,12 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (
 			Articles:    articles,
 		})
 	}
+
+	totalArticles := 0
+	for _, ca := range result {
+		totalArticles += len(ca.Articles)
+	}
+	logger.Info(fmt.Sprintf("完了 (%d記事 / %dコーナー, %.1fs)", totalArticles, len(result), time.Since(start).Seconds()))
 
 	return model.Articles{Corners: result}, nil
 }

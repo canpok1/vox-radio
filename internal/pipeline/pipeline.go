@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
@@ -52,6 +53,7 @@ type Runner struct {
 	Synther           Synther
 	Assembler         Assembler
 	ProgramSummarizer ProgramSummarizer // optional; if nil, summary is omitted from manifest
+	Logger            *slog.Logger      // optional; if nil, slog.Default() is used
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
@@ -108,10 +110,20 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		}
 	}
 
+	logger := r.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	manifestLogger := logger.With("step", "manifest")
+	manifestLogger.Info("開始")
+	manifestStart := time.Now()
+
 	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt, programSummary)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
+
+	manifestLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(manifestStart).Seconds()))
 
 	return nil
 }
