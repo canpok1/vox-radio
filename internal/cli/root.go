@@ -7,11 +7,11 @@ import (
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "vox-radio",
-		Short: "AI-powered podcast production tool",
-		Long: `vox-radio is a CLI tool for producing AI-generated podcast episodes.
+		Short: "AI を使ったポッドキャスト制作ツール",
+		Long: `vox-radio は AI を活用したポッドキャストエピソード制作 CLI ツールです。
 
-It covers the full pipeline: collecting articles, generating scripts via LLM,
-synthesizing voice clips, assembling audio, and outputting a content manifest.`,
+記事収集・LLM による台本生成・音声合成・音声組み立て・コンテンツマニフェスト出力まで、
+フルパイプラインをカバーします。`,
 		SilenceUsage:      true,
 		SilenceErrors:     true,
 		DisableAutoGenTag: true,

@@ -1,17 +1,17 @@
 ## vox-radio init
 
-Generate template config files in the current directory
+カレントディレクトリにテンプレート設定ファイルを生成する
 
 ### Synopsis
 
-Generate vox-radio.yaml (common settings) and profile.yaml (program profile)
-in the current directory.
+vox-radio.yaml（共通設定）と profile.yaml（プログラムプロファイル）を
+カレントディレクトリに生成します。
 
-Existing files are skipped individually to prevent accidental overwrites.
-If both files already exist, nothing is generated.
+既存ファイルは上書きを防ぐため個別にスキップされます。
+両ファイルがすでに存在する場合は何も生成されません。
 
-After generation, edit the files to configure your LLM API key, program
-content, and audio asset paths, then run the pipeline:
+生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
+次のコマンドでパイプラインを実行してください:
 
   vox-radio run --profile profile.yaml
 
@@ -27,5 +27,5 @@ vox-radio init [flags]
 
 ### SEE ALSO
 
-* [vox-radio](vox-radio.md)	 - AI-powered podcast production tool
+* [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
 

@@ -15,13 +15,13 @@ func newCollectCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "collect",
-		Short: "Collect articles from RSS/Atom feeds and URLs per corner",
-		Long: `Collect articles from RSS/Atom feeds and web URLs defined in corners[].source,
-extract their body text, and write the result to articles.json.
+		Short: "コーナーごとに RSS/Atom フィードと URL から記事を収集する",
+		Long: `corners[].source に定義された RSS/Atom フィードや Web URL から記事を収集し、
+本文テキストを抽出して articles.json に書き出します。
 
-Corners without a source field are skipped.
+source フィールドのないコーナーはスキップされます。
 
-Example:
+例:
   vox-radio collect --out work/articles.json
   vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -50,7 +50,7 @@ Example:
 	}
 
 	registerProfileFlag(cmd, &profilePath)
-	cmd.Flags().StringVar(&out, "out", "", "output articles.json path (required)")
+	cmd.Flags().StringVar(&out, "out", "", "articles.json の出力先パス（必須）")
 	_ = cmd.MarkFlagRequired("out")
 
 	return cmd

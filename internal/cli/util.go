@@ -14,7 +14,7 @@ import (
 // to profilePath. Used by every command that loads a profile (assemble is the
 // exception: its --profile is optional because assets can be skipped).
 func registerProfileFlag(cmd *cobra.Command, profilePath *string) {
-	cmd.Flags().StringVar(profilePath, "profile", "", "profile YAML file path (required)")
+	cmd.Flags().StringVar(profilePath, "profile", "", "プロファイル YAML ファイルのパス（必須）")
 	_ = cmd.MarkFlagRequired("profile")
 }
 

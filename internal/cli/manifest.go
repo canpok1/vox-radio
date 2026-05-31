@@ -25,17 +25,17 @@ func newManifestCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "manifest",
-		Short: "Generate a content manifest JSON alongside an episode",
-		Long: `Build a manifest.json that describes the episode content: title, description,
-summary, datetime, audio filename, and corners with their articles.
+		Short: "エピソードのコンテンツマニフェスト JSON を生成する",
+		Long: `エピソードの内容を記述する manifest.json を生成します。
+タイトル・説明・要約・日時・音声ファイル名・各コーナーの記事情報を含みます。
 
-The manifest is intended for use by a separate publishing service to generate
-RSS feeds without re-running the full pipeline.
+マニフェストは別の配信サービスが RSS フィードを生成する際に使用することを想定しており、
+フルパイプラインを再実行せずに済みます。
 
-When --script is provided, an LLM-generated summary is added to the manifest
-using vox-radio.yaml for LLM configuration.
+--script を指定すると、vox-radio.yaml の LLM 設定を使って
+LLM が生成した要約をマニフェストに追加します。
 
-Example:
+例:
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/script.json --audio output/episode.mp3 --out output/manifest.json`,
@@ -99,11 +99,11 @@ Example:
 	}
 
 	registerProfileFlag(cmd, &profilePath)
-	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json path (optional; corners get empty articles when omitted)")
-	cmd.Flags().StringVar(&audioPath, "audio", "", "audio file path; basename is stored in manifest (required)")
-	cmd.Flags().StringVar(&out, "out", "", "output manifest.json path (required)")
-	cmd.Flags().StringVar(&scriptPath, "script", "", "script.json path (optional; when provided, LLM generates a summary from the script)")
-	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates (used when --script is provided)")
+	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json のパス（任意）。省略するとコーナーの記事は空になる")
+	cmd.Flags().StringVar(&audioPath, "audio", "", "音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）")
+	cmd.Flags().StringVar(&out, "out", "", "manifest.json の出力先パス（必須）")
+	cmd.Flags().StringVar(&scriptPath, "script", "", "script.json のパス（任意）。指定すると LLM が台本から要約を生成する")
+	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ（--script 指定時に使用）")
 	_ = cmd.MarkFlagRequired("audio")
 	_ = cmd.MarkFlagRequired("out")
 
