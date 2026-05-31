@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -226,25 +227,11 @@ func loadPrompts(dir string) (map[string]string, error) {
 }
 
 func buildAssetCatalog(assets config.AssetsConfig) model.AssetCatalog {
-	seNames := make([]string, 0, len(assets.SE))
-	for name := range assets.SE {
-		seNames = append(seNames, name)
+	return model.AssetCatalog{
+		SE:     slices.Sorted(maps.Keys(assets.SE)),
+		BGM:    slices.Sorted(maps.Keys(assets.BGM)),
+		Jingle: slices.Sorted(maps.Keys(assets.Jingle)),
 	}
-	sort.Strings(seNames)
-
-	bgmNames := make([]string, 0, len(assets.BGM))
-	for name := range assets.BGM {
-		bgmNames = append(bgmNames, name)
-	}
-	sort.Strings(bgmNames)
-
-	jingleNames := make([]string, 0, len(assets.Jingle))
-	for name := range assets.Jingle {
-		jingleNames = append(jingleNames, name)
-	}
-	sort.Strings(jingleNames)
-
-	return model.AssetCatalog{SE: seNames, BGM: bgmNames, Jingle: jingleNames}
 }
 
 func stepTemp(llmCfg config.LLMConfig, name string) float64 {

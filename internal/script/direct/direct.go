@@ -68,8 +68,10 @@ func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog mo
 		return model.Script{}, fmt.Errorf("marshal asset catalog: %w", err)
 	}
 
-	prompt := strings.ReplaceAll(d.promptTemplate, "{{lines}}", string(linesJSON))
-	prompt = strings.ReplaceAll(prompt, "{{asset_catalog}}", string(catalogJSON))
+	prompt := strings.NewReplacer(
+		"{{lines}}", string(linesJSON),
+		"{{asset_catalog}}", string(catalogJSON),
+	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},

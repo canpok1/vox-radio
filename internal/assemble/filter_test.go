@@ -619,50 +619,6 @@ func TestBuildFFmpegArgs_DuplicateSEUsesDistinctInputs(t *testing.T) {
 	}
 }
 
-func TestComputeSEEvents_NoSE(t *testing.T) {
-	script := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, Text: "only speech"},
-		},
-	}
-	clips := []model.ClipMeta{
-		{Index: 0, File: "clip_000.wav", DurationSec: 1.0},
-	}
-
-	events := computeSEEvents(script, clips, 0.3)
-	if len(events) != 0 {
-		t.Errorf("expected 0 SE events, got %d", len(events))
-	}
-}
-
-func TestComputeSEEvents_PositionsAfterSpeech(t *testing.T) {
-	script := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "first"},
-			{Type: model.SegmentTypeSE, AssetName: "chime"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "second"},
-		},
-	}
-	clips := []model.ClipMeta{
-		{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
-		{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
-	}
-
-	events := computeSEEvents(script, clips, 0.5)
-
-	if len(events) != 1 {
-		t.Fatalf("expected 1 SE event, got %d", len(events))
-	}
-	if events[0].assetName != "chime" {
-		t.Errorf("asset name: got %s, want chime", events[0].assetName)
-	}
-	// After clip_000 (2.0s) + pause (0.5s) = 2500ms
-	wantMs := int((2.0 + 0.5) * 1000)
-	if events[0].offsetMs != wantMs {
-		t.Errorf("SE offset: got %d ms, want %d ms", events[0].offsetMs, wantMs)
-	}
-}
-
 // TestBuildFFmpegArgs_LoudnormAppliedOnce verifies that loudnorm is applied exactly once
 // to the full assembled output (after all concat operations).
 func TestBuildFFmpegArgs_LoudnormAppliedOnce(t *testing.T) {

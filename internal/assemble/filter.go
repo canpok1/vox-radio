@@ -175,20 +175,24 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 // program.OpeningJingle and program.EndingJingle configuration.
 // This is the mechanism for code-deterministic OP/ED jingle insertion.
 func injectProgramJingles(scr model.Script, program config.ProgramConfig) model.Script {
-	var prepend, append_ []model.ScriptSegment
-	if program.OpeningJingle != "" {
-		prepend = []model.ScriptSegment{{Type: model.SegmentTypeJingle, AssetName: program.OpeningJingle}}
-	}
-	if program.EndingJingle != "" {
-		append_ = []model.ScriptSegment{{Type: model.SegmentTypeJingle, AssetName: program.EndingJingle}}
-	}
-	if len(prepend) == 0 && len(append_) == 0 {
+	if program.OpeningJingle == "" && program.EndingJingle == "" {
 		return scr
 	}
-	segments := make([]model.ScriptSegment, 0, len(prepend)+len(scr.Segments)+len(append_))
-	segments = append(segments, prepend...)
+	capacity := len(scr.Segments)
+	if program.OpeningJingle != "" {
+		capacity++
+	}
+	if program.EndingJingle != "" {
+		capacity++
+	}
+	segments := make([]model.ScriptSegment, 0, capacity)
+	if program.OpeningJingle != "" {
+		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.OpeningJingle})
+	}
 	segments = append(segments, scr.Segments...)
-	segments = append(segments, append_...)
+	if program.EndingJingle != "" {
+		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.EndingJingle})
+	}
 	return model.Script{Segments: segments}
 }
 
@@ -278,30 +282,26 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 	speechLabel := buildSpeechConcatWithIndices(b, run.clipIndices, clipInputIdx, pauseSec, runIdx)
 	currentLabel := speechLabel
 
-	hasBGM := false
+	// Single pass over bgmIntervals to determine hasBGM, hasDucking, and firstDuckRatio.
+	hasBGM, hasDucking := false, false
+	firstDuckRatio := 0.0
 	for _, interval := range run.bgmIntervals {
-		if _, ok := assets.BGM[interval.assetName]; ok {
+		if e, ok := assets.BGM[interval.assetName]; ok {
 			hasBGM = true
-			break
+			if e.DuckRatio > 0 && !hasDucking {
+				hasDucking = true
+				firstDuckRatio = e.DuckRatio
+			}
 		}
 	}
 
 	// Split speech for sidechain ducking if any BGM has duck_ratio > 0.
 	duckLabel := ""
-	if hasBGM {
-		hasDucking := false
-		for _, interval := range run.bgmIntervals {
-			if e, ok := assets.BGM[interval.assetName]; ok && e.DuckRatio > 0 {
-				hasDucking = true
-				break
-			}
-		}
-		if hasDucking {
-			mixLabel := fmt.Sprintf("[run%d_speech_mix]", runIdx)
-			duckLabel = fmt.Sprintf("[run%d_speech_duck]", runIdx)
-			b.addFilter(fmt.Sprintf("%sasplit=2%s%s", currentLabel, mixLabel, duckLabel))
-			currentLabel = mixLabel
-		}
+	if hasDucking {
+		mixLabel := fmt.Sprintf("[run%d_speech_mix]", runIdx)
+		duckLabel = fmt.Sprintf("[run%d_speech_duck]", runIdx)
+		b.addFilter(fmt.Sprintf("%sasplit=2%s%s", currentLabel, mixLabel, duckLabel))
+		currentLabel = mixLabel
 	}
 
 	// SE overlay.
@@ -358,15 +358,8 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			// Apply sidechain ducking if duck ratio > 0.
 			if duckLabel != "" {
 				bgmDuckedLabel := fmt.Sprintf("[run%d_bgm_ducked]", runIdx)
-				firstDuck := 4.0
-				for _, interval := range run.bgmIntervals {
-					if e, ok := assets.BGM[interval.assetName]; ok && e.DuckRatio > 0 {
-						firstDuck = e.DuckRatio
-						break
-					}
-				}
 				b.addFilter(fmt.Sprintf("%s%ssidechaincompress=threshold=0.02:ratio=%.1f%s",
-					bgmFullLabel, duckLabel, firstDuck, bgmDuckedLabel))
+					bgmFullLabel, duckLabel, firstDuckRatio, bgmDuckedLabel))
 				bgmFullLabel = bgmDuckedLabel
 			}
 
@@ -427,29 +420,4 @@ func applyFadeIn(b *filterBuilder, currentLabel string, idx int, fadeSec float64
 	outLabel := fmt.Sprintf("[jingle%d_fi]", idx)
 	b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", currentLabel, fadeSec, outLabel))
 	return outLabel
-}
-
-// computeSEEvents processes the script to determine the timeline offset of each SE segment.
-// The offset is measured in milliseconds from the start of the assembled audio.
-func computeSEEvents(script model.Script, clips []model.ClipMeta, pauseSec float64) []seEvent {
-	var events []seEvent
-	clipIdx := 0
-	offsetMs := 0.0
-
-	for _, seg := range script.Segments {
-		switch seg.Type {
-		case model.SegmentTypeSpeech:
-			if clipIdx < len(clips) {
-				offsetMs += clips[clipIdx].DurationSec * 1000
-				clipIdx++
-			}
-			offsetMs += pauseSec * 1000
-		case model.SegmentTypeSE:
-			events = append(events, seEvent{
-				assetName: seg.AssetName,
-				offsetMs:  int(offsetMs),
-			})
-		}
-	}
-	return events
 }
