@@ -106,12 +106,6 @@ func (s *Synth) resolveSpeakerID(charID string) int {
 	if !ok {
 		return 0
 	}
-	if ch.DefaultStyle == "" {
-		return 0
-	}
-	styleID, ok := ch.Styles[ch.DefaultStyle]
-	if !ok {
-		return 0
-	}
-	return styleID
+	id, _ := ch.DefaultSpeakerID()
+	return id
 }

@@ -97,11 +97,14 @@ func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.Corn
 }
 
 func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, corners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) [][]model.Line {
+	if len(corners) == 0 {
+		return cornerLines
+	}
 	totalTarget := 0
 	for _, c := range corners {
 		totalTarget += c.TargetChars
 	}
-	if totalTarget <= 0 || len(corners) == 0 {
+	if totalTarget <= 0 {
 		return cornerLines
 	}
 

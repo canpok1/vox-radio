@@ -91,6 +91,15 @@ type CharacterConfig struct {
 	Styles       map[string]int `yaml:"styles"`
 }
 
+// DefaultSpeakerID returns the VOICEVOX speaker ID for the character's default style.
+func (c CharacterConfig) DefaultSpeakerID() (int, bool) {
+	if c.DefaultStyle == "" {
+		return 0, false
+	}
+	id, ok := c.Styles[c.DefaultStyle]
+	return id, ok
+}
+
 // Config holds genre-independent common settings.
 // It is loaded from vox-radio.yaml at the repository root.
 type Config struct {
