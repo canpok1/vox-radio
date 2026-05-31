@@ -28,12 +28,12 @@ grep -n "Short:\|Long:" internal/cli/*.go
 作業ツリーを汚さないよう `docs/cli/` をバックアップしてから再生成し、差分を確認して元に戻す。
 
 ```bash
-TMPDIR=$(mktemp -d)
-cp docs/cli/* "$TMPDIR/"
+BACKUP_DIR=$(mktemp -d)
+cp docs/cli/* "$BACKUP_DIR/"
 make docs
-diff -rq "$TMPDIR/" docs/cli/
-cp "$TMPDIR/"* docs/cli/
-rm -rf "$TMPDIR"
+diff -rq "$BACKUP_DIR/" docs/cli/
+cp "$BACKUP_DIR/"* docs/cli/
+rm -rf "$BACKUP_DIR"
 ```
 
 差分があれば対象ファイルを記録する。

@@ -25,12 +25,12 @@ grep -n "Short:\|Long:" internal/cli/*.go
 現在の `docs/cli/` をバックアップし、`make docs` で再生成して差分を確認してから元に戻す。
 
 ```bash
-TMPDIR=$(mktemp -d)
-cp docs/cli/* "$TMPDIR/"
+BACKUP_DIR=$(mktemp -d)
+cp docs/cli/* "$BACKUP_DIR/"
 make docs
-diff -rq "$TMPDIR/" docs/cli/
-cp "$TMPDIR/"* docs/cli/
-rm -rf "$TMPDIR"
+diff -rq "$BACKUP_DIR/" docs/cli/
+cp "$BACKUP_DIR/"* docs/cli/
+rm -rf "$BACKUP_DIR"
 ```
 
 差分がなければ「ドキュメント最新」と報告する。差分があればファイル名を列挙する。
