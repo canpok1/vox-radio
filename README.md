@@ -211,7 +211,8 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `title` | string | 必須 | コーナータイトル |
-| `content` | string | 任意 | コーナーの内容説明（LLM への指示に使用） |
+| `content` | string | 任意 | コーナーの内容説明（台本生成 LLM への指示に使用） |
+| `direction` | string | 任意 | コーナーの演出説明（演出生成 LLM への指示に使用。ジングル・SE・BGM の挿入タイミングなど）。台本生成 LLM へは渡されない |
 | `cast` | map[string]string | 任意 | キャラID → 役割説明のマップ（キーは `vox-radio.yaml` の `characters` のキーと一致させること） |
 | `target_duration_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に文字数（≈7文字/秒）へ換算される |
 | `source` | SourceConfig | 任意 | データソース（省略するとこのコーナーの収集はスキップ） |

@@ -101,6 +101,7 @@ type SourceConfig struct {
 type CornerConfig struct {
 	Title             string            `yaml:"title"`
 	Content           string            `yaml:"content"`
+	Direction         string            `yaml:"direction,omitempty"`
 	Cast              map[string]string `yaml:"cast"`
 	TargetDurationSec int               `yaml:"target_duration_sec"`
 	Source            *SourceConfig     `yaml:"source,omitempty"`

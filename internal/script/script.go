@@ -70,13 +70,13 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		return model.Script{}, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, cornerMap, chars)
-	allLines := flatten(cornerLines)
-	if err := g.saveIntermediate(fileio.FileLines, model.Lines{Lines: allLines}); err != nil {
+	scriptLines := buildScriptLines(corners, cornerLines)
+	if err := g.saveIntermediate(fileio.FileLines, model.ScriptLines{Corners: scriptLines}); err != nil {
 		return model.Script{}, err
 	}
 
 	g.logger.With("step", "script/direct").Info("開始")
-	scr, err := g.director.Direct(ctx, allLines, g.assetCatalog)
+	scr, err := g.director.Direct(ctx, scriptLines, g.assetCatalog)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("direct: %w", err)
 	}
@@ -179,14 +179,14 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 	return nil
 }
 
-func flatten(lines [][]model.Line) []model.Line {
-	total := 0
-	for _, l := range lines {
-		total += len(l)
-	}
-	result := make([]model.Line, 0, total)
-	for _, l := range lines {
-		result = append(result, l...)
+func buildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
+	result := make([]model.CornerLines, len(corners))
+	for i, corner := range corners {
+		result[i] = model.CornerLines{
+			Title:     corner.Title,
+			Direction: corner.Direction,
+			Lines:     cornerLines[i],
+		}
 	}
 	return result
 }

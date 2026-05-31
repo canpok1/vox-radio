@@ -1,14 +1,19 @@
 # [C] 演出プロンプト（アセット挿入位置の判定）
 
-以下のセリフ列と使用可能なアセット一覧を元に、SE（効果音）・BGM・中間ジングル（アイキャッチ）を挿入する位置を判定してください。
+以下のコーナー別セリフ列と使用可能なアセット一覧を元に、SE（効果音）・BGM・中間ジングル（アイキャッチ）を挿入する位置を判定してください。
 
 OP/EDジングルはscript生成時にコードが台本へ埋め込み済みのため、ここでは中間アイキャッチ用ジングル・SEの挿入位置とBGMの開始/停止のみを判定してください。
 
-## セリフ列
+## コーナー別セリフ列
 
 ```json
-{{lines}}
+{{corners}}
 ```
+
+各コーナーのフィールド:
+- `title`: コーナー名
+- `direction`（省略可）: このコーナーの演出意図（ジングル・SE・BGMの挿入タイミングに関する指示）。**挿入位置の判断に積極的に活用すること**
+- `lines`: セリフの配列（インデックスは0始まり）
 
 ## 使用可能なアセット一覧
 
@@ -33,25 +38,29 @@ OP/EDジングルはscript生成時にコードが台本へ埋め込み済みの
 {
   "insertions": [
     {
+      "corner_index": 0,
       "after_line_index": 0,
       "type": "se",
       "asset_name": "chime",
       "reason": "コーナー開始のため"
     },
     {
+      "corner_index": 0,
       "after_line_index": 0,
       "type": "bgm",
       "asset_name": "talk_bgm",
       "reason": "BGM開始"
     },
     {
+      "corner_index": 0,
       "after_line_index": 3,
       "type": "bgm",
       "asset_name": "",
       "reason": "BGM停止"
     },
     {
-      "after_line_index": 5,
+      "corner_index": 1,
+      "after_line_index": 0,
       "type": "jingle",
       "asset_name": "eyecatch",
       "reason": "コーナー区切り"
@@ -59,6 +68,7 @@ OP/EDジングルはscript生成時にコードが台本へ埋め込み済みの
   ],
   "pause_insertions": [
     {
+      "corner_index": 0,
       "after_line_index": 4,
       "duration_sec": 1.0,
       "reason": "オチの前の溜め"
@@ -71,7 +81,7 @@ OP/EDジングルはscript生成時にコードが台本へ埋め込み済みの
 
 ### 間（pause）
 - オチの前の溜め、しんみりした余韻など、**意図的な空白**が演出として必要な場合のみ使用する
-- `after_line_index` のセリフの直後に指定秒数の無音が入る（BGMは途切れず継続）
+- 指定コーナーの `after_line_index` のセリフの直後に指定秒数の無音が入る（BGMは途切れず継続）
 - `duration_sec` は **0.3〜2.0秒** を目安とし、最大5.0秒まで指定可能
 - 過剰な「間」は dead air になるため、**全体で0〜2回まで**を目安に控えめに使う
 - 通常のトーク進行・セリフの切れ目には使わない（デフォルトのポーズで十分）
@@ -79,7 +89,7 @@ OP/EDジングルはscript生成時にコードが台本へ埋め込み済みの
 ### SE（効果音）
 - トピックの転換点など、効果的な場所にのみ挿入する
 - 使いすぎると煩わしくなるので、厳選して挿入する（全体で0〜3回程度）
-- `after_line_index` のセリフの直後に再生される（overlayのため本編と同時）
+- 指定コーナーの `after_line_index` のセリフの直後に再生される（overlayのため本編と同時）
 
 ### BGM
 - 番組の雰囲気に合わせて開始・停止を制御する
@@ -95,7 +105,9 @@ OP/EDジングルはscript生成時にコードが台本へ埋め込み済みの
 
 ## 注意事項
 
-- `after_line_index` は0始まりのインデックスです（0 = 最初のセリフの後に挿入）
+- `corner_index` は0始まりのコーナーインデックスです（コーナー別セリフ列の配列インデックスと一致）
+- `after_line_index` は各コーナー内での0始まりのセリフインデックスです（**コーナーをまたいだ通し番号ではありません**）
 - `asset_name` は対応するアセット一覧のキー名を使用してください（BGM停止は空文字列）
 - 挿入が不要な場合は `insertions` / `pause_insertions` をそれぞれ空配列にしてください
-- 同一 `after_line_index` に SE と pause が両方ある場合、SE → pause の順で再生されます
+- 同一コーナー・同一 `after_line_index` に SE と pause が両方ある場合、SE → pause の順で再生されます
+- BGMはコーナーをまたいで継続できます（停止しない限り次のコーナーでも流れ続けます）

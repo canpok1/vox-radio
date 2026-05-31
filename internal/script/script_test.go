@@ -2,6 +2,7 @@ package script_test
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -41,16 +42,18 @@ type mockDirector struct {
 	err    error
 }
 
-func (m *mockDirector) Direct(_ context.Context, lines []model.Line, _ model.AssetCatalog) (model.Script, error) {
+func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog) (model.Script, error) {
 	if m.err != nil {
 		return model.Script{}, m.err
 	}
 	if m.script.Segments != nil {
 		return m.script, nil
 	}
-	segs := make([]model.ScriptSegment, len(lines))
-	for i, l := range lines {
-		segs[i] = model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: l.SpeakerRole, Text: l.Text}
+	segs := make([]model.ScriptSegment, 0)
+	for _, corner := range corners {
+		for _, l := range corner.Lines {
+			segs = append(segs, model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: l.SpeakerRole, Text: l.Text})
+		}
 	}
 	return model.Script{Segments: segs}, nil
 }
@@ -277,6 +280,48 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 	path := filepath.Join(workDir, fileio.FileLines)
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("expected intermediate file %q to exist: %v", fileio.FileLines, err)
+	}
+}
+
+func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) {
+	workDir := t.TempDir()
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Content: "AI紹介", Direction: "冒頭でSEを流す。", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
+	}
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		&mockDirector{},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		workDir,
+	)
+
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(workDir, fileio.FileLines)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected intermediate file to exist: %v", err)
+	}
+
+	var sl model.ScriptLines
+	if err := json.Unmarshal(data, &sl); err != nil {
+		t.Fatalf("03_lines.json must be ScriptLines structure: %v\nContent: %s", err, data)
+	}
+	if len(sl.Corners) != 1 {
+		t.Fatalf("ScriptLines.Corners: got %d, want 1", len(sl.Corners))
+	}
+	if sl.Corners[0].Title != "AIコーナー" {
+		t.Errorf("Corners[0].Title: got %q, want AIコーナー", sl.Corners[0].Title)
+	}
+	if sl.Corners[0].Direction != "冒頭でSEを流す。" {
+		t.Errorf("Corners[0].Direction: got %q, want 冒頭でSEを流す。", sl.Corners[0].Direction)
 	}
 }
 

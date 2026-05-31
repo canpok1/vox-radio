@@ -291,6 +291,31 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	}
 }
 
+func TestLLMWriter_Write_DirectionNotInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "c={{corner}} p={{program}}", 0, nil)
+
+	corner := config.CornerConfig{
+		Title:     "オープニング",
+		Content:   "番組の挨拶",
+		Direction: "冒頭でジングルを流す演出をする。",
+		Cast:      map[string]string{"zundamon": "司会"},
+	}
+	allCorners := []config.CornerConfig{corner}
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, allCorners, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if strings.Contains(prompt, "冒頭でジングルを流す演出をする。") {
+		t.Errorf("direction value must not appear in write prompt, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "direction") {
+		t.Errorf("direction key must not appear in write prompt, got: %s", prompt)
+	}
+}
+
 func TestLLMWriter_Write_PromptContainsProgramInfo(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "program={{program}}", 0, nil)

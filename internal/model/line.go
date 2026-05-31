@@ -12,3 +12,15 @@ type Line struct {
 type Lines struct {
 	Lines []Line `json:"lines"`
 }
+
+// CornerLines holds the lines and direction for one corner.
+type CornerLines struct {
+	Title     string `json:"title"`
+	Direction string `json:"direction,omitempty"`
+	Lines     []Line `json:"lines"`
+}
+
+// ScriptLines is the root structure of 03_lines.json.
+type ScriptLines struct {
+	Corners []CornerLines `json:"corners"`
+}
