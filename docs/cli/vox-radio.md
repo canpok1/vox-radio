@@ -18,7 +18,7 @@ synthesizing voice clips, assembling audio, and outputting a content manifest.
 ### SEE ALSO
 
 * [vox-radio assemble](vox-radio_assemble.md)	 - Assemble WAV clips into an MP3 episode
-* [vox-radio collect](vox-radio_collect.md)	 - Collect articles from RSS feeds and URLs per corner
+* [vox-radio collect](vox-radio_collect.md)	 - Collect articles from RSS/Atom feeds and URLs per corner
 * [vox-radio manifest](vox-radio_manifest.md)	 - Generate a content manifest JSON alongside an episode
 * [vox-radio run](vox-radio_run.md)	 - Run the full podcast production pipeline
 * [vox-radio script](vox-radio_script.md)	 - Generate a script from collected articles using LLM

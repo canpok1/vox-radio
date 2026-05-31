@@ -3,23 +3,40 @@ package collect
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-// Collector fetches articles from RSS feeds and individual URLs.
+// Collector fetches articles from RSS/Atom feeds and individual URLs.
 type Collector struct {
 	client *http.Client
+	logger *slog.Logger
+}
+
+// Option configures a Collector.
+type Option func(*Collector)
+
+// WithLogger sets the logger used for WARN messages.
+func WithLogger(l *slog.Logger) Option {
+	return func(c *Collector) { c.logger = l }
 }
 
 // New creates a Collector. If client is nil, http.DefaultClient is used.
-func New(client *http.Client) *Collector {
+func New(client *http.Client, opts ...Option) *Collector {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return &Collector{client: client}
+	c := &Collector{
+		client: client,
+		logger: slog.Default(),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // Run collects articles from all feeds and individual URLs in cfg.

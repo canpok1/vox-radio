@@ -1,10 +1,10 @@
 ## vox-radio collect
 
-Collect articles from RSS feeds and URLs per corner
+Collect articles from RSS/Atom feeds and URLs per corner
 
 ### Synopsis
 
-Collect articles from RSS feeds and web URLs defined in corners[].source,
+Collect articles from RSS/Atom feeds and web URLs defined in corners[].source,
 extract their body text, and write the result to articles.json.
 
 Corners without a source field are skipped.

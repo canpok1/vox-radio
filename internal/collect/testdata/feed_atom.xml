@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>テストAtomフィード</title>
+  <link href="https://example.com"/>
+  <updated>2024-01-01T00:00:00Z</updated>
+  <entry>
+    <title>Atomフィード記事1</title>
+    <link href="https://example.com/atom/1"/>
+    <content type="html">&lt;p&gt;Atom記事1の本文。テスト用コンテンツ。&lt;/p&gt;</content>
+    <updated>2024-01-01T00:00:00Z</updated>
+  </entry>
+  <entry>
+    <title>Atomフィード記事2</title>
+    <link href="https://example.com/atom/2"/>
+    <content type="html">&lt;p&gt;Atom記事2の本文。テスト用コンテンツ。&lt;/p&gt;</content>
+    <updated>2024-01-01T00:00:00Z</updated>
+  </entry>
+  <entry>
+    <title>Atomフィード記事3</title>
+    <link href="https://example.com/atom/3"/>
+    <content type="html">&lt;p&gt;Atom記事3の本文。max_itemsで除外される。&lt;/p&gt;</content>
+    <updated>2024-01-01T00:00:00Z</updated>
+  </entry>
+</feed>

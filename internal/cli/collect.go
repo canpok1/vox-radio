@@ -15,8 +15,8 @@ func newCollectCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "collect",
-		Short: "Collect articles from RSS feeds and URLs per corner",
-		Long: `Collect articles from RSS feeds and web URLs defined in corners[].source,
+		Short: "Collect articles from RSS/Atom feeds and URLs per corner",
+		Long: `Collect articles from RSS/Atom feeds and web URLs defined in corners[].source,
 extract their body text, and write the result to articles.json.
 
 Corners without a source field are skipped.
