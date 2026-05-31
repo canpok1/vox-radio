@@ -1,0 +1,69 @@
+# vox-radio.yaml - 共通設定ファイル
+# このファイルを編集して LLM・VOICEVOX の接続情報とキャラクター設定を行ってください。
+
+# LLM（大規模言語モデル）の接続設定
+llm:
+  # LLM API のベースURL（OpenAI 互換エンドポイント）
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  # APIキーを格納する環境変数名（export GEMINI_API_KEY=xxx などで設定）
+  api_key_env: GEMINI_API_KEY
+  # 使用するモデル名
+  model: gemini-3.1-flash-lite
+  # 生成のランダム性（0.0〜1.0）。低いほど安定、高いほど多様な出力になる
+  temperature: 0.7
+  # APIリトライ回数
+  max_retries: 3
+  # ステップごとの温度設定（省略時は上記 temperature を使用）
+  steps:
+    summarize: { temperature: 0.2 }
+    plan:      { temperature: 0.4 }
+    write:     { temperature: 0.8 }
+    direct:    { temperature: 0.2 }
+
+# VOICEVOX 音声合成エンジンの接続設定
+voicevox:
+  # VOICEVOX Engine の URL
+  # devcontainer 環境で利用する場合は http://voicevox:50021 に変更してください
+  url: http://localhost:50021
+
+# キャラクター設定（VOICEVOX の話者IDと紐付け）
+# キャラクターIDは corners[].cast のキーとして使用します
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ", "〜なのだ"]
+    personality: ["元気", "明るい", "素直", "前向き", "おっちょこちょい", "好奇心旺盛"]
+    # デフォルトで使用するスタイル名（styles のキーと一致させること）
+    default_style: ノーマル
+    # スタイル名と VOICEVOX 話者IDの対応
+    styles:
+      ノーマル: 3
+      あまあま: 1
+      ツンツン: 7
+      セクシー: 5
+      ささやき: 22
+      ヒソヒソ: 38
+      ヘロヘロ: 75
+      なみだめ: 76
+  zunko:
+    name: 東北ずん子
+    pronoun: 私
+    speech_suffix: ["〜です", "〜ます"]
+    personality: ["前向き", "明るい", "母性の塊", "穏やか"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 107
+  metan:
+    name: 四国めたん
+    pronoun: わたくし
+    speech_suffix: ["〜かしら", "〜だわ", "〜ですわ"]
+    personality: ["お嬢様", "しっかり者", "気まぐれ", "負けず嫌い", "世話好き"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 2
+      あまあま: 0
+      ツンツン: 6
+      セクシー: 4
+      ささやき: 36
+      ヒソヒソ: 37

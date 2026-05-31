@@ -18,6 +18,7 @@ synthesizing voice clips, assembling audio, and outputting a content manifest.`,
 	}
 
 	root.AddCommand(
+		newInitCmd(),
 		newCollectCmd(),
 		newScriptCmd(),
 		newSynthCmd(),

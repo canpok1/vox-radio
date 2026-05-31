@@ -1,0 +1,60 @@
+# profile.yaml - プロファイル設定ファイル
+# このファイルを編集して番組の構成・コーナー・音声素材のパスを設定してください。
+# vox-radio run --profile profile.yaml で実行できます。
+
+# 番組全体の設定
+program:
+  # 番組タイトル
+  title: "番組タイトル"
+  # 番組の説明（LLM への指示に使用）
+  description: "番組の説明"
+  # コーナー間の無音時間（秒）
+  segment_pause_sec: 0.3
+  # 番組全体の目標収録時間（秒）
+  target_duration_sec: 240
+
+# コーナー定義（番組を構成する各コーナーを順番に記述）
+corners:
+  - title: "オープニング"
+    # コーナーの内容説明（LLM への指示に使用）
+    content: "番組の挨拶と本日のトピック紹介"
+    # 出演キャラクター（キャラクターID: 役割の説明）
+    # キャラクターIDは vox-radio.yaml の characters のキーと一致させること
+    cast:
+      zundamon: "元気に挨拶する進行役"
+    # このコーナーの目標時間（秒）
+    target_duration_sec: 30
+
+  - title: "メインコーナー"
+    content: "メインコンテンツの紹介"
+    cast:
+      zundamon: "進行役"
+      metan: "解説役"
+    target_duration_sec: 180
+    # ソース設定（RSSフィードや記事URLからコンテンツを収集する場合に設定）
+    # ソースがない場合はこのブロックを省略してください
+    source:
+      feeds:
+        - url: https://example.com/feed
+          max_items: 5
+      articles: []
+
+  - title: "エンディング"
+    content: "まとめと締め"
+    cast:
+      zundamon: "進行役"
+    target_duration_sec: 30
+
+# アセット設定（ジングル・SE・BGM）
+# バイナリ素材ファイルは別途用意してください。
+# ファイルパスはこのプロファイルファイルからの相対パスで解決されます。
+# 素材が不要な場合はこのセクション全体をコメントアウトするか削除してください。
+# assets:
+#   jingle:
+#     opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
+#     ending:  { file: assets/jingle/ending.mp3,  fade_in: 0.5, fade_out: 1.0 }
+#   se:
+#     chime:      { file: assets/se/chime.wav,      volume: 0.8 }
+#     transition: { file: assets/se/transition.wav, volume: 0.8 }
+#   bgm:
+#     talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }
