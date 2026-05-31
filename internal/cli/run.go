@@ -14,7 +14,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
-	"github.com/canpok1/vox-radio/internal/script/plan"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
 	"github.com/canpok1/vox-radio/internal/script/write"
 	"github.com/canpok1/vox-radio/internal/synth"
@@ -55,6 +54,9 @@ Example:
 			if err != nil {
 				return fmt.Errorf("load profile: %w", err)
 			}
+			if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
+				return fmt.Errorf("profile validation: %w", err)
+			}
 
 			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
 			llmClient := llm.NewClient(llm.Config{
@@ -75,7 +77,6 @@ Example:
 
 			scripter := script.NewLLMScriptGenerator(
 				summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize")),
-				plan.NewLLMPlanner(llmClient, prompts["plan"], stepTemp(cfg.LLM, "plan")),
 				write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write")),
 				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 				seCatalog,
@@ -87,21 +88,22 @@ Example:
 				engineURL = "http://localhost:50021"
 			}
 
-			siteURL := resolveSiteURL(baseURL, p.Podcast.SiteURL)
+			siteURL := resolveSiteURL(baseURL, p.Program.SiteURL)
 			h, err := newHosting(hostingType, outDir, siteURL)
 			if err != nil {
 				return err
 			}
 
-			keep := resolveKeep(p.Podcast.MaxItems)
+			keep := resolveKeep(p.Program.MaxItems)
 
 			runner := &pipeline.Runner{
 				Profile:   p,
+				Config:    cfg,
 				Collector: collect.New(nil),
 				Scripter:  scripter,
-				Synther:   synth.New(engineURL, p.Show, cfg),
-				Assembler: assemble.New(p.Assets, p.Show),
-				Publisher: publish.New(h, p.Podcast),
+				Synther:   synth.New(engineURL, cfg),
+				Assembler: assemble.New(p.Assets, p.Program),
+				Publisher: publish.New(h, p.Program),
 				Pruner:    publish.NewPruner(h, keep),
 			}
 
@@ -127,7 +129,7 @@ Example:
 	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
-	cmd.Flags().StringVar(&title, "title", "", "episode title (default: <date> <podcast.title>)")
+	cmd.Flags().StringVar(&title, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&description, "description", "", "episode description")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	cmd.Flags().StringVar(&hostingType, "hosting", "local", "hosting type: local or ghpages")

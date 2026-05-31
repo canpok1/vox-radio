@@ -1,4 +1,4 @@
-podcast:
+program:
   title: "今日のテックニュース"
   description: "毎日5分のニュースラジオ"
   language: ja
@@ -8,18 +8,25 @@ podcast:
   cover_image_url: https://example.github.io/vox-radio/cover.jpg
   site_url: https://example.github.io/vox-radio/
   max_items: 7
-
-show:
-  title_format: "今日のテックニュース {date}"
-  target_chars: 1700
-  corners: 3
-  default_speaker: 3
-  speakers:
-    host: 3
-    guest: 2
-  persona: |
-    hostは元気で親しみやすい進行役。guestは落ち着いた解説役。
   segment_pause_sec: 0.3
+
+corners:
+  - title: "オープニング"
+    content: "番組の挨拶と本日のトピック紹介"
+    cast:
+      zundamon: "元気に挨拶する進行役"
+    target_chars: 200
+  - title: "今日のテックニュース"
+    content: "テック記事を2〜3本、噛み砕いて紹介"
+    cast:
+      zundamon: "司会"
+      metan: "解説役"
+    target_chars: 1300
+  - title: "エンディング"
+    content: "まとめと次回予告"
+    cast:
+      zundamon: "進行役"
+    target_chars: 200
 
 feeds:
   - url: https://example.com/rss.xml

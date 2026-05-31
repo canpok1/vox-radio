@@ -41,7 +41,7 @@ Example:
 				return fmt.Errorf("load profile: %w", err)
 			}
 
-			siteURL := resolveSiteURL(baseURL, p.Podcast.SiteURL)
+			siteURL := resolveSiteURL(baseURL, p.Program.SiteURL)
 			opts := publish.Options{
 				Date:        date,
 				Title:       titleFlag,
@@ -54,7 +54,7 @@ Example:
 			}
 
 			ctx := context.Background()
-			publisher := publish.New(h, p.Podcast)
+			publisher := publish.New(h, p.Program)
 			if err := publisher.Run(ctx, in, opts); err != nil {
 				return err
 			}
@@ -76,7 +76,7 @@ Example:
 
 	cmd.Flags().StringVar(&in, "in", "", "input mp3 path (required)")
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
-	cmd.Flags().StringVar(&titleFlag, "title", "", "episode title (default: <date> <podcast.title>)")
+	cmd.Flags().StringVar(&titleFlag, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&descFlag, "description", "", "episode description")
 	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for hosting (required)")

@@ -31,7 +31,7 @@ vox-radio run [flags]
       --out-dir string       output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/) (default "output")
       --profile string       profile YAML file path (default "profiles/test/profile.yaml")
       --prompts string       directory containing prompt templates (default "prompts")
-      --title string         episode title (default: <date> <podcast.title>)
+      --title string         episode title (default: <date> <program.title>)
 ```
 
 ### SEE ALSO

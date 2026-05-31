@@ -63,7 +63,7 @@ type itemData struct {
 	Duration    string
 }
 
-func Generate(cfg config.PodcastConfig, episodes model.Episodes) ([]byte, error) {
+func Generate(cfg config.ProgramConfig, episodes model.Episodes) ([]byte, error) {
 	items := make([]itemData, len(episodes.Episodes))
 	for i, ep := range episodes.Episodes {
 		pubDate, err := formatPubDate(ep.PubDate)

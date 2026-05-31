@@ -36,9 +36,11 @@ func newTestSynth() *Synth {
 				return fakeWAV, nil
 			},
 		},
-		ShowConfig: model.ShowConfig{
-			DefaultSpeaker: 3,
-			Speakers:       map[string]int{"host": 3, "guest": 2},
+		Config: &config.Config{
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+				"metan":    {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 2}},
+			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.5, nil },
 	}
@@ -48,9 +50,9 @@ func TestSynth_Run_SkipsSESegments(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "こんにちは"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
 			{Type: model.SegmentTypeSE, SEName: "chime"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "よろしく"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "よろしく"},
 		},
 	}
 
@@ -69,9 +71,9 @@ func TestSynth_Run_NamesClipsSequentially(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "セリフ1"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "セリフ2"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "セリフ3"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "セリフ1"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "セリフ2"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "セリフ3"},
 		},
 	}
 
@@ -96,7 +98,7 @@ func TestSynth_Run_WritesWAVFiles(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
 		},
 	}
 
@@ -120,7 +122,7 @@ func TestSynth_Run_WritesClipsJSON(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
 		},
 	}
 
@@ -146,8 +148,8 @@ func TestSynth_Run_WritesClipsJSON(t *testing.T) {
 	if meta.Clips[0].DurationSec != 1.5 {
 		t.Errorf("clips.json duration: got %v, want 1.5", meta.Clips[0].DurationSec)
 	}
-	if meta.Clips[0].SpeakerRole != "host" {
-		t.Errorf("clips.json speaker_role: got %s, want host", meta.Clips[0].SpeakerRole)
+	if meta.Clips[0].SpeakerRole != "zundamon" {
+		t.Errorf("clips.json speaker_role: got %s, want zundamon", meta.Clips[0].SpeakerRole)
 	}
 	if meta.Clips[0].Text != "テスト" {
 		t.Errorf("clips.json text: got %s, want テスト", meta.Clips[0].Text)
@@ -158,7 +160,7 @@ func TestSynth_Run_AutoCreatesOutputDir(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
 		},
 	}
 
@@ -173,7 +175,7 @@ func TestSynth_Run_AutoCreatesOutputDir(t *testing.T) {
 	}
 }
 
-func TestSynth_Run_UsesSpeakerFromShowConfig(t *testing.T) {
+func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 	var gotSpeakers []int
 	s := &Synth{
 		Client: &mockVoicevoxClient{
@@ -185,16 +187,18 @@ func TestSynth_Run_UsesSpeakerFromShowConfig(t *testing.T) {
 				return fakeWAV, nil
 			},
 		},
-		ShowConfig: model.ShowConfig{
-			DefaultSpeaker: 99,
-			Speakers:       map[string]int{"host": 3, "guest": 2},
+		Config: &config.Config{
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+				"metan":    {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 2}},
+			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
 	}
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "A"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "B"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "unknown", Text: "C"},
 		},
 	}
@@ -204,7 +208,7 @@ func TestSynth_Run_UsesSpeakerFromShowConfig(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := []int{3, 2, 99}
+	want := []int{3, 2, 0}
 	if len(gotSpeakers) != len(want) {
 		t.Fatalf("speakers count: got %d, want %d", len(gotSpeakers), len(want))
 	}
@@ -222,9 +226,8 @@ func TestNew_StoresConfig(t *testing.T) {
 			"zundamon": {Name: "ずんだもん", DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
 		},
 	}
-	showConfig := model.ShowConfig{DefaultSpeaker: 3, Speakers: map[string]int{}}
 
-	s := New("http://localhost:50021", showConfig, cfg)
+	s := New("http://localhost:50021", cfg)
 
 	if s.Config != cfg {
 		t.Error("New should store the config in Synth.Config")

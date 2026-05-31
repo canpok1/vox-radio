@@ -48,19 +48,19 @@ Example:
 			}
 
 			var assetsConfig config.AssetsConfig
-			var showConfig model.ShowConfig
+			var program config.ProgramConfig
 			if profilePath != "" {
 				p, err := config.LoadProfile(profilePath)
 				if err != nil {
 					return fmt.Errorf("load profile: %w", err)
 				}
 				assetsConfig = p.Assets
-				showConfig = p.Show
+				program = p.Program
 			} else {
-				showConfig = model.ShowConfig{SegmentPauseSec: 0.3}
+				program = config.ProgramConfig{SegmentPauseSec: 0.3}
 			}
 
-			a := assemble.New(assetsConfig, showConfig)
+			a := assemble.New(assetsConfig, program)
 			result, err := a.Run(context.Background(), scr, clips, clipsDir, out)
 			if err != nil {
 				return err

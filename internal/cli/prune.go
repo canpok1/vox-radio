@@ -30,9 +30,9 @@ Example:
 				return fmt.Errorf("load profile: %w", err)
 			}
 
-			keep := resolveKeep(p.Podcast.MaxItems)
+			keep := resolveKeep(p.Program.MaxItems)
 
-			h := local.New(outDir, resolveSiteURL(baseURL, p.Podcast.SiteURL))
+			h := local.New(outDir, resolveSiteURL(baseURL, p.Program.SiteURL))
 			pruner := publish.NewPruner(h, keep)
 
 			if err := pruner.Run(context.Background()); err != nil {

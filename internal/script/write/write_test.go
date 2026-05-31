@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/canpok1/vox-radio/internal/script/write"
@@ -33,40 +34,44 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 
 var linesJSON = json.RawMessage(`{
   "lines": [
-    {"speaker_role": "host", "text": "こんにちは"},
-    {"speaker_role": "guest", "text": "よろしく"}
+    {"speaker_role": "zundamon", "text": "こんにちは"},
+    {"speaker_role": "metan", "text": "よろしく"}
   ]
 }`)
 
 func TestLLMWriter_Write_Success(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summary}} persona={{persona}}", 0)
+	w := write.NewLLMWriter(mc, "corner={{corner}} summaries={{summary}} cast={{cast_info}}", 0)
 
-	corner := model.Corner{Title: "コーナー1", Topic: "AI", Points: []string{"p1"}, TargetChars: 100}
+	corner := config.CornerConfig{Title: "コーナー1", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "要約", Points: []string{"p1"}}}
-	show := model.ShowConfig{Persona: "ホスト設定", TargetChars: 1000}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
+	}
 
-	got, err := w.Write(context.Background(), corner, summaries, show)
+	got, err := w.Write(context.Background(), corner, summaries, chars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 2 {
 		t.Errorf("Lines: got %d, want 2", len(got))
 	}
-	if got[0].SpeakerRole != "host" {
-		t.Errorf("SpeakerRole: got %q, want host", got[0].SpeakerRole)
+	if got[0].SpeakerRole != "zundamon" {
+		t.Errorf("SpeakerRole: got %q, want zundamon", got[0].SpeakerRole)
 	}
 }
 
-func TestLLMWriter_Write_PromptContainsCornerAndSummaries(t *testing.T) {
+func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "c={{corner}} s={{summary}} p={{persona}}", 0)
+	w := write.NewLLMWriter(mc, "c={{corner}} s={{summary}} cast={{cast_info}}", 0)
 
-	corner := model.Corner{Title: "AIコーナー", Topic: "AI", Points: []string{"p1"}, TargetChars: 100}
+	corner := config.CornerConfig{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100}
 	summaries := []model.Summary{{URL: "https://example.com/1", Summary: "AI要約", Points: []string{"p1"}}}
-	show := model.ShowConfig{Persona: "キャラ設定テキスト"}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
+	}
 
-	_, _ = w.Write(context.Background(), corner, summaries, show)
+	_, _ = w.Write(context.Background(), corner, summaries, chars)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -78,8 +83,11 @@ func TestLLMWriter_Write_PromptContainsCornerAndSummaries(t *testing.T) {
 	if !strings.Contains(prompt, "AI要約") {
 		t.Errorf("prompt should contain summary, got: %s", prompt)
 	}
-	if !strings.Contains(prompt, "キャラ設定テキスト") {
-		t.Errorf("prompt should contain persona, got: %s", prompt)
+	if !strings.Contains(prompt, "ずんだもん") {
+		t.Errorf("prompt should contain character name, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "司会") {
+		t.Errorf("prompt should contain role, got: %s", prompt)
 	}
 }
 
@@ -87,7 +95,7 @@ func TestLLMWriter_Write_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0)
 
-	_, err := w.Write(context.Background(), model.Corner{}, nil, model.ShowConfig{})
+	_, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -16,7 +16,7 @@ import (
 // Publisher orchestrates the publish pipeline.
 type Publisher struct {
 	Hosting     hosting.Hosting
-	Podcast     config.PodcastConfig
+	Program     config.ProgramConfig
 	getDuration func(path string) (float64, error)
 	getFileSize func(path string) (int64, error)
 }
@@ -24,15 +24,15 @@ type Publisher struct {
 // Options holds optional parameters for a publish run.
 type Options struct {
 	Date        string // YYYY-MM-DD; defaults to today
-	Title       string // defaults to "<date> <podcast.title>"
+	Title       string // defaults to "<date> <program.title>"
 	Description string
 }
 
 // New creates a Publisher using ffprobe for duration detection.
-func New(h hosting.Hosting, podcast config.PodcastConfig) *Publisher {
+func New(h hosting.Hosting, program config.ProgramConfig) *Publisher {
 	return &Publisher{
 		Hosting:     h,
-		Podcast:     podcast,
+		Program:     program,
 		getDuration: mediainfo.Duration,
 		getFileSize: mediainfo.FileSize,
 	}
@@ -52,7 +52,7 @@ func (p *Publisher) Run(ctx context.Context, mp3Path string, opts Options) error
 
 	title := opts.Title
 	if title == "" {
-		title = date + " " + p.Podcast.Title
+		title = date + " " + p.Program.Title
 	}
 
 	fileBytes, err := p.getFileSize(mp3Path)
@@ -94,15 +94,15 @@ func (p *Publisher) Run(ctx context.Context, mp3Path string, opts Options) error
 
 	episodes.Episodes = append([]model.Episode{newEp}, episodes.Episodes...)
 
-	if p.Podcast.MaxItems > 0 && len(episodes.Episodes) > p.Podcast.MaxItems {
-		episodes.Episodes = episodes.Episodes[:p.Podcast.MaxItems]
+	if p.Program.MaxItems > 0 && len(episodes.Episodes) > p.Program.MaxItems {
+		episodes.Episodes = episodes.Episodes[:p.Program.MaxItems]
 	}
 
 	if err := p.Hosting.SaveEpisodes(ctx, episodes); err != nil {
 		return fmt.Errorf("save episodes: %w", err)
 	}
 
-	feedXML, err := feed.Generate(p.Podcast, episodes)
+	feedXML, err := feed.Generate(p.Program, episodes)
 	if err != nil {
 		return fmt.Errorf("generate feed: %w", err)
 	}

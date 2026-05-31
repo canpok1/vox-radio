@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"unicode/utf8"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
-	"github.com/canpok1/vox-radio/internal/script/plan"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
 	"github.com/canpok1/vox-radio/internal/script/write"
 )
@@ -18,12 +18,11 @@ import (
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, articles []model.Article, show model.ShowConfig) (model.Script, error)
+	Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 type LLMScriptGenerator struct {
 	summarizer summarize.Summarizer
-	planner    plan.Planner
 	writer     write.Writer
 	director   direct.Director
 	seCatalog  model.SECatalog
@@ -32,7 +31,6 @@ type LLMScriptGenerator struct {
 
 func NewLLMScriptGenerator(
 	s summarize.Summarizer,
-	p plan.Planner,
 	w write.Writer,
 	d direct.Director,
 	seCatalog model.SECatalog,
@@ -40,7 +38,6 @@ func NewLLMScriptGenerator(
 ) *LLMScriptGenerator {
 	return &LLMScriptGenerator{
 		summarizer: s,
-		planner:    p,
 		writer:     w,
 		director:   d,
 		seCatalog:  seCatalog,
@@ -48,7 +45,7 @@ func NewLLMScriptGenerator(
 	}
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, articles []model.Article, show model.ShowConfig) (model.Script, error) {
+func (g *LLMScriptGenerator) Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
 	summaries, err := g.summarizeAll(ctx, articles)
 	if err != nil {
 		return model.Script{}, err
@@ -57,19 +54,11 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles []model.Arti
 		return model.Script{}, err
 	}
 
-	rundown, err := g.planner.Plan(ctx, summaries, show)
-	if err != nil {
-		return model.Script{}, fmt.Errorf("plan: %w", err)
-	}
-	if err := g.saveIntermediate("rundown.json", rundown); err != nil {
-		return model.Script{}, err
-	}
-
-	cornerLines, summaryByURL, err := g.writeAll(ctx, rundown, summaries, show)
+	cornerLines, err := g.writeAll(ctx, corners, summaries, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, cornerLines, rundown, summaryByURL, show)
+	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, summaries, chars)
 	allLines := flatten(cornerLines)
 	if err := g.saveIntermediate("lines.json", model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
@@ -95,23 +84,24 @@ func (g *LLMScriptGenerator) summarizeAll(ctx context.Context, articles []model.
 	return summaries, nil
 }
 
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, rundown model.Rundown, summaries []model.Summary, show model.ShowConfig) ([][]model.Line, map[string]model.Summary, error) {
-	summaryByURL := SummaryByURL(summaries)
-
-	result := make([][]model.Line, len(rundown.Corners))
-	for i, corner := range rundown.Corners {
-		relevant := CornerSummaries(corner, summaryByURL)
-		lines, err := g.writer.Write(ctx, corner, relevant, show)
+func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
+	result := make([][]model.Line, len(corners))
+	for i, corner := range corners {
+		lines, err := g.writer.Write(ctx, corner, summaries, chars)
 		if err != nil {
-			return nil, nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
+			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
 		result[i] = lines
 	}
-	return result, summaryByURL, nil
+	return result, nil
 }
 
-func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, rundown model.Rundown, summaryByURL map[string]model.Summary, show model.ShowConfig) [][]model.Line {
-	if show.TargetChars <= 0 || len(rundown.Corners) == 0 {
+func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]model.Line, corners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) [][]model.Line {
+	totalTarget := 0
+	for _, c := range corners {
+		totalTarget += c.TargetChars
+	}
+	if totalTarget <= 0 || len(corners) == 0 {
 		return cornerLines
 	}
 
@@ -120,32 +110,29 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 		totalChars += countChars(lines)
 	}
 
-	deviation := float64(max(totalChars-show.TargetChars, show.TargetChars-totalChars)) / float64(show.TargetChars)
-	if deviation <= regenThreshold {
+	if absDeviation(totalChars, totalTarget) <= regenThreshold {
 		return cornerLines
 	}
 
 	worstIdx := 0
 	worstDev := 0.0
-	for i, corner := range rundown.Corners {
+	for i, corner := range corners {
 		if corner.TargetChars <= 0 {
 			continue
 		}
 		actual := countChars(cornerLines[i])
-		dev := float64(max(actual-corner.TargetChars, corner.TargetChars-actual)) / float64(corner.TargetChars)
+		dev := absDeviation(actual, corner.TargetChars)
 		if dev > worstDev {
 			worstDev = dev
 			worstIdx = i
 		}
 	}
-	// All corners have TargetChars=0 — nothing to regenerate.
 	if worstDev == 0 {
 		return cornerLines
 	}
 
-	corner := rundown.Corners[worstIdx]
-	relevant := CornerSummaries(corner, summaryByURL)
-	if newLines, err := g.writer.Write(ctx, corner, relevant, show); err == nil {
+	corner := corners[worstIdx]
+	if newLines, err := g.writer.Write(ctx, corner, summaries, chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines
@@ -166,26 +153,6 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 	return nil
 }
 
-// SummaryByURL builds a URL-keyed lookup map from a summaries slice.
-func SummaryByURL(summaries []model.Summary) map[string]model.Summary {
-	m := make(map[string]model.Summary, len(summaries))
-	for _, s := range summaries {
-		m[s.URL] = s
-	}
-	return m
-}
-
-// CornerSummaries returns the summaries relevant to a corner, in summary_urls order.
-func CornerSummaries(corner model.Corner, byURL map[string]model.Summary) []model.Summary {
-	result := make([]model.Summary, 0, len(corner.SummaryURLs))
-	for _, u := range corner.SummaryURLs {
-		if s, ok := byURL[u]; ok {
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
 func flatten(lines [][]model.Line) []model.Line {
 	total := 0
 	for _, l := range lines {
@@ -204,4 +171,8 @@ func countChars(lines []model.Line) int {
 		total += utf8.RuneCountInString(l.Text)
 	}
 	return total
+}
+
+func absDeviation(actual, target int) float64 {
+	return float64(max(actual-target, target-actual)) / float64(target)
 }

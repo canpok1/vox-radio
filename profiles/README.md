@@ -39,7 +39,7 @@ vox-radio collect --out work/articles.json
 ## profile.yaml のスキーマ
 
 ```yaml
-podcast:
+program:
   title: "番組タイトル"
   description: "番組の説明"
   language: ja
@@ -49,18 +49,20 @@ podcast:
   cover_image_url: https://example.com/cover.jpg
   site_url: https://example.com/
   max_items: 7            # フィードに載せる最大件数
-
-show:
-  title_format: "タイトル {date}"
-  target_chars: 1700      # 台本の目標文字数
-  corners: 3              # コーナー数の目安
-  default_speaker: 3      # VOICEVOX スピーカー ID
-  speakers:
-    host: 3
-    guest: 2
-  persona: |
-    hostは...
   segment_pause_sec: 0.3  # セリフ間の無音（秒）
+
+corners:                  # 固定コーナーのリスト
+  - title: "オープニング"
+    content: "番組の挨拶と本日のトピック紹介"
+    cast:
+      zundamon: "元気に挨拶する進行役"  # キャラID: そのコーナーの役割指示
+    target_chars: 200      # 目標文字数（暫定）
+  - title: "ニュースコーナー"
+    content: "テック記事を紹介"
+    cast:
+      zundamon: "司会"
+      metan: "解説役"
+    target_chars: 1300
 
 feeds:
   - url: https://example.com/rss.xml
@@ -79,6 +81,14 @@ assets:
   bgm:
     talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }
 ```
+
+### フィールド説明
+
+- `program`: 番組全体の設定（旧 `podcast` + `show.segment_pause_sec`）
+- `corners`: 固定コーナーのリスト（旧 `show` を再設計）
+  - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
+  - `target_chars`: 暫定の目標文字数（#4 で再生時間化予定）
+- キャラIDは `vox-radio.yaml` の `characters` セクションで定義したIDと一致させること
 
 `assets.*/file` のパスは、このプロファイルファイルが置かれているディレクトリからの相対パスで解決されます。
 
