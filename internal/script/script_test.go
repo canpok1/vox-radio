@@ -73,10 +73,19 @@ var testCorners = []config.CornerConfig{
 	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
 }
 
-func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
-	articles := []model.Article{
-		{URL: "https://example.com/1", Title: "AI", Body: "本文"},
+// corneredArticles wraps articles into a model.Articles attributed to the given corner title.
+func corneredArticles(cornerTitle string, arts ...model.Article) model.Articles {
+	return model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: cornerTitle, Articles: arts},
+		},
 	}
+}
+
+func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
+	articles := corneredArticles("AIコーナー",
+		model.Article{URL: "https://example.com/1", Title: "AI", Body: "本文"},
+	)
 	lines := []model.Line{
 		{SpeakerRole: "zundamon", Text: "テスト"},
 	}
@@ -107,7 +116,7 @@ func TestLLMScriptGenerator_Generate_SummarizeError(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), []model.Article{{URL: "u"}}, testCorners, testChars)
+	_, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -122,7 +131,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), []model.Article{{URL: "u"}}, testCorners, testChars)
+	_, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -131,10 +140,10 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 	// TargetChars=100, but writer first returns 1 char total (huge deficit)
 	// should trigger regen of the worst corner
-	articles := []model.Article{{URL: "https://example.com/1"}}
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
 	}
+	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
 	shortLines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}                                                  // 1 char
 	longLines := []model.Line{{SpeakerRole: "zundamon", Text: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいうえお"}} // ~45 chars
 
@@ -160,10 +169,10 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 }
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
-	articles := []model.Article{{URL: "https://example.com/1"}}
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
 	}
+	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
 	// 95 chars → 5% deviation (target=100), within 20% threshold
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいう"}}
 
@@ -194,7 +203,7 @@ func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), []model.Article{}, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), model.Articles{}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,7 +221,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), []model.Article{{URL: "u"}}, []config.CornerConfig{}, testChars)
+	got, err := gen.Generate(context.Background(), corneredArticles("AIコーナー", model.Article{URL: "u"}), []config.CornerConfig{}, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -222,10 +231,10 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 }
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *testing.T) {
-	articles := []model.Article{{URL: "https://example.com/1"}}
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 0},
 	}
+	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}
 
 	mw := &mockWriter{lines: lines}

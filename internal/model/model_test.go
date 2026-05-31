@@ -48,10 +48,17 @@ func TestArticles_RoundTrip(t *testing.T) {
 
 func TestArticles_Fields(t *testing.T) {
 	v := unmarshalFixture[model.Articles](t, "articles.json")
-	if len(v.Articles) == 0 {
-		t.Error("expected at least one article")
+	if len(v.Corners) == 0 {
+		t.Error("expected at least one corner")
 	}
-	a := v.Articles[0]
+	ca := v.Corners[0]
+	if ca.CornerTitle == "" {
+		t.Error("CornerTitle must not be empty")
+	}
+	if len(ca.Articles) == 0 {
+		t.Error("expected at least one article in corner")
+	}
+	a := ca.Articles[0]
 	if a.URL == "" {
 		t.Error("URL must not be empty")
 	}
@@ -69,10 +76,17 @@ func TestSummaries_RoundTrip(t *testing.T) {
 
 func TestSummaries_Fields(t *testing.T) {
 	v := unmarshalFixture[model.Summaries](t, "summaries.json")
-	if len(v.Summaries) == 0 {
-		t.Error("expected at least one summary")
+	if len(v.Corners) == 0 {
+		t.Error("expected at least one corner")
 	}
-	s := v.Summaries[0]
+	cs := v.Corners[0]
+	if cs.CornerTitle == "" {
+		t.Error("CornerTitle must not be empty")
+	}
+	if len(cs.Summaries) == 0 {
+		t.Error("expected at least one summary in corner")
+	}
+	s := cs.Summaries[0]
 	if s.URL == "" {
 		t.Error("URL must not be empty")
 	}

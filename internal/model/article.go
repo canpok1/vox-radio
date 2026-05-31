@@ -6,6 +6,11 @@ type Article struct {
 	Body  string `json:"body"`
 }
 
+type CornerArticles struct {
+	CornerTitle string    `json:"corner_title"`
+	Articles    []Article `json:"articles"`
+}
+
 type Articles struct {
-	Articles []Article `json:"articles"`
+	Corners []CornerArticles `json:"corners"`
 }

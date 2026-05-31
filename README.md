@@ -44,7 +44,7 @@ collect → script → synth → assemble → publish
 
 | コマンド | 概要 |
 |----------|------|
-| `collect` | RSS フィードや URL から記事を収集し `articles.json` を生成する |
+| `collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `articles.json` を生成する |
 | `script` | 記事を LLM に渡して台本 `script.json` を生成する（summarize → write → direct の多段パイプライン） |
 | `synth` | `script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
@@ -59,7 +59,7 @@ collect → script → synth → assemble → publish
 | 種別 | ファイル | 内容 |
 |------|---------|------|
 | 共通設定 (config) | `vox-radio.yaml`（カレントディレクトリ、自動読込） | LLM / VOICEVOX URL / キャラカタログ |
-| ジャンル別設定 (profile) | `profiles/<genre>/profile.yaml` | feeds / program / corners / assets |
+| ジャンル別設定 (profile) | `profiles/<genre>/profile.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
 
 `vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
 

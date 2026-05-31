@@ -57,19 +57,19 @@ corners:                  # 固定コーナーのリスト
     cast:
       zundamon: "元気に挨拶する進行役"  # キャラID: そのコーナーの役割指示
     target_chars: 200      # 目標文字数（暫定）
+    # source なし → 収集スキップ（挨拶のみのコーナーに使用）
   - title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"
       metan: "解説役"
     target_chars: 1300
-
-feeds:
-  - url: https://example.com/rss.xml
-    max_items: 5
-
-articles:
-  - https://example.com/articles/123
+    source:                # このコーナーのデータソース（省略可）
+      feeds:
+        - url: https://example.com/rss.xml
+          max_items: 5
+      articles:
+        - https://example.com/articles/123
 
 assets:
   jingle:
@@ -88,6 +88,9 @@ assets:
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
   - `target_chars`: 暫定の目標文字数（#4 で再生時間化予定）
+  - `source`（省略可）: コーナーのデータソース。省略したコーナーは収集をスキップ
+    - `feeds`: RSS フィードのリスト（`url` / `max_items`）
+    - `articles`: 個別記事 URL のリスト
 - キャラIDは `vox-radio.yaml` の `characters` セクションで定義したIDと一致させること
 
 `assets.*/file` のパスは、このプロファイルファイルが置かれているディレクトリからの相対パスで解決されます。

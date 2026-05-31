@@ -15,9 +15,11 @@ func newCollectCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "collect",
-		Short: "Collect articles from RSS feeds and URLs",
-		Long: `Collect articles from RSS feeds and web URLs defined in the profile,
+		Short: "Collect articles from RSS feeds and URLs per corner",
+		Long: `Collect articles from RSS feeds and web URLs defined in corners[].source,
 extract their body text, and write the result to articles.json.
+
+Corners without a source field are skipped.
 
 Example:
   vox-radio collect --out work/articles.json
@@ -29,10 +31,7 @@ Example:
 			}
 
 			c := collect.New(nil)
-			articles, err := c.Run(context.Background(), config.FeedsConfig{
-				Feeds:    p.Feeds,
-				Articles: p.Articles,
-			})
+			articles, err := c.RunAll(context.Background(), p.Corners)
 			if err != nil {
 				return err
 			}
@@ -41,7 +40,11 @@ Example:
 				return err
 			}
 
-			fmt.Printf("collected %d articles to %s\n", len(articles.Articles), out)
+			total := 0
+			for _, ca := range articles.Corners {
+				total += len(ca.Articles)
+			}
+			fmt.Printf("collected %d articles across %d corners to %s\n", total, len(articles.Corners), out)
 			return nil
 		},
 	}

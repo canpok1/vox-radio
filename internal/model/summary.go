@@ -6,6 +6,11 @@ type Summary struct {
 	Points  []string `json:"points"`
 }
 
+type CornerSummaries struct {
+	CornerTitle string    `json:"corner_title"`
+	Summaries   []Summary `json:"summaries"`
+}
+
 type Summaries struct {
-	Summaries []Summary `json:"summaries"`
+	Corners []CornerSummaries `json:"corners"`
 }

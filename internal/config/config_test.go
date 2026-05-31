@@ -76,15 +76,25 @@ func TestLoadProfile(t *testing.T) {
 		}
 	})
 
-	t.Run("Feeds", func(t *testing.T) {
-		if len(profile.Feeds) == 0 {
-			t.Error("Feeds must not be empty")
+	t.Run("CornerSource", func(t *testing.T) {
+		var sourceCorner *config.CornerConfig
+		for i := range profile.Corners {
+			if profile.Corners[i].Source != nil {
+				sourceCorner = &profile.Corners[i]
+				break
+			}
 		}
-		if profile.Feeds[0].URL == "" {
-			t.Error("Feeds[0].URL must not be empty")
+		if sourceCorner == nil {
+			t.Fatal("no corner with source found")
 		}
-		if len(profile.Articles) == 0 {
-			t.Error("Articles must not be empty")
+		if len(sourceCorner.Source.Feeds) == 0 {
+			t.Error("Source.Feeds must not be empty")
+		}
+		if sourceCorner.Source.Feeds[0].URL == "" {
+			t.Error("Source.Feeds[0].URL must not be empty")
+		}
+		if len(sourceCorner.Source.Articles) == 0 {
+			t.Error("Source.Articles must not be empty")
 		}
 	})
 
