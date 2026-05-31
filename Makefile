@@ -1,11 +1,12 @@
 BINARY_NAME=vox-radio
 VERSION ?= dev
+LDFLAGS=-X github.com/canpok1/vox-radio/internal/cli.version=$(VERSION)
 
 setup:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
 
 build:
-	go build -ldflags "-X github.com/canpok1/vox-radio/internal/cli.version=$(VERSION)" -o $(BINARY_NAME) ./cmd/vox-radio
+	go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/vox-radio
 
 clean:
 	go clean
@@ -21,7 +22,7 @@ lint:
 	golangci-lint run ./...
 
 install:
-	go install ./cmd/vox-radio
+	go install -ldflags "$(LDFLAGS)" ./cmd/vox-radio
 
 docs:
 	go run ./tools/gendocs

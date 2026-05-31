@@ -139,11 +139,8 @@ func TestRootVersionFlag(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "vox-radio") {
-		t.Errorf("--version output should contain %q, got %q", "vox-radio", out)
-	}
-	if !strings.Contains(out, "dev") {
-		t.Errorf("--version output should contain %q, got %q", "dev", out)
+	if !strings.Contains(out, "vox-radio version dev") {
+		t.Errorf("--version output should contain %q, got %q", "vox-radio version dev", out)
 	}
 }
 
