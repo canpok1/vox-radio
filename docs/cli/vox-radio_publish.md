@@ -14,7 +14,7 @@ Hosting types:
 Example:
   vox-radio publish --in work/episode.mp3 --out-dir public
   vox-radio publish --in work/episode.mp3 --out-dir public --date 2026-01-01 --title "Episode title"
-  vox-radio publish --in work/episode.mp3 --out-dir public --profile sample-profiles/tech/profile.yaml
+  vox-radio publish --in work/episode.mp3 --out-dir public --profile sample-profiles/tech_profile.yaml
   vox-radio publish --in work/episode.mp3 --out-dir public --hosting ghpages
 
 ```

@@ -9,7 +9,7 @@ then update episodes.json and regenerate feed.xml.
 
 Example:
   vox-radio prune --out-dir public
-  vox-radio prune --out-dir public --profile sample-profiles/tech/profile.yaml
+  vox-radio prune --out-dir public --profile sample-profiles/tech_profile.yaml
 
 ```
 vox-radio prune [flags]

@@ -18,7 +18,7 @@ Use --step to run a single stage independently:
 Example:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step write
-  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech/profile.yaml
+  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml
 
 ```
 vox-radio script [flags]

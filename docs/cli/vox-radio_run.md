@@ -13,7 +13,7 @@ vox-radio.yaml is automatically loaded from the current directory.
 
 Example:
   vox-radio run
-  vox-radio run --out-dir output --profile sample-profiles/tech/profile.yaml
+  vox-radio run --out-dir output --profile sample-profiles/tech_profile.yaml
   vox-radio run --hosting ghpages --date 2026-01-01
 
 ```
