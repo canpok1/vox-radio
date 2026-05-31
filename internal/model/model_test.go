@@ -235,6 +235,121 @@ func TestScript_Fields(t *testing.T) {
 	}
 }
 
+func TestLine_PresetFields_OmitEmpty(t *testing.T) {
+	line := model.Line{SpeakerRole: "zundamon", Text: "こんにちは"}
+	b, err := json.Marshal(line)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if contains(s, "intonation") {
+		t.Errorf("should omit intonation when empty, got: %s", s)
+	}
+	if contains(s, "pitch") {
+		t.Errorf("should omit pitch when empty, got: %s", s)
+	}
+	if contains(s, "speed") {
+		t.Errorf("should omit speed when empty, got: %s", s)
+	}
+}
+
+func contains(s, sub string) bool {
+	return len(s) >= len(sub) && (s == sub || len(s) > 0 && containsStr(s, sub))
+}
+
+func containsStr(s, sub string) bool {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
+func TestLine_PresetFields_Present(t *testing.T) {
+	line := model.Line{
+		SpeakerRole: "zundamon",
+		Text:        "こんにちは",
+		Intonation:  "表現豊か",
+		Pitch:       "高め",
+		Speed:       "早口",
+	}
+	b, err := json.Marshal(line)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if !containsStr(s, "表現豊か") {
+		t.Errorf("should contain intonation value, got: %s", s)
+	}
+	if !containsStr(s, "高め") {
+		t.Errorf("should contain pitch value, got: %s", s)
+	}
+	if !containsStr(s, "早口") {
+		t.Errorf("should contain speed value, got: %s", s)
+	}
+
+	var got model.Line
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if got.Intonation != "表現豊か" {
+		t.Errorf("Intonation: got %q, want 表現豊か", got.Intonation)
+	}
+	if got.Pitch != "高め" {
+		t.Errorf("Pitch: got %q, want 高め", got.Pitch)
+	}
+	if got.Speed != "早口" {
+		t.Errorf("Speed: got %q, want 早口", got.Speed)
+	}
+}
+
+func TestScriptSegment_PresetFields_OmitEmpty(t *testing.T) {
+	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"}
+	b, err := json.Marshal(seg)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if containsStr(s, "intonation") {
+		t.Errorf("should omit intonation when empty, got: %s", s)
+	}
+	if containsStr(s, "pitch") {
+		t.Errorf("should omit pitch when empty, got: %s", s)
+	}
+	if containsStr(s, "speed") {
+		t.Errorf("should omit speed when empty, got: %s", s)
+	}
+}
+
+func TestScriptSegment_PresetFields_Present(t *testing.T) {
+	seg := model.ScriptSegment{
+		Type:        model.SegmentTypeSpeech,
+		SpeakerRole: "zundamon",
+		Text:        "テスト",
+		Intonation:  "棒読み",
+		Pitch:       "低め",
+		Speed:       "ゆっくり",
+	}
+	b, err := json.Marshal(seg)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	var got model.ScriptSegment
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if got.Intonation != "棒読み" {
+		t.Errorf("Intonation: got %q, want 棒読み", got.Intonation)
+	}
+	if got.Pitch != "低め" {
+		t.Errorf("Pitch: got %q, want 低め", got.Pitch)
+	}
+	if got.Speed != "ゆっくり" {
+		t.Errorf("Speed: got %q, want ゆっくり", got.Speed)
+	}
+}
+
 func TestClipsMeta_RoundTrip(t *testing.T) {
 	roundTrip[model.ClipsMeta](t, loadFixture(t, "clips.json"))
 }

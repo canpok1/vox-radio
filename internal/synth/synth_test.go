@@ -375,6 +375,218 @@ func TestSynth_Run_LogsStartAndComplete(t *testing.T) {
 	}
 }
 
+func TestSynth_Run_AppliesIntonationPreset(t *testing.T) {
+	var gotQuery *AudioQuery
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, q *AudioQuery, _ int) ([]byte, error) {
+				gotQuery = q
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{
+				Presets: &config.VoicevoxPresets{
+					Intonation: map[string]float64{"表現豊か": 1.5},
+					Pitch:      map[string]float64{"標準": 0.0},
+					Speed:      map[string]float64{"標準": 1.0},
+				},
+			},
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト", Intonation: "表現豊か"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotQuery == nil {
+		t.Fatal("query was not captured")
+	}
+	if gotQuery.IntonationScale != 1.5 {
+		t.Errorf("IntonationScale: got %v, want 1.5", gotQuery.IntonationScale)
+	}
+}
+
+func TestSynth_Run_AppliesPitchPreset(t *testing.T) {
+	var gotQuery *AudioQuery
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, q *AudioQuery, _ int) ([]byte, error) {
+				gotQuery = q
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{
+				Presets: &config.VoicevoxPresets{
+					Intonation: map[string]float64{"標準": 1.0},
+					Pitch:      map[string]float64{"高め": 0.05},
+					Speed:      map[string]float64{"標準": 1.0},
+				},
+			},
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト", Pitch: "高め"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotQuery.PitchScale != 0.05 {
+		t.Errorf("PitchScale: got %v, want 0.05", gotQuery.PitchScale)
+	}
+}
+
+func TestSynth_Run_AppliesSpeedPreset(t *testing.T) {
+	var gotQuery *AudioQuery
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, q *AudioQuery, _ int) ([]byte, error) {
+				gotQuery = q
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{
+				Presets: &config.VoicevoxPresets{
+					Intonation: map[string]float64{"標準": 1.0},
+					Pitch:      map[string]float64{"標準": 0.0},
+					Speed:      map[string]float64{"ゆっくり": 0.8},
+				},
+			},
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト", Speed: "ゆっくり"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotQuery.SpeedScale != 0.8 {
+		t.Errorf("SpeedScale: got %v, want 0.8", gotQuery.SpeedScale)
+	}
+}
+
+func TestSynth_Run_NoOverwriteWhenPresetEmpty(t *testing.T) {
+	var gotQuery *AudioQuery
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.01, SpeedScale: 1.1}, nil
+			},
+			synthesisFn: func(_ context.Context, q *AudioQuery, _ int) ([]byte, error) {
+				gotQuery = q
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{
+				Presets: &config.VoicevoxPresets{
+					Intonation: map[string]float64{"標準": 1.0},
+					Pitch:      map[string]float64{"標準": 0.0},
+					Speed:      map[string]float64{"標準": 1.0},
+				},
+			},
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			// All preset fields empty → AudioQuery should not be overwritten
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotQuery.IntonationScale != 1.0 {
+		t.Errorf("IntonationScale: got %v, want 1.0 (unchanged)", gotQuery.IntonationScale)
+	}
+	if gotQuery.PitchScale != 0.01 {
+		t.Errorf("PitchScale: got %v, want 0.01 (unchanged)", gotQuery.PitchScale)
+	}
+	if gotQuery.SpeedScale != 1.1 {
+		t.Errorf("SpeedScale: got %v, want 1.1 (unchanged)", gotQuery.SpeedScale)
+	}
+}
+
+func TestSynth_Run_UnknownPresetNameNoOverwrite(t *testing.T) {
+	var gotQuery *AudioQuery
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, q *AudioQuery, _ int) ([]byte, error) {
+				gotQuery = q
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{
+				Presets: &config.VoicevoxPresets{
+					Intonation: map[string]float64{"標準": 1.0},
+					Pitch:      map[string]float64{"標準": 0.0},
+					Speed:      map[string]float64{"標準": 1.0},
+				},
+			},
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト",
+				Intonation: "存在しない", Pitch: "存在しない", Speed: "存在しない"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should not panic; original AudioQuery values preserved
+	if gotQuery.IntonationScale != 1.0 {
+		t.Errorf("IntonationScale: got %v, want 1.0 (unknown preset → no overwrite)", gotQuery.IntonationScale)
+	}
+}
+
 func TestSynth_Run_LogsPerClipProgress(t *testing.T) {
 	s := newTestSynth()
 

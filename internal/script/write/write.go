@@ -12,28 +12,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
-var linesSchema = json.RawMessage(`{
-  "type": "object",
-  "required": ["lines"],
-  "properties": {
-    "lines": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": ["speaker_role", "text"],
-        "properties": {
-          "speaker_role": {"type": "string"},
-          "style":        {"type": "string"},
-          "text":         {"type": "string"}
-        },
-        "additionalProperties": false
-      }
-    }
-  },
-  "additionalProperties": false
-}`)
-
 // cornerForPrompt is the subset of corner data passed to the LLM.
 // TargetChars is computed from TargetDurationSec via config.DurationSecToTargetChars.
 type cornerForPrompt struct {
@@ -51,10 +29,17 @@ type LLMWriter struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
+	config         *config.Config
 }
 
-func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64) *LLMWriter {
-	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature}
+// NewLLMWriter creates an LLMWriter. An optional *config.Config may be passed as the 4th argument
+// to enable dynamic schema generation and preset info in the prompt.
+func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64, cfgs ...*config.Config) *LLMWriter {
+	var cfg *config.Config
+	if len(cfgs) > 0 {
+		cfg = cfgs[0]
+	}
+	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature, config: cfg}
 }
 
 func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error) {
@@ -76,17 +61,22 @@ func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summa
 		return nil, fmt.Errorf("marshal summaries: %w", err)
 	}
 
+	presets := w.effectivePresets()
 	castInfo := buildCastInfo(corner.Cast, chars)
+	presetInfo := buildPresetInfo(presets)
 
 	prompt := strings.NewReplacer(
 		"{{corner}}", string(cornerJSON),
 		"{{summary}}", string(summariesJSON),
 		"{{cast_info}}", castInfo,
+		"{{preset_info}}", presetInfo,
 	).Replace(w.promptTemplate)
+
+	schema := buildLinesSchema(presets)
 
 	raw, err := w.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema:  linesSchema,
+		JSONSchema:  schema,
 		Temperature: w.temperature,
 	})
 	if err != nil {
@@ -99,6 +89,59 @@ func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summa
 	}
 
 	return resp.Lines, nil
+}
+
+func (w *LLMWriter) effectivePresets() config.VoicevoxPresets {
+	if w.config == nil {
+		return config.VoicevoxConfig{}.EffectivePresets()
+	}
+	return w.config.Voicevox.EffectivePresets()
+}
+
+// buildLinesSchema generates a JSON Schema for the lines response, with intonation/pitch/speed
+// enum values derived from the given presets.
+func buildLinesSchema(presets config.VoicevoxPresets) json.RawMessage {
+	intonationEnum := sortedKeys(presets.Intonation)
+	pitchEnum := sortedKeys(presets.Pitch)
+	speedEnum := sortedKeys(presets.Speed)
+
+	intonationEnumJSON, _ := json.Marshal(intonationEnum)
+	pitchEnumJSON, _ := json.Marshal(pitchEnum)
+	speedEnumJSON, _ := json.Marshal(speedEnum)
+
+	return json.RawMessage(fmt.Sprintf(`{
+  "type": "object",
+  "required": ["lines"],
+  "properties": {
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["speaker_role", "text"],
+        "properties": {
+          "speaker_role": {"type": "string"},
+          "style":        {"type": "string"},
+          "intonation":   {"type": "string", "enum": %s},
+          "pitch":        {"type": "string", "enum": %s},
+          "speed":        {"type": "string", "enum": %s},
+          "text":         {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}`, intonationEnumJSON, pitchEnumJSON, speedEnumJSON))
+}
+
+// buildPresetInfo formats available preset names for each axis for the prompt.
+func buildPresetInfo(presets config.VoicevoxPresets) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "抑揚（intonation）: [%s]\n", strings.Join(sortedKeys(presets.Intonation), ", "))
+	fmt.Fprintf(&sb, "音高（pitch）: [%s]\n", strings.Join(sortedKeys(presets.Pitch), ", "))
+	fmt.Fprintf(&sb, "話速（speed）: [%s]\n", strings.Join(sortedKeys(presets.Speed), ", "))
+	return sb.String()
 }
 
 // buildCastInfo formats cast assignments with character catalog features for the prompt.
@@ -126,4 +169,13 @@ func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConf
 		)
 	}
 	return sb.String()
+}
+
+func sortedKeys(m map[string]float64) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

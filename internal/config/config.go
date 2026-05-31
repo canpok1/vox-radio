@@ -106,8 +106,95 @@ type CornerConfig struct {
 	Source            *SourceConfig     `yaml:"source,omitempty"`
 }
 
+// VoicevoxPresets maps preset names to float64 scale values for each axis.
+type VoicevoxPresets struct {
+	Intonation map[string]float64 `yaml:"intonation"`
+	Pitch      map[string]float64 `yaml:"pitch"`
+	Speed      map[string]float64 `yaml:"speed"`
+}
+
+// ResolveIntonation returns (value, true) if name is non-empty and found in Intonation.
+func (p VoicevoxPresets) ResolveIntonation(name string) (float64, bool) {
+	if name == "" {
+		return 0, false
+	}
+	v, ok := p.Intonation[name]
+	return v, ok
+}
+
+// ResolvePitch returns (value, true) if name is non-empty and found in Pitch.
+func (p VoicevoxPresets) ResolvePitch(name string) (float64, bool) {
+	if name == "" {
+		return 0, false
+	}
+	v, ok := p.Pitch[name]
+	return v, ok
+}
+
+// ResolveSpeed returns (value, true) if name is non-empty and found in Speed.
+func (p VoicevoxPresets) ResolveSpeed(name string) (float64, bool) {
+	if name == "" {
+		return 0, false
+	}
+	v, ok := p.Speed[name]
+	return v, ok
+}
+
+var defaultIntonationPresets = map[string]float64{
+	"棒読み":    0.0,
+	"かなり控えめ": 0.3,
+	"控えめ":    0.6,
+	"標準":     1.0,
+	"やや豊か":   1.2,
+	"表現豊か":   1.5,
+	"とても豊か":  1.8,
+}
+
+var defaultPitchPresets = map[string]float64{
+	"低め":     -0.05,
+	"やや低め":   -0.033,
+	"わずかに低め": -0.017,
+	"標準":     0.0,
+	"わずかに高め": 0.017,
+	"やや高め":   0.033,
+	"高め":     0.05,
+}
+
+var defaultSpeedPresets = map[string]float64{
+	"とてもゆっくり": 0.6,
+	"ゆっくり":    0.8,
+	"ややゆっくり":  0.9,
+	"標準":      1.0,
+	"やや早口":    1.1,
+	"早口":      1.2,
+	"とても早口":   1.4,
+}
+
 type VoicevoxConfig struct {
-	URL string `yaml:"url"`
+	URL     string           `yaml:"url"`
+	Presets *VoicevoxPresets `yaml:"presets,omitempty"`
+}
+
+// EffectivePresets returns the configured presets, falling back per-axis to defaults when nil.
+func (c VoicevoxConfig) EffectivePresets() VoicevoxPresets {
+	if c.Presets == nil {
+		return VoicevoxPresets{
+			Intonation: defaultIntonationPresets,
+			Pitch:      defaultPitchPresets,
+			Speed:      defaultSpeedPresets,
+		}
+	}
+	result := *c.Presets
+	if result.Intonation == nil {
+		result.Intonation = defaultIntonationPresets
+	}
+	if result.Pitch == nil {
+		result.Pitch = defaultPitchPresets
+	}
+	if result.Speed == nil {
+		result.Speed = defaultSpeedPresets
+	}
+	return result
 }
 
 type CharacterConfig struct {
@@ -174,6 +261,31 @@ func validateConfig(cfg *Config) error {
 			if _, ok := ch.Styles[ch.DefaultStyle]; !ok {
 				return fmt.Errorf("characters[%q].default_style %q not found in styles", id, ch.DefaultStyle)
 			}
+		}
+	}
+	if err := validateVoicevoxPresets(cfg.Voicevox.Presets); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateVoicevoxPresets(p *VoicevoxPresets) error {
+	if p == nil {
+		return nil
+	}
+	for name, v := range p.Intonation {
+		if v < 0.0 || v > 2.0 {
+			return fmt.Errorf("voicevox.presets.intonation[%q]: value %g is out of range [0.0, 2.0]", name, v)
+		}
+	}
+	for name, v := range p.Pitch {
+		if v < -0.15 || v > 0.15 {
+			return fmt.Errorf("voicevox.presets.pitch[%q]: value %g is out of range [-0.15, 0.15]", name, v)
+		}
+	}
+	for name, v := range p.Speed {
+		if v < 0.5 || v > 2.0 {
+			return fmt.Errorf("voicevox.presets.speed[%q]: value %g is out of range [0.5, 2.0]", name, v)
 		}
 	}
 	return nil

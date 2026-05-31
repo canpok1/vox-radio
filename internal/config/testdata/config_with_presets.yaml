@@ -1,0 +1,36 @@
+llm:
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  api_key_env: GEMINI_API_KEY
+  model: gemini-3.1-flash-lite
+  temperature: 0.7
+  max_retries: 3
+  steps:
+    summarize: { temperature: 0.2 }
+    write:     { temperature: 0.8 }
+    direct:    { temperature: 0.2 }
+
+voicevox:
+  url: http://localhost:50021
+  presets:
+    intonation:
+      棒読み: 0.0
+      標準: 1.0
+      表現豊か: 1.5
+    pitch:
+      低め: -0.05
+      標準: 0.0
+      高め: 0.05
+    speed:
+      ゆっくり: 0.8
+      標準: 1.0
+      早口: 1.2
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ", "〜なのだ"]
+    personality: ["元気", "明るい"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3
