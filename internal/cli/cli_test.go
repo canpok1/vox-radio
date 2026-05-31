@@ -128,6 +128,7 @@ func TestScriptMissingOut(t *testing.T) {
 
 func TestProfileRequired(t *testing.T) {
 	// --profile はデフォルト値を持たず、各サブコマンドで必須であること。
+	// assemble は assets を任意で読み込むため --profile は optional（意図的に対象外）。
 	for _, sub := range []string{"collect", "script", "publish", "prune", "run", "manifest"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()

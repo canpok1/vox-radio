@@ -78,12 +78,11 @@ Example:
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
 	cmd.Flags().StringVar(&titleFlag, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&descFlag, "description", "", "episode description")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for hosting (required)")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	cmd.Flags().StringVar(&hostingType, "hosting", "local", "hosting type: local or ghpages")
 	_ = cmd.MarkFlagRequired("in")
-	_ = cmd.MarkFlagRequired("profile")
 	_ = cmd.MarkFlagRequired("out-dir")
 
 	return cmd

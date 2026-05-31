@@ -45,10 +45,9 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "output directory for local hosting (required)")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	_ = cmd.MarkFlagRequired("out-dir")
-	_ = cmd.MarkFlagRequired("profile")
 
 	return cmd
 }

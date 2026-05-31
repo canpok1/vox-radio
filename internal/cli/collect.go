@@ -49,9 +49,8 @@ Example:
 		},
 	}
 
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&out, "out", "", "output articles.json path (required)")
-	_ = cmd.MarkFlagRequired("profile")
 	_ = cmd.MarkFlagRequired("out")
 
 	return cmd

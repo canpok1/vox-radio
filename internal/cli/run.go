@@ -117,14 +117,13 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "output", "output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/)")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
 	cmd.Flags().StringVar(&title, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&description, "description", "", "episode description")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	cmd.Flags().StringVar(&hostingType, "hosting", "local", "hosting type: local or ghpages")
-	_ = cmd.MarkFlagRequired("profile")
 
 	return cmd
 }

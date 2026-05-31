@@ -11,7 +11,16 @@ import (
 	"github.com/canpok1/vox-radio/internal/publish/hosting"
 	"github.com/canpok1/vox-radio/internal/publish/hosting/ghpages"
 	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
+	"github.com/spf13/cobra"
 )
+
+// registerProfileFlag registers the required --profile flag on cmd, binding it
+// to profilePath. Used by every command that loads a profile (assemble is the
+// exception: its --profile is optional because assets can be skipped).
+func registerProfileFlag(cmd *cobra.Command, profilePath *string) {
+	cmd.Flags().StringVar(profilePath, "profile", "", "profile YAML file path (required)")
+	_ = cmd.MarkFlagRequired("profile")
+}
 
 func writeJSON(path string, v any) error {
 	return fileio.WriteJSON(path, v)

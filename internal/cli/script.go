@@ -88,9 +88,8 @@ Example:
 	cmd.Flags().StringVar(&in, "in", "", "input articles.json path (required for full pipeline or summarize step)")
 	cmd.Flags().StringVar(&out, "out", "", "output script.json path (required)")
 	cmd.Flags().StringVar(&step, "step", "", "run a single step: summarize|write|direct")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
+	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
-	_ = cmd.MarkFlagRequired("profile")
 	_ = cmd.MarkFlagRequired("out")
 
 	return cmd
