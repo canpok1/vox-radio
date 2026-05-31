@@ -286,8 +286,12 @@ func TestComplete_ThrottlesRequests(t *testing.T) {
 	}
 	gap := receivedAt[1].Sub(receivedAt[0])
 	minGap := time.Duration(intervalMS) * time.Millisecond
-	if gap < minGap {
-		t.Errorf("requests too close: gap=%v, want >= %v", gap, minGap)
+	// Server-side timestamps include TCP connection overhead for the first request
+	// but not the second (keep-alive reuse), so allow a small tolerance.
+	const toleranceMS = 5
+	tolerance := time.Duration(toleranceMS) * time.Millisecond
+	if gap < minGap-tolerance {
+		t.Errorf("requests too close: gap=%v, want >= %v", gap, minGap-tolerance)
 	}
 }
 
