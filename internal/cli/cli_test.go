@@ -128,7 +128,7 @@ func TestScriptMissingOut(t *testing.T) {
 
 func TestProfileRequired(t *testing.T) {
 	// --profile はデフォルト値を持たず、各サブコマンドで必須であること。
-	for _, sub := range []string{"collect", "script", "publish", "prune", "run"} {
+	for _, sub := range []string{"collect", "script", "publish", "prune", "run", "manifest"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			errBuf := &bytes.Buffer{}

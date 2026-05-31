@@ -11,8 +11,8 @@ The manifest is intended for use by a separate publishing service to generate
 RSS feeds without re-running the full pipeline.
 
 Example:
-  vox-radio manifest --profile profiles/tech/profile.yaml --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile profiles/tech/profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json
 
 ```
 vox-radio manifest [flags]
@@ -25,7 +25,7 @@ vox-radio manifest [flags]
       --audio string      audio file path; basename is stored in manifest (required)
   -h, --help              help for manifest
       --out string        output manifest.json path (required)
-      --profile string    profile YAML file path (default "profiles/test/profile.yaml")
+      --profile string    profile YAML file path (required)
 ```
 
 ### SEE ALSO

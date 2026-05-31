@@ -27,8 +27,8 @@ The manifest is intended for use by a separate publishing service to generate
 RSS feeds without re-running the full pipeline.
 
 Example:
-  vox-radio manifest --profile profiles/tech/profile.yaml --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile profiles/tech/profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json`,
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p, err := config.LoadProfile(profilePath)
 			if err != nil {
@@ -55,10 +55,11 @@ Example:
 		},
 	}
 
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
 	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json path (optional; corners get empty articles when omitted)")
 	cmd.Flags().StringVar(&audioPath, "audio", "", "audio file path; basename is stored in manifest (required)")
 	cmd.Flags().StringVar(&out, "out", "", "output manifest.json path (required)")
+	_ = cmd.MarkFlagRequired("profile")
 	_ = cmd.MarkFlagRequired("audio")
 	_ = cmd.MarkFlagRequired("out")
 
