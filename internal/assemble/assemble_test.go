@@ -269,7 +269,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 		logger:      slog.Default(),
 	}
 
-	// Build a script that already contains jingle segments (as produced by script.Generate after Issue #131).
+	// Build a script that already contains jingle segments (as produced by script.Generate).
 	openingKey := profile.Program.OpeningJingle
 	endingKey := profile.Program.EndingJingle
 	if openingKey == "" || endingKey == "" {
