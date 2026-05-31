@@ -107,6 +107,14 @@ func TestBuildFFmpegArgs_MultipleClipsWithPauses(t *testing.T) {
 	if !strings.Contains(args.FilterComplex, "concat") {
 		t.Errorf("filter_complex missing concat: %s", args.FilterComplex)
 	}
+	// atrim の duration 指定は `duration=` でなければならない。
+	// `d=` は atrim フィルタに存在しないオプションで ffmpeg が失敗する。
+	if strings.Contains(args.FilterComplex, "atrim=d=") {
+		t.Errorf("filter_complex uses invalid atrim option `d=` (must be `duration=`): %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "atrim=duration=") {
+		t.Errorf("filter_complex missing valid `atrim=duration=` for pauses: %s", args.FilterComplex)
+	}
 }
 
 func TestBuildFFmpegArgs_SESegment(t *testing.T) {
