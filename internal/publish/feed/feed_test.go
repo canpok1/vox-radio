@@ -10,7 +10,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/publish/feed"
 )
 
-var testPodcast = config.PodcastConfig{
+var testPodcast = config.ProgramConfig{
 	Title:         "今日のテックニュース",
 	Description:   "毎日5分のニュースラジオ",
 	Language:      "ja",
@@ -81,7 +81,7 @@ func TestGenerate_EmptyEpisodes(t *testing.T) {
 }
 
 func TestGenerate_XMLEscaping(t *testing.T) {
-	podcast := config.PodcastConfig{
+	podcast := config.ProgramConfig{
 		Title:       "Test & Show",
 		Description: "A show with <special> chars",
 		Language:    "en",
@@ -121,7 +121,7 @@ func TestGenerate_InvalidPubDate(t *testing.T) {
 }
 
 func TestGenerate_ExplicitYes(t *testing.T) {
-	podcast := config.PodcastConfig{
+	podcast := config.ProgramConfig{
 		Title:    "Explicit Show",
 		Language: "en",
 		SiteURL:  "https://example.com/",

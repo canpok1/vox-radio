@@ -45,27 +45,34 @@ func TestLoadProfile(t *testing.T) {
 		t.Fatalf("LoadProfile failed: %v", err)
 	}
 
-	t.Run("Podcast", func(t *testing.T) {
-		if profile.Podcast.Title == "" {
-			t.Error("Podcast.Title must not be empty")
+	t.Run("Program", func(t *testing.T) {
+		if profile.Program.Title == "" {
+			t.Error("Program.Title must not be empty")
 		}
-		if profile.Podcast.Language == "" {
-			t.Error("Podcast.Language must not be empty")
+		if profile.Program.Language == "" {
+			t.Error("Program.Language must not be empty")
 		}
-		if profile.Podcast.MaxItems <= 0 {
-			t.Error("Podcast.MaxItems must be positive")
+		if profile.Program.MaxItems <= 0 {
+			t.Error("Program.MaxItems must be positive")
+		}
+		if profile.Program.SegmentPauseSec <= 0 {
+			t.Error("Program.SegmentPauseSec must be positive")
 		}
 	})
 
-	t.Run("Show", func(t *testing.T) {
-		if profile.Show.TitleFormat == "" {
-			t.Error("Show.TitleFormat must not be empty")
+	t.Run("Corners", func(t *testing.T) {
+		if len(profile.Corners) == 0 {
+			t.Error("Corners must not be empty")
 		}
-		if profile.Show.TargetChars <= 0 {
-			t.Error("Show.TargetChars must be positive")
+		c := profile.Corners[0]
+		if c.Title == "" {
+			t.Error("Corners[0].Title must not be empty")
 		}
-		if profile.Show.SegmentPauseSec <= 0 {
-			t.Error("Show.SegmentPauseSec must be positive")
+		if c.Content == "" {
+			t.Error("Corners[0].Content must not be empty")
+		}
+		if len(c.Cast) == 0 {
+			t.Error("Corners[0].Cast must not be empty")
 		}
 	})
 
@@ -202,5 +209,33 @@ func TestLoadConfig_ValidationError_DefaultStyleNotInStyles(t *testing.T) {
 	_, err := config.LoadConfig("testdata/config_invalid_default_style.yaml")
 	if err == nil {
 		t.Error("expected error when default_style is not in styles")
+	}
+}
+
+func TestValidateProfileCast_Valid(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
+		},
+	}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {Name: "ずんだもん"},
+	}
+	if err := config.ValidateProfileCast(p, chars); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateProfileCast_UnknownCharacter(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "opening", Cast: map[string]string{"unknown_char": "司会"}},
+		},
+	}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {Name: "ずんだもん"},
+	}
+	if err := config.ValidateProfileCast(p, chars); err == nil {
+		t.Error("expected error for unknown character in cast")
 	}
 }

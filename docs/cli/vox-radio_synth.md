@@ -9,6 +9,7 @@ The output directory will contain per-line WAV files and a clips.json manifest.
 
 vox-radio.yaml is automatically loaded from the current directory.
 The voicevox.url field specifies the VOICEVOX engine URL (default: http://localhost:50021).
+Speaker IDs are resolved from the characters catalog in vox-radio.yaml.
 
 Example:
   vox-radio synth --in work/script.json --out-dir work/clips

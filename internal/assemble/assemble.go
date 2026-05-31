@@ -23,17 +23,17 @@ type Result struct {
 // Assembler assembles speech clips and assets into a final mp3.
 type Assembler struct {
 	AssetsConfig config.AssetsConfig
-	ShowConfig   model.ShowConfig
+	Program      config.ProgramConfig
 	runFFmpeg    func(ctx context.Context, args []string) error
 	getDuration  func(path string) (float64, error)
 	getFileSize  func(path string) (int64, error)
 }
 
 // New creates a new Assembler that calls ffmpeg and ffprobe.
-func New(assetsConfig config.AssetsConfig, showConfig model.ShowConfig) *Assembler {
+func New(assetsConfig config.AssetsConfig, program config.ProgramConfig) *Assembler {
 	return &Assembler{
 		AssetsConfig: assetsConfig,
-		ShowConfig:   showConfig,
+		Program:      program,
 		runFFmpeg:    runFFmpegCmd,
 		getDuration:  mediainfo.Duration,
 		getFileSize:  mediainfo.FileSize,
@@ -47,7 +47,7 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
-	pauseSec := a.ShowConfig.SegmentPauseSec
+	pauseSec := a.Program.SegmentPauseSec
 	if pauseSec == 0 {
 		pauseSec = defaultPauseSec
 	}

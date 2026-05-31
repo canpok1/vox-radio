@@ -45,7 +45,7 @@ func (m *mockHosting) DeleteAudio(_ context.Context, _ string) error {
 }
 
 func newTestPublisher(h *mockHosting) *Publisher {
-	podcast := config.PodcastConfig{
+	podcast := config.ProgramConfig{
 		Title:         "今日のテックニュース",
 		Description:   "毎日5分のニュースラジオ",
 		Language:      "ja",
@@ -58,7 +58,7 @@ func newTestPublisher(h *mockHosting) *Publisher {
 	}
 	return &Publisher{
 		Hosting:     h,
-		Podcast:     podcast,
+		Program:     podcast,
 		getDuration: func(string) (float64, error) { return 312.0, nil },
 		getFileSize: func(string) (int64, error) { return 5242880, nil },
 	}
@@ -200,13 +200,13 @@ func TestPublisher_Run_MaxItemsZero_NoTrim(t *testing.T) {
 		},
 	}
 	h := &mockHosting{episodes: existing}
-	podcast := config.PodcastConfig{
+	podcast := config.ProgramConfig{
 		Title:    "Test",
 		MaxItems: 0, // 0 = unlimited
 	}
 	p := &Publisher{
 		Hosting:     h,
-		Podcast:     podcast,
+		Program:     podcast,
 		getDuration: func(string) (float64, error) { return 60.0, nil },
 		getFileSize: func(string) (int64, error) { return 1024, nil },
 	}

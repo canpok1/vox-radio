@@ -15,17 +15,14 @@ import (
 // Synth synthesizes speech segments from a script using the VOICEVOX HTTP API
 type Synth struct {
 	Client      VoicevoxClient
-	ShowConfig  model.ShowConfig
 	Config      *config.Config
 	getDuration func(path string) (float64, error)
 }
 
 // New creates a new Synth with an HTTP VOICEVOX client.
-// cfg carries the character catalog for future speaker resolution (#2).
-func New(engineURL string, showConfig model.ShowConfig, cfg *config.Config) *Synth {
+func New(engineURL string, cfg *config.Config) *Synth {
 	return &Synth{
 		Client:      NewClient(engineURL),
-		ShowConfig:  showConfig,
 		Config:      cfg,
 		getDuration: mediainfo.Duration,
 	}
@@ -99,9 +96,16 @@ func (s *Synth) synthesize(ctx context.Context, text string, speakerID int, outP
 	return nil
 }
 
-func (s *Synth) resolveSpeakerID(role string) int {
-	if id, ok := s.ShowConfig.Speakers[role]; ok {
-		return id
+// resolveSpeakerID resolves a character ID to a VOICEVOX speaker ID
+// via the character catalog: charID → CharacterConfig → DefaultStyle → Styles[DefaultStyle].
+func (s *Synth) resolveSpeakerID(charID string) int {
+	if s.Config == nil {
+		return 0
 	}
-	return s.ShowConfig.DefaultSpeaker
+	ch, ok := s.Config.Characters[charID]
+	if !ok {
+		return 0
+	}
+	id, _ := ch.DefaultSpeakerID()
+	return id
 }

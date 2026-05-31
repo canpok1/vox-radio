@@ -14,7 +14,7 @@ import (
 func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler {
 	return &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		ShowConfig:   model.ShowConfig{SegmentPauseSec: 0.5},
+		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
 		runFFmpeg:    func(_ context.Context, _ []string) error { return ffmpegErr },
 		getDuration:  func(_ string) (float64, error) { return duration, nil },
 		getFileSize:  func(_ string) (int64, error) { return size, nil },
@@ -25,7 +25,7 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 	var capturedArgs []string
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		ShowConfig:   model.ShowConfig{SegmentPauseSec: 0.5},
+		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
 		runFFmpeg: func(_ context.Context, args []string) error {
 			capturedArgs = args
 			return nil
@@ -137,7 +137,7 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	var capturedArgs []string
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		ShowConfig:   model.ShowConfig{SegmentPauseSec: 0}, // zero → default
+		Program:      config.ProgramConfig{SegmentPauseSec: 0}, // zero → default
 		runFFmpeg: func(_ context.Context, args []string) error {
 			capturedArgs = args
 			return nil
@@ -164,7 +164,6 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// Ensure ffmpeg was called (default pause used)
 	if len(capturedArgs) == 0 {
 		t.Error("ffmpeg was not called")
 	}

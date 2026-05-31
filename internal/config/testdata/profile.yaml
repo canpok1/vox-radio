@@ -1,4 +1,4 @@
-podcast:
+program:
   title: "テストニュース"
   description: "テスト用"
   language: ja
@@ -8,15 +8,20 @@ podcast:
   cover_image_url: https://example.com/cover.jpg
   site_url: https://example.com/
   max_items: 5
-show:
-  title_format: "テスト {date}"
-  target_chars: 500
-  corners: 2
-  default_speaker: 3
-  speakers:
-    host: 3
-  persona: "テスト用ペルソナ"
   segment_pause_sec: 0.3
+
+corners:
+  - title: "オープニング"
+    content: "番組の挨拶とトピック紹介"
+    cast:
+      zundamon: "元気に挨拶する進行役"
+    target_chars: 300
+  - title: "ニュースコーナー"
+    content: "テック記事を紹介"
+    cast:
+      zundamon: "司会"
+    target_chars: 200
+
 feeds:
   - url: https://example.com/rss.xml
     max_items: 3

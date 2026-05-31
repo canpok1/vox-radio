@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/canpok1/vox-radio/internal/model"
 )
 
 type FeedEntry struct {
@@ -57,16 +55,27 @@ type LLMConfig struct {
 	Steps       map[string]LLMStepConfig `yaml:"steps"`
 }
 
-type PodcastConfig struct {
-	Title         string `yaml:"title"`
-	Description   string `yaml:"description"`
-	Language      string `yaml:"language"`
-	Author        string `yaml:"author"`
-	Category      string `yaml:"category"`
-	Explicit      bool   `yaml:"explicit"`
-	CoverImageURL string `yaml:"cover_image_url"`
-	SiteURL       string `yaml:"site_url"`
-	MaxItems      int    `yaml:"max_items"`
+// ProgramConfig holds program-wide settings (formerly PodcastConfig + SegmentPauseSec from ShowConfig).
+type ProgramConfig struct {
+	Title           string  `yaml:"title"`
+	Description     string  `yaml:"description"`
+	Language        string  `yaml:"language"`
+	Author          string  `yaml:"author"`
+	Category        string  `yaml:"category"`
+	Explicit        bool    `yaml:"explicit"`
+	CoverImageURL   string  `yaml:"cover_image_url"`
+	SiteURL         string  `yaml:"site_url"`
+	MaxItems        int     `yaml:"max_items"`
+	SegmentPauseSec float64 `yaml:"segment_pause_sec"`
+}
+
+// CornerConfig defines a fixed corner in the program structure.
+// target_chars is provisional; will be replaced by target_duration_sec in #4.
+type CornerConfig struct {
+	Title       string            `yaml:"title"`
+	Content     string            `yaml:"content"`
+	Cast        map[string]string `yaml:"cast"`
+	TargetChars int               `yaml:"target_chars"`
 }
 
 type VoicevoxConfig struct {
@@ -82,6 +91,15 @@ type CharacterConfig struct {
 	Styles       map[string]int `yaml:"styles"`
 }
 
+// DefaultSpeakerID returns the VOICEVOX speaker ID for the character's default style.
+func (c CharacterConfig) DefaultSpeakerID() (int, bool) {
+	if c.DefaultStyle == "" {
+		return 0, false
+	}
+	id, ok := c.Styles[c.DefaultStyle]
+	return id, ok
+}
+
 // Config holds genre-independent common settings.
 // It is loaded from vox-radio.yaml at the repository root.
 type Config struct {
@@ -90,14 +108,14 @@ type Config struct {
 	Characters map[string]CharacterConfig `yaml:"characters"`
 }
 
-// Profile holds genre-specific settings (feeds, show, assets, podcast).
+// Profile holds genre-specific settings (feeds, program, corners, assets).
 // It is loaded from profiles/<genre>/profile.yaml.
 type Profile struct {
-	Podcast  PodcastConfig    `yaml:"podcast"`
-	Show     model.ShowConfig `yaml:"show"`
-	Feeds    []FeedEntry      `yaml:"feeds"`
-	Articles []string         `yaml:"articles"`
-	Assets   AssetsConfig     `yaml:"assets"`
+	Program  ProgramConfig  `yaml:"program"`
+	Corners  []CornerConfig `yaml:"corners"`
+	Feeds    []FeedEntry    `yaml:"feeds"`
+	Articles []string       `yaml:"articles"`
+	Assets   AssetsConfig   `yaml:"assets"`
 }
 
 // LoadConfig loads common settings from the given YAML file path.
@@ -132,6 +150,18 @@ func LoadProfile(path string) (*Profile, error) {
 	}
 	resolveAssetPaths(filepath.Dir(path), &p.Assets)
 	return p, nil
+}
+
+// ValidateProfileCast checks that every character ID in corners[].cast exists in chars.
+func ValidateProfileCast(p *Profile, chars map[string]CharacterConfig) error {
+	for _, corner := range p.Corners {
+		for charID := range corner.Cast {
+			if _, ok := chars[charID]; !ok {
+				return fmt.Errorf("corners[%q].cast: unknown character %q", corner.Title, charID)
+			}
+		}
+	}
+	return nil
 }
 
 func resolveAssetPaths(base string, assets *AssetsConfig) {

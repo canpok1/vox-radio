@@ -18,7 +18,7 @@ type Collector interface {
 
 // Scripter generates a radio script from articles.
 type Scripter interface {
-	Generate(ctx context.Context, articles []model.Article, show model.ShowConfig) (model.Script, error)
+	Generate(ctx context.Context, articles []model.Article, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -50,6 +50,7 @@ type Options struct {
 // Runner orchestrates the full collect→script→synth→assemble→publish→prune pipeline.
 type Runner struct {
 	Profile   *config.Profile
+	Config    *config.Config
 	Collector Collector
 	Scripter  Scripter
 	Synther   Synther
@@ -77,7 +78,12 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	scr, err := r.Scripter.Generate(ctx, articles.Articles, r.Profile.Show)
+	var chars map[string]config.CharacterConfig
+	if r.Config != nil {
+		chars = r.Config.Characters
+	}
+
+	scr, err := r.Scripter.Generate(ctx, articles.Articles, r.Profile.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}

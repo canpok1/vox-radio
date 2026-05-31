@@ -32,7 +32,7 @@ vox-radio publish [flags]
       --in string            input mp3 path (required)
       --out-dir string       output directory for hosting (required)
       --profile string       profile YAML file path (default "profiles/test/profile.yaml")
-      --title string         episode title (default: <date> <podcast.title>)
+      --title string         episode title (default: <date> <program.title>)
 ```
 
 ### SEE ALSO
