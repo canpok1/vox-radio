@@ -269,7 +269,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 		logger:      slog.Default(),
 	}
 
-	// Build a script that uses the exact YAML keys for jingle and bgm.
+	// Build a script that already contains jingle segments (as produced by script.Generate after Issue #131).
 	openingKey := profile.Program.OpeningJingle
 	endingKey := profile.Program.EndingJingle
 	if openingKey == "" || endingKey == "" {
@@ -278,7 +278,9 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 
 	script := model.Script{
 		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeJingle, AssetName: openingKey},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+			{Type: model.SegmentTypeJingle, AssetName: endingKey},
 		},
 	}
 	clips := model.ClipsMeta{

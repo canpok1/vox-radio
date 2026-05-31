@@ -75,7 +75,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			case "write":
 				return runScriptWrite(context.Background(), in, workDir, llmClient, cfg, p, prompts)
 			case "direct":
-				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog)
+				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog, p.Program)
 			default:
 				return fmt.Errorf("unknown step %q: use write|direct", step)
 			}
@@ -147,7 +147,7 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	return nil
 }
 
-func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog) error {
+func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog, program config.ProgramConfig) error {
 	linesPath := filepath.Join(workDir, "03_lines.json")
 	data, err := os.ReadFile(linesPath)
 	if err != nil {
@@ -163,6 +163,8 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
 	}
+
+	scr = script.InjectProgramJingles(scr, program)
 
 	if err := writeJSON(out, scr); err != nil {
 		return err

@@ -279,3 +279,105 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 		t.Errorf("expected intermediate file %q to exist: %v", fileio.FileLines, err)
 	}
 }
+
+// newJingleTestGen creates a generator with a single-speech-segment director for jingle injection tests.
+func newJingleTestGen() *script.LLMScriptGenerator {
+	speechSeg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"}
+	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{speechSeg}}}
+	return script.NewLLMScriptGenerator(
+		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
+		md,
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		"",
+	)
+}
+
+func TestLLMScriptGenerator_Generate_InjectsOpeningAndEndingJingles(t *testing.T) {
+	gen := newJingleTestGen()
+	program := config.ProgramConfig{OpeningJingle: "opening", EndingJingle: "ending"}
+	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 3 {
+		t.Fatalf("expected 3 segments (opening jingle + speech + ending jingle), got %d", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "opening" {
+		t.Errorf("first segment should be opening jingle, got %+v", got.Segments[0])
+	}
+	if got.Segments[1].Type != model.SegmentTypeSpeech {
+		t.Errorf("second segment should be speech, got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeJingle || got.Segments[2].AssetName != "ending" {
+		t.Errorf("third segment should be ending jingle, got %+v", got.Segments[2])
+	}
+}
+
+func TestLLMScriptGenerator_Generate_NoJinglesWhenConfigEmpty(t *testing.T) {
+	gen := newJingleTestGen()
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 1 {
+		t.Fatalf("expected 1 segment (no jingles), got %d", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeSpeech {
+		t.Errorf("expected speech segment, got %+v", got.Segments[0])
+	}
+}
+
+func TestLLMScriptGenerator_Generate_InjectsOnlyOpeningJingle(t *testing.T) {
+	gen := newJingleTestGen()
+	program := config.ProgramConfig{OpeningJingle: "opening"}
+	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 2 {
+		t.Fatalf("expected 2 segments (opening jingle + speech), got %d", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "opening" {
+		t.Errorf("first segment should be opening jingle, got %+v", got.Segments[0])
+	}
+}
+
+func TestLLMScriptGenerator_Generate_InjectsOnlyEndingJingle(t *testing.T) {
+	gen := newJingleTestGen()
+	program := config.ProgramConfig{EndingJingle: "ending"}
+	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 2 {
+		t.Fatalf("expected 2 segments (speech + ending jingle), got %d", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeJingle || got.Segments[1].AssetName != "ending" {
+		t.Errorf("last segment should be ending jingle, got %+v", got.Segments[1])
+	}
+}
+
+func TestInjectProgramJingles_BothEmpty_ReturnsOriginal(t *testing.T) {
+	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, Text: "x"}
+	scr := model.Script{Segments: []model.ScriptSegment{seg}}
+	got := script.InjectProgramJingles(scr, config.ProgramConfig{})
+	if len(got.Segments) != 1 || got.Segments[0].Text != "x" {
+		t.Errorf("expected unchanged script, got %+v", got.Segments)
+	}
+}
+
+func TestInjectProgramJingles_BothSet_PrependAndAppend(t *testing.T) {
+	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, Text: "mid"}
+	scr := model.Script{Segments: []model.ScriptSegment{seg}}
+	got := script.InjectProgramJingles(scr, config.ProgramConfig{OpeningJingle: "op", EndingJingle: "ed"})
+	if len(got.Segments) != 3 {
+		t.Fatalf("expected 3 segments, got %d", len(got.Segments))
+	}
+	if got.Segments[0].AssetName != "op" || got.Segments[2].AssetName != "ed" {
+		t.Errorf("unexpected jingle placement: %+v", got.Segments)
+	}
+}
