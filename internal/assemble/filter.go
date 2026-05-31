@@ -54,6 +54,11 @@ func (b *filterBuilder) addFilter(f string) {
 	b.filters = append(b.filters, f)
 }
 
+// addSilence emits an anullsrc silence segment with the given label.
+func (b *filterBuilder) addSilence(durationSec float64, label string) {
+	b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f%s", durationSec, label))
+}
+
 type seEvent struct {
 	seName   string
 	offsetMs int
@@ -152,52 +157,46 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 // buildJingleConcat inserts OP/ED jingles around mainLabel using ffmpeg concat.
 // Returns the label of the final stream (either a new [full_mix] label or mainLabel unchanged).
 func buildJingleConcat(b *filterBuilder, bctx BuildContext, mainLabel string) string {
-	opEntry, hasOP := bctx.Assets.Jingle[bctx.OpeningJingle]
-	if bctx.OpeningJingle == "" {
-		hasOP = false
+	var opEntry config.JingleEntry
+	var hasOP bool
+	if bctx.OpeningJingle != "" {
+		opEntry, hasOP = bctx.Assets.Jingle[bctx.OpeningJingle]
 	}
-	edEntry, hasED := bctx.Assets.Jingle[bctx.EndingJingle]
-	if bctx.EndingJingle == "" {
-		hasED = false
+	var edEntry config.JingleEntry
+	var hasED bool
+	if bctx.EndingJingle != "" {
+		edEntry, hasED = bctx.Assets.Jingle[bctx.EndingJingle]
 	}
 	if !hasOP && !hasED {
 		return mainLabel
 	}
 
 	var parts []string
-	count := 0
 
 	if hasOP {
 		opIdx := b.addInput(opEntry.File)
 		opLabel := buildJingleFadeIn(b, opIdx, opEntry)
-		b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[pause_op]", bctx.PauseSec))
+		b.addSilence(bctx.PauseSec, "[pause_op]")
 		parts = append(parts, opLabel, "[pause_op]")
-		count += 2
 	}
 
 	parts = append(parts, mainLabel)
-	count++
 
 	if hasED {
-		b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[pause_ed]", bctx.PauseSec))
+		b.addSilence(bctx.PauseSec, "[pause_ed]")
 		edIdx := b.addInput(edEntry.File)
 		edLabel := buildJingleFadeOut(b, edIdx, edEntry)
 		parts = append(parts, "[pause_ed]", edLabel)
-		count += 2
 	}
 
-	b.addFilter(fmt.Sprintf("%sconcat=n=%d:v=0:a=1[full_mix]", strings.Join(parts, ""), count))
+	b.addFilter(fmt.Sprintf("%sconcat=n=%d:v=0:a=1[full_mix]", strings.Join(parts, ""), len(parts)))
 	return "[full_mix]"
 }
 
 // buildJingleFadeIn applies fade-in to a jingle input and returns the resulting label.
 func buildJingleFadeIn(b *filterBuilder, idx int, entry config.JingleEntry) string {
-	if entry.FadeIn > 0 {
-		label := fmt.Sprintf("[jingle%d_fi]", idx)
-		b.addFilter(fmt.Sprintf("[%d:a]afade=t=in:d=%.3f%s", idx, entry.FadeIn, label))
-		return label
-	}
-	return fmt.Sprintf("[%d:a]", idx)
+	rawLabel := fmt.Sprintf("[%d:a]", idx)
+	return applyFadeIn(b, rawLabel, idx, entry.FadeIn)
 }
 
 // buildJingleFadeOut applies fade-out (and optional fade-in) to a jingle input and returns the resulting label.
@@ -209,12 +208,18 @@ func buildJingleFadeOut(b *filterBuilder, idx int, entry config.JingleEntry) str
 		b.addFilter(fmt.Sprintf("%sareverse,afade=t=in:d=%.3f,areverse%s", label, entry.FadeOut, fadedLabel))
 		label = fadedLabel
 	}
-	if entry.FadeIn > 0 {
-		fadedLabel := fmt.Sprintf("[jingle%d_fi]", idx)
-		b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", label, entry.FadeIn, fadedLabel))
-		label = fadedLabel
+	return applyFadeIn(b, label, idx, entry.FadeIn)
+}
+
+// applyFadeIn applies an afade=t=in filter to currentLabel and returns the output label.
+// Returns currentLabel unchanged when fadeSec <= 0.
+func applyFadeIn(b *filterBuilder, currentLabel string, idx int, fadeSec float64) string {
+	if fadeSec <= 0 {
+		return currentLabel
 	}
-	return label
+	outLabel := fmt.Sprintf("[jingle%d_fi]", idx)
+	b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", currentLabel, fadeSec, outLabel))
+	return outLabel
 }
 
 // buildSpeechConcat generates filter entries for concatenating clips with silence between them.
@@ -227,7 +232,7 @@ func buildSpeechConcat(b *filterBuilder, clips []model.ClipMeta, inputIdx []int,
 	for i := range clips {
 		parts = append(parts, fmt.Sprintf("[%d:a]", inputIdx[i]))
 		if i < len(clips)-1 {
-			b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[p%d]", pauseSec, i))
+			b.addSilence(pauseSec, fmt.Sprintf("[p%d]", i))
 			parts = append(parts, fmt.Sprintf("[p%d]", i))
 		}
 	}

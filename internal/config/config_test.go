@@ -1,7 +1,9 @@
 package config_test
 
 import (
+	"maps"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -208,7 +210,7 @@ func TestLoadProfile_OpeningJingleKeyMatchesAssets(t *testing.T) {
 	}
 	if _, ok := profile.Assets.Jingle[profile.Program.OpeningJingle]; !ok {
 		t.Errorf("Program.OpeningJingle %q not found in Assets.Jingle (keys: %v)",
-			profile.Program.OpeningJingle, jingleKeys(profile.Assets.Jingle))
+			profile.Program.OpeningJingle, slices.Sorted(maps.Keys(profile.Assets.Jingle)))
 	}
 }
 
@@ -224,16 +226,8 @@ func TestLoadProfile_EndingJingleKeyMatchesAssets(t *testing.T) {
 	}
 	if _, ok := profile.Assets.Jingle[profile.Program.EndingJingle]; !ok {
 		t.Errorf("Program.EndingJingle %q not found in Assets.Jingle (keys: %v)",
-			profile.Program.EndingJingle, jingleKeys(profile.Assets.Jingle))
+			profile.Program.EndingJingle, slices.Sorted(maps.Keys(profile.Assets.Jingle)))
 	}
-}
-
-func jingleKeys(m map[string]config.JingleEntry) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 func TestLoadConfig_Voicevox(t *testing.T) {
