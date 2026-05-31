@@ -3,6 +3,7 @@ program:
   description: "毎日5分のニュースラジオ"
   segment_pause_sec: 0.3
   target_duration_sec: 240
+  opening_jingle: opening
 
 corners:
   - title: "オープニング"

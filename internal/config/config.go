@@ -84,6 +84,8 @@ type ProgramConfig struct {
 	Description       string  `yaml:"description"`
 	SegmentPauseSec   float64 `yaml:"segment_pause_sec"`
 	TargetDurationSec int     `yaml:"target_duration_sec"`
+	OpeningJingle     string  `yaml:"opening_jingle,omitempty"`
+	EndingJingle      string  `yaml:"ending_jingle,omitempty"`
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).

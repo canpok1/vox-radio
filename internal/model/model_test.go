@@ -225,6 +225,10 @@ func TestScript_Fields(t *testing.T) {
 			if seg.SEName == "" {
 				t.Errorf("segment[%d]: SEName must not be empty for se", i)
 			}
+		case model.SegmentTypeJingle:
+			if seg.AssetName == "" {
+				t.Errorf("segment[%d]: AssetName must not be empty for jingle", i)
+			}
 		}
 	}
 }

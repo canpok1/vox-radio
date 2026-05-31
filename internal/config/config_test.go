@@ -70,6 +70,12 @@ func TestLoadProfile(t *testing.T) {
 		if profile.Program.SegmentPauseSec <= 0 {
 			t.Error("Program.SegmentPauseSec must be positive")
 		}
+		if profile.Program.OpeningJingle == "" {
+			t.Error("Program.OpeningJingle must not be empty")
+		}
+		if profile.Program.EndingJingle == "" {
+			t.Error("Program.EndingJingle must not be empty")
+		}
 	})
 
 	t.Run("Corners", func(t *testing.T) {
@@ -188,6 +194,46 @@ func TestLoadProfile_MissingFile(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
+}
+
+// TestLoadProfile_OpeningJingleKeyMatchesAssets verifies that Program.OpeningJingle
+// references a key that actually exists in Assets.Jingle, preventing silent misconfiguration.
+func TestLoadProfile_OpeningJingleKeyMatchesAssets(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	if profile.Program.OpeningJingle == "" {
+		t.Skip("no opening_jingle configured")
+	}
+	if _, ok := profile.Assets.Jingle[profile.Program.OpeningJingle]; !ok {
+		t.Errorf("Program.OpeningJingle %q not found in Assets.Jingle (keys: %v)",
+			profile.Program.OpeningJingle, jingleKeys(profile.Assets.Jingle))
+	}
+}
+
+// TestLoadProfile_EndingJingleKeyMatchesAssets verifies that Program.EndingJingle
+// references a key that actually exists in Assets.Jingle.
+func TestLoadProfile_EndingJingleKeyMatchesAssets(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	if profile.Program.EndingJingle == "" {
+		t.Skip("no ending_jingle configured")
+	}
+	if _, ok := profile.Assets.Jingle[profile.Program.EndingJingle]; !ok {
+		t.Errorf("Program.EndingJingle %q not found in Assets.Jingle (keys: %v)",
+			profile.Program.EndingJingle, jingleKeys(profile.Assets.Jingle))
+	}
+}
+
+func jingleKeys(m map[string]config.JingleEntry) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func TestLoadConfig_Voicevox(t *testing.T) {

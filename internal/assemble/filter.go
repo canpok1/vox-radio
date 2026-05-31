@@ -9,22 +9,24 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-// speechNormFilter normalizes speech to EBU R128 before BGM mixing.
-// The TP ceiling (-1.5 dB) must match outputLimiterLimit so the two stages are calibrated together.
 const (
-	speechNormFilter = "loudnorm=I=-16:TP=-1.5:LRA=11"
-	// outputLimiterLimit is the linear equivalent of the TP ceiling used in speechNormFilter (10^(-1.5/20) ≈ 0.841).
+	// outputNormFilter normalizes the assembled output to EBU R128 before peak limiting.
+	// Applied once to the full mix (speech + SE + BGM + jingles) after serial concat.
+	outputNormFilter = "loudnorm=I=-16:TP=-1.5:LRA=11"
+	// outputLimiterLimit is the linear equivalent of the TP ceiling used in outputNormFilter (10^(-1.5/20) ≈ 0.841).
 	outputLimiterLimit = 0.841
 )
 
 // BuildContext holds all data needed to build the ffmpeg command.
 type BuildContext struct {
-	Script   model.Script
-	Clips    model.ClipsMeta
-	ClipsDir string
-	Assets   config.AssetsConfig
-	PauseSec float64
-	OutPath  string
+	Script        model.Script
+	Clips         model.ClipsMeta
+	ClipsDir      string
+	Assets        config.AssetsConfig
+	PauseSec      float64
+	OutPath       string
+	OpeningJingle string // key into Assets.Jingle; empty = no OP jingle
+	EndingJingle  string // key into Assets.Jingle; empty = no ED jingle
 }
 
 // FFmpegArgs holds the complete set of arguments for an ffmpeg call.
@@ -59,7 +61,7 @@ type seEvent struct {
 
 // BuildFFmpegArgs constructs the complete ffmpeg argument list for audio assembly.
 // It builds a single filter_complex covering speech concat, SE placement, BGM ducking,
-// OP/ED jingles, and loudness normalization.
+// OP/ED jingles (serial concat), and loudness normalization.
 func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	if len(bctx.Clips.Clips) == 0 {
 		return nil, fmt.Errorf("no speech clips to assemble")
@@ -75,14 +77,9 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 
 	// Build speech track (concat with silence between clips)
 	speechLabel := buildSpeechConcat(b, bctx.Clips.Clips, clipInputIdx, bctx.PauseSec)
+	currentLabel := speechLabel
 
-	// Normalize speech before any mixing.
-	// This keeps BGM/SE/jingle levels independent of speech amplitude across episodes.
-	b.addFilter(fmt.Sprintf("%s%s[speech_norm]", speechLabel, speechNormFilter))
-	currentLabel := "[speech_norm]"
-
-	// If BGM is configured, split normalized speech so it can be used as sidechain.
-	// Using normalized speech as sidechain prevents per-episode variation in ducking depth.
+	// If BGM is configured, split speech for sidechain ducking.
 	hasBGM := len(bctx.Assets.BGM) > 0
 	if hasBGM {
 		b.addFilter(fmt.Sprintf("%sasplit=2[speech_mix][speech_duck]", currentLabel))
@@ -104,43 +101,6 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 			seIdx, entry.Volume, ev.offsetMs, ev.offsetMs, delayedLabel))
 		b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=first:normalize=0%s",
 			currentLabel, delayedLabel, nextLabel))
-		currentLabel = nextLabel
-	}
-
-	// OP jingle: afade in, mix with speech (duration=longest so speech continues after jingle)
-	if opEntry, ok := bctx.Assets.Jingle["op"]; ok {
-		opIdx := b.addInput(opEntry.File)
-		opLabel := fmt.Sprintf("[op%d]", opIdx)
-		if opEntry.FadeIn > 0 {
-			b.addFilter(fmt.Sprintf("[%d:a]afade=t=in:d=%.3f%s", opIdx, opEntry.FadeIn, opLabel))
-		} else {
-			opLabel = fmt.Sprintf("[%d:a]", opIdx)
-		}
-		nextLabel := "[after_op]"
-		b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=longest:normalize=0%s",
-			opLabel, currentLabel, nextLabel))
-		currentLabel = nextLabel
-	}
-
-	// ED jingle: afade out (reverse trick), mix with speech
-	if edEntry, ok := bctx.Assets.Jingle["ed"]; ok {
-		edIdx := b.addInput(edEntry.File)
-		edLabel := fmt.Sprintf("[ed%d]", edIdx)
-		if edEntry.FadeOut > 0 {
-			// Reverse → fade in → reverse = fade out from end
-			b.addFilter(fmt.Sprintf("[%d:a]areverse,afade=t=in:d=%.3f,areverse%s",
-				edIdx, edEntry.FadeOut, edLabel))
-		} else {
-			edLabel = fmt.Sprintf("[%d:a]", edIdx)
-		}
-		if edEntry.FadeIn > 0 {
-			fadedLabel := fmt.Sprintf("[ed%d_fi]", edIdx)
-			b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", edLabel, edEntry.FadeIn, fadedLabel))
-			edLabel = fadedLabel
-		}
-		nextLabel := "[after_ed]"
-		b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=longest:normalize=0%s",
-			currentLabel, edLabel, nextLabel))
 		currentLabel = nextLabel
 	}
 
@@ -171,9 +131,15 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		currentLabel = "[after_bgm]"
 	}
 
-	// Peak limiter: prevents clipping after BGM mix without dynamic re-normalization.
-	// level=0 disables auto gain equalization.
-	b.addFilter(fmt.Sprintf("%salimiter=limit=%.3f:level=0[out]", currentLabel, outputLimiterLimit))
+	// Build serial jingle concat: [OP jingle][pause][main content][pause][ED jingle]
+	// Each jingle is a distinct segment played before/after main content (not overlaid).
+	currentLabel = buildJingleConcat(b, bctx, currentLabel)
+
+	// loudnorm: applied once to the full assembled mix (speech + SE + BGM + jingles).
+	b.addFilter(fmt.Sprintf("%s%s[norm_out]", currentLabel, outputNormFilter))
+
+	// Peak limiter: prevents clipping after loudnorm. level=0 disables auto gain equalization.
+	b.addFilter(fmt.Sprintf("[norm_out]alimiter=limit=%.3f:level=0[out]", outputLimiterLimit))
 
 	return &FFmpegArgs{
 		Inputs:        b.inputs,
@@ -181,6 +147,74 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		OutputArgs:    []string{"-map", "[out]", "-c:a", "libmp3lame", "-q:a", "2"},
 		OutputPath:    bctx.OutPath,
 	}, nil
+}
+
+// buildJingleConcat inserts OP/ED jingles around mainLabel using ffmpeg concat.
+// Returns the label of the final stream (either a new [full_mix] label or mainLabel unchanged).
+func buildJingleConcat(b *filterBuilder, bctx BuildContext, mainLabel string) string {
+	opEntry, hasOP := bctx.Assets.Jingle[bctx.OpeningJingle]
+	if bctx.OpeningJingle == "" {
+		hasOP = false
+	}
+	edEntry, hasED := bctx.Assets.Jingle[bctx.EndingJingle]
+	if bctx.EndingJingle == "" {
+		hasED = false
+	}
+	if !hasOP && !hasED {
+		return mainLabel
+	}
+
+	var parts []string
+	count := 0
+
+	if hasOP {
+		opIdx := b.addInput(opEntry.File)
+		opLabel := buildJingleFadeIn(b, opIdx, opEntry)
+		b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[pause_op]", bctx.PauseSec))
+		parts = append(parts, opLabel, "[pause_op]")
+		count += 2
+	}
+
+	parts = append(parts, mainLabel)
+	count++
+
+	if hasED {
+		b.addFilter(fmt.Sprintf("anullsrc=cl=stereo:r=44100,atrim=duration=%.3f[pause_ed]", bctx.PauseSec))
+		edIdx := b.addInput(edEntry.File)
+		edLabel := buildJingleFadeOut(b, edIdx, edEntry)
+		parts = append(parts, "[pause_ed]", edLabel)
+		count += 2
+	}
+
+	b.addFilter(fmt.Sprintf("%sconcat=n=%d:v=0:a=1[full_mix]", strings.Join(parts, ""), count))
+	return "[full_mix]"
+}
+
+// buildJingleFadeIn applies fade-in to a jingle input and returns the resulting label.
+func buildJingleFadeIn(b *filterBuilder, idx int, entry config.JingleEntry) string {
+	if entry.FadeIn > 0 {
+		label := fmt.Sprintf("[jingle%d_fi]", idx)
+		b.addFilter(fmt.Sprintf("[%d:a]afade=t=in:d=%.3f%s", idx, entry.FadeIn, label))
+		return label
+	}
+	return fmt.Sprintf("[%d:a]", idx)
+}
+
+// buildJingleFadeOut applies fade-out (and optional fade-in) to a jingle input and returns the resulting label.
+func buildJingleFadeOut(b *filterBuilder, idx int, entry config.JingleEntry) string {
+	label := fmt.Sprintf("[%d:a]", idx)
+	if entry.FadeOut > 0 {
+		// Reverse → fade in → reverse = fade out from end
+		fadedLabel := fmt.Sprintf("[jingle%d_fo]", idx)
+		b.addFilter(fmt.Sprintf("%sareverse,afade=t=in:d=%.3f,areverse%s", label, entry.FadeOut, fadedLabel))
+		label = fadedLabel
+	}
+	if entry.FadeIn > 0 {
+		fadedLabel := fmt.Sprintf("[jingle%d_fi]", idx)
+		b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", label, entry.FadeIn, fadedLabel))
+		label = fadedLabel
+	}
+	return label
 }
 
 // buildSpeechConcat generates filter entries for concatenating clips with silence between them.

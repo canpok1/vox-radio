@@ -233,6 +233,8 @@ func TestBuildFFmpegArgs_BGM(t *testing.T) {
 	}
 }
 
+// TestBuildFFmpegArgs_OPJingle verifies that the opening jingle is prepended as a serial
+// segment (concat) before the main content, not overlaid via amix.
 func TestBuildFFmpegArgs_OPJingle(t *testing.T) {
 	ctx := BuildContext{
 		Script: model.Script{
@@ -248,11 +250,12 @@ func TestBuildFFmpegArgs_OPJingle(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{
-				"op": {File: "/assets/op.wav", FadeIn: 0.5, FadeOut: 1.0},
+				"opening": {File: "/assets/opening.wav", FadeIn: 0.5, FadeOut: 1.0},
 			},
 		},
-		PauseSec: 0.5,
-		OutPath:  "/out.mp3",
+		OpeningJingle: "opening",
+		PauseSec:      0.5,
+		OutPath:       "/out.mp3",
 	}
 
 	args, err := BuildFFmpegArgs(ctx)
@@ -262,7 +265,7 @@ func TestBuildFFmpegArgs_OPJingle(t *testing.T) {
 
 	foundOP := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/op.wav" {
+		if inp == "/assets/opening.wav" {
 			foundOP = true
 		}
 	}
@@ -272,8 +275,14 @@ func TestBuildFFmpegArgs_OPJingle(t *testing.T) {
 	if !strings.Contains(args.FilterComplex, "afade") {
 		t.Errorf("filter_complex missing afade for OP jingle: %s", args.FilterComplex)
 	}
+	// Jingle must be serial (concat), not overlaid (amix=duration=longest)
+	if !strings.Contains(args.FilterComplex, "concat") {
+		t.Errorf("filter_complex missing concat for serial jingle: %s", args.FilterComplex)
+	}
 }
 
+// TestBuildFFmpegArgs_EDJingle verifies that the ending jingle is appended as a serial
+// segment (concat) after the main content, not overlaid via amix.
 func TestBuildFFmpegArgs_EDJingle(t *testing.T) {
 	ctx := BuildContext{
 		Script: model.Script{
@@ -289,11 +298,12 @@ func TestBuildFFmpegArgs_EDJingle(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{
-				"ed": {File: "/assets/ed.wav", FadeIn: 0.3, FadeOut: 1.5},
+				"ending": {File: "/assets/ending.wav", FadeIn: 0.3, FadeOut: 1.5},
 			},
 		},
-		PauseSec: 0.5,
-		OutPath:  "/out.mp3",
+		EndingJingle: "ending",
+		PauseSec:     0.5,
+		OutPath:      "/out.mp3",
 	}
 
 	args, err := BuildFFmpegArgs(ctx)
@@ -303,7 +313,7 @@ func TestBuildFFmpegArgs_EDJingle(t *testing.T) {
 
 	foundED := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/ed.wav" {
+		if inp == "/assets/ending.wav" {
 			foundED = true
 		}
 	}
@@ -312,6 +322,67 @@ func TestBuildFFmpegArgs_EDJingle(t *testing.T) {
 	}
 	if !strings.Contains(args.FilterComplex, "afade") {
 		t.Errorf("filter_complex missing afade for ED jingle: %s", args.FilterComplex)
+	}
+	// Jingle must be serial (concat), not overlaid (amix=duration=longest)
+	if !strings.Contains(args.FilterComplex, "concat") {
+		t.Errorf("filter_complex missing concat for serial jingle: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BothJingles_WithPauses verifies that OP+ED jingles are both inserted
+// with pause gaps between jingle and main content.
+func TestBuildFFmpegArgs_BothJingles_WithPauses(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"opening": {File: "/assets/opening.wav", FadeIn: 0.5},
+				"ending":  {File: "/assets/ending.wav", FadeOut: 1.0},
+			},
+		},
+		OpeningJingle: "opening",
+		EndingJingle:  "ending",
+		PauseSec:      0.5,
+		OutPath:       "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	foundOP, foundED := false, false
+	for _, inp := range args.Inputs {
+		if inp == "/assets/opening.wav" {
+			foundOP = true
+		}
+		if inp == "/assets/ending.wav" {
+			foundED = true
+		}
+	}
+	if !foundOP {
+		t.Errorf("OP jingle not in inputs: %v", args.Inputs)
+	}
+	if !foundED {
+		t.Errorf("ED jingle not in inputs: %v", args.Inputs)
+	}
+	// Pauses between jingle and main content
+	if !strings.Contains(args.FilterComplex, "anullsrc") {
+		t.Errorf("filter_complex missing anullsrc (pause) for jingle gaps: %s", args.FilterComplex)
+	}
+	// Both jingles in serial concat
+	if !strings.Contains(args.FilterComplex, "concat") {
+		t.Errorf("filter_complex missing concat: %s", args.FilterComplex)
 	}
 }
 
@@ -405,9 +476,9 @@ func TestComputeSEEvents_NoSE(t *testing.T) {
 	}
 }
 
-// TestBuildFFmpegArgs_LoudnormBeforeBGMMix verifies that loudnorm is applied to speech
-// BEFORE BGM mixing, so BGM levels are unaffected by speech-driven AGC.
-func TestBuildFFmpegArgs_LoudnormBeforeBGMMix(t *testing.T) {
+// TestBuildFFmpegArgs_LoudnormAfterMainContent verifies that loudnorm is applied AFTER
+// the full main content (speech+BGM) is assembled, so it normalizes the whole output once.
+func TestBuildFFmpegArgs_LoudnormAfterMainContent(t *testing.T) {
 	ctx := BuildContext{
 		Script: model.Script{
 			Segments: []model.ScriptSegment{
@@ -454,8 +525,8 @@ func TestBuildFFmpegArgs_LoudnormBeforeBGMMix(t *testing.T) {
 	if bgmFilterIdx == -1 {
 		t.Fatal("BGM filter (aloop or sidechaincompress) not found in filter_complex")
 	}
-	if loudnormIdx >= bgmFilterIdx {
-		t.Errorf("loudnorm (filter index %d) must appear before BGM mix filter (index %d); filter_complex:\n%s",
+	if loudnormIdx <= bgmFilterIdx {
+		t.Errorf("loudnorm (filter index %d) must appear AFTER BGM mix filter (index %d); filter_complex:\n%s",
 			loudnormIdx, bgmFilterIdx, args.FilterComplex)
 	}
 }
