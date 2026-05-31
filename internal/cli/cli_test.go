@@ -122,6 +122,31 @@ func TestRootCmdDisableAutoGenTag(t *testing.T) {
 	}
 }
 
+func TestRootVersion(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	if cmd.Version != "dev" {
+		t.Errorf("expected version %q, got %q", "dev", cmd.Version)
+	}
+}
+
+func TestRootVersionFlag(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"--version"})
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "vox-radio") {
+		t.Errorf("--version output should contain %q, got %q", "vox-radio", out)
+	}
+	if !strings.Contains(out, "dev") {
+		t.Errorf("--version output should contain %q, got %q", "dev", out)
+	}
+}
+
 func TestSubcommandHelp(t *testing.T) {
 	for _, sub := range []string{"init", "collect", "synth", "assemble", "manifest", "script", "run"} {
 		t.Run(sub, func(t *testing.T) {

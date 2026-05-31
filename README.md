@@ -33,6 +33,18 @@
 make build
 ```
 
+バージョンを埋め込む場合は `VERSION` を指定します。
+
+```bash
+make build VERSION=v0.1.0
+```
+
+ビルドしたバイナリのバージョンを確認するには `--version` フラグを使います。
+
+```bash
+vox-radio --version
+```
+
 ### パイプライン概要
 
 vox-radio は以下のパイプラインでポッドキャストを自動生成します。
