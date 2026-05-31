@@ -10,62 +10,58 @@ import (
 )
 
 func TestBuildAssetCatalog_DescriptionPropagated(t *testing.T) {
-	assets := config.AssetsConfig{
-		SE: map[string]config.SEEntry{
-			"chime": {File: "se/chime.mp3", Volume: 0.8, Description: "チャイム音"},
+	tests := []struct {
+		name     string
+		assets   config.AssetsConfig
+		wantKey  string
+		wantDesc string
+		getSlice func(model.AssetCatalog) []model.AssetCatalogEntry
+	}{
+		{
+			name: "SE",
+			assets: config.AssetsConfig{
+				SE:     map[string]config.SEEntry{"chime": {File: "se/chime.mp3", Volume: 0.8, Description: "チャイム音"}},
+				BGM:    map[string]config.BGMEntry{},
+				Jingle: map[string]config.JingleEntry{},
+			},
+			wantKey: "chime", wantDesc: "チャイム音",
+			getSlice: func(c model.AssetCatalog) []model.AssetCatalogEntry { return c.SE },
 		},
-		BGM:    map[string]config.BGMEntry{},
-		Jingle: map[string]config.JingleEntry{},
-	}
-	got := buildAssetCatalog(assets)
-	if len(got.SE) != 1 {
-		t.Fatalf("SE: got %d entries, want 1", len(got.SE))
-	}
-	if got.SE[0].Name != "chime" {
-		t.Errorf("SE[0].Name: got %q, want chime", got.SE[0].Name)
-	}
-	if got.SE[0].Description != "チャイム音" {
-		t.Errorf("SE[0].Description: got %q, want チャイム音", got.SE[0].Description)
-	}
-}
-
-func TestBuildAssetCatalog_BGMDescriptionPropagated(t *testing.T) {
-	assets := config.AssetsConfig{
-		SE: map[string]config.SEEntry{},
-		BGM: map[string]config.BGMEntry{
-			"coffee_break": {File: "bgm/coffee.mp3", Volume: 0.3, DuckRatio: 8, Loop: true, Description: "カフェ風BGM"},
+		{
+			name: "BGM",
+			assets: config.AssetsConfig{
+				SE:     map[string]config.SEEntry{},
+				BGM:    map[string]config.BGMEntry{"coffee_break": {File: "bgm/coffee.mp3", Volume: 0.3, DuckRatio: 8, Loop: true, Description: "カフェ風BGM"}},
+				Jingle: map[string]config.JingleEntry{},
+			},
+			wantKey: "coffee_break", wantDesc: "カフェ風BGM",
+			getSlice: func(c model.AssetCatalog) []model.AssetCatalogEntry { return c.BGM },
 		},
-		Jingle: map[string]config.JingleEntry{},
-	}
-	got := buildAssetCatalog(assets)
-	if len(got.BGM) != 1 {
-		t.Fatalf("BGM: got %d entries, want 1", len(got.BGM))
-	}
-	if got.BGM[0].Name != "coffee_break" {
-		t.Errorf("BGM[0].Name: got %q, want coffee_break", got.BGM[0].Name)
-	}
-	if got.BGM[0].Description != "カフェ風BGM" {
-		t.Errorf("BGM[0].Description: got %q, want カフェ風BGM", got.BGM[0].Description)
-	}
-}
-
-func TestBuildAssetCatalog_JingleDescriptionPropagated(t *testing.T) {
-	assets := config.AssetsConfig{
-		SE:  map[string]config.SEEntry{},
-		BGM: map[string]config.BGMEntry{},
-		Jingle: map[string]config.JingleEntry{
-			"opening": {File: "jingle/opening.mp3", FadeIn: 0.5, FadeOut: 0.5, Description: "オープニングジングル"},
+		{
+			name: "Jingle",
+			assets: config.AssetsConfig{
+				SE:     map[string]config.SEEntry{},
+				BGM:    map[string]config.BGMEntry{},
+				Jingle: map[string]config.JingleEntry{"opening": {File: "jingle/opening.mp3", FadeIn: 0.5, FadeOut: 0.5, Description: "オープニングジングル"}},
+			},
+			wantKey: "opening", wantDesc: "オープニングジングル",
+			getSlice: func(c model.AssetCatalog) []model.AssetCatalogEntry { return c.Jingle },
 		},
 	}
-	got := buildAssetCatalog(assets)
-	if len(got.Jingle) != 1 {
-		t.Fatalf("Jingle: got %d entries, want 1", len(got.Jingle))
-	}
-	if got.Jingle[0].Name != "opening" {
-		t.Errorf("Jingle[0].Name: got %q, want opening", got.Jingle[0].Name)
-	}
-	if got.Jingle[0].Description != "オープニングジングル" {
-		t.Errorf("Jingle[0].Description: got %q, want オープニングジングル", got.Jingle[0].Description)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAssetCatalog(tt.assets)
+			entries := tt.getSlice(got)
+			if len(entries) != 1 {
+				t.Fatalf("got %d entries, want 1", len(entries))
+			}
+			if entries[0].Name != tt.wantKey {
+				t.Errorf("Name: got %q, want %q", entries[0].Name, tt.wantKey)
+			}
+			if entries[0].Description != tt.wantDesc {
+				t.Errorf("Description: got %q, want %q", entries[0].Description, tt.wantDesc)
+			}
+		})
 	}
 }
 

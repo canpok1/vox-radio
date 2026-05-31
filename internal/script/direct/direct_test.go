@@ -33,10 +33,6 @@ func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest)
 	return c.response, c.err
 }
 
-func emptyEntries() []model.AssetCatalogEntry {
-	return []model.AssetCatalogEntry{}
-}
-
 func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
@@ -50,7 +46,7 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
 		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
-		Jingle: emptyEntries(),
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
@@ -79,8 +75,8 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 	}
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
-		BGM:    emptyEntries(),
-		Jingle: emptyEntries(),
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
@@ -116,9 +112,9 @@ func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
 		{SpeakerRole: "guest", Text: "BGM停止"},
 	}
 	catalog := model.AssetCatalog{
-		SE:     emptyEntries(),
+		SE:     []model.AssetCatalogEntry{},
 		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
-		Jingle: emptyEntries(),
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
@@ -154,8 +150,8 @@ func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
 		{SpeakerRole: "guest", Text: "コーナー2"},
 	}
 	catalog := model.AssetCatalog{
-		SE:     emptyEntries(),
-		BGM:    emptyEntries(),
+		SE:     []model.AssetCatalogEntry{},
+		BGM:    []model.AssetCatalogEntry{},
 		Jingle: []model.AssetCatalogEntry{{Name: "eyecatch"}},
 	}
 
@@ -187,8 +183,8 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 	}
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "transition"}},
-		BGM:    emptyEntries(),
-		Jingle: emptyEntries(),
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
@@ -215,7 +211,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 		{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: emptyEntries(), BGM: emptyEntries(), Jingle: emptyEntries()})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -234,7 +230,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: emptyEntries(), BGM: emptyEntries(), Jingle: emptyEntries()})
+	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -250,7 +246,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 		{SpeakerRole: "host", Text: "テストテキスト"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: emptyEntries(), BGM: emptyEntries(), Jingle: emptyEntries()})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -276,8 +272,8 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
-		BGM:    emptyEntries(),
-		Jingle: emptyEntries(),
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
@@ -300,8 +296,8 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
-		BGM:    emptyEntries(),
-		Jingle: emptyEntries(),
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
