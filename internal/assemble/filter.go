@@ -3,6 +3,7 @@ package assemble
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -64,6 +65,12 @@ type seEvent struct {
 	offsetMs  int
 }
 
+// speechItem represents an element in the speech timeline: either a clip or an explicit pause.
+type speechItem struct {
+	clipIndex   int     // >= 0 for a clip, -1 for an explicit pause
+	durationSec float64 // used when clipIndex == -1
+}
+
 // bgmInterval represents a BGM active period within a run.
 type bgmInterval struct {
 	startMs   int
@@ -73,7 +80,7 @@ type bgmInterval struct {
 
 // runData holds all audio segments for a single "run" (the content between jingles).
 type runData struct {
-	clipIndices  []int
+	speechItems  []speechItem
 	seEvents     []seEvent
 	bgmIntervals []bgmInterval
 	durationMs   int
@@ -101,7 +108,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	// Build each run and collect their output labels.
 	runLabels := make([]string, len(runs))
 	for i, run := range runs {
-		if len(run.clipIndices) == 0 {
+		if !hasClips(run.speechItems) {
 			runLabels[i] = ""
 			continue
 		}
@@ -196,6 +203,11 @@ func injectProgramJingles(scr model.Script, program config.ProgramConfig) model.
 	return model.Script{Segments: segments}
 }
 
+// hasClips returns true if the speech timeline contains at least one clip item.
+func hasClips(items []speechItem) bool {
+	return slices.ContainsFunc(items, func(it speechItem) bool { return it.clipIndex >= 0 })
+}
+
 // collectRuns scans the script and splits it into runs separated by jingle segments.
 // Returns the list of runs and the list of jingle asset names between them.
 func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) ([]runData, []string) {
@@ -209,11 +221,17 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) 
 		switch seg.Type {
 		case model.SegmentTypeSpeech:
 			if clipIdx < len(clips) {
-				current.clipIndices = append(current.clipIndices, clipIdx)
+				current.speechItems = append(current.speechItems, speechItem{clipIndex: clipIdx})
 				current.durationMs += int(clips[clipIdx].DurationSec * 1000)
 				clipIdx++
 			}
 			current.durationMs += int(pauseSec * 1000)
+
+		case model.SegmentTypePause:
+			if seg.DurationSec > 0 {
+				current.speechItems = append(current.speechItems, speechItem{clipIndex: -1, durationSec: seg.DurationSec})
+				current.durationMs += int(seg.DurationSec * 1000)
+			}
 
 		case model.SegmentTypeSE:
 			current.seEvents = append(current.seEvents, seEvent{
@@ -279,7 +297,7 @@ func newRun() runBuilder {
 
 // buildRun constructs the filter_complex entries for a single run and returns the output label.
 func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, pauseSec float64, runIdx int) string {
-	speechLabel := buildSpeechConcatWithIndices(b, run.clipIndices, clipInputIdx, pauseSec, runIdx)
+	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, pauseSec, runIdx)
 	currentLabel := speechLabel
 
 	// Single pass over bgmIntervals to determine hasBGM, hasDucking, and firstDuckRatio.
@@ -373,22 +391,41 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 	return currentLabel
 }
 
-// buildSpeechConcatWithIndices generates filter entries for concatenating a run's speech clips.
-func buildSpeechConcatWithIndices(b *filterBuilder, clipIndices []int, clipInputIdx []int, pauseSec float64, runIdx int) string {
-	if len(clipIndices) == 1 {
-		return fmt.Sprintf("[%d:a]", clipInputIdx[clipIndices[0]])
-	}
-
-	var parts []string
-	for i, ci := range clipIndices {
-		parts = append(parts, fmt.Sprintf("[%d:a]", clipInputIdx[ci]))
-		if i < len(clipIndices)-1 {
-			pauseLabel := fmt.Sprintf("[run%d_p%d]", runIdx, i)
-			b.addSilence(pauseSec, pauseLabel)
-			parts = append(parts, pauseLabel)
+// buildSpeechConcat generates filter entries for the speech timeline of a run.
+// Items can be clip references or explicit pauses; default pauseSec is inserted between consecutive clips.
+func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int, pauseSec float64, runIdx int) string {
+	// Find the last clip's position (reverse scan) to know where to stop adding inter-clip pauses.
+	lastClipPos := -1
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].clipIndex >= 0 {
+			lastClipPos = i
+			break
 		}
 	}
-	n := 2*len(clipIndices) - 1
+
+	parts := make([]string, 0, 2*len(items))
+	silenceIdx := 0
+	for i, item := range items {
+		if item.clipIndex >= 0 {
+			parts = append(parts, fmt.Sprintf("[%d:a]", clipInputIdx[item.clipIndex]))
+			if i != lastClipPos {
+				label := fmt.Sprintf("[run%d_p%d]", runIdx, silenceIdx)
+				b.addSilence(pauseSec, label)
+				parts = append(parts, label)
+				silenceIdx++
+			}
+		} else {
+			label := fmt.Sprintf("[run%d_p%d]", runIdx, silenceIdx)
+			b.addSilence(item.durationSec, label)
+			parts = append(parts, label)
+			silenceIdx++
+		}
+	}
+
+	n := len(parts)
+	if n == 1 {
+		return parts[0]
+	}
 	concatLabel := fmt.Sprintf("[run%d_speech]", runIdx)
 	b.addFilter(fmt.Sprintf("%sconcat=n=%d:v=0:a=1%s", strings.Join(parts, ""), n, concatLabel))
 	return concatLabel
