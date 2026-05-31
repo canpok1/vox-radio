@@ -35,7 +35,7 @@ type programForPrompt struct {
 }
 
 type Writer interface {
-	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error)
+	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
 
 type LLMWriter struct {
@@ -50,7 +50,7 @@ func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64,
 	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature, config: cfg}
 }
 
-func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error) {
+func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
 	promptCorner := cornerForPrompt{
 		Title:       corner.Title,
 		Content:     corner.Content,
@@ -62,11 +62,11 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		return nil, fmt.Errorf("marshal corner: %w", err)
 	}
 
-	summariesJSON, err := json.Marshal(struct {
-		Summaries []model.Summary `json:"summaries"`
-	}{Summaries: summaries})
+	articlesJSON, err := json.Marshal(struct {
+		Articles []model.RundownArticle `json:"articles"`
+	}{Articles: articles})
 	if err != nil {
-		return nil, fmt.Errorf("marshal summaries: %w", err)
+		return nil, fmt.Errorf("marshal articles: %w", err)
 	}
 
 	outlines := make([]cornerOutline, len(allCorners))
@@ -90,7 +90,8 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
-		"{{summary}}", string(summariesJSON),
+		"{{articles}}", string(articlesJSON),
+		"{{flow}}", flow,
 		"{{cast_info}}", castInfo,
 		"{{preset_info}}", presetInfo,
 	).Replace(w.promptTemplate)

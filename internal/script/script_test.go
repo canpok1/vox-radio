@@ -16,21 +16,6 @@ import (
 
 // mock implementations
 
-type mockSummarizer struct {
-	byURL map[string]model.Summary
-	err   error
-}
-
-func (m *mockSummarizer) Summarize(_ context.Context, a model.Article) (model.Summary, error) {
-	if m.err != nil {
-		return model.Summary{}, m.err
-	}
-	if s, ok := m.byURL[a.URL]; ok {
-		return s, nil
-	}
-	return model.Summary{URL: a.URL, Summary: "default", Points: []string{"p1"}}, nil
-}
-
 type mockWriter struct {
 	lines     []model.Line
 	err       error
@@ -38,7 +23,7 @@ type mockWriter struct {
 	responses [][]model.Line
 }
 
-func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, _ config.CornerConfig, _ []config.CornerConfig, _ []model.Summary, _ map[string]config.CharacterConfig) ([]model.Line, error) {
+func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, _ config.CornerConfig, _ []config.CornerConfig, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -78,32 +63,31 @@ var testCorners = []config.CornerConfig{
 	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 }
 
-// corneredArticles wraps articles into a model.Articles attributed to the given corner title.
-func corneredArticles(cornerTitle string, arts ...model.Article) model.Articles {
-	return model.Articles{
-		Corners: []model.CornerArticles{
-			{CornerTitle: cornerTitle, Articles: arts},
+// corneredRundown wraps rundown articles into a model.Rundown attributed to the given corner title.
+func corneredRundown(cornerTitle string, arts ...model.RundownArticle) model.Rundown {
+	return model.Rundown{
+		Corners: []model.RundownCorner{
+			{Title: cornerTitle, Flow: "テスト用フロー", Articles: arts},
 		},
 	}
 }
 
 func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
-	articles := corneredArticles("AIコーナー",
-		model.Article{URL: "https://example.com/1", Title: "AI", Body: "本文"},
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
 	lines := []model.Line{
 		{SpeakerRole: "zundamon", Text: "テスト"},
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: []model.AssetCatalogEntry{{Name: "chime"}}, BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,31 +96,15 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_SummarizeError(t *testing.T) {
-	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{err: context.Canceled},
-		&mockWriter{},
-		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
-		"",
-	)
-
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
 func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		&mockWriter{err: context.Canceled},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), testCorners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -148,7 +116,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 	}
-	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
+	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	shortLines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}                                                  // 1 char
 	longLines := []model.Line{{SpeakerRole: "zundamon", Text: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいうえお"}} // ~45 chars
 
@@ -157,14 +125,13 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -177,20 +144,19 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 	}
-	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
+	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	// 95 chars → ~9.5% deviation (target=105 = 15sec*7), within 20% threshold
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいう"}}
 
 	mw := &mockWriter{lines: lines}
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -199,16 +165,15 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
+func TestLLMScriptGenerator_Generate_EmptyRundown(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Articles{}, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -219,14 +184,13 @@ func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		&mockWriter{},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredArticles("AIコーナー", model.Article{URL: "u"}), []config.CornerConfig{}, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), []config.CornerConfig{}, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -239,19 +203,18 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 	corners := []config.CornerConfig{
 		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 0},
 	}
-	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
+	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}
 
 	mw := &mockWriter{lines: lines}
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -261,16 +224,16 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 }
 
 func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
-	ms := &mockSummarizer{}
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}}
 	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{{Type: model.SegmentTypeSpeech, Text: "テスト"}}}}
 
-	articles := model.Articles{
-		Corners: []model.CornerArticles{
+	rundown := model.Rundown{
+		Corners: []model.RundownCorner{
 			{
-				CornerTitle: "ニュース",
-				Articles: []model.Article{
-					{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
+				Title: "ニュース",
+				Flow:  "記事を紹介",
+				Articles: []model.RundownArticle{
+					{URL: "https://example.com/1", Title: "記事1", Summary: "要約1", Points: []string{"p1"}},
 				},
 			},
 		},
@@ -280,9 +243,9 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	gen := script.NewLLMScriptGenerator(ms, mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, corners, testChars)
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -293,29 +256,26 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T) {
+func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 	workDir := t.TempDir()
-	articles := corneredArticles("AIコーナー",
-		model.Article{URL: "https://example.com/1", Title: "AI", Body: "本文"},
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 
 	gen := script.NewLLMScriptGenerator(
-		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		workDir,
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, articles, testCorners, testChars); err != nil {
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, name := range []string{fileio.FileSummaries, fileio.FileLines} {
-		path := filepath.Join(workDir, name)
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("expected intermediate file %q to exist: %v", name, err)
-		}
+	path := filepath.Join(workDir, fileio.FileLines)
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("expected intermediate file %q to exist: %v", fileio.FileLines, err)
 	}
 }

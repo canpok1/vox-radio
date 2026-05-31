@@ -2,26 +2,33 @@
   "corners": [
     {
       "title": "AIチップ特集",
-      "topic": "新型AIチップの性能と普及",
-      "points": [
-        "従来比2倍の性能",
-        "電力効率向上"
-      ],
-      "target_chars": 600,
-      "summary_urls": [
-        "https://example.com/article/1"
+      "flow": "新型AIチップの発表から性能比較、普及の課題まで順に紹介する",
+      "articles": [
+        {
+          "url": "https://example.com/article/1",
+          "title": "新型AIチップ発表",
+          "summary": "最新のAIチップが発表され、従来比2倍の性能を実現した",
+          "points": [
+            "従来比2倍の性能",
+            "電力効率向上",
+            "2026年末に市場投入予定"
+          ]
+        }
       ]
     },
     {
       "title": "オープンソース動向",
-      "topic": "オープンソース活動の活発化",
-      "points": [
-        "参加者数増加",
-        "企業貢献増加"
-      ],
-      "target_chars": 500,
-      "summary_urls": [
-        "https://example.com/article/2"
+      "flow": "参加者数の増加トレンドから企業の貢献状況まで解説する",
+      "articles": [
+        {
+          "url": "https://example.com/article/2",
+          "title": "オープンソース参加者増加",
+          "summary": "2025年のオープンソース活動が活発化し参加者数が増加した",
+          "points": [
+            "参加者数増加",
+            "企業貢献増加"
+          ]
+        }
       ]
     }
   ]

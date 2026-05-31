@@ -15,7 +15,7 @@ LLM が生成した要約をマニフェストに追加します。
 
 例:
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/01_articles.json --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --rundown output/intermediate/02_rundown.json --audio output/episode.mp3 --out output/manifest.json
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/04_script.json --audio output/episode.mp3 --out output/manifest.json
 
 ```
@@ -25,13 +25,13 @@ vox-radio manifest [flags]
 ### Options
 
 ```
-      --articles string   articles.json のパス（任意）。省略するとコーナーの記事は空になる
-      --audio string      音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）
-  -h, --help              help for manifest
-      --out string        manifest.json の出力先パス（必須）
-      --profile string    プロファイル YAML ファイルのパス（必須）
-      --prompts string    プロンプトテンプレートを含むディレクトリ（--script 指定時に使用） (default "prompts")
-      --script string     script.json のパス（任意）。指定すると LLM が台本から要約を生成する
+      --audio string     音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）
+  -h, --help             help for manifest
+      --out string       manifest.json の出力先パス（必須）
+      --profile string   プロファイル YAML ファイルのパス（必須）
+      --prompts string   プロンプトテンプレートを含むディレクトリ（--script 指定時に使用） (default "prompts")
+      --rundown string   02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
+      --script string    04_script.json のパス（任意）。指定すると LLM が台本から要約を生成する
 ```
 
 ### SEE ALSO

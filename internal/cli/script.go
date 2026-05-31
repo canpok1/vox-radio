@@ -15,7 +15,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
-	"github.com/canpok1/vox-radio/internal/script/summarize"
 	"github.com/canpok1/vox-radio/internal/script/write"
 	"github.com/spf13/cobra"
 )
@@ -29,22 +28,21 @@ func newScriptCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "script",
-		Short: "LLM を使って収集した記事から台本を生成する",
-		Long: `多段階 LLM パイプライン（summarize → write → direct）を実行し、
-articles.json から script.json を生成します。
+		Short: "LLM を使って rundown から台本を生成する",
+		Long: `多段階 LLM パイプライン（write → direct）を実行し、
+02_rundown.json から 04_script.json を生成します。
 
 vox-radio.yaml はカレントディレクトリから自動読み込みされます。
-コーナー定義はプロファイルから取得します（plan ステップはありません）。
+コーナー定義はプロファイルから取得します。
 
 --step で単一ステージのみ実行できます:
-  summarize  コーナーごとに各記事を要約します（summaries.json を出力）
-  write      コーナーごとに台詞を書きます（lines.json を出力）
-  direct     台詞に SE・話者を割り当てます（script.json を出力）
+  write      コーナーごとに台詞を書きます（03_lines.json を出力）
+  direct     台詞に SE・話者を割り当てます（04_script.json を出力）
 
 例:
-  vox-radio script --in work/articles.json --out work/script.json
-  vox-radio script --out work/script.json --step write
-  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml`,
+  vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json
+  vox-radio script --out work/intermediate/04_script.json --step write
+  vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("script", "")
 			if err != nil {
@@ -74,21 +72,19 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			switch step {
 			case "":
 				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg, p, prompts, assetCatalog, logger)
-			case "summarize":
-				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg.LLM, prompts)
 			case "write":
-				return runScriptWrite(context.Background(), workDir, llmClient, cfg, p, prompts)
+				return runScriptWrite(context.Background(), in, workDir, llmClient, cfg, p, prompts)
 			case "direct":
 				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog)
 			default:
-				return fmt.Errorf("unknown step %q: use summarize|write|direct", step)
+				return fmt.Errorf("unknown step %q: use write|direct", step)
 			}
 		},
 	}
 
-	cmd.Flags().StringVar(&in, "in", "", "articles.json の入力パス（フルパイプラインまたは summarize ステップで必須）")
-	cmd.Flags().StringVar(&out, "out", "", "script.json の出力先パス（必須）")
-	cmd.Flags().StringVar(&step, "step", "", "単一ステップを実行する: summarize|write|direct")
+	cmd.Flags().StringVar(&in, "in", "", "02_rundown.json の入力パス（フルパイプラインまたは write ステップで必須）")
+	cmd.Flags().StringVar(&out, "out", "", "04_script.json の出力先パス（必須）")
+	cmd.Flags().StringVar(&step, "step", "", "単一ステップを実行する: write|direct")
 	registerProfileFlag(cmd, &profilePath)
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ")
 	_ = cmd.MarkFlagRequired("out")
@@ -100,13 +96,12 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
-	articles, err := readArticles(in)
+	rundown, err := readJSON[model.Rundown](in)
 	if err != nil {
-		return err
+		return fmt.Errorf("read rundown: %w", err)
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg.LLM, "summarize")),
 		write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg),
 		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 		assetCatalog,
@@ -114,7 +109,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		script.WithLogger(logger),
 	)
 
-	scr, err := gen.Generate(ctx, p.Program, articles, p.Corners, cfg.Characters)
+	scr, err := gen.Generate(ctx, p.Program, rundown, p.Corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -122,66 +117,29 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	return writeJSON(out, scr)
 }
 
-func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string) error {
+func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *config.Config, p *config.Profile, prompts map[string]string) error {
 	if in == "" {
-		return fmt.Errorf("--in is required for summarize step")
+		return fmt.Errorf("--in is required for write step")
 	}
-	articles, err := readArticles(in)
+	rundown, err := readJSON[model.Rundown](in)
 	if err != nil {
-		return err
+		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	s := summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize"))
-	cornerSummaries := make([]model.CornerSummaries, 0, len(articles.Corners))
-	totalCount := 0
-	for _, ca := range articles.Corners {
-		sums := make([]model.Summary, 0, len(ca.Articles))
-		for _, a := range ca.Articles {
-			sum, err := s.Summarize(ctx, a)
-			if err != nil {
-				return fmt.Errorf("summarize %q: %w", a.URL, err)
-			}
-			sums = append(sums, sum)
-		}
-		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
-			CornerTitle: ca.CornerTitle,
-			Summaries:   sums,
-		})
-		totalCount += len(sums)
-	}
-
-	outPath := filepath.Join(workDir, "summaries.json")
-	if err := writeJSON(outPath, model.Summaries{Corners: cornerSummaries}); err != nil {
-		return err
-	}
-	fmt.Printf("summarized %d articles to %s\n", totalCount, outPath)
-	return nil
-}
-
-func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *config.Config, p *config.Profile, prompts map[string]string) error {
-	summariesPath := filepath.Join(workDir, "summaries.json")
-	summariesData, err := os.ReadFile(summariesPath)
-	if err != nil {
-		return fmt.Errorf("read summaries.json: %w", err)
-	}
-	var sums model.Summaries
-	if err := json.Unmarshal(summariesData, &sums); err != nil {
-		return fmt.Errorf("parse summaries.json: %w", err)
-	}
-
-	cornerSumsMap := sums.CornerMap()
+	cornerMap := rundown.CornerMap()
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	allLines := make([]model.Line, 0)
 	for _, corner := range p.Corners {
-		lines, err := w.Write(ctx, p.Program, corner, p.Corners, cornerSumsMap[corner.Title], cfg.Characters)
+		rc := cornerMap[corner.Title]
+		lines, err := w.Write(ctx, p.Program, corner, p.Corners, rc.Articles, rc.Flow, cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
 		allLines = append(allLines, lines...)
 	}
 
-	outPath := filepath.Join(workDir, "lines.json")
+	outPath := filepath.Join(workDir, "03_lines.json")
 	if err := writeJSON(outPath, model.Lines{Lines: allLines}); err != nil {
 		return err
 	}
@@ -190,14 +148,14 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *conf
 }
 
 func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog) error {
-	linesPath := filepath.Join(workDir, "lines.json")
+	linesPath := filepath.Join(workDir, "03_lines.json")
 	data, err := os.ReadFile(linesPath)
 	if err != nil {
-		return fmt.Errorf("read lines.json: %w", err)
+		return fmt.Errorf("read 03_lines.json: %w", err)
 	}
 	var linesWrapper model.Lines
 	if err := json.Unmarshal(data, &linesWrapper); err != nil {
-		return fmt.Errorf("parse lines.json: %w", err)
+		return fmt.Errorf("parse 03_lines.json: %w", err)
 	}
 
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"))
@@ -214,7 +172,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 }
 
 func loadPrompts(dir string) (map[string]string, error) {
-	names := []string{"summarize", "write", "direct", "summary"}
+	names := []string{"select", "summarize", "write", "direct", "summary"}
 	prompts := make(map[string]string, len(names))
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(dir, name+".md"))
@@ -256,16 +214,4 @@ func stepTemp(llmCfg config.LLMConfig, name string) float64 {
 		return *s.Temperature
 	}
 	return 0
-}
-
-func readArticles(path string) (model.Articles, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return model.Articles{}, fmt.Errorf("read %s: %w", path, err)
-	}
-	var articles model.Articles
-	if err := json.Unmarshal(data, &articles); err != nil {
-		return model.Articles{}, fmt.Errorf("parse %s: %w", path, err)
-	}
-	return articles, nil
 }

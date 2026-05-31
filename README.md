@@ -50,18 +50,19 @@ vox-radio --version
 vox-radio は以下のパイプラインでポッドキャストを自動生成します。
 
 ```
-collect → script → synth → assemble → manifest
+collect → rundown → script → synth → assemble → manifest
 ```
 
 | コマンド | 概要 |
 |----------|------|
 | `init` | カレントディレクトリに `vox-radio.yaml` と `profile.yaml` のテンプレートを生成する（初回セットアップ用） |
-| `collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `articles.json` を生成する |
-| `script` | 記事を LLM に渡して台本 `script.json` を生成する（summarize → write → direct の多段パイプライン） |
-| `synth` | `script.json` をもとに VOICEVOX で音声クリップを合成する |
+| `collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
+| `rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
+| `script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
+| `synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
-| `manifest` | 番組内容（タイトル・概要・要約・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する。`--script` を指定すると LLM で台本ベースの要約を生成する |
-| `run` | collect → script → synth → assemble → manifest の全パイプラインを一括実行する |
+| `manifest` | 番組内容（タイトル・概要・要約・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--script` を指定すると LLM で台本ベースの要約を生成する |
+| `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
 
 ### 設定ファイルの作成
 
@@ -115,17 +116,21 @@ characters:
 
 ```bash
 # 記事を収集（--profile は必須）
-vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
+vox-radio collect --out work/intermediate/01_articles.json --profile sample-profiles/tech_profile.yaml
+
+# 番組設計図（rundown）を生成
+vox-radio rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json \
+    --profile sample-profiles/tech_profile.yaml
 
 # 台本を生成
-vox-radio script --in work/articles.json --out work/script.json \
+vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json \
     --profile sample-profiles/tech_profile.yaml
 
 # 音声合成（設定不要）
-vox-radio synth --in work/script.json --out-dir work/clips
+vox-radio synth --in work/intermediate/04_script.json --out-dir work/clips
 
 # 音声結合
-vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 \
+vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --out work/episode.mp3 \
     --profile sample-profiles/tech_profile.yaml
 ```
 
