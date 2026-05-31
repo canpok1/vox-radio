@@ -3,6 +3,7 @@ package direct_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -19,6 +20,19 @@ func (m *mockClient) Complete(_ context.Context, _ llm.CompletionRequest) (json.
 	return m.response, m.err
 }
 
+type capturingClient struct {
+	response       json.RawMessage
+	err            error
+	capturedPrompt *string
+}
+
+func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
+	if len(req.Messages) > 0 {
+		*c.capturedPrompt = req.Messages[0].Content
+	}
+	return c.response, c.err
+}
+
 func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
@@ -30,9 +44,9 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 		{SpeakerRole: "guest", Text: "よろしく"},
 	}
 	catalog := model.AssetCatalog{
-		SE:     []string{"chime"},
-		BGM:    []string{"talk_bgm"},
-		Jingle: []string{},
+		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
+		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
+		Jingle: []model.AssetCatalogEntry{},
 	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
@@ -59,7 +73,11 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 		{SpeakerRole: "host", Text: "開始"},
 		{SpeakerRole: "guest", Text: "続き"},
 	}
-	catalog := model.AssetCatalog{SE: []string{"chime"}, BGM: []string{}, Jingle: []string{}}
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
@@ -93,7 +111,11 @@ func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
 		{SpeakerRole: "host", Text: "BGM開始"},
 		{SpeakerRole: "guest", Text: "BGM停止"},
 	}
-	catalog := model.AssetCatalog{SE: []string{}, BGM: []string{"talk_bgm"}, Jingle: []string{}}
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{},
+		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
+		Jingle: []model.AssetCatalogEntry{},
+	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
@@ -127,7 +149,11 @@ func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
 		{SpeakerRole: "host", Text: "コーナー1"},
 		{SpeakerRole: "guest", Text: "コーナー2"},
 	}
-	catalog := model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{"eyecatch"}}
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{{Name: "eyecatch"}},
+	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
@@ -155,7 +181,11 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 		{SpeakerRole: "host", Text: "A"},
 		{SpeakerRole: "guest", Text: "B"},
 	}
-	catalog := model.AssetCatalog{SE: []string{"transition"}, BGM: []string{}, Jingle: []string{}}
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{{Name: "transition"}},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	}
 
 	got, err := d.Direct(context.Background(), lines, catalog)
 	if err != nil {
@@ -181,7 +211,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 		{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -200,7 +230,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
+	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -216,7 +246,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 		{SpeakerRole: "host", Text: "テストテキスト"},
 	}
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []string{}, BGM: []string{}, Jingle: []string{}})
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -229,5 +259,55 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	}
 	if seg.Text != "テストテキスト" {
 		t.Errorf("Text: got %q, want テストテキスト", seg.Text)
+	}
+}
+
+func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
+
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	}
+
+	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(capturedPrompt, "コーナー開始時のチャイム音") {
+		t.Errorf("description should appear in prompt, got: %s", capturedPrompt)
+	}
+}
+
+func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
+
+	catalog := model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	}
+
+	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, field := range []string{`"file"`, `"volume"`, `"duck_ratio"`, `"loop"`, `"fade_in"`, `"fade_out"`} {
+		if strings.Contains(capturedPrompt, field) {
+			t.Errorf("internal config field %s should not appear in prompt, got: %s", field, capturedPrompt)
+		}
 	}
 }

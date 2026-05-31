@@ -31,8 +31,20 @@ corners:
 
 assets:
   jingle:
-    opening: { file: assets/jingle/private-time-1.mp3, fade_in: 0.5, fade_out: 0.5 }
+    opening:
+      file: assets/jingle/private-time-1.mp3
+      fade_in: 0.5
+      fade_out: 0.5
+      description: "番組冒頭で流すオープニングジングル"
   se:
-    accent_low: { file: assets/se/accent-low.mp3, volume: 0.8 }
+    accent_low:
+      file: assets/se/accent-low.mp3
+      volume: 0.8
+      description: "話題の切り替わりや新コーナー導入時に使うアクセント音"
   bgm:
-    coffee_break: { file: assets/bgm/coffee_break_long.mp3, volume: 0.3, duck_ratio: 8, loop: true }
+    coffee_break:
+      file: assets/bgm/coffee_break_long.mp3
+      volume: 0.3
+      duck_ratio: 8
+      loop: true
+      description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"

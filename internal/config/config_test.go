@@ -391,3 +391,34 @@ func TestCharacterConfig_SpeakerID_InvalidStyle(t *testing.T) {
 		t.Errorf("SpeakerID: got %d, want 3 (default)", id)
 	}
 }
+
+func TestLoadProfile_AssetsDescription(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+
+	se, ok := profile.Assets.SE["chime"]
+	if !ok {
+		t.Fatal("Assets.SE[\"chime\"] not found")
+	}
+	if se.Description == "" {
+		t.Error("SE[\"chime\"].Description must not be empty (testdata should include description)")
+	}
+
+	bgm, ok := profile.Assets.BGM["talk_bgm"]
+	if !ok {
+		t.Fatal("Assets.BGM[\"talk_bgm\"] not found")
+	}
+	if bgm.Description == "" {
+		t.Error("BGM[\"talk_bgm\"].Description must not be empty (testdata should include description)")
+	}
+
+	jingle, ok := profile.Assets.Jingle["opening"]
+	if !ok {
+		t.Fatal("Assets.Jingle[\"opening\"] not found")
+	}
+	if jingle.Description == "" {
+		t.Error("Jingle[\"opening\"].Description must not be empty (testdata should include description)")
+	}
+}

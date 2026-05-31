@@ -99,7 +99,7 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.AssetCatalog{SE: []string{"chime"}, BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: []model.AssetCatalogEntry{{Name: "chime"}}, BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -117,7 +117,7 @@ func TestLLMScriptGenerator_Generate_SummarizeError(t *testing.T) {
 		&mockSummarizer{err: context.Canceled},
 		&mockWriter{},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -132,7 +132,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{err: context.Canceled},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -160,7 +160,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -186,7 +186,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -204,7 +204,7 @@ func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -222,7 +222,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -247,7 +247,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -280,7 +280,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	gen := script.NewLLMScriptGenerator(ms, mw, md, model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)}, "", script.WithLogger(logger))
+	gen := script.NewLLMScriptGenerator(ms, mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
 
 	_, err := gen.Generate(context.Background(), articles, corners, testChars)
 	if err != nil {
@@ -304,7 +304,7 @@ func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T
 		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
 		workDir,
 	)
 

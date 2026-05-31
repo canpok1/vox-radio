@@ -228,19 +228,27 @@ func loadPrompts(dir string) (map[string]string, error) {
 
 func buildAssetCatalog(assets config.AssetsConfig) model.AssetCatalog {
 	return model.AssetCatalog{
-		SE:     sortedKeys(assets.SE),
-		BGM:    sortedKeys(assets.BGM),
-		Jingle: sortedKeys(assets.Jingle),
+		SE:     buildAssetEntries(assets.SE, func(e config.SEEntry) string { return e.Description }),
+		BGM:    buildAssetEntries(assets.BGM, func(e config.BGMEntry) string { return e.Description }),
+		Jingle: buildAssetEntries(assets.Jingle, func(e config.JingleEntry) string { return e.Description }),
 	}
 }
 
-// sortedKeys returns a sorted, non-nil slice of map keys.
+// buildAssetEntries converts a config asset map to a sorted, non-nil slice of AssetCatalogEntry.
 // slices.Sorted returns nil for empty iterators, causing JSON to marshal as null instead of [].
-func sortedKeys[V any](m map[string]V) []string {
+func buildAssetEntries[V any](m map[string]V, getDesc func(V) string) []model.AssetCatalogEntry {
 	if len(m) == 0 {
-		return make([]string, 0)
+		return make([]model.AssetCatalogEntry, 0)
 	}
-	return slices.Sorted(maps.Keys(m))
+	keys := slices.Sorted(maps.Keys(m))
+	entries := make([]model.AssetCatalogEntry, len(keys))
+	for i, k := range keys {
+		entries[i] = model.AssetCatalogEntry{
+			Name:        k,
+			Description: getDesc(m[k]),
+		}
+	}
+	return entries
 }
 
 func stepTemp(llmCfg config.LLMConfig, name string) float64 {
