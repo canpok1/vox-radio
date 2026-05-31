@@ -13,7 +13,7 @@
 
 - 個別サブコマンドは**入出力パスを明示指定**する（`--in`/`--out`、synth は `--out-dir`、assemble は `--clips` 等）。
 - 指定ディレクトリが存在しなければ**自動生成**する。
-- 一括 `run` は**出力ディレクトリのみ指定**（`--out-dir`、既定 `output/`）。**最終成果物 `episode.mp3` は直下**、**中間生成物は `<out-dir>/intermediate/` 配下**にまとめ、ファイル名は正準固定（articles.json / summaries.json / rundown.json / lines.json / script.json, clips/clip_NNN.wav）。
+- 一括 `run` は**出力ディレクトリのみ指定**（`--out-dir`、既定 `output/`）。**最終成果物 `episode.mp3` は直下**、**中間生成物は `<out-dir>/intermediate/` 配下**にまとめ、ファイル名は生成順の連番プレフィックス付きで正準固定（01_articles.json / 02_summaries.json / 03_lines.json / 04_script.json / 05_clips/clip_NNN.wav）。
 - **日付固定ディレクトリは作らない**（複数回実行に対応。ディレクトリ名は呼び出し側が決める）。掃除はディレクトリ単位で `rm -rf`。
 
 Podcast の guid/pubDate（`episode-<date>`）は publish 側で日付指定（既定=実行日）から決め、作業ディレクトリ構成からは独立させる。

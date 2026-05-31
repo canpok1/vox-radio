@@ -8,16 +8,16 @@ import (
 )
 
 const (
-	FileArticles  = "articles.json"
-	FileSummaries = "summaries.json"
+	FileArticles  = "01_articles.json"
+	FileSummaries = "02_summaries.json"
 	FileRundown   = "rundown.json"
-	FileLines     = "lines.json"
-	FileScript    = "script.json"
+	FileLines     = "03_lines.json"
+	FileScript    = "04_script.json"
 	FileEpisode   = "episode.mp3"
 	FileManifest  = "manifest.json"
 
 	DirIntermediate = "intermediate"
-	DirClips        = "clips"
+	DirClips        = "05_clips"
 )
 
 func ClipFileName(n int) string {
