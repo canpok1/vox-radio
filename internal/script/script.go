@@ -63,7 +63,6 @@ func NewLLMScriptGenerator(
 }
 
 func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
-	logger := g.logger.With("step", "script")
 	start := time.Now()
 
 	cornerArticlesMap := articles.CornerMap()
@@ -81,13 +80,19 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	done := 0
 	for _, corner := range corners {
 		arts := cornerArticlesMap[corner.Title]
-		sums, err := g.summarizeAllWithProgress(ctx, arts, &done, totalArticles, sumLogger)
-		if err != nil {
-			return model.Script{}, err
+		summaries := make([]model.Summary, 0, len(arts))
+		for _, a := range arts {
+			done++
+			sumLogger.Info(fmt.Sprintf("記事を要約中 (%d/%d)", done, totalArticles))
+			s, err := g.summarizer.Summarize(ctx, a)
+			if err != nil {
+				return model.Script{}, fmt.Errorf("summarize %q: %w", a.URL, err)
+			}
+			summaries = append(summaries, s)
 		}
 		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
 			CornerTitle: corner.Title,
-			Summaries:   sums,
+			Summaries:   summaries,
 		})
 	}
 	sumLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(sumStart).Seconds()))
@@ -97,8 +102,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 		return model.Script{}, err
 	}
 
-	writeLogger := g.logger.With("step", "script/write")
-	writeLogger.Info("開始")
+	g.logger.With("step", "script/write").Info("開始")
 	cornerLines, err := g.writeAll(ctx, corners, allSummaries, chars)
 	if err != nil {
 		return model.Script{}, err
@@ -109,30 +113,15 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 		return model.Script{}, err
 	}
 
-	directLogger := g.logger.With("step", "script/direct")
-	directLogger.Info("開始")
+	g.logger.With("step", "script/direct").Info("開始")
 	scr, err := g.director.Direct(ctx, allLines, g.seCatalog)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("direct: %w", err)
 	}
 
-	logger.Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
+	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
 	return scr, nil
-}
-
-func (g *LLMScriptGenerator) summarizeAllWithProgress(ctx context.Context, articles []model.Article, done *int, total int, logger *slog.Logger) ([]model.Summary, error) {
-	summaries := make([]model.Summary, 0, len(articles))
-	for _, a := range articles {
-		*done++
-		logger.Info(fmt.Sprintf("記事を要約中 (%d/%d)", *done, total))
-		s, err := g.summarizer.Summarize(ctx, a)
-		if err != nil {
-			return nil, fmt.Errorf("summarize %q: %w", a.URL, err)
-		}
-		summaries = append(summaries, s)
-	}
-	return summaries, nil
 }
 
 func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {

@@ -68,24 +68,19 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (
 	logger := c.logger.With("step", "collect")
 	start := time.Now()
 
-	withSource := 0
+	filtered := make([]config.CornerConfig, 0, len(corners))
 	for _, corner := range corners {
 		if corner.Source != nil {
-			withSource++
+			filtered = append(filtered, corner)
 		}
 	}
 
 	logger.Info("開始")
 
-	result := make([]model.CornerArticles, 0, len(corners))
-	done := 0
+	result := make([]model.CornerArticles, 0, len(filtered))
 
-	for _, corner := range corners {
-		if corner.Source == nil {
-			continue
-		}
-		done++
-		logger.Info(fmt.Sprintf("コーナー「%s」を収集中 (%d/%d)", corner.Title, done, withSource))
+	for i, corner := range filtered {
+		logger.Info(fmt.Sprintf("コーナー「%s」を収集中 (%d/%d)", corner.Title, i+1, len(filtered)))
 
 		articles, err := c.Run(ctx, config.FeedsConfig{
 			Feeds:    corner.Source.Feeds,

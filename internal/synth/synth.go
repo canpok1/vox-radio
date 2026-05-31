@@ -47,44 +47,33 @@ func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
 // Run synthesizes all speech segments and saves clip_NNN.wav files to outDir.
 // It also writes clips.json with metadata including durations.
 func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*model.ClipsMeta, error) {
-	l := s.logger
-	if l == nil {
-		l = slog.Default()
-	}
-	logger := l.With("step", "synth")
+	logger := s.logger.With("step", "synth")
 	start := time.Now()
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
-	total := 0
+	speechSegs := make([]model.ScriptSegment, 0, len(script.Segments))
 	for _, seg := range script.Segments {
 		if seg.Type == model.SegmentTypeSpeech {
-			total++
+			speechSegs = append(speechSegs, seg)
 		}
 	}
 
-	logger.Info(fmt.Sprintf("開始 (%dクリップ)", total))
+	logger.Info(fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
 
-	clips := make([]model.ClipMeta, 0)
-	clipIdx := 0
-	done := 0
+	clips := make([]model.ClipMeta, 0, len(speechSegs))
 
-	for _, seg := range script.Segments {
-		if seg.Type != model.SegmentTypeSpeech {
-			continue
-		}
-
-		done++
-		logger.Info(fmt.Sprintf("クリップを合成中 (%d/%d)", done, total))
+	for i, seg := range speechSegs {
+		logger.Info(fmt.Sprintf("クリップを合成中 (%d/%d)", i+1, len(speechSegs)))
 
 		speakerID := s.resolveSpeakerID(seg.SpeakerRole, seg.Style)
-		clipFile := fmt.Sprintf("clip_%03d.wav", clipIdx)
+		clipFile := fmt.Sprintf("clip_%03d.wav", i)
 		clipPath := filepath.Join(outDir, clipFile)
 
 		if err := s.synthesize(ctx, seg.Text, speakerID, clipPath); err != nil {
-			return nil, fmt.Errorf("synthesize clip %d: %w", clipIdx, err)
+			return nil, fmt.Errorf("synthesize clip %d: %w", i, err)
 		}
 
 		dur, err := s.getDuration(clipPath)
@@ -93,14 +82,13 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		}
 
 		clips = append(clips, model.ClipMeta{
-			Index:       clipIdx,
+			Index:       i,
 			File:        clipFile,
 			DurationSec: dur,
 			SpeakerRole: seg.SpeakerRole,
 			Style:       seg.Style,
 			Text:        seg.Text,
 		})
-		clipIdx++
 	}
 
 	meta := &model.ClipsMeta{Clips: clips}

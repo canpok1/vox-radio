@@ -21,6 +21,7 @@ func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler 
 		runFFmpeg:    func(_ context.Context, _ []string, _ io.Writer) error { return ffmpegErr },
 		getDuration:  func(_ string) (float64, error) { return duration, nil },
 		getFileSize:  func(_ string) (int64, error) { return size, nil },
+		logger:       slog.Default(),
 	}
 }
 
@@ -35,6 +36,7 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 		},
 		getDuration: func(_ string) (float64, error) { return 60.0, nil },
 		getFileSize: func(_ string) (int64, error) { return 1024, nil },
+		logger:      slog.Default(),
 	}
 
 	script := model.Script{
@@ -147,6 +149,7 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
 		getFileSize: func(_ string) (int64, error) { return 100, nil },
+		logger:      slog.Default(),
 	}
 
 	script := model.Script{
@@ -218,6 +221,7 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 		getDuration:  func(_ string) (float64, error) { return 30.0, nil },
 		getFileSize:  func(_ string) (int64, error) { return 512, nil },
 		ffmpegWriter: &ffmpegOutput,
+		logger:       slog.Default(),
 	}
 
 	script := model.Script{

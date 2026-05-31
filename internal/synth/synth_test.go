@@ -45,6 +45,7 @@ func newTestSynth() *Synth {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.5, nil },
+		logger:      slog.Default(),
 	}
 }
 
@@ -196,6 +197,7 @@ func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
 	}
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -254,6 +256,7 @@ func TestSynth_Run_UsesStyleFromSegment(t *testing.T) {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
 	}
 	script := model.Script{
 		Segments: []model.ScriptSegment{
