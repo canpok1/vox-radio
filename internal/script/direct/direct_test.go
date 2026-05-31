@@ -33,23 +33,37 @@ func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest)
 	return c.response, c.err
 }
 
+// helper: wrap lines into a single-corner CornerLines slice
+func oneCorner(title string, lines ...model.Line) []model.CornerLines {
+	return []model.CornerLines{{Title: title, Lines: lines}}
+}
+
+// helper: single empty catalog
+func emptyCatalog() model.AssetCatalog {
+	return model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	}
+}
+
 func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "lines={{lines}} catalog={{asset_catalog}}", 0)
+	d := direct.NewLLMDirector(mc, "corners={{corners}} catalog={{asset_catalog}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "こんにちは"},
-		{SpeakerRole: "guest", Text: "よろしく"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "こんにちは"},
+		model.Line{SpeakerRole: "guest", Text: "よろしく"},
+	)
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
 		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	got, err := d.Direct(context.Background(), lines, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -65,21 +79,21 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 
 func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"se","asset_name":"chime","reason":"コーナー開始"}]}`),
+		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"se","asset_name":"chime","reason":"コーナー開始"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "開始"},
-		{SpeakerRole: "guest", Text: "続き"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "開始"},
+		model.Line{SpeakerRole: "guest", Text: "続き"},
+	)
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
 		BGM:    []model.AssetCatalogEntry{},
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	got, err := d.Direct(context.Background(), lines, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -103,21 +117,21 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 
 func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"bgm","asset_name":"talk_bgm"},{"after_line_index":1,"type":"bgm","asset_name":""}]}`),
+		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"bgm","asset_name":"talk_bgm"},{"corner_index":0,"after_line_index":1,"type":"bgm","asset_name":""}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "BGM開始"},
-		{SpeakerRole: "guest", Text: "BGM停止"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "BGM開始"},
+		model.Line{SpeakerRole: "guest", Text: "BGM停止"},
+	)
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{},
 		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	got, err := d.Direct(context.Background(), lines, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -141,21 +155,21 @@ func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
 
 func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"jingle","asset_name":"eyecatch"}]}`),
+		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"jingle","asset_name":"eyecatch"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "コーナー1"},
-		{SpeakerRole: "guest", Text: "コーナー2"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "コーナー1"},
+		model.Line{SpeakerRole: "guest", Text: "コーナー2"},
+	)
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{},
 		BGM:    []model.AssetCatalogEntry{},
 		Jingle: []model.AssetCatalogEntry{{Name: "eyecatch"}},
 	}
 
-	got, err := d.Direct(context.Background(), lines, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -173,21 +187,21 @@ func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
 
 func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"after_line_index":1,"type":"se","asset_name":"transition"}]}`),
+		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":1,"type":"se","asset_name":"transition"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "A"},
-		{SpeakerRole: "guest", Text: "B"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "A"},
+		model.Line{SpeakerRole: "guest", Text: "B"},
+	)
 	catalog := model.AssetCatalog{
 		SE:     []model.AssetCatalogEntry{{Name: "transition"}},
 		BGM:    []model.AssetCatalogEntry{},
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	got, err := d.Direct(context.Background(), lines, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -204,14 +218,14 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "zundamon", Style: "なみだめ", Text: "ぐすん"},
-		{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "zundamon", Style: "なみだめ", Text: "ぐすん"},
+		model.Line{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -228,9 +242,9 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 
 func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	_, err := d.Direct(context.Background(), nil, emptyCatalog())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -240,13 +254,11 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "テストテキスト"},
-	}
+	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テストテキスト"})
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -276,7 +288,7 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -300,7 +312,7 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 		Jingle: []model.AssetCatalogEntry{},
 	}
 
-	_, err := d.Direct(context.Background(), []model.Line{}, catalog)
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -316,14 +328,14 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "テスト", Intonation: "表現豊か", Pitch: "高め", Speed: "早口"},
-		{SpeakerRole: "guest", Text: "応答"}, // preset fields empty
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "テスト", Intonation: "表現豊か", Pitch: "高め", Speed: "早口"},
+		model.Line{SpeakerRole: "guest", Text: "応答"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -357,16 +369,16 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 
 func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":1.2,"reason":"オチの前の溜め"}]}`),
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":1.2,"reason":"オチの前の溜め"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "オチの前"},
-		{SpeakerRole: "guest", Text: "オチ"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "オチの前"},
+		model.Line{SpeakerRole: "guest", Text: "オチ"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -390,16 +402,16 @@ func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
 
 func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"after_line_index":0,"type":"se","asset_name":"chime"}],"pause_insertions":[{"after_line_index":0,"duration_sec":1.0}]}`),
+		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"se","asset_name":"chime"}],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":1.0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "A"},
-		{SpeakerRole: "guest", Text: "B"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "A"},
+		model.Line{SpeakerRole: "guest", Text: "B"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -417,20 +429,19 @@ func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
 
 func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":0}]}`),
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "A"},
-		{SpeakerRole: "guest", Text: "B"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "A"},
+		model.Line{SpeakerRole: "guest", Text: "B"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// duration_sec=0 is ignored → only 2 speech segments
 	if len(got.Segments) != 2 {
 		t.Fatalf("Segments: got %d, want 2 (zero-duration pause should be ignored)", len(got.Segments))
 	}
@@ -438,21 +449,87 @@ func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
 
 func TestLLMDirector_Direct_PauseNegativeDurationIgnored(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"after_line_index":0,"duration_sec":-1.0}]}`),
+		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":-1.0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	lines := []model.Line{
-		{SpeakerRole: "host", Text: "A"},
-		{SpeakerRole: "guest", Text: "B"},
-	}
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "A"},
+		model.Line{SpeakerRole: "guest", Text: "B"},
+	)
 
-	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// negative duration_sec is ignored → only 2 speech segments
 	if len(got.Segments) != 2 {
 		t.Fatalf("Segments: got %d, want 2 (negative-duration pause should be ignored)", len(got.Segments))
+	}
+}
+
+// TestLLMDirector_Direct_MultiCorner verifies that corner_index routes insertions to the right corner.
+func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
+	mc := &mockClient{
+		// Insert SE after line 0 of corner 1 (second corner)
+		response: json.RawMessage(`{"insertions":[{"corner_index":1,"after_line_index":0,"type":"se","asset_name":"chime"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{
+		{Title: "C1", Lines: []model.Line{
+			{SpeakerRole: "host", Text: "コーナー1セリフ"},
+		}},
+		{Title: "C2", Lines: []model.Line{
+			{SpeakerRole: "guest", Text: "コーナー2セリフ"},
+		}},
+	}
+
+	got, err := d.Direct(context.Background(), corners, model.AssetCatalog{
+		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
+		BGM:    []model.AssetCatalogEntry{},
+		Jingle: []model.AssetCatalogEntry{},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech(C1), speech(C2), se(chime)]
+	if len(got.Segments) != 3 {
+		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
+	}
+	if got.Segments[0].Text != "コーナー1セリフ" {
+		t.Errorf("Segment[0] should be C1 speech, got %+v", got.Segments[0])
+	}
+	if got.Segments[1].Text != "コーナー2セリフ" {
+		t.Errorf("Segment[1] should be C2 speech, got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeSE || got.Segments[2].AssetName != "chime" {
+		t.Errorf("Segment[2] should be SE chime, got %+v", got.Segments[2])
+	}
+}
+
+// TestLLMDirector_Direct_DirectionInPrompt verifies corner direction appears in the prompt.
+func TestLLMDirector_Direct_DirectionInPrompt(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{
+		{
+			Title:     "オープニング",
+			Direction: "冒頭でオープニングジングルを流す。",
+			Lines:     []model.Line{{SpeakerRole: "host", Text: "こんにちは"}},
+		},
+	}
+
+	_, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(capturedPrompt, "冒頭でオープニングジングルを流す。") {
+		t.Errorf("direction value should appear in direct prompt, got: %s", capturedPrompt)
 	}
 }

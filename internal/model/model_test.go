@@ -71,6 +71,108 @@ func TestArticles_Fields(t *testing.T) {
 	}
 }
 
+func TestScriptLines_RoundTrip(t *testing.T) {
+	original := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{
+				Title:     "オープニング",
+				Direction: "冒頭でジングルを流す。",
+				Lines: []model.Line{
+					{SpeakerRole: "zundamon", Text: "こんにちは"},
+				},
+			},
+			{
+				Title: "エンディング",
+				Lines: []model.Line{
+					{SpeakerRole: "metan", Text: "さようなら"},
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+
+	var got model.ScriptLines
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	if len(got.Corners) != 2 {
+		t.Fatalf("Corners: got %d, want 2", len(got.Corners))
+	}
+	if got.Corners[0].Title != "オープニング" {
+		t.Errorf("Corners[0].Title: got %q, want オープニング", got.Corners[0].Title)
+	}
+	if got.Corners[0].Direction != "冒頭でジングルを流す。" {
+		t.Errorf("Corners[0].Direction: got %q, want 冒頭でジングルを流す。", got.Corners[0].Direction)
+	}
+	if len(got.Corners[0].Lines) != 1 || got.Corners[0].Lines[0].Text != "こんにちは" {
+		t.Errorf("Corners[0].Lines: unexpected %+v", got.Corners[0].Lines)
+	}
+	if got.Corners[1].Direction != "" {
+		t.Errorf("Corners[1].Direction: got %q, want empty (omitempty)", got.Corners[1].Direction)
+	}
+}
+
+func TestScriptLines_DirectionOmittedWhenEmpty(t *testing.T) {
+	sl := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "テスト", Lines: make([]model.Line, 0)},
+		},
+	}
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	if strings.Contains(string(data), `"direction"`) {
+		t.Errorf("direction field should be omitted when empty, got: %s", string(data))
+	}
+}
+
+func TestScriptLines_TotalLines(t *testing.T) {
+	tests := []struct {
+		name string
+		sl   model.ScriptLines
+		want int
+	}{
+		{
+			name: "empty corners",
+			sl:   model.ScriptLines{},
+			want: 0,
+		},
+		{
+			name: "single corner with lines",
+			sl: model.ScriptLines{
+				Corners: []model.CornerLines{
+					{Title: "C1", Lines: []model.Line{{SpeakerRole: "a", Text: "x"}, {SpeakerRole: "b", Text: "y"}}},
+				},
+			},
+			want: 2,
+		},
+		{
+			name: "multiple corners",
+			sl: model.ScriptLines{
+				Corners: []model.CornerLines{
+					{Title: "C1", Lines: []model.Line{{SpeakerRole: "a", Text: "x"}}},
+					{Title: "C2", Lines: []model.Line{{SpeakerRole: "b", Text: "y"}, {SpeakerRole: "c", Text: "z"}}},
+				},
+			},
+			want: 3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.sl.TotalLines()
+			if got != tt.want {
+				t.Errorf("TotalLines() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestArticles_CornerMap(t *testing.T) {
 	art1 := model.Article{URL: "https://example.com/1", Title: "T1", Body: "B1"}
 	art2 := model.Article{URL: "https://example.com/2", Title: "T2", Body: "B2"}

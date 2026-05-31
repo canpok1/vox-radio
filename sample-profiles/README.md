@@ -41,6 +41,7 @@ program:
 corners:                  # 固定コーナーのリスト
   - title: "オープニング"
     content: "番組の挨拶と本日のトピック紹介"
+    direction: "冒頭でオープニングジングルを流す。"  # 演出説明（省略可）
     cast:
       zundamon: "元気に挨拶する進行役"  # キャラID: そのコーナーの役割指示
     target_duration_sec: 30  # コーナーの目標再生時間（秒）
@@ -75,6 +76,8 @@ assets:
   - `target_duration_sec`: 番組全体の目標再生時間（秒）
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
+  - `content`（省略可）: コーナーの内容説明。台本生成（write）LLM への指示に使用される。演出指示は含めないこと
+  - `direction`（省略可）: コーナーの演出説明（ジングル・SE・BGMの挿入タイミングなど）。演出生成（direct）LLM のみに渡される。台本生成 LLM へは渡されないため、キャラクターがセリフとして口走ることがない
   - `target_duration_sec`: コーナーの目標再生時間（秒）。台本生成時に文字数係数（≈7文字/秒）で換算される
   - `source`（省略可）: コーナーのデータソース。省略したコーナーは収集をスキップ
     - `feeds`: RSS フィードのリスト（`url` / `max_items`）

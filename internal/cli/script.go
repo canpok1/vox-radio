@@ -129,21 +129,22 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	cornerMap := rundown.CornerMap()
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	allLines := make([]model.Line, 0)
-	for _, corner := range p.Corners {
+	allCornerLines := make([][]model.Line, len(p.Corners))
+	for i, corner := range p.Corners {
 		rc := cornerMap[corner.Title]
 		lines, err := w.Write(ctx, p.Program, corner, p.Corners, rc.Articles, rc.Flow, cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
-		allLines = append(allLines, lines...)
+		allCornerLines[i] = lines
 	}
 
+	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(p.Corners, allCornerLines)}
 	outPath := filepath.Join(workDir, "03_lines.json")
-	if err := writeJSON(outPath, model.Lines{Lines: allLines}); err != nil {
+	if err := writeJSON(outPath, scriptLines); err != nil {
 		return err
 	}
-	fmt.Printf("wrote %d lines to %s\n", len(allLines), outPath)
+	fmt.Printf("wrote %d lines to %s\n", scriptLines.TotalLines(), outPath)
 	return nil
 }
 
@@ -153,13 +154,13 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	if err != nil {
 		return fmt.Errorf("read 03_lines.json: %w", err)
 	}
-	var linesWrapper model.Lines
-	if err := json.Unmarshal(data, &linesWrapper); err != nil {
+	var scriptLines model.ScriptLines
+	if err := json.Unmarshal(data, &scriptLines); err != nil {
 		return fmt.Errorf("parse 03_lines.json: %w", err)
 	}
 
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"))
-	scr, err := d.Direct(ctx, linesWrapper.Lines, assetCatalog)
+	scr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
 	}

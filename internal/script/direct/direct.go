@@ -18,8 +18,9 @@ var insertionsSchema = json.RawMessage(`{
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["after_line_index", "type", "asset_name"],
+        "required": ["corner_index", "after_line_index", "type", "asset_name"],
         "properties": {
+          "corner_index":     {"type": "integer", "minimum": 0},
           "after_line_index": {"type": "integer", "minimum": 0},
           "type":             {"type": "string", "enum": ["se", "bgm", "jingle"]},
           "asset_name":       {"type": "string"},
@@ -32,8 +33,9 @@ var insertionsSchema = json.RawMessage(`{
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["after_line_index", "duration_sec"],
+        "required": ["corner_index", "after_line_index", "duration_sec"],
         "properties": {
+          "corner_index":     {"type": "integer", "minimum": 0},
           "after_line_index": {"type": "integer", "minimum": 0},
           "duration_sec":     {"type": "number", "exclusiveMinimum": 0, "maximum": 5.0},
           "reason":           {"type": "string"}
@@ -46,10 +48,11 @@ var insertionsSchema = json.RawMessage(`{
 }`)
 
 type Director interface {
-	Direct(ctx context.Context, lines []model.Line, catalog model.AssetCatalog) (model.Script, error)
+	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error)
 }
 
 type insertion struct {
+	CornerIndex    int               `json:"corner_index"`
 	AfterLineIndex int               `json:"after_line_index"`
 	Type           model.SegmentType `json:"type"`
 	AssetName      string            `json:"asset_name"`
@@ -57,6 +60,7 @@ type insertion struct {
 }
 
 type pauseInsertion struct {
+	CornerIndex    int     `json:"corner_index"`
 	AfterLineIndex int     `json:"after_line_index"`
 	DurationSec    float64 `json:"duration_sec"`
 	Reason         string  `json:"reason,omitempty"`
@@ -77,10 +81,10 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog model.AssetCatalog) (model.Script, error) {
-	linesJSON, err := json.Marshal(model.Lines{Lines: lines})
+func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error) {
+	cornersJSON, err := json.Marshal(corners)
 	if err != nil {
-		return model.Script{}, fmt.Errorf("marshal lines: %w", err)
+		return model.Script{}, fmt.Errorf("marshal corners: %w", err)
 	}
 
 	catalogJSON, err := json.Marshal(catalog)
@@ -89,7 +93,7 @@ func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog mo
 	}
 
 	prompt := strings.NewReplacer(
-		"{{lines}}", string(linesJSON),
+		"{{corners}}", string(cornersJSON),
 		"{{asset_catalog}}", string(catalogJSON),
 	).Replace(d.promptTemplate)
 
@@ -107,44 +111,52 @@ func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog mo
 		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
-	return buildScript(lines, resp.Insertions, resp.PauseInsertions), nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions), nil
 }
 
-func buildScript(lines []model.Line, insertions []insertion, pauseInsertions []pauseInsertion) model.Script {
-	insertionMap := make(map[int][]insertion, len(insertions))
+type insertKey struct{ cornerIdx, lineIdx int }
+
+func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion) model.Script {
+	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
-		insertionMap[ins.AfterLineIndex] = append(insertionMap[ins.AfterLineIndex], ins)
+		key := insertKey{ins.CornerIndex, ins.AfterLineIndex}
+		insertionMap[key] = append(insertionMap[key], ins)
 	}
 
-	pauseMap := make(map[int][]pauseInsertion, len(pauseInsertions))
+	pauseMap := make(map[insertKey][]pauseInsertion, len(pauseInsertions))
 	for _, p := range pauseInsertions {
 		if p.DurationSec > 0 {
-			pauseMap[p.AfterLineIndex] = append(pauseMap[p.AfterLineIndex], p)
+			key := insertKey{p.CornerIndex, p.AfterLineIndex}
+			pauseMap[key] = append(pauseMap[key], p)
 		}
 	}
 
-	segments := make([]model.ScriptSegment, 0, len(lines)+len(insertions)+len(pauseInsertions))
-	for i, line := range lines {
-		segments = append(segments, model.ScriptSegment{
-			Type:        model.SegmentTypeSpeech,
-			SpeakerRole: line.SpeakerRole,
-			Style:       line.Style,
-			Intonation:  line.Intonation,
-			Pitch:       line.Pitch,
-			Speed:       line.Speed,
-			Text:        line.Text,
-		})
-		for _, ins := range insertionMap[i] {
+	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions))
+
+	for ci, corner := range corners {
+		for li, line := range corner.Lines {
 			segments = append(segments, model.ScriptSegment{
-				Type:      ins.Type,
-				AssetName: ins.AssetName,
+				Type:        model.SegmentTypeSpeech,
+				SpeakerRole: line.SpeakerRole,
+				Style:       line.Style,
+				Intonation:  line.Intonation,
+				Pitch:       line.Pitch,
+				Speed:       line.Speed,
+				Text:        line.Text,
 			})
-		}
-		for _, p := range pauseMap[i] {
-			segments = append(segments, model.ScriptSegment{
-				Type:        model.SegmentTypePause,
-				DurationSec: p.DurationSec,
-			})
+			key := insertKey{ci, li}
+			for _, ins := range insertionMap[key] {
+				segments = append(segments, model.ScriptSegment{
+					Type:      ins.Type,
+					AssetName: ins.AssetName,
+				})
+			}
+			for _, p := range pauseMap[key] {
+				segments = append(segments, model.ScriptSegment{
+					Type:        model.SegmentTypePause,
+					DurationSec: p.DurationSec,
+				})
+			}
 		}
 	}
 

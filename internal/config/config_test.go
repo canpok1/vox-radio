@@ -322,6 +322,27 @@ func TestLoadConfig_LLM_MinRequestIntervalMS(t *testing.T) {
 	}
 }
 
+func TestLoadProfile_CornerDirection(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+
+	var directionCorner *config.CornerConfig
+	for i := range profile.Corners {
+		if profile.Corners[i].Direction != "" {
+			directionCorner = &profile.Corners[i]
+			break
+		}
+	}
+	if directionCorner == nil {
+		t.Fatal("no corner with direction found")
+	}
+	if directionCorner.Direction != "冒頭でオープニングジングルを流す。" {
+		t.Errorf("Direction: got %q, want %q", directionCorner.Direction, "冒頭でオープニングジングルを流す。")
+	}
+}
+
 func TestValidateProfileCast_Valid(t *testing.T) {
 	p := &config.Profile{
 		Corners: []config.CornerConfig{

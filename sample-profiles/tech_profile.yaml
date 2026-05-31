@@ -7,7 +7,8 @@ program:
 
 corners:
   - title: "オープニング"
-    content: "openingジングルを流したあとに元気に挨拶と自己紹介。ずんだもんからプライベートな出来事を1つ話し、ちょっとした雑談をする。"
+    content: "元気に挨拶と自己紹介。ずんだもんからプライベートな出来事を1つ話し、ちょっとした雑談をする。"
+    direction: "冒頭でオープニングジングルを流す。"
     cast:
       zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
       metan: "MC。ずんだもんの相棒。ツッコミ担当。"
@@ -25,7 +26,8 @@ corners:
         - url: https://qiita.com/popular-items/feed
           max_items: 5
   - title: "エンディング"
-    content: "次回も聴いて欲しいという宣伝をして最後にジングルを流す。"
+    content: "次回も聴いて欲しいという宣伝をする。"
+    direction: "最後にエンディングジングルを流す。"
     cast:
       zundamon: "MC。進行役。ボケ担当。"
       metan: "MC。相棒。ツッコミ担当。"

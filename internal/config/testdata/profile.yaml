@@ -9,6 +9,7 @@ program:
 corners:
   - title: "オープニング"
     content: "番組の挨拶とトピック紹介"
+    direction: "冒頭でオープニングジングルを流す。"
     cast:
       zundamon: "元気に挨拶する進行役"
     target_duration_sec: 45
