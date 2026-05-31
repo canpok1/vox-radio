@@ -38,8 +38,8 @@ make build
 vox-radio は以下のパイプラインでポッドキャストを自動生成します。
 
 ```
-collect → script → synth → assemble → publish
-                                              └─ prune（古いエピソードを削除）
+collect → script → synth → assemble → manifest → publish
+                                                         └─ prune（古いエピソードを削除）
 ```
 
 | コマンド | 概要 |
@@ -48,9 +48,10 @@ collect → script → synth → assemble → publish
 | `script` | 記事を LLM に渡して台本 `script.json` を生成する（summarize → write → direct の多段パイプライン） |
 | `synth` | `script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
+| `manifest` | 番組内容（タイトル・概要・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する |
 | `publish` | MP3 をホスティングディレクトリへコピーし、`episodes.json` と `feed.xml` を更新する |
 | `prune` | 直近 N 件を残して古いエピソードを削除し、`episodes.json` と `feed.xml` を更新する |
-| `run` | collect → script → synth → assemble → publish の全パイプラインを一括実行する |
+| `run` | collect → script → synth → assemble → manifest → publish の全パイプラインを一括実行する |
 
 ### 設定ファイル
 

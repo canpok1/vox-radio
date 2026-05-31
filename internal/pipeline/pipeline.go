@@ -3,10 +3,12 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/manifest"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/publish"
 )
@@ -45,6 +47,7 @@ type Pruner interface {
 type Options struct {
 	OutDir      string
 	PublishOpts publish.Options
+	GeneratedAt time.Time // zero value means time.Now().UTC()
 }
 
 // Runner orchestrates the full collect→script→synth→assemble→publish→prune pipeline.
@@ -98,6 +101,15 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 
 	if _, err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir)); err != nil {
 		return fmt.Errorf("assemble: %w", err)
+	}
+
+	generatedAt := opts.GeneratedAt
+	if generatedAt.IsZero() {
+		generatedAt = time.Now().UTC()
+	}
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt)
+	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
 	}
 
 	if err := r.Publisher.Run(ctx, fileio.EpisodePath(outDir), opts.PublishOpts); err != nil {

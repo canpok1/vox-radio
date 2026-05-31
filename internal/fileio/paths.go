@@ -14,6 +14,7 @@ const (
 	FileLines     = "lines.json"
 	FileScript    = "script.json"
 	FileEpisode   = "episode.mp3"
+	FileManifest  = "manifest.json"
 
 	DirIntermediate = "intermediate"
 	DirClips        = "clips"
@@ -43,6 +44,10 @@ func ScriptPath(outDir string) string    { return intermediatePath(outDir, FileS
 
 func EpisodePath(outDir string) string {
 	return filepath.Join(outDir, FileEpisode)
+}
+
+func ManifestPath(outDir string) string {
+	return filepath.Join(outDir, FileManifest)
 }
 
 func EnsureDir(dir string) error {
