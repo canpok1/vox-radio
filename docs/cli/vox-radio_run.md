@@ -1,17 +1,17 @@
 ## vox-radio run
 
-Run the full podcast production pipeline
+ポッドキャスト制作パイプラインをすべて実行する
 
 ### Synopsis
 
-Run collect → script → synth → assemble → manifest in one shot.
+collect → script → synth → assemble → manifest を一括実行します。
 
-Intermediate files are written to <out-dir>/intermediate/ and the final
-episode.mp3 is placed directly under <out-dir>/.
+中間ファイルは <out-dir>/intermediate/ に書き出され、
+最終的な episode.mp3 は <out-dir>/ 直下に配置されます。
 
-vox-radio.yaml is automatically loaded from the current directory.
+vox-radio.yaml はカレントディレクトリから自動読み込みされます。
 
-Example:
+例:
   vox-radio run
   vox-radio run --out-dir output --profile sample-profiles/tech_profile.yaml
 
@@ -23,12 +23,12 @@ vox-radio run [flags]
 
 ```
   -h, --help             help for run
-      --out-dir string   output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/) (default "output")
-      --profile string   profile YAML file path (required)
-      --prompts string   directory containing prompt templates (default "prompts")
+      --out-dir string   出力ディレクトリ（episode.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置） (default "output")
+      --profile string   プロファイル YAML ファイルのパス（必須）
+      --prompts string   プロンプトテンプレートを含むディレクトリ (default "prompts")
 ```
 
 ### SEE ALSO
 
-* [vox-radio](vox-radio.md)	 - AI-powered podcast production tool
+* [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
 

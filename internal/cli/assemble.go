@@ -21,11 +21,11 @@ func newAssembleCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "assemble",
-		Short: "Assemble WAV clips into an MP3 episode",
-		Long: `Read script.json and the clips directory produced by synth, then use ffmpeg
-to mix intro/outro/SE and produce a final MP3 episode file.
+		Short: "WAV クリップを MP3 エピソードに組み立てる",
+		Long: `script.json と synth が生成したクリップディレクトリを読み込み、
+ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終的な MP3 エピソードを生成します。
 
-Example:
+例:
   vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3
   vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -69,10 +69,10 @@ Example:
 		},
 	}
 
-	cmd.Flags().StringVar(&in, "in", "", "input script.json path (required)")
-	cmd.Flags().StringVar(&clipsDir, "clips", "", "directory containing clips.json and WAV files (required)")
-	cmd.Flags().StringVar(&out, "out", "", "output mp3 path (required)")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path for assets (optional)")
+	cmd.Flags().StringVar(&in, "in", "", "script.json の入力パス（必須）")
+	cmd.Flags().StringVar(&clipsDir, "clips", "", "clips.json と WAV ファイルを含むディレクトリ（必須）")
+	cmd.Flags().StringVar(&out, "out", "", "MP3 の出力先パス（必須）")
+	cmd.Flags().StringVar(&profilePath, "profile", "", "アセット設定を含むプロファイル YAML ファイルのパス（任意）")
 	_ = cmd.MarkFlagRequired("in")
 	_ = cmd.MarkFlagRequired("clips")
 	_ = cmd.MarkFlagRequired("out")

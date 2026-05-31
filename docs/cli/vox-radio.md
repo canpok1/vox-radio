@@ -1,13 +1,13 @@
 ## vox-radio
 
-AI-powered podcast production tool
+AI を使ったポッドキャスト制作ツール
 
 ### Synopsis
 
-vox-radio is a CLI tool for producing AI-generated podcast episodes.
+vox-radio は AI を活用したポッドキャストエピソード制作 CLI ツールです。
 
-It covers the full pipeline: collecting articles, generating scripts via LLM,
-synthesizing voice clips, assembling audio, and outputting a content manifest.
+記事収集・LLM による台本生成・音声合成・音声組み立て・コンテンツマニフェスト出力まで、
+フルパイプラインをカバーします。
 
 ### Options
 
@@ -17,11 +17,11 @@ synthesizing voice clips, assembling audio, and outputting a content manifest.
 
 ### SEE ALSO
 
-* [vox-radio assemble](vox-radio_assemble.md)	 - Assemble WAV clips into an MP3 episode
-* [vox-radio collect](vox-radio_collect.md)	 - Collect articles from RSS/Atom feeds and URLs per corner
-* [vox-radio init](vox-radio_init.md)	 - Generate template config files in the current directory
-* [vox-radio manifest](vox-radio_manifest.md)	 - Generate a content manifest JSON alongside an episode
-* [vox-radio run](vox-radio_run.md)	 - Run the full podcast production pipeline
-* [vox-radio script](vox-radio_script.md)	 - Generate a script from collected articles using LLM
-* [vox-radio synth](vox-radio_synth.md)	 - Synthesize voice clips from a script
+* [vox-radio assemble](vox-radio_assemble.md)	 - WAV クリップを MP3 エピソードに組み立てる
+* [vox-radio collect](vox-radio_collect.md)	 - コーナーごとに RSS/Atom フィードと URL から記事を収集する
+* [vox-radio init](vox-radio_init.md)	 - カレントディレクトリにテンプレート設定ファイルを生成する
+* [vox-radio manifest](vox-radio_manifest.md)	 - エピソードのコンテンツマニフェスト JSON を生成する
+* [vox-radio run](vox-radio_run.md)	 - ポッドキャスト制作パイプラインをすべて実行する
+* [vox-radio script](vox-radio_script.md)	 - LLM を使って収集した記事から台本を生成する
+* [vox-radio synth](vox-radio_synth.md)	 - 台本から音声クリップを合成する
 

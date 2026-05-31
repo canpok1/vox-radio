@@ -1,17 +1,17 @@
 ## vox-radio synth
 
-Synthesize voice clips from a script
+台本から音声クリップを合成する
 
 ### Synopsis
 
-Read script.json and call VOICEVOX to synthesize each line into WAV clips.
-The output directory will contain per-line WAV files and a clips.json manifest.
+script.json を読み込み、VOICEVOX を呼び出して各台詞を WAV クリップに合成します。
+出力ディレクトリには台詞ごとの WAV ファイルと clips.json マニフェストが格納されます。
 
-vox-radio.yaml is automatically loaded from the current directory.
-The voicevox.url field specifies the VOICEVOX engine URL (default: http://localhost:50021).
-Speaker IDs are resolved from the characters catalog in vox-radio.yaml.
+vox-radio.yaml はカレントディレクトリから自動読み込みされます。
+voicevox.url フィールドで VOICEVOX エンジンの URL を指定します（デフォルト: http://localhost:50021）。
+話者 ID は vox-radio.yaml のキャラクターカタログから解決されます。
 
-Example:
+例:
   vox-radio synth --in work/script.json --out-dir work/clips
 
 ```
@@ -22,11 +22,11 @@ vox-radio synth [flags]
 
 ```
   -h, --help             help for synth
-      --in string        input script.json path (required)
-      --out-dir string   output directory for WAV clips (required)
+      --in string        script.json の入力パス（必須）
+      --out-dir string   WAV クリップの出力ディレクトリ（必須）
 ```
 
 ### SEE ALSO
 
-* [vox-radio](vox-radio.md)	 - AI-powered podcast production tool
+* [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
 

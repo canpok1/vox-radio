@@ -1,15 +1,15 @@
 ## vox-radio collect
 
-Collect articles from RSS/Atom feeds and URLs per corner
+コーナーごとに RSS/Atom フィードと URL から記事を収集する
 
 ### Synopsis
 
-Collect articles from RSS/Atom feeds and web URLs defined in corners[].source,
-extract their body text, and write the result to articles.json.
+corners[].source に定義された RSS/Atom フィードや Web URL から記事を収集し、
+本文テキストを抽出して articles.json に書き出します。
 
-Corners without a source field are skipped.
+source フィールドのないコーナーはスキップされます。
 
-Example:
+例:
   vox-radio collect --out work/articles.json
   vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
 
@@ -21,11 +21,11 @@ vox-radio collect [flags]
 
 ```
   -h, --help             help for collect
-      --out string       output articles.json path (required)
-      --profile string   profile YAML file path (required)
+      --out string       articles.json の出力先パス（必須）
+      --profile string   プロファイル YAML ファイルのパス（必須）
 ```
 
 ### SEE ALSO
 
-* [vox-radio](vox-radio.md)	 - AI-powered podcast production tool
+* [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
 

@@ -27,19 +27,19 @@ func newScriptCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "script",
-		Short: "Generate a script from collected articles using LLM",
-		Long: `Run the multi-stage LLM pipeline (summarize → write → direct) to
-produce script.json from articles.json.
+		Short: "LLM を使って収集した記事から台本を生成する",
+		Long: `多段階 LLM パイプライン（summarize → write → direct）を実行し、
+articles.json から script.json を生成します。
 
-vox-radio.yaml is automatically loaded from the current directory.
-Corner definitions come from the profile (no plan step).
+vox-radio.yaml はカレントディレクトリから自動読み込みされます。
+コーナー定義はプロファイルから取得します（plan ステップはありません）。
 
-Use --step to run a single stage independently:
-  summarize  Summarize each article per corner (writes summaries.json)
-  write      Write lines per corner (writes lines.json)
-  direct     Assign SE/speakers to lines (writes script.json)
+--step で単一ステージのみ実行できます:
+  summarize  コーナーごとに各記事を要約します（summaries.json を出力）
+  write      コーナーごとに台詞を書きます（lines.json を出力）
+  direct     台詞に SE・話者を割り当てます（script.json を出力）
 
-Example:
+例:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step write
   vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml`,
@@ -85,11 +85,11 @@ Example:
 		},
 	}
 
-	cmd.Flags().StringVar(&in, "in", "", "input articles.json path (required for full pipeline or summarize step)")
-	cmd.Flags().StringVar(&out, "out", "", "output script.json path (required)")
-	cmd.Flags().StringVar(&step, "step", "", "run a single step: summarize|write|direct")
+	cmd.Flags().StringVar(&in, "in", "", "articles.json の入力パス（フルパイプラインまたは summarize ステップで必須）")
+	cmd.Flags().StringVar(&out, "out", "", "script.json の出力先パス（必須）")
+	cmd.Flags().StringVar(&step, "step", "", "単一ステップを実行する: summarize|write|direct")
 	registerProfileFlag(cmd, &profilePath)
-	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
+	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ")
 	_ = cmd.MarkFlagRequired("out")
 
 	return cmd
