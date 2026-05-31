@@ -114,7 +114,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 	}
 	totalTarget := 0
 	for _, c := range corners {
-		totalTarget += c.TargetChars
+		totalTarget += config.DurationSecToTargetChars(c.TargetDurationSec)
 	}
 	if totalTarget <= 0 {
 		return cornerLines
@@ -133,11 +133,12 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, cornerLines [][]
 	worstIdx := 0
 	worstDev := 0.0
 	for i, corner := range corners {
-		if corner.TargetChars <= 0 {
+		targetChars := config.DurationSecToTargetChars(corner.TargetDurationSec)
+		if targetChars <= 0 {
 			continue
 		}
 		actual := countChars(cornerLines[i])
-		dev := absDeviation(actual, corner.TargetChars)
+		dev := absDeviation(actual, targetChars)
 		if dev > worstDev {
 			worstDev = dev
 			worstIdx = i

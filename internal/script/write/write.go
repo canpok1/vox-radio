@@ -32,6 +32,15 @@ var linesSchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
+// cornerForPrompt is the subset of corner data passed to the LLM.
+// TargetChars is computed from TargetDurationSec via config.DurationSecToTargetChars.
+type cornerForPrompt struct {
+	Title       string            `json:"title"`
+	Content     string            `json:"content"`
+	Cast        map[string]string `json:"cast"`
+	TargetChars int               `json:"target_chars"`
+}
+
 type Writer interface {
 	Write(ctx context.Context, corner config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
@@ -47,7 +56,13 @@ func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64)
 }
 
 func (w *LLMWriter) Write(ctx context.Context, corner config.CornerConfig, summaries []model.Summary, chars map[string]config.CharacterConfig) ([]model.Line, error) {
-	cornerJSON, err := json.Marshal(corner)
+	promptCorner := cornerForPrompt{
+		Title:       corner.Title,
+		Content:     corner.Content,
+		Cast:        corner.Cast,
+		TargetChars: config.DurationSecToTargetChars(corner.TargetDurationSec),
+	}
+	cornerJSON, err := json.Marshal(promptCorner)
 	if err != nil {
 		return nil, fmt.Errorf("marshal corner: %w", err)
 	}

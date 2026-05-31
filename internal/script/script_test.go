@@ -70,7 +70,7 @@ var testChars = map[string]config.CharacterConfig{
 }
 
 var testCorners = []config.CornerConfig{
-	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
+	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 }
 
 // corneredArticles wraps articles into a model.Articles attributed to the given corner title.
@@ -138,10 +138,10 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 }
 
 func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
-	// TargetChars=100, but writer first returns 1 char total (huge deficit)
+	// TargetDurationSec=15 → 105 chars, but writer first returns 1 char total (huge deficit)
 	// should trigger regen of the worst corner
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 	}
 	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
 	shortLines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}                                                  // 1 char
@@ -170,10 +170,10 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 100},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
 	}
 	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
-	// 95 chars → 5% deviation (target=100), within 20% threshold
+	// 95 chars → ~9.5% deviation (target=105 = 15sec*7), within 20% threshold
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんあいう"}}
 
 	mw := &mockWriter{lines: lines}
@@ -232,7 +232,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetChars: 0},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 0},
 	}
 	articles := corneredArticles("C", model.Article{URL: "https://example.com/1"})
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}

@@ -8,6 +8,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// CharsPerSec is the approximate number of characters spoken per second,
+// used to convert target_duration_sec to a target character count.
+const CharsPerSec = 7
+
+// DurationSecToTargetChars converts a duration in seconds to an approximate target character count.
+func DurationSecToTargetChars(sec int) int {
+	return sec * CharsPerSec
+}
+
 type FeedEntry struct {
 	URL      string `yaml:"url"`
 	MaxItems int    `yaml:"max_items"`
@@ -57,16 +66,17 @@ type LLMConfig struct {
 
 // ProgramConfig holds program-wide settings (formerly PodcastConfig + SegmentPauseSec from ShowConfig).
 type ProgramConfig struct {
-	Title           string  `yaml:"title"`
-	Description     string  `yaml:"description"`
-	Language        string  `yaml:"language"`
-	Author          string  `yaml:"author"`
-	Category        string  `yaml:"category"`
-	Explicit        bool    `yaml:"explicit"`
-	CoverImageURL   string  `yaml:"cover_image_url"`
-	SiteURL         string  `yaml:"site_url"`
-	MaxItems        int     `yaml:"max_items"`
-	SegmentPauseSec float64 `yaml:"segment_pause_sec"`
+	Title             string  `yaml:"title"`
+	Description       string  `yaml:"description"`
+	Language          string  `yaml:"language"`
+	Author            string  `yaml:"author"`
+	Category          string  `yaml:"category"`
+	Explicit          bool    `yaml:"explicit"`
+	CoverImageURL     string  `yaml:"cover_image_url"`
+	SiteURL           string  `yaml:"site_url"`
+	MaxItems          int     `yaml:"max_items"`
+	SegmentPauseSec   float64 `yaml:"segment_pause_sec"`
+	TargetDurationSec int     `yaml:"target_duration_sec"`
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
@@ -76,13 +86,12 @@ type SourceConfig struct {
 }
 
 // CornerConfig defines a fixed corner in the program structure.
-// target_chars is provisional; will be replaced by target_duration_sec in #4.
 type CornerConfig struct {
-	Title       string            `yaml:"title"`
-	Content     string            `yaml:"content"`
-	Cast        map[string]string `yaml:"cast"`
-	TargetChars int               `yaml:"target_chars"`
-	Source      *SourceConfig     `yaml:"source,omitempty"`
+	Title             string            `yaml:"title"`
+	Content           string            `yaml:"content"`
+	Cast              map[string]string `yaml:"cast"`
+	TargetDurationSec int               `yaml:"target_duration_sec"`
+	Source            *SourceConfig     `yaml:"source,omitempty"`
 }
 
 type VoicevoxConfig struct {

@@ -7,6 +7,24 @@ import (
 	"github.com/canpok1/vox-radio/internal/config"
 )
 
+func TestDurationSecToTargetChars(t *testing.T) {
+	tests := []struct {
+		sec  int
+		want int
+	}{
+		{sec: 0, want: 0},
+		{sec: 1, want: 7},
+		{sec: 14, want: 98},
+		{sec: 30, want: 210},
+	}
+	for _, tt := range tests {
+		got := config.DurationSecToTargetChars(tt.sec)
+		if got != tt.want {
+			t.Errorf("DurationSecToTargetChars(%d) = %d, want %d", tt.sec, got, tt.want)
+		}
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/config.yaml")
 	if err != nil {
@@ -73,6 +91,15 @@ func TestLoadProfile(t *testing.T) {
 		}
 		if len(c.Cast) == 0 {
 			t.Error("Corners[0].Cast must not be empty")
+		}
+		if c.TargetDurationSec <= 0 {
+			t.Error("Corners[0].TargetDurationSec must be positive")
+		}
+	})
+
+	t.Run("ProgramTargetDurationSec", func(t *testing.T) {
+		if profile.Program.TargetDurationSec <= 0 {
+			t.Error("Program.TargetDurationSec must be positive")
 		}
 	})
 
