@@ -129,7 +129,8 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 func buildCmdArgs(ffArgs *FFmpegArgs) []string {
 	var args []string
 	for _, inp := range ffArgs.Inputs {
-		args = append(args, "-i", inp)
+		args = append(args, inp.PreOptions...)
+		args = append(args, "-i", inp.Path)
 	}
 	args = append(args, "-filter_complex", ffArgs.FilterComplex)
 	args = append(args, ffArgs.OutputArgs...)

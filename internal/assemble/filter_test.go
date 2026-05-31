@@ -48,7 +48,7 @@ func TestBuildFFmpegArgs_SingleClip(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(args.Inputs) < 1 || args.Inputs[0] != filepath.Join("/clips", "clip_000.wav") {
+	if len(args.Inputs) < 1 || args.Inputs[0].Path != filepath.Join("/clips", "clip_000.wav") {
 		t.Errorf("clip input not found, inputs: %v", args.Inputs)
 	}
 	if !strings.Contains(args.FilterComplex, "[0:a]") {
@@ -147,7 +147,7 @@ func TestBuildFFmpegArgs_SESegment(t *testing.T) {
 
 	foundSE := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/chime.wav" {
+		if inp.Path == "/assets/chime.wav" {
 			foundSE = true
 		}
 	}
@@ -223,16 +223,25 @@ func TestBuildFFmpegArgs_BGMSegment_StartsAndStops(t *testing.T) {
 	}
 
 	foundBGM := false
+	foundStreamLoop := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/bgm.mp3" {
+		if inp.Path == "/assets/bgm.mp3" {
 			foundBGM = true
+			for i, opt := range inp.PreOptions {
+				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
+					foundStreamLoop = true
+				}
+			}
 		}
 	}
 	if !foundBGM {
 		t.Errorf("BGM input /assets/bgm.mp3 not found in inputs: %v", args.Inputs)
 	}
-	if !strings.Contains(args.FilterComplex, "aloop") {
-		t.Errorf("filter_complex missing aloop for BGM: %s", args.FilterComplex)
+	if !foundStreamLoop {
+		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
+	}
+	if strings.Contains(args.FilterComplex, "aloop") {
+		t.Errorf("loop:true BGM must not use aloop filter, filter: %s", args.FilterComplex)
 	}
 	if !strings.Contains(args.FilterComplex, "sidechaincompress") {
 		t.Errorf("filter_complex missing sidechaincompress for BGM ducking: %s", args.FilterComplex)
@@ -278,7 +287,7 @@ func TestBuildFFmpegArgs_BGMDoesNotCrossJingle(t *testing.T) {
 	// BGM should appear (active in run 0)
 	foundBGM := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/bgm.mp3" {
+		if inp.Path == "/assets/bgm.mp3" {
 			foundBGM = true
 		}
 	}
@@ -325,7 +334,7 @@ func TestBuildFFmpegArgs_JingleSegment_SerialConcat(t *testing.T) {
 
 	foundJingle := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/eyecatch.wav" {
+		if inp.Path == "/assets/eyecatch.wav" {
 			foundJingle = true
 		}
 	}
@@ -378,7 +387,7 @@ func TestBuildFFmpegArgs_JingleAtBeginning(t *testing.T) {
 
 	foundOP := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/opening.wav" {
+		if inp.Path == "/assets/opening.wav" {
 			foundOP = true
 		}
 	}
@@ -422,7 +431,7 @@ func TestBuildFFmpegArgs_JingleAtEnd(t *testing.T) {
 
 	foundED := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/ending.wav" {
+		if inp.Path == "/assets/ending.wav" {
 			foundED = true
 		}
 	}
@@ -471,10 +480,10 @@ func TestBuildFFmpegArgs_OPAndED(t *testing.T) {
 
 	foundOP, foundED := false, false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/opening.wav" {
+		if inp.Path == "/assets/opening.wav" {
 			foundOP = true
 		}
-		if inp == "/assets/ending.wav" {
+		if inp.Path == "/assets/ending.wav" {
 			foundED = true
 		}
 	}
@@ -528,10 +537,10 @@ func TestBuildFFmpegArgs_ConsecutiveJingles(t *testing.T) {
 
 	foundJ1, foundJ2 := false, false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/j1.wav" {
+		if inp.Path == "/assets/j1.wav" {
 			foundJ1 = true
 		}
-		if inp == "/assets/j2.wav" {
+		if inp.Path == "/assets/j2.wav" {
 			foundJ2 = true
 		}
 	}
@@ -569,8 +578,8 @@ func TestBuildFFmpegArgs_JingleUnknownAssetSkipped(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	for _, inp := range args.Inputs {
-		if strings.Contains(inp, "jingle") || strings.Contains(inp, "missing") {
-			t.Errorf("unexpected jingle input when key is missing: %s", inp)
+		if strings.Contains(inp.Path, "jingle") || strings.Contains(inp.Path, "missing") {
+			t.Errorf("unexpected jingle input when key is missing: %s", inp.Path)
 		}
 	}
 }
@@ -610,7 +619,7 @@ func TestBuildFFmpegArgs_DuplicateSEUsesDistinctInputs(t *testing.T) {
 
 	chimeCount := 0
 	for _, inp := range args.Inputs {
-		if inp == "/assets/chime.wav" {
+		if inp.Path == "/assets/chime.wav" {
 			chimeCount++
 		}
 	}
@@ -918,20 +927,121 @@ func TestBuildFFmpegArgs_PauseSegment_BGMContinues(t *testing.T) {
 
 	// BGM should be present and loop (continues through pause)
 	foundBGM := false
+	foundStreamLoop := false
 	for _, inp := range args.Inputs {
-		if inp == "/assets/bgm.mp3" {
+		if inp.Path == "/assets/bgm.mp3" {
 			foundBGM = true
+			for i, opt := range inp.PreOptions {
+				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
+					foundStreamLoop = true
+				}
+			}
 		}
 	}
 	if !foundBGM {
 		t.Errorf("BGM input not found in inputs: %v", args.Inputs)
 	}
-	if !strings.Contains(args.FilterComplex, "aloop") {
-		t.Errorf("BGM should loop (aloop), filter: %s", args.FilterComplex)
+	if !foundStreamLoop {
+		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
+	}
+	if strings.Contains(args.FilterComplex, "aloop") {
+		t.Errorf("loop:true BGM must not use aloop filter, filter: %s", args.FilterComplex)
 	}
 	// BGM duration: 2s(clip0) + 0.5s(pauseSec) + 1.2s(pause) + 3s(clip1) + 0.5s(pauseSec) = 7.2s
 	// atrim=duration=7.200 confirms BGM covers the explicit pause duration.
 	if !strings.Contains(args.FilterComplex, "atrim=duration=7.200") {
 		t.Errorf("BGM atrim duration should be 7.200 (covers pause), filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMLoop_StreamLoop verifies that loop:true BGM uses -stream_loop -1
+// as a pre-input option instead of the aloop filter, enabling full-file looping.
+func TestBuildFFmpegArgs_BGMLoop_StreamLoop(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 30.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// -stream_loop -1 must be set as PreOptions on the BGM input.
+	foundStreamLoop := false
+	for _, inp := range args.Inputs {
+		if inp.Path == "/assets/bgm.mp3" {
+			for i, opt := range inp.PreOptions {
+				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
+					foundStreamLoop = true
+				}
+			}
+		}
+	}
+	if !foundStreamLoop {
+		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
+	}
+
+	// aloop must NOT appear in filter_complex for loop:true BGM.
+	if strings.Contains(args.FilterComplex, "aloop") {
+		t.Errorf("loop:true BGM must not use aloop filter, filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMNoLoop_NoStreamLoop verifies that loop:false BGM does NOT
+// get -stream_loop -1 (it should play once and stop).
+func TestBuildFFmpegArgs_BGMNoLoop_NoStreamLoop(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 5.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: false},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, inp := range args.Inputs {
+		if inp.Path == "/assets/bgm.mp3" {
+			for _, opt := range inp.PreOptions {
+				if opt == "-stream_loop" {
+					t.Errorf("loop:false BGM should not have -stream_loop, got PreOptions: %v", inp.PreOptions)
+				}
+			}
+		}
 	}
 }
