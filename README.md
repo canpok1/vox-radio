@@ -184,6 +184,8 @@ vox-radio assemble --in work/script.json --clips work/clips --out work/episode.m
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用） |
 | `segment_pause_sec` | float64 | 任意 | コーナー間の無音時間（秒）。デフォルト: 0（Go ゼロ値） |
 | `target_duration_sec` | int | 任意 | 番組全体の目標収録時間（秒）。デフォルト: 0（Go ゼロ値） |
+| `opening_jingle` | string | 任意 | OP ジングルのキー名（`assets.jingle` のキーと一致させること）。コードが台本先頭へ自動挿入する |
+| `ending_jingle` | string | 任意 | ED ジングルのキー名（`assets.jingle` のキーと一致させること）。コードが台本末尾へ自動挿入する |
 
 #### `corners` セクション
 
@@ -215,6 +217,17 @@ vox-radio assemble --in work/script.json --clips work/clips --out work/episode.m
 
 `assets` はジングル・SE・BGM の音声素材を設定します。バイナリ素材は別途用意してください。ファイルパスはプロファイルファイルのディレクトリからの相対パスで解決されます。
 
+音声アセットは `script.json` のセグメント型として統一的に表現されます。各セグメントは `type` フィールドで種別を指定し、`asset_name` フィールドで対応するマップのキーを参照します。
+
+| セグメント種別 | `type` 値 | 再生方式 | 説明 |
+|---|---|---|---|
+| 音声（ナレーション） | `speech` | serial | メイン音声。複数同時不可 |
+| 効果音 | `se` | overlay | 音声に重ねて再生。複数同時可 |
+| BGM | `bgm` | overlay | 音声の裏で再生。排他（停止→切替）。`asset_name` 空 = 停止 |
+| ジングル | `jingle` | serial | 単独再生（音声・BGMと重ならない）。前後に pause が入る |
+
+ジングルはラン境界として機能します: 台本がジングルで区切られ、各ラン内の SE/BGM はそのランにのみ適用されます（ジングルをまたいで継続しません）。
+
 ##### `assets.jingle` マップ値
 
 | フィールド | 型 | 必須/任意 | 説明 |
@@ -222,6 +235,8 @@ vox-radio assemble --in work/script.json --clips work/clips --out work/episode.m
 | `file` | string | 必須 | 音声ファイルパス |
 | `fade_in` | float64 | 任意 | フェードイン時間（秒）。デフォルト: 0 |
 | `fade_out` | float64 | 任意 | フェードアウト時間（秒）。デフォルト: 0 |
+
+OP/ED ジングルは `program.opening_jingle` / `program.ending_jingle` で設定します。中間アイキャッチは LLM が `jingle` セグメントを台本に挿入します。
 
 ##### `assets.se` マップ値
 
@@ -236,5 +251,7 @@ vox-radio assemble --in work/script.json --clips work/clips --out work/episode.m
 |---|---|---|---|
 | `file` | string | 必須 | 音声ファイルパス |
 | `volume` | float64 | 任意 | 音量倍率。デフォルト: 0（Go ゼロ値） |
-| `duck_ratio` | float64 | 任意 | セリフ再生中の音量低減比率。デフォルト: 0 |
+| `duck_ratio` | float64 | 任意 | セリフ再生中の音量低減比率（サイドチェインコンプ）。デフォルト: 0 |
 | `loop` | bool | 任意 | ループ再生するかどうか。デフォルト: false |
+
+BGM の開始・停止は台本の `bgm` セグメントで制御します。`asset_name` にキー名を指定するとその BGM を開始し、空文字列を指定すると停止します。
