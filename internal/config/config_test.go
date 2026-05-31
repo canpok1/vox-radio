@@ -392,6 +392,119 @@ func TestCharacterConfig_SpeakerID_InvalidStyle(t *testing.T) {
 	}
 }
 
+func TestVoicevoxConfig_EffectivePresets_UsesDefaultWhenNotSet(t *testing.T) {
+	cfg := config.VoicevoxConfig{}
+	presets := cfg.EffectivePresets()
+
+	if v, ok := presets.Intonation["標準"]; !ok || v != 1.0 {
+		t.Errorf("Intonation[\"標準\"]: got %v (ok=%v), want 1.0", v, ok)
+	}
+	if v, ok := presets.Pitch["標準"]; !ok || v != 0.0 {
+		t.Errorf("Pitch[\"標準\"]: got %v (ok=%v), want 0.0", v, ok)
+	}
+	if v, ok := presets.Speed["標準"]; !ok || v != 1.0 {
+		t.Errorf("Speed[\"標準\"]: got %v (ok=%v), want 1.0", v, ok)
+	}
+}
+
+func TestVoicevoxConfig_EffectivePresets_UsesYAMLWhenSet(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_with_presets.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	presets := cfg.Voicevox.EffectivePresets()
+
+	if v, ok := presets.Intonation["棒読み"]; !ok || v != 0.0 {
+		t.Errorf("Intonation[\"棒読み\"]: got %v (ok=%v), want 0.0", v, ok)
+	}
+	if v, ok := presets.Pitch["低め"]; !ok || v != -0.05 {
+		t.Errorf("Pitch[\"低め\"]: got %v (ok=%v), want -0.05", v, ok)
+	}
+	if v, ok := presets.Speed["ゆっくり"]; !ok || v != 0.8 {
+		t.Errorf("Speed[\"ゆっくり\"]: got %v (ok=%v), want 0.8", v, ok)
+	}
+}
+
+func TestVoicevoxConfig_EffectivePresets_FallsBackPerAxis(t *testing.T) {
+	p := &config.VoicevoxPresets{
+		Intonation: map[string]float64{"カスタム": 1.3},
+		// Pitch and Speed are nil
+	}
+	cfg := config.VoicevoxConfig{Presets: p}
+	presets := cfg.EffectivePresets()
+
+	if _, ok := presets.Intonation["カスタム"]; !ok {
+		t.Error("Intonation[\"カスタム\"] should be present from YAML")
+	}
+	if v, ok := presets.Pitch["標準"]; !ok || v != 0.0 {
+		t.Errorf("Pitch[\"標準\"]: got %v (ok=%v), want 0.0 (fallback to default)", v, ok)
+	}
+	if v, ok := presets.Speed["標準"]; !ok || v != 1.0 {
+		t.Errorf("Speed[\"標準\"]: got %v (ok=%v), want 1.0 (fallback to default)", v, ok)
+	}
+}
+
+func TestVoicevoxPresets_Resolve_KnownName(t *testing.T) {
+	p := config.VoicevoxPresets{
+		Intonation: map[string]float64{"標準": 1.0},
+		Pitch:      map[string]float64{"標準": 0.0},
+		Speed:      map[string]float64{"標準": 1.0},
+	}
+
+	if v, ok := p.ResolveIntonation("標準"); !ok || v != 1.0 {
+		t.Errorf("ResolveIntonation(\"標準\"): got %v (ok=%v), want 1.0 true", v, ok)
+	}
+	if v, ok := p.ResolvePitch("標準"); !ok || v != 0.0 {
+		t.Errorf("ResolvePitch(\"標準\"): got %v (ok=%v), want 0.0 true", v, ok)
+	}
+	if v, ok := p.ResolveSpeed("標準"); !ok || v != 1.0 {
+		t.Errorf("ResolveSpeed(\"標準\"): got %v (ok=%v), want 1.0 true", v, ok)
+	}
+}
+
+func TestVoicevoxPresets_Resolve_EmptyName(t *testing.T) {
+	p := config.VoicevoxPresets{
+		Intonation: map[string]float64{"標準": 1.0},
+		Pitch:      map[string]float64{"標準": 0.0},
+		Speed:      map[string]float64{"標準": 1.0},
+	}
+
+	if _, ok := p.ResolveIntonation(""); ok {
+		t.Error("ResolveIntonation(\"\") should return ok=false for empty name")
+	}
+	if _, ok := p.ResolvePitch(""); ok {
+		t.Error("ResolvePitch(\"\") should return ok=false for empty name")
+	}
+	if _, ok := p.ResolveSpeed(""); ok {
+		t.Error("ResolveSpeed(\"\") should return ok=false for empty name")
+	}
+}
+
+func TestVoicevoxPresets_Resolve_UnknownName(t *testing.T) {
+	p := config.VoicevoxPresets{
+		Intonation: map[string]float64{"標準": 1.0},
+		Pitch:      map[string]float64{"標準": 0.0},
+		Speed:      map[string]float64{"標準": 1.0},
+	}
+
+	if _, ok := p.ResolveIntonation("存在しない"); ok {
+		t.Error("ResolveIntonation(\"存在しない\") should return ok=false for unknown name")
+	}
+	if _, ok := p.ResolvePitch("存在しない"); ok {
+		t.Error("ResolvePitch(\"存在しない\") should return ok=false for unknown name")
+	}
+	if _, ok := p.ResolveSpeed("存在しない"); ok {
+		t.Error("ResolveSpeed(\"存在しない\") should return ok=false for unknown name")
+	}
+}
+
+func TestLoadConfig_ValidationError_PresetOutOfRange(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_invalid_preset_range.yaml")
+	if err == nil {
+		t.Error("expected error when preset value is out of range")
+	}
+}
+
 func TestLoadProfile_AssetsDescription(t *testing.T) {
 	profile, err := config.LoadProfile("testdata/profile.yaml")
 	if err != nil {

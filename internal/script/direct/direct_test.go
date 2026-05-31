@@ -311,3 +311,46 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildScript_CopiesPresetFields(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "host", Text: "テスト", Intonation: "表現豊か", Pitch: "高め", Speed: "早口"},
+		{SpeakerRole: "guest", Text: "応答"}, // preset fields empty
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.AssetCatalog{SE: []model.AssetCatalogEntry{}, BGM: []model.AssetCatalogEntry{}, Jingle: []model.AssetCatalogEntry{}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+
+	seg0 := got.Segments[0]
+	if seg0.Intonation != "表現豊か" {
+		t.Errorf("Segment[0].Intonation: got %q, want 表現豊か", seg0.Intonation)
+	}
+	if seg0.Pitch != "高め" {
+		t.Errorf("Segment[0].Pitch: got %q, want 高め", seg0.Pitch)
+	}
+	if seg0.Speed != "早口" {
+		t.Errorf("Segment[0].Speed: got %q, want 早口", seg0.Speed)
+	}
+
+	seg1 := got.Segments[1]
+	if seg1.Intonation != "" {
+		t.Errorf("Segment[1].Intonation: got %q, want empty", seg1.Intonation)
+	}
+	if seg1.Pitch != "" {
+		t.Errorf("Segment[1].Pitch: got %q, want empty", seg1.Pitch)
+	}
+	if seg1.Speed != "" {
+		t.Errorf("Segment[1].Speed: got %q, want empty", seg1.Speed)
+	}
+}

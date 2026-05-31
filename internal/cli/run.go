@@ -59,7 +59,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			scripter := script.NewLLMScriptGenerator(
 				summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize")),
-				write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write")),
+				write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg),
 				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 				assetCatalog,
 				intermediateDir,

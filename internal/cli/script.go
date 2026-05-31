@@ -73,11 +73,11 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			switch step {
 			case "":
-				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts, assetCatalog, logger)
+				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg, p, prompts, assetCatalog, logger)
 			case "summarize":
 				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg.LLM, prompts)
 			case "write":
-				return runScriptWrite(context.Background(), workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts)
+				return runScriptWrite(context.Background(), workDir, llmClient, cfg, p, prompts)
 			case "direct":
 				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog)
 			default:
@@ -96,7 +96,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 	return cmd
 }
 
-func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string, assetCatalog model.AssetCatalog, logger *slog.Logger) error {
+func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, cfg *config.Config, p *config.Profile, prompts map[string]string, assetCatalog model.AssetCatalog, logger *slog.Logger) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
@@ -106,15 +106,15 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, l
 	}
 
 	gen := script.NewLLMScriptGenerator(
-		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize")),
-		write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write")),
-		direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct")),
+		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(cfg.LLM, "summarize")),
+		write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg),
+		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 		assetCatalog,
 		workDir,
 		script.WithLogger(logger),
 	)
 
-	scr, err := gen.Generate(ctx, articles, p.Corners, chars)
+	scr, err := gen.Generate(ctx, articles, p.Corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -158,7 +158,7 @@ func runScriptSummarize(ctx context.Context, in, workDir string, c llm.Client, l
 	return nil
 }
 
-func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string) error {
+func runScriptWrite(ctx context.Context, workDir string, c llm.Client, cfg *config.Config, p *config.Profile, prompts map[string]string) error {
 	summariesPath := filepath.Join(workDir, "summaries.json")
 	summariesData, err := os.ReadFile(summariesPath)
 	if err != nil {
@@ -171,10 +171,10 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg co
 
 	cornerSumsMap := sums.CornerMap()
 
-	w := write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write"))
+	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	allLines := make([]model.Line, 0)
 	for _, corner := range p.Corners {
-		lines, err := w.Write(ctx, corner, cornerSumsMap[corner.Title], chars)
+		lines, err := w.Write(ctx, corner, cornerSumsMap[corner.Title], cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}

@@ -102,6 +102,9 @@ func buildScript(lines []model.Line, insertions []insertion) model.Script {
 			Type:        model.SegmentTypeSpeech,
 			SpeakerRole: line.SpeakerRole,
 			Style:       line.Style,
+			Intonation:  line.Intonation,
+			Pitch:       line.Pitch,
+			Speed:       line.Speed,
 			Text:        line.Text,
 		})
 		for _, ins := range insertionMap[i] {
