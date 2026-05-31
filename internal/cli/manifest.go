@@ -10,7 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/manifest"
 	"github.com/canpok1/vox-radio/internal/model"
-	"github.com/canpok1/vox-radio/internal/script/llm"
 	programsummary "github.com/canpok1/vox-radio/internal/script/summary"
 	"github.com/spf13/cobra"
 )
@@ -80,15 +79,7 @@ LLM が生成した要約をマニフェストに追加します。
 					return fmt.Errorf("read summary.md: %w", err)
 				}
 
-				apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
-				llmClient := llm.NewClient(llm.Config{
-					BaseURL:              cfg.LLM.BaseURL,
-					APIKey:               apiKey,
-					Model:                cfg.LLM.Model,
-					Temperature:          cfg.LLM.Temperature,
-					MaxRetries:           cfg.LLM.MaxRetries,
-					MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
-				})
+				llmClient := newLLMClient(cfg)
 
 				s := programsummary.NewLLMProgramSummarizer(llmClient, string(summaryPromptData), stepTemp(cfg.LLM, "summary"))
 				programSummary, err = s.Summarize(context.Background(), scr)

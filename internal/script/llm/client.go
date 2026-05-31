@@ -132,12 +132,10 @@ func (c *openAIClient) throttle(ctx context.Context) error {
 	c.mu.Lock()
 	now := time.Now()
 	next := c.lastRequestTime.Add(interval)
-	if next.After(now) {
-		c.lastRequestTime = next
-	} else {
-		c.lastRequestTime = now
+	if next.Before(now) {
 		next = now
 	}
+	c.lastRequestTime = next
 	c.mu.Unlock()
 
 	waitDur := time.Until(next)

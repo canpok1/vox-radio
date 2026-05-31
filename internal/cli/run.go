@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/collect"
@@ -11,7 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/pipeline"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/direct"
-	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
 	programsummary "github.com/canpok1/vox-radio/internal/script/summary"
 	"github.com/canpok1/vox-radio/internal/script/write"
@@ -49,15 +47,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return err
 			}
 
-			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
-			llmClient := llm.NewClient(llm.Config{
-				BaseURL:              cfg.LLM.BaseURL,
-				APIKey:               apiKey,
-				Model:                cfg.LLM.Model,
-				Temperature:          cfg.LLM.Temperature,
-				MaxRetries:           cfg.LLM.MaxRetries,
-				MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
-			})
+			llmClient := newLLMClient(cfg)
 
 			prompts, err := loadPrompts(promptsDir)
 			if err != nil {

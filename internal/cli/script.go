@@ -56,15 +56,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return err
 			}
 
-			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
-			llmClient := llm.NewClient(llm.Config{
-				BaseURL:              cfg.LLM.BaseURL,
-				APIKey:               apiKey,
-				Model:                cfg.LLM.Model,
-				Temperature:          cfg.LLM.Temperature,
-				MaxRetries:           cfg.LLM.MaxRetries,
-				MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
-			})
+			llmClient := newLLMClient(cfg)
 
 			prompts, err := loadPrompts(promptsDir)
 			if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/logging"
+	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +46,18 @@ func setupLogger(commandName string, logDir string) (*slog.Logger, *os.File, err
 		logDir = "logs"
 	}
 	return logging.NewSetup(time.Now(), commandName, logDir)
+}
+
+func newLLMClient(cfg *config.Config) llm.Client {
+	apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
+	return llm.NewClient(llm.Config{
+		BaseURL:              cfg.LLM.BaseURL,
+		APIKey:               apiKey,
+		Model:                cfg.LLM.Model,
+		Temperature:          cfg.LLM.Temperature,
+		MaxRetries:           cfg.LLM.MaxRetries,
+		MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
+	})
 }
 
 func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, error) {
