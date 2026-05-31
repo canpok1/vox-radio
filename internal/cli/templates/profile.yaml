@@ -12,6 +12,9 @@ program:
   segment_pause_sec: 0.3
   # 番組全体の目標収録時間（秒）
   target_duration_sec: 240
+  # OP/ED ジングルキー（assets.jingle のキー名を指定。不要な場合は行ごと削除）
+  # opening_jingle: opening
+  # ending_jingle: ending
 
 # コーナー定義（番組を構成する各コーナーを順番に記述）
 corners:

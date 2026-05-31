@@ -3,6 +3,8 @@ program:
   description: "テスト用"
   segment_pause_sec: 0.3
   target_duration_sec: 75
+  opening_jingle: opening
+  ending_jingle: ending
 
 corners:
   - title: "オープニング"
@@ -25,6 +27,7 @@ corners:
 assets:
   jingle:
     opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
+    ending:  { file: assets/jingle/ending.mp3,  fade_in: 0.5, fade_out: 1.0 }
   se:
     chime: { file: assets/se/chime.wav, volume: 0.8 }
   bgm:

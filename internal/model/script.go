@@ -5,6 +5,7 @@ type SegmentType string
 const (
 	SegmentTypeSpeech SegmentType = "speech"
 	SegmentTypeSE     SegmentType = "se"
+	SegmentTypeJingle SegmentType = "jingle"
 )
 
 type ScriptSegment struct {
@@ -13,6 +14,7 @@ type ScriptSegment struct {
 	Style       string      `json:"style,omitempty"`
 	Text        string      `json:"text,omitempty"`
 	SEName      string      `json:"se_name,omitempty"`
+	AssetName   string      `json:"asset_name,omitempty"`
 }
 
 type Script struct {

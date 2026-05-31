@@ -1,6 +1,10 @@
 {
   "segments": [
     {
+      "type": "jingle",
+      "asset_name": "opening"
+    },
+    {
       "type": "speech",
       "speaker_role": "host",
       "text": "今日のテックニュースを始めましょう。"
@@ -22,6 +26,10 @@
       "type": "speech",
       "speaker_role": "host",
       "text": "本日のニュースは以上です。また明日！"
+    },
+    {
+      "type": "jingle",
+      "asset_name": "ending"
     }
   ]
 }
