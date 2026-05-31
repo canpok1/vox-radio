@@ -43,5 +43,9 @@ go.work.sum
 # vox-actor
 .vox-actor/
 
-# 生成物（中間生成物・最終成果物）
+# 生成物（中間生成物・最終成果物・ログ）
 output/
+logs/
+
+# Claudeのスケジュールされたタスクのロックファイル
+.claude/scheduled_tasks.lock
