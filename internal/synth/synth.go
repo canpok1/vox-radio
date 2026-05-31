@@ -43,7 +43,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 			continue
 		}
 
-		speakerID := s.resolveSpeakerID(seg.SpeakerRole)
+		speakerID := s.resolveSpeakerID(seg.SpeakerRole, seg.Style)
 		clipFile := fmt.Sprintf("clip_%03d.wav", clipIdx)
 		clipPath := filepath.Join(outDir, clipFile)
 
@@ -61,6 +61,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 			File:        clipFile,
 			DurationSec: dur,
 			SpeakerRole: seg.SpeakerRole,
+			Style:       seg.Style,
 			Text:        seg.Text,
 		})
 		clipIdx++
@@ -96,9 +97,9 @@ func (s *Synth) synthesize(ctx context.Context, text string, speakerID int, outP
 	return nil
 }
 
-// resolveSpeakerID resolves a character ID to a VOICEVOX speaker ID
-// via the character catalog: charID → CharacterConfig → DefaultStyle → Styles[DefaultStyle].
-func (s *Synth) resolveSpeakerID(charID string) int {
+// resolveSpeakerID resolves a character ID and optional style to a VOICEVOX speaker ID.
+// Falls back to the character's default style when style is empty or not found.
+func (s *Synth) resolveSpeakerID(charID, style string) int {
 	if s.Config == nil {
 		return 0
 	}
@@ -106,6 +107,6 @@ func (s *Synth) resolveSpeakerID(charID string) int {
 	if !ok {
 		return 0
 	}
-	id, _ := ch.DefaultSpeakerID()
+	id, _ := ch.SpeakerID(style)
 	return id
 }

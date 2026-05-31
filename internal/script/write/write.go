@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -23,6 +24,7 @@ var linesSchema = json.RawMessage(`{
         "required": ["speaker_role", "text"],
         "properties": {
           "speaker_role": {"type": "string"},
+          "style":        {"type": "string"},
           "text":         {"type": "string"}
         },
         "additionalProperties": false
@@ -108,12 +110,19 @@ func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConf
 			fmt.Fprintf(&sb, "- %s（%s）\n", charID, role)
 			continue
 		}
-		fmt.Fprintf(&sb, "- %s（%s）: 名前=%s、一人称=%s、語尾=[%s]、性格=[%s]\n",
+		styleNames := make([]string, 0, len(ch.Styles))
+		for s := range ch.Styles {
+			styleNames = append(styleNames, s)
+		}
+		sort.Strings(styleNames)
+		fmt.Fprintf(&sb, "- %s（%s）: 名前=%s、一人称=%s、語尾=[%s]、性格=[%s]、スタイル=[%s]（デフォルト: %s）\n",
 			charID, role,
 			ch.Name,
 			ch.Pronoun,
 			strings.Join(ch.SpeechSuffix, ", "),
 			strings.Join(ch.Personality, ", "),
+			strings.Join(styleNames, ", "),
+			ch.DefaultStyle,
 		)
 	}
 	return sb.String()

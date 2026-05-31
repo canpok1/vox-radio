@@ -6,6 +6,7 @@ type ClipMeta struct {
 	File        string  `json:"file"`
 	DurationSec float64 `json:"duration_sec"`
 	SpeakerRole string  `json:"speaker_role"`
+	Style       string  `json:"style,omitempty"`
 	Text        string  `json:"text"`
 }
 

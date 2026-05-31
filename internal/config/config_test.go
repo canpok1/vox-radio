@@ -276,3 +276,45 @@ func TestValidateProfileCast_UnknownCharacter(t *testing.T) {
 		t.Error("expected error for unknown character in cast")
 	}
 }
+
+func TestCharacterConfig_SpeakerID_ValidStyle(t *testing.T) {
+	ch := config.CharacterConfig{
+		DefaultStyle: "ノーマル",
+		Styles:       map[string]int{"ノーマル": 3, "なみだめ": 76},
+	}
+	id, ok := ch.SpeakerID("なみだめ")
+	if !ok {
+		t.Fatal("SpeakerID: expected ok=true for valid style")
+	}
+	if id != 76 {
+		t.Errorf("SpeakerID: got %d, want 76", id)
+	}
+}
+
+func TestCharacterConfig_SpeakerID_EmptyStyle(t *testing.T) {
+	ch := config.CharacterConfig{
+		DefaultStyle: "ノーマル",
+		Styles:       map[string]int{"ノーマル": 3, "なみだめ": 76},
+	}
+	id, ok := ch.SpeakerID("")
+	if !ok {
+		t.Fatal("SpeakerID: expected ok=true with empty style (fallback to default)")
+	}
+	if id != 3 {
+		t.Errorf("SpeakerID: got %d, want 3 (default)", id)
+	}
+}
+
+func TestCharacterConfig_SpeakerID_InvalidStyle(t *testing.T) {
+	ch := config.CharacterConfig{
+		DefaultStyle: "ノーマル",
+		Styles:       map[string]int{"ノーマル": 3, "なみだめ": 76},
+	}
+	id, ok := ch.SpeakerID("存在しない")
+	if !ok {
+		t.Fatal("SpeakerID: expected ok=true when invalid style falls back to default")
+	}
+	if id != 3 {
+		t.Errorf("SpeakerID: got %d, want 3 (default)", id)
+	}
+}

@@ -63,6 +63,26 @@ collect → script → synth → assemble → publish
 
 `vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
 
+#### キャラカタログとスタイル選択
+
+`vox-radio.yaml` の `characters` セクションには、キャラIDごとに複数の音声スタイルを定義できます。`default_style` は `style` 未指定時のフォールバックスタイルです。
+
+```yaml
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ", "〜なのだ"]
+    personality: ["元気", "明るい"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3    # style名 → VOICEVOX speaker_id
+      あまあま: 1
+      なみだめ: 76
+```
+
+台本生成（`script` コマンド）では、LLM がセリフの感情に応じてスタイルを選択します。`synth` コマンドは行ごとの `style` フィールドを読み取り、指定されたスタイルの `speaker_id` で合成します。`style` が未指定または不正な場合は `default_style` にフォールバックします。
+
 プロファイルは `profiles/` ディレクトリに配置します。サンプルは `profiles/tech/`（技術ニュース用）と `profiles/test/`（動作確認用）です。詳細は [profiles/README.md](profiles/README.md) を参照してください。
 
 ### 実行例

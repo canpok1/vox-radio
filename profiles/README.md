@@ -94,6 +94,7 @@ assets:
     - `feeds`: RSS フィードのリスト（`url` / `max_items`）
     - `articles`: 個別記事 URL のリスト
 - キャラIDは `vox-radio.yaml` の `characters` セクションで定義したIDと一致させること
+- 各キャラクターは `styles`（style名 → VOICEVOX speaker_id のマップ）と `default_style` を持つ。台本生成時に LLM がセリフの感情に応じてスタイルを選択し、`synth` がそのスタイルの `speaker_id` で合成する。`style` 未指定・不正時は `default_style` にフォールバック
 
 `assets.*/file` のパスは、このプロファイルファイルが置かれているディレクトリからの相対パスで解決されます。
 
