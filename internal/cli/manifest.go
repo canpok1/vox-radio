@@ -36,8 +36,8 @@ LLM が生成した要約をマニフェストに追加します。
 
 例:
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/articles.json --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/script.json --audio output/episode.mp3 --out output/manifest.json`,
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/01_articles.json --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/04_script.json --audio output/episode.mp3 --out output/manifest.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("manifest", "")
 			if err != nil {

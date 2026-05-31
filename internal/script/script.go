@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
@@ -98,7 +99,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	sumLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(sumStart).Seconds()))
 
 	allSummaries := model.Summaries{Corners: cornerSummaries}
-	if err := g.saveIntermediate("summaries.json", allSummaries); err != nil {
+	if err := g.saveIntermediate(fileio.FileSummaries, allSummaries); err != nil {
 		return model.Script{}, err
 	}
 
@@ -109,7 +110,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 	}
 	cornerLines = g.regenIfNeeded(ctx, cornerLines, corners, allSummaries, chars)
 	allLines := flatten(cornerLines)
-	if err := g.saveIntermediate("lines.json", model.Lines{Lines: allLines}); err != nil {
+	if err := g.saveIntermediate(fileio.FileLines, model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
 	}
 

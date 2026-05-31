@@ -3,6 +3,8 @@ package script_test
 import (
 	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -287,5 +289,32 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	logs := buf.String()
 	if !strings.Contains(logs, "完了") {
 		t.Errorf("should log complete: %q", logs)
+	}
+}
+
+func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T) {
+	workDir := t.TempDir()
+	articles := corneredArticles("AIコーナー",
+		model.Article{URL: "https://example.com/1", Title: "AI", Body: "本文"},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+
+	gen := script.NewLLMScriptGenerator(
+		&mockSummarizer{},
+		&mockWriter{lines: lines},
+		&mockDirector{},
+		model.SECatalog{},
+		workDir,
+	)
+
+	if _, err := gen.Generate(context.Background(), articles, testCorners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, name := range []string{"02_summaries.json", "03_lines.json"} {
+		path := filepath.Join(workDir, name)
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("expected intermediate file %q to exist: %v", name, err)
+		}
 	}
 }
