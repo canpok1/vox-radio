@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/mediainfo"
@@ -67,6 +68,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 
 	for i, seg := range speechSegs {
 		logger.Info(fmt.Sprintf("クリップを合成中 (%d/%d)", i+1, len(speechSegs)))
+		logger.Debug("クリップ詳細", "speaker", seg.SpeakerRole, "style", seg.Style, "text_chars", utf8.RuneCountInString(seg.Text))
 
 		speakerID := s.resolveSpeakerID(seg.SpeakerRole, seg.Style)
 		clipFile := fmt.Sprintf("clip_%03d.wav", i)
@@ -80,6 +82,8 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		if err != nil {
 			return nil, fmt.Errorf("get duration of %s: %w", clipFile, err)
 		}
+
+		logger.Debug("クリップ出力", "file", clipFile, "duration_sec", dur)
 
 		clips = append(clips, model.ClipMeta{
 			Index:       i,
