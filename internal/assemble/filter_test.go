@@ -438,11 +438,14 @@ func TestBuildFFmpegArgs_LoudnormBeforeBGMMix(t *testing.T) {
 	loudnormIdx := -1
 	bgmFilterIdx := -1
 	for i, f := range filters {
-		if strings.Contains(f, "loudnorm") && loudnormIdx == -1 {
+		if loudnormIdx == -1 && strings.Contains(f, "loudnorm") {
 			loudnormIdx = i
 		}
-		if (strings.Contains(f, "aloop") || strings.Contains(f, "sidechaincompress")) && bgmFilterIdx == -1 {
+		if bgmFilterIdx == -1 && (strings.Contains(f, "aloop") || strings.Contains(f, "sidechaincompress")) {
 			bgmFilterIdx = i
+		}
+		if loudnormIdx != -1 && bgmFilterIdx != -1 {
+			break
 		}
 	}
 	if loudnormIdx == -1 {
@@ -461,7 +464,6 @@ func TestBuildFFmpegArgs_LoudnormBeforeBGMMix(t *testing.T) {
 // alimiter (peak protection), not a dynamic loudnorm that would cause BGM pumping.
 func TestBuildFFmpegArgs_FinalOutputIsAlimiter(t *testing.T) {
 	for _, name := range []string{"no BGM", "with BGM"} {
-		name := name
 		t.Run(name, func(t *testing.T) {
 			assets := config.AssetsConfig{}
 			if name == "with BGM" {

@@ -9,6 +9,14 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+// speechNormFilter normalizes speech to EBU R128 before BGM mixing.
+// The TP ceiling (-1.5 dB) must match outputLimiterTP so the two stages are calibrated together.
+const (
+	speechNormFilter = "loudnorm=I=-16:TP=-1.5:LRA=11"
+	// outputLimiterTP is the linear equivalent of the TP ceiling used in speechNormFilter (10^(-1.5/20) ≈ 0.841).
+	outputLimiterTP = 0.841
+)
+
 // BuildContext holds all data needed to build the ffmpeg command.
 type BuildContext struct {
 	Script   model.Script
@@ -70,7 +78,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 
 	// Normalize speech before any mixing.
 	// This keeps BGM/SE/jingle levels independent of speech amplitude across episodes.
-	b.addFilter(fmt.Sprintf("%sloudnorm=I=-16:TP=-1.5:LRA=11[speech_norm]", speechLabel))
+	b.addFilter(fmt.Sprintf("%s%s[speech_norm]", speechLabel, speechNormFilter))
 	currentLabel := "[speech_norm]"
 
 	// If BGM is configured, split normalized speech so it can be used as sidechain.
@@ -164,8 +172,8 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	}
 
 	// Peak limiter: prevents clipping after BGM mix without dynamic re-normalization.
-	// limit=0.841 ≈ -1.5 dB TP; level=0 disables auto gain equalization.
-	b.addFilter(fmt.Sprintf("%salimiter=limit=0.841:level=0[out]", currentLabel))
+	// level=0 disables auto gain equalization.
+	b.addFilter(fmt.Sprintf("%salimiter=limit=%.3f:level=0[out]", currentLabel, outputLimiterTP))
 
 	return &FFmpegArgs{
 		Inputs:        b.inputs,
