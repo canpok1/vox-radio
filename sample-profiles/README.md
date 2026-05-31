@@ -1,11 +1,11 @@
-# profiles/
+# sample-profiles/
 
 ジャンル別設定（プロファイル）を格納するディレクトリです。
 
 ## ディレクトリ構成
 
 ```
-profiles/
+sample-profiles/
   tech/
     profile.yaml        # 技術ニュース用プロファイル
     assets/
@@ -20,19 +20,19 @@ profiles/
 
 ## プロファイルの切り替え
 
-コマンドの `--profile` フラグでプロファイルファイルのパスを指定します。
+コマンドの `--profile` フラグでプロファイルファイルのパスを指定します（必須）。
 
 ```bash
 # 技術ニュース用プロファイルで実行
-vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
+vox-radio collect --out work/articles.json --profile sample-profiles/tech/profile.yaml
 
-# 動作確認用プロファイルで実行（デフォルト）
-vox-radio collect --out work/articles.json
+# 動作確認用プロファイルで実行
+vox-radio collect --out work/articles.json --profile sample-profiles/test/profile.yaml
 ```
 
 ## 新しいジャンルの追加
 
-1. `profiles/<genre>/` ディレクトリを作成する
+1. `sample-profiles/<genre>/` ディレクトリを作成する
 2. `profile.yaml` を作成する（既存プロファイルをコピーして編集）
 3. `assets/` に音声素材を配置する
 

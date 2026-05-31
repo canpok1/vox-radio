@@ -11,7 +11,7 @@ Corners without a source field are skipped.
 
 Example:
   vox-radio collect --out work/articles.json
-  vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
+  vox-radio collect --out work/articles.json --profile sample-profiles/tech/profile.yaml
 
 ```
 vox-radio collect [flags]
@@ -22,7 +22,7 @@ vox-radio collect [flags]
 ```
   -h, --help             help for collect
       --out string       output articles.json path (required)
-      --profile string   profile YAML file path (default "profiles/test/profile.yaml")
+      --profile string   profile YAML file path (required)
 ```
 
 ### SEE ALSO

@@ -41,7 +41,7 @@ vox-radio.yaml is automatically loaded from the current directory.
 
 Example:
   vox-radio run
-  vox-radio run --out-dir output --profile profiles/tech/profile.yaml
+  vox-radio run --out-dir output --profile sample-profiles/tech/profile.yaml
   vox-radio run --hosting ghpages --date 2026-01-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, p, err := loadConfigAndProfile(profilePath)
@@ -117,13 +117,14 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "output", "output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/)")
-	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
+	cmd.Flags().StringVar(&profilePath, "profile", "", "profile YAML file path (required)")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
 	cmd.Flags().StringVar(&title, "title", "", "episode title (default: <date> <program.title>)")
 	cmd.Flags().StringVar(&description, "description", "", "episode description")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "base URL for audio/feed URLs (default: site_url from profile)")
 	cmd.Flags().StringVar(&hostingType, "hosting", "local", "hosting type: local or ghpages")
+	_ = cmd.MarkFlagRequired("profile")
 
 	return cmd
 }

@@ -19,8 +19,9 @@ corners:
     target_duration_sec: 45
     source:
       feeds:
-        - url: https://example.com/rss.xml
-          max_items: 1
+        - url: https://zenn.dev/feed
+          max_items: 5
+      articles:
 
 assets:
   jingle:

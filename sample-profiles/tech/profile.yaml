@@ -20,19 +20,17 @@ corners:
   - title: "今日のテックニュース"
     content: "テック記事を2〜3本、噛み砕いて紹介"
     cast:
-      zundamon: "司会"
-      metan: "解説役"
+      zundamon: "進行役、ボケ担当、あまり詳しくない設定"
+      metan: "解説役、ツッコミ担当"
     target_duration_sec: 180
     source:
       feeds:
-        - url: https://example.com/rss.xml
+        - url: https://zenn.dev/feed
           max_items: 5
-        - url: https://another.example.com/feed
-          max_items: 3
-      articles:
-        - https://example.com/articles/123
+        - url: https://qiita.com/popular-items/feed
+          max_items: 5
   - title: "エンディング"
-    content: "まとめと次回予告"
+    content: "まとめ"
     cast:
       zundamon: "進行役"
     target_duration_sec: 30
