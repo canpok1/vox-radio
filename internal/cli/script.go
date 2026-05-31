@@ -228,10 +228,19 @@ func loadPrompts(dir string) (map[string]string, error) {
 
 func buildAssetCatalog(assets config.AssetsConfig) model.AssetCatalog {
 	return model.AssetCatalog{
-		SE:     slices.Sorted(maps.Keys(assets.SE)),
-		BGM:    slices.Sorted(maps.Keys(assets.BGM)),
-		Jingle: slices.Sorted(maps.Keys(assets.Jingle)),
+		SE:     sortedKeys(assets.SE),
+		BGM:    sortedKeys(assets.BGM),
+		Jingle: sortedKeys(assets.Jingle),
 	}
+}
+
+// sortedKeys returns a sorted, non-nil slice of map keys.
+// slices.Sorted returns nil for empty iterators, causing JSON to marshal as null instead of [].
+func sortedKeys[V any](m map[string]V) []string {
+	if len(m) == 0 {
+		return make([]string, 0)
+	}
+	return slices.Sorted(maps.Keys(m))
 }
 
 func stepTemp(llmCfg config.LLMConfig, name string) float64 {
