@@ -116,6 +116,17 @@ func (c CharacterConfig) DefaultSpeakerID() (int, bool) {
 	return id, ok
 }
 
+// SpeakerID returns the VOICEVOX speaker ID for the given style name.
+// Falls back to the default style if style is empty or not found in Styles.
+func (c CharacterConfig) SpeakerID(style string) (int, bool) {
+	if style != "" {
+		if id, ok := c.Styles[style]; ok {
+			return id, true
+		}
+	}
+	return c.DefaultSpeakerID()
+}
+
 // Config holds genre-independent common settings.
 // It is loaded from vox-radio.yaml at the repository root.
 type Config struct {

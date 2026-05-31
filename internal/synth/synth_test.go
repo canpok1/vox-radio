@@ -234,6 +234,76 @@ func TestNew_StoresConfig(t *testing.T) {
 	}
 }
 
+func TestSynth_Run_UsesStyleFromSegment(t *testing.T) {
+	var gotSpeakers []int
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, _ string, speaker int) (*AudioQuery, error) {
+				gotSpeakers = append(gotSpeakers, speaker)
+				return &AudioQuery{SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3, "なみだめ": 76}},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Style: "なみだめ", Text: "A"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Style: "", Text: "B"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Style: "存在しない", Text: "C"},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := s.Run(context.Background(), script, dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []int{76, 3, 3}
+	if len(gotSpeakers) != len(want) {
+		t.Fatalf("speakers count: got %d, want %d", len(gotSpeakers), len(want))
+	}
+	for i := range want {
+		if gotSpeakers[i] != want[i] {
+			t.Errorf("speaker[%d]: got %d, want %d", i, gotSpeakers[i], want[i])
+		}
+	}
+}
+
+func TestSynth_Run_StoresStyleInClipMeta(t *testing.T) {
+	s := newTestSynth()
+	s.Config = &config.Config{
+		Characters: map[string]config.CharacterConfig{
+			"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3, "なみだめ": 76}},
+		},
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Style: "なみだめ", Text: "ぐすん"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Style: "", Text: "普通"},
+		},
+	}
+
+	dir := t.TempDir()
+	meta, err := s.Run(context.Background(), script, dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if meta.Clips[0].Style != "なみだめ" {
+		t.Errorf("clip[0].Style: got %q, want なみだめ", meta.Clips[0].Style)
+	}
+	if meta.Clips[1].Style != "" {
+		t.Errorf("clip[1].Style: got %q, want empty", meta.Clips[1].Style)
+	}
+}
+
 func TestSynth_Run_EmptyClipsJSON_WhenNoSpeechSegments(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{

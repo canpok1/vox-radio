@@ -104,6 +104,32 @@ func TestLLMDirector_Direct_SEAfterLastLine(t *testing.T) {
 	}
 }
 
+func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"se_insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{lines}}", 0)
+
+	lines := []model.Line{
+		{SpeakerRole: "zundamon", Style: "なみだめ", Text: "ぐすん"},
+		{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
+	}
+
+	got, err := d.Direct(context.Background(), lines, model.SECatalog{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[0].Style != "なみだめ" {
+		t.Errorf("Segment[0].Style: got %q, want なみだめ", got.Segments[0].Style)
+	}
+	if got.Segments[1].Style != "" {
+		t.Errorf("Segment[1].Style: got %q, want empty", got.Segments[1].Style)
+	}
+}
+
 func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{lines}}", 0)

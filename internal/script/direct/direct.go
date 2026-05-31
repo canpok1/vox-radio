@@ -97,6 +97,7 @@ func buildScript(lines []model.Line, insertions []seInsertion) model.Script {
 		segments = append(segments, model.ScriptSegment{
 			Type:        model.SegmentTypeSpeech,
 			SpeakerRole: line.SpeakerRole,
+			Style:       line.Style,
 			Text:        line.Text,
 		})
 		for _, ins := range insertionMap[i] {

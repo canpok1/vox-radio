@@ -101,6 +101,58 @@ func TestLLMWriter_Write_LLMError(t *testing.T) {
 	}
 }
 
+func TestLLMWriter_Write_PromptContainsStyles(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "cast={{cast_info}}", 0)
+
+	corner := config.CornerConfig{Cast: map[string]string{"zundamon": "司会"}}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {
+			Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"},
+			DefaultStyle: "ノーマル",
+			Styles:       map[string]int{"ノーマル": 3, "なみだめ": 76},
+		},
+	}
+
+	_, _ = w.Write(context.Background(), corner, nil, chars)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "なみだめ") {
+		t.Errorf("prompt should contain style name 'なみだめ', got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "ノーマル") {
+		t.Errorf("prompt should contain style name 'ノーマル', got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_LineStyleParsed(t *testing.T) {
+	linesWithStyleJSON := json.RawMessage(`{
+		"lines": [
+			{"speaker_role": "zundamon", "style": "なみだめ", "text": "ぐすん"},
+			{"speaker_role": "metan", "text": "よろしく"}
+		]
+	}`)
+	mc := &mockClient{response: linesWithStyleJSON}
+	w := write.NewLLMWriter(mc, "{{corner}}", 0)
+
+	got, err := w.Write(context.Background(), config.CornerConfig{}, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("Lines: got %d, want 2", len(got))
+	}
+	if got[0].Style != "なみだめ" {
+		t.Errorf("Style: got %q, want なみだめ", got[0].Style)
+	}
+	if got[1].Style != "" {
+		t.Errorf("Style for line without style: got %q, want empty", got[1].Style)
+	}
+}
+
 func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "c={{corner}}", 0)
