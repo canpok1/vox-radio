@@ -32,21 +32,24 @@ type FeedsConfig struct {
 }
 
 type JingleEntry struct {
-	File    string  `yaml:"file"`
-	FadeIn  float64 `yaml:"fade_in"`
-	FadeOut float64 `yaml:"fade_out"`
+	File        string  `yaml:"file"`
+	FadeIn      float64 `yaml:"fade_in"`
+	FadeOut     float64 `yaml:"fade_out"`
+	Description string  `yaml:"description,omitempty"`
 }
 
 type SEEntry struct {
-	File   string  `yaml:"file"`
-	Volume float64 `yaml:"volume"`
+	File        string  `yaml:"file"`
+	Volume      float64 `yaml:"volume"`
+	Description string  `yaml:"description,omitempty"`
 }
 
 type BGMEntry struct {
-	File      string  `yaml:"file"`
-	Volume    float64 `yaml:"volume"`
-	DuckRatio float64 `yaml:"duck_ratio"`
-	Loop      bool    `yaml:"loop"`
+	File        string  `yaml:"file"`
+	Volume      float64 `yaml:"volume"`
+	DuckRatio   float64 `yaml:"duck_ratio"`
+	Loop        bool    `yaml:"loop"`
+	Description string  `yaml:"description,omitempty"`
 }
 
 type AssetsConfig struct {

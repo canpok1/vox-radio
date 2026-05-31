@@ -26,9 +26,9 @@ corners:
 
 assets:
   jingle:
-    opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
+    opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5, description: "番組冒頭で流すオープニングジングル" }
     ending:  { file: assets/jingle/ending.mp3,  fade_in: 0.5, fade_out: 1.0 }
   se:
-    chime: { file: assets/se/chime.wav, volume: 0.8 }
+    chime: { file: assets/se/chime.wav, volume: 0.8, description: "話題の切り替わりに鳴らす明るいチャイム音" }
   bgm:
-    talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }
+    talk_bgm: { file: assets/bgm/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true, description: "雑談向けの落ち着いたBGM" }
