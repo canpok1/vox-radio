@@ -18,9 +18,14 @@ func TestRootHelp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	for _, sub := range []string{"collect", "script", "synth", "assemble", "publish", "prune", "run"} {
+	for _, sub := range []string{"collect", "script", "synth", "assemble", "manifest", "run"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("root help missing subcommand %q", sub)
+		}
+	}
+	for _, sub := range []string{"publish", "prune"} {
+		if strings.Contains(out, sub) {
+			t.Errorf("root help should not contain removed subcommand %q", sub)
 		}
 	}
 }
@@ -81,42 +86,6 @@ func TestAssembleMissingOut(t *testing.T) {
 	}
 }
 
-func TestPublishMissingIn(t *testing.T) {
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"publish", "--out-dir", "/tmp"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error when --in is missing")
-	}
-}
-
-func TestPublishMissingOutDir(t *testing.T) {
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"publish", "--in", "/tmp/ep.mp3"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error when --out-dir is missing")
-	}
-}
-
-func TestPublishInvalidHosting(t *testing.T) {
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"publish", "--in", "/tmp/ep.mp3", "--out-dir", "/tmp", "--hosting", "invalid"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error for invalid --hosting value")
-	}
-}
-
-func TestPruneMissingOutDir(t *testing.T) {
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"prune"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error when --out-dir is missing")
-	}
-}
-
 func TestScriptMissingOut(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"script"})
@@ -129,7 +98,7 @@ func TestScriptMissingOut(t *testing.T) {
 func TestProfileRequired(t *testing.T) {
 	// --profile はデフォルト値を持たず、各サブコマンドで必須であること。
 	// assemble は assets を任意で読み込むため --profile は optional（意図的に対象外）。
-	for _, sub := range []string{"collect", "script", "publish", "prune", "run", "manifest"} {
+	for _, sub := range []string{"collect", "script", "run", "manifest"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			errBuf := &bytes.Buffer{}
@@ -154,7 +123,7 @@ func TestRootCmdDisableAutoGenTag(t *testing.T) {
 }
 
 func TestSubcommandHelp(t *testing.T) {
-	for _, sub := range []string{"collect", "synth", "assemble", "publish", "prune", "script", "run"} {
+	for _, sub := range []string{"collect", "synth", "assemble", "manifest", "script", "run"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			buf := &bytes.Buffer{}

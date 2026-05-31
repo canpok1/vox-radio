@@ -11,7 +11,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/pipeline"
-	"github.com/canpok1/vox-radio/internal/publish"
 )
 
 // --- stubs ---
@@ -68,28 +67,6 @@ func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta
 	return s.result, s.err
 }
 
-type stubPublisher struct {
-	err             error
-	called          bool
-	capturedMp3Path string
-}
-
-func (s *stubPublisher) Run(_ context.Context, mp3Path string, _ publish.Options) error {
-	s.called = true
-	s.capturedMp3Path = mp3Path
-	return s.err
-}
-
-type stubPruner struct {
-	err    error
-	called bool
-}
-
-func (s *stubPruner) Run(_ context.Context) error {
-	s.called = true
-	return s.err
-}
-
 // --- helpers ---
 
 type stubs struct {
@@ -97,8 +74,6 @@ type stubs struct {
 	scr *stubScripter
 	syn *stubSynther
 	asm *stubAssembler
-	pub *stubPublisher
-	pru *stubPruner
 }
 
 func defaultStubs() stubs {
@@ -107,8 +82,6 @@ func defaultStubs() stubs {
 		scr: &stubScripter{script: model.Script{Segments: make([]model.ScriptSegment, 0)}},
 		syn: &stubSynther{clips: &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}},
 		asm: &stubAssembler{result: &assemble.Result{}},
-		pub: &stubPublisher{},
-		pru: &stubPruner{},
 	}
 }
 
@@ -119,8 +92,6 @@ func newRunner(s stubs) *pipeline.Runner {
 		Scripter:  s.scr,
 		Synther:   s.syn,
 		Assembler: s.asm,
-		Publisher: s.pub,
-		Pruner:    s.pru,
 	}
 }
 
@@ -145,12 +116,6 @@ func TestRunner_Run_CallsAllSteps(t *testing.T) {
 	}
 	if !s.asm.called {
 		t.Error("Assembler.Run not called")
-	}
-	if !s.pub.called {
-		t.Error("Publisher.Run not called")
-	}
-	if !s.pru.called {
-		t.Error("Pruner.Run not called")
 	}
 }
 
@@ -184,9 +149,6 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 	}
 	if s.asm.capturedOutPath != fileio.EpisodePath(outDir) {
 		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, fileio.EpisodePath(outDir))
-	}
-	if s.pub.capturedMp3Path != fileio.EpisodePath(outDir) {
-		t.Errorf("Publisher.Run mp3Path = %q, want %q", s.pub.capturedMp3Path, fileio.EpisodePath(outDir))
 	}
 }
 
@@ -260,31 +222,5 @@ func TestRunner_Run_AssembleError(t *testing.T) {
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from Assembler, got nil")
-	}
-	if s.pub.called {
-		t.Error("Publisher should not be called after Assembler error")
-	}
-}
-
-func TestRunner_Run_PublishError(t *testing.T) {
-	outDir := t.TempDir()
-	s := defaultStubs()
-	s.pub.err = errors.New("publish error")
-
-	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
-		t.Fatal("expected error from Publisher, got nil")
-	}
-	if s.pru.called {
-		t.Error("Pruner should not be called after Publisher error")
-	}
-}
-
-func TestRunner_Run_PruneError(t *testing.T) {
-	outDir := t.TempDir()
-	s := defaultStubs()
-	s.pru.err = errors.New("prune error")
-
-	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
-		t.Fatal("expected error from Pruner, got nil")
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/manifest"
 	"github.com/canpok1/vox-radio/internal/model"
-	"github.com/canpok1/vox-radio/internal/publish"
 )
 
 // Collector gathers articles per corner from configured sources.
@@ -33,24 +32,13 @@ type Assembler interface {
 	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) (*assemble.Result, error)
 }
 
-// Publisher publishes the episode to a hosting backend.
-type Publisher interface {
-	Run(ctx context.Context, mp3Path string, opts publish.Options) error
-}
-
-// Pruner removes old episodes beyond the configured keep limit.
-type Pruner interface {
-	Run(ctx context.Context) error
-}
-
 // Options configures a single pipeline run.
 type Options struct {
 	OutDir      string
-	PublishOpts publish.Options
 	GeneratedAt time.Time // zero value means time.Now().UTC()
 }
 
-// Runner orchestrates the full collect→script→synth→assemble→publish→prune pipeline.
+// Runner orchestrates the full collect→script→synth→assemble→manifest pipeline.
 type Runner struct {
 	Profile   *config.Profile
 	Config    *config.Config
@@ -58,8 +46,6 @@ type Runner struct {
 	Scripter  Scripter
 	Synther   Synther
 	Assembler Assembler
-	Publisher Publisher
-	Pruner    Pruner
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
@@ -110,14 +96,6 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
-	}
-
-	if err := r.Publisher.Run(ctx, fileio.EpisodePath(outDir), opts.PublishOpts); err != nil {
-		return fmt.Errorf("publish: %w", err)
-	}
-
-	if err := r.Pruner.Run(ctx); err != nil {
-		return fmt.Errorf("prune: %w", err)
 	}
 
 	return nil

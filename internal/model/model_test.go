@@ -252,30 +252,3 @@ func TestClipsMeta_Fields(t *testing.T) {
 		t.Error("Text must not be empty")
 	}
 }
-
-func TestEpisodes_RoundTrip(t *testing.T) {
-	roundTrip[model.Episodes](t, loadFixture(t, "episodes.json"))
-}
-
-func TestEpisodes_Fields(t *testing.T) {
-	v := unmarshalFixture[model.Episodes](t, "episodes.json")
-	if len(v.Episodes) == 0 {
-		t.Error("expected at least one episode")
-	}
-	e := v.Episodes[0]
-	if e.GUID == "" {
-		t.Error("GUID must not be empty")
-	}
-	if e.Title == "" {
-		t.Error("Title must not be empty")
-	}
-	if e.AudioURL == "" {
-		t.Error("AudioURL must not be empty")
-	}
-	if e.Bytes <= 0 {
-		t.Error("Bytes must be positive")
-	}
-	if e.Duration == "" {
-		t.Error("Duration must not be empty")
-	}
-}

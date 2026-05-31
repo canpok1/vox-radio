@@ -11,7 +11,7 @@ func NewRootCmd() *cobra.Command {
 		Long: `vox-radio is a CLI tool for producing AI-generated podcast episodes.
 
 It covers the full pipeline: collecting articles, generating scripts via LLM,
-synthesizing voice clips, assembling audio, and publishing RSS feeds.`,
+synthesizing voice clips, assembling audio, and outputting a content manifest.`,
 		SilenceUsage:      true,
 		SilenceErrors:     true,
 		DisableAutoGenTag: true,
@@ -23,8 +23,6 @@ synthesizing voice clips, assembling audio, and publishing RSS feeds.`,
 		newSynthCmd(),
 		newAssembleCmd(),
 		newManifestCmd(),
-		newPublishCmd(),
-		newPruneCmd(),
 		newRunCmd(),
 	)
 

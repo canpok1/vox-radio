@@ -7,10 +7,6 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
-	"github.com/canpok1/vox-radio/internal/publish"
-	"github.com/canpok1/vox-radio/internal/publish/hosting"
-	"github.com/canpok1/vox-radio/internal/publish/hosting/ghpages"
-	"github.com/canpok1/vox-radio/internal/publish/hosting/local"
 	"github.com/spf13/cobra"
 )
 
@@ -51,29 +47,4 @@ func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, 
 		return nil, nil, fmt.Errorf("profile validation: %w", err)
 	}
 	return cfg, p, nil
-}
-
-func resolveSiteURL(override, configURL string) string {
-	if override != "" {
-		return override
-	}
-	return configURL
-}
-
-func resolveKeep(maxItems int) int {
-	if maxItems <= 0 {
-		return publish.DefaultKeep
-	}
-	return maxItems
-}
-
-func newHosting(hostingType, outDir, siteURL string) (hosting.Hosting, error) {
-	switch hostingType {
-	case "local":
-		return local.New(outDir, siteURL), nil
-	case "ghpages":
-		return ghpages.New(outDir, siteURL), nil
-	default:
-		return nil, fmt.Errorf("unknown hosting type %q: must be \"local\" or \"ghpages\"", hostingType)
-	}
 }
