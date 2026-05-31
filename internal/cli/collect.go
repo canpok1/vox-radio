@@ -25,12 +25,18 @@ source フィールドのないコーナーはスキップされます。
   vox-radio collect --out work/articles.json
   vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger, logFile, err := setupLogger("collect", "")
+			if err != nil {
+				return fmt.Errorf("setup logger: %w", err)
+			}
+			defer func() { _ = logFile.Close() }()
+
 			p, err := config.LoadProfile(profilePath)
 			if err != nil {
 				return fmt.Errorf("load profile: %w", err)
 			}
 
-			c := collect.New(nil)
+			c := collect.New(nil, collect.WithLogger(logger))
 			articles, err := c.RunAll(context.Background(), p.Corners)
 			if err != nil {
 				return err

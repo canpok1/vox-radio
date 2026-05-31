@@ -3,8 +3,10 @@ package synth
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -43,6 +45,7 @@ func newTestSynth() *Synth {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.5, nil },
+		logger:      slog.Default(),
 	}
 }
 
@@ -194,6 +197,7 @@ func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
 	}
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -252,6 +256,7 @@ func TestSynth_Run_UsesStyleFromSegment(t *testing.T) {
 			},
 		},
 		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
 	}
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -339,5 +344,61 @@ func TestSynth_Run_EmptyClipsJSON_WhenNoSpeechSegments(t *testing.T) {
 	}
 	if string(raw["clips"]) == "null" {
 		t.Error("clips.json clips field is null, want []")
+	}
+}
+
+func TestSynth_Run_LogsStartAndComplete(t *testing.T) {
+	s := newTestSynth()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	s.logger = logger
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "よろしく"},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := s.Run(context.Background(), script, dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "開始") {
+		t.Errorf("should log start: %q", logs)
+	}
+	if !strings.Contains(logs, "完了") {
+		t.Errorf("should log complete: %q", logs)
+	}
+}
+
+func TestSynth_Run_LogsPerClipProgress(t *testing.T) {
+	s := newTestSynth()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	s.logger = logger
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "セリフ1"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "セリフ2"},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := s.Run(context.Background(), script, dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "1/2") {
+		t.Errorf("should log per-clip progress (1/2): %q", logs)
+	}
+	if !strings.Contains(logs, "2/2") {
+		t.Errorf("should log per-clip progress (2/2): %q", logs)
 	}
 }

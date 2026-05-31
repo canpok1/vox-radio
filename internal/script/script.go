@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -27,6 +29,15 @@ type LLMScriptGenerator struct {
 	director   direct.Director
 	seCatalog  model.SECatalog
 	workDir    string
+	logger     *slog.Logger
+}
+
+// GeneratorOption configures a LLMScriptGenerator.
+type GeneratorOption func(*LLMScriptGenerator)
+
+// WithLogger sets the logger used for progress messages.
+func WithLogger(l *slog.Logger) GeneratorOption {
+	return func(g *LLMScriptGenerator) { g.logger = l }
 }
 
 func NewLLMScriptGenerator(
@@ -35,36 +46,63 @@ func NewLLMScriptGenerator(
 	d direct.Director,
 	seCatalog model.SECatalog,
 	workDir string,
+	opts ...GeneratorOption,
 ) *LLMScriptGenerator {
-	return &LLMScriptGenerator{
+	g := &LLMScriptGenerator{
 		summarizer: s,
 		writer:     w,
 		director:   d,
 		seCatalog:  seCatalog,
 		workDir:    workDir,
+		logger:     slog.Default(),
 	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
 }
 
 func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
+	start := time.Now()
+
 	cornerArticlesMap := articles.CornerMap()
 
+	totalArticles := 0
+	for _, ca := range articles.Corners {
+		totalArticles += len(ca.Articles)
+	}
+
+	sumLogger := g.logger.With("step", "script/summarize")
+	sumLogger.Info(fmt.Sprintf("開始 (%d記事)", totalArticles))
+	sumStart := time.Now()
+
 	cornerSummaries := make([]model.CornerSummaries, 0, len(corners))
+	done := 0
 	for _, corner := range corners {
 		arts := cornerArticlesMap[corner.Title]
-		sums, err := g.summarizeAll(ctx, arts)
-		if err != nil {
-			return model.Script{}, err
+		summaries := make([]model.Summary, 0, len(arts))
+		for _, a := range arts {
+			done++
+			sumLogger.Info(fmt.Sprintf("記事を要約中 (%d/%d)", done, totalArticles))
+			s, err := g.summarizer.Summarize(ctx, a)
+			if err != nil {
+				return model.Script{}, fmt.Errorf("summarize %q: %w", a.URL, err)
+			}
+			summaries = append(summaries, s)
 		}
 		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
 			CornerTitle: corner.Title,
-			Summaries:   sums,
+			Summaries:   summaries,
 		})
 	}
+	sumLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(sumStart).Seconds()))
+
 	allSummaries := model.Summaries{Corners: cornerSummaries}
 	if err := g.saveIntermediate("summaries.json", allSummaries); err != nil {
 		return model.Script{}, err
 	}
 
+	g.logger.With("step", "script/write").Info("開始")
 	cornerLines, err := g.writeAll(ctx, corners, allSummaries, chars)
 	if err != nil {
 		return model.Script{}, err
@@ -75,24 +113,15 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, articles model.Articl
 		return model.Script{}, err
 	}
 
+	g.logger.With("step", "script/direct").Info("開始")
 	scr, err := g.director.Direct(ctx, allLines, g.seCatalog)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("direct: %w", err)
 	}
 
-	return scr, nil
-}
+	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
-func (g *LLMScriptGenerator) summarizeAll(ctx context.Context, articles []model.Article) ([]model.Summary, error) {
-	summaries := make([]model.Summary, 0, len(articles))
-	for _, a := range articles {
-		s, err := g.summarizer.Summarize(ctx, a)
-		if err != nil {
-			return nil, fmt.Errorf("summarize %q: %w", a.URL, err)
-		}
-		summaries = append(summaries, s)
-	}
-	return summaries, nil
+	return scr, nil
 }
 
 func (g *LLMScriptGenerator) writeAll(ctx context.Context, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {

@@ -38,6 +38,12 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
   vox-radio run
   vox-radio run --out-dir output --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logger, logFile, err := setupLogger("run", "")
+			if err != nil {
+				return fmt.Errorf("setup logger: %w", err)
+			}
+			defer func() { _ = logFile.Close() }()
+
 			cfg, p, err := loadConfigAndProfile(profilePath)
 			if err != nil {
 				return err
@@ -66,6 +72,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 				seCatalog,
 				intermediateDir,
+				script.WithLogger(logger),
 			)
 
 			engineURL := cfg.Voicevox.URL
@@ -76,11 +83,12 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			runner := &pipeline.Runner{
 				Profile:           p,
 				Config:            cfg,
-				Collector:         collect.New(nil),
+				Collector:         collect.New(nil, collect.WithLogger(logger)),
 				Scripter:          scripter,
-				Synther:           synth.New(engineURL, cfg),
-				Assembler:         assemble.New(p.Assets, p.Program),
+				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
+				Assembler:         assemble.New(p.Assets, p.Program, assemble.WithLogger(logger), assemble.WithFFmpegWriter(logFile)),
 				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary")),
+				Logger:            logger,
 			}
 
 			if err := runner.Run(context.Background(), pipeline.Options{

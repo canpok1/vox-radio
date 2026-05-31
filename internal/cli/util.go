@@ -3,10 +3,13 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +35,16 @@ func readJSON[T any](path string) (T, error) {
 		return v, err
 	}
 	return v, nil
+}
+
+// setupLogger creates a fan-out logger (stderr INFO+, logFile DEBUG+) and returns it with the
+// log file handle. The caller must close the file when done.
+// logDir defaults to "./logs" if empty.
+func setupLogger(commandName string, logDir string) (*slog.Logger, *os.File, error) {
+	if logDir == "" {
+		logDir = "logs"
+	}
+	return logging.NewSetup(time.Now(), commandName, logDir)
 }
 
 func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, error) {
