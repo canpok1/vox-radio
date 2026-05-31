@@ -16,6 +16,7 @@ type ManifestCorner struct {
 type Manifest struct {
 	Title       string           `json:"title"`
 	Description string           `json:"description"`
+	Summary     string           `json:"summary"`
 	Datetime    string           `json:"datetime"`
 	AudioFile   string           `json:"audio_file"`
 	Corners     []ManifestCorner `json:"corners"`

@@ -47,7 +47,7 @@ collect → script → synth → assemble → manifest
 | `script` | 記事を LLM に渡して台本 `script.json` を生成する（summarize → write → direct の多段パイプライン） |
 | `synth` | `script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
-| `manifest` | 番組内容（タイトル・概要・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する |
+| `manifest` | 番組内容（タイトル・概要・要約・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する。`--script` を指定すると LLM で台本ベースの要約を生成する |
 | `run` | collect → script → synth → assemble → manifest の全パイプラインを一括実行する |
 
 ### 設定ファイル

@@ -13,6 +13,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
+	programsummary "github.com/canpok1/vox-radio/internal/script/summary"
 	"github.com/canpok1/vox-radio/internal/script/write"
 	"github.com/canpok1/vox-radio/internal/synth"
 	"github.com/spf13/cobra"
@@ -73,12 +74,13 @@ Example:
 			}
 
 			runner := &pipeline.Runner{
-				Profile:   p,
-				Config:    cfg,
-				Collector: collect.New(nil),
-				Scripter:  scripter,
-				Synther:   synth.New(engineURL, cfg),
-				Assembler: assemble.New(p.Assets, p.Program),
+				Profile:           p,
+				Config:            cfg,
+				Collector:         collect.New(nil),
+				Scripter:          scripter,
+				Synther:           synth.New(engineURL, cfg),
+				Assembler:         assemble.New(p.Assets, p.Program),
+				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary")),
 			}
 
 			if err := runner.Run(context.Background(), pipeline.Options{

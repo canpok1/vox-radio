@@ -212,7 +212,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 }
 
 func loadPrompts(dir string) (map[string]string, error) {
-	names := []string{"summarize", "write", "direct"}
+	names := []string{"summarize", "write", "direct", "summary"}
 	prompts := make(map[string]string, len(names))
 	for _, name := range names {
 		data, err := os.ReadFile(filepath.Join(dir, name+".md"))
