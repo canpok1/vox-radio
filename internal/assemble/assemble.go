@@ -83,7 +83,7 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 	}
 
 	bctx := BuildContext{
-		Script:   injectProgramJingles(script, a.Program),
+		Script:   script,
 		Clips:    clips,
 		ClipsDir: clipsDir,
 		Assets:   a.AssetsConfig,

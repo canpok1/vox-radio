@@ -201,8 +201,8 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用） |
 | `segment_pause_sec` | float64 | 任意 | コーナー間の無音時間（秒）。デフォルト: 0（Go ゼロ値） |
 | `target_duration_sec` | int | 任意 | 番組全体の目標収録時間（秒）。デフォルト: 0（Go ゼロ値） |
-| `opening_jingle` | string | 任意 | OP ジングルのキー名（`assets.jingle` のキーと一致させること）。コードが台本先頭へ自動挿入する |
-| `ending_jingle` | string | 任意 | ED ジングルのキー名（`assets.jingle` のキーと一致させること）。コードが台本末尾へ自動挿入する |
+| `opening_jingle` | string | 任意 | OP ジングルのキー名（`assets.jingle` のキーと一致させること）。script 生成時にコードが台本先頭へ埋め込む |
+| `ending_jingle` | string | 任意 | ED ジングルのキー名（`assets.jingle` のキーと一致させること）。script 生成時にコードが台本末尾へ埋め込む |
 
 #### `corners` セクション
 
@@ -254,7 +254,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `fade_out` | float64 | 任意 | フェードアウト時間（秒）。デフォルト: 0 |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
-OP/ED ジングルは `program.opening_jingle` / `program.ending_jingle` で設定します。中間アイキャッチは LLM が `jingle` セグメントを台本に挿入します。
+OP/ED ジングルは `program.opening_jingle` / `program.ending_jingle` で設定します。script 生成ステップでコードが台本の先頭/末尾へ埋め込むため、生成された `04_script.json` に OP/ED ジングルが含まれます。中間アイキャッチは LLM が `jingle` セグメントを台本に挿入します。
 
 ##### `assets.se` マップ値
 

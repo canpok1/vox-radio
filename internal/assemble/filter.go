@@ -184,31 +184,6 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	}, nil
 }
 
-// injectProgramJingles prepends and appends jingle segments to the script based on
-// program.OpeningJingle and program.EndingJingle configuration.
-// This is the mechanism for code-deterministic OP/ED jingle insertion.
-func injectProgramJingles(scr model.Script, program config.ProgramConfig) model.Script {
-	if program.OpeningJingle == "" && program.EndingJingle == "" {
-		return scr
-	}
-	capacity := len(scr.Segments)
-	if program.OpeningJingle != "" {
-		capacity++
-	}
-	if program.EndingJingle != "" {
-		capacity++
-	}
-	segments := make([]model.ScriptSegment, 0, capacity)
-	if program.OpeningJingle != "" {
-		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.OpeningJingle})
-	}
-	segments = append(segments, scr.Segments...)
-	if program.EndingJingle != "" {
-		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.EndingJingle})
-	}
-	return model.Script{Segments: segments}
-}
-
 // hasClips returns true if the speech timeline contains at least one clip item.
 func hasClips(items []speechItem) bool {
 	return slices.ContainsFunc(items, func(it speechItem) bool { return it.clipIndex >= 0 })
