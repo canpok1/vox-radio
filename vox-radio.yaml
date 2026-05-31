@@ -9,3 +9,36 @@ llm:
     plan:      { temperature: 0.4 }
     write:     { temperature: 0.8 }
     direct:    { temperature: 0.2 }
+
+voicevox:
+  url: http://localhost:50021
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ", "〜なのだ"]
+    personality: ["元気", "明るい", "素直", "前向き"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3
+      あまあま: 1
+      なみだめ: 76
+  zundako:
+    name: ずん子
+    pronoun: 私
+    speech_suffix: ["〜ですわ", "〜ですの"]
+    personality: ["知的", "冷静", "丁寧", "分析的"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 22
+  metan:
+    name: 四国めたん
+    pronoun: うち
+    speech_suffix: ["〜やん", "〜やで"]
+    personality: ["活発", "関西弁", "陽気", "世話好き"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 2
+      あまあま: 0
+      ツンツン: 6

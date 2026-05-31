@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -68,10 +69,25 @@ type PodcastConfig struct {
 	MaxItems      int    `yaml:"max_items"`
 }
 
-// Config holds genre-independent common settings (LLM only).
+type VoicevoxConfig struct {
+	URL string `yaml:"url"`
+}
+
+type CharacterConfig struct {
+	Name         string         `yaml:"name"`
+	Pronoun      string         `yaml:"pronoun"`
+	SpeechSuffix []string       `yaml:"speech_suffix"`
+	Personality  []string       `yaml:"personality"`
+	DefaultStyle string         `yaml:"default_style"`
+	Styles       map[string]int `yaml:"styles"`
+}
+
+// Config holds genre-independent common settings.
 // It is loaded from vox-radio.yaml at the repository root.
 type Config struct {
-	LLM LLMConfig `yaml:"llm"`
+	LLM        LLMConfig                  `yaml:"llm"`
+	Voicevox   VoicevoxConfig             `yaml:"voicevox"`
+	Characters map[string]CharacterConfig `yaml:"characters"`
 }
 
 // Profile holds genre-specific settings (feeds, show, assets, podcast).
@@ -90,7 +106,21 @@ func LoadConfig(path string) (*Config, error) {
 	if err := loadYAML(path, cfg); err != nil {
 		return nil, err
 	}
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
+	}
 	return cfg, nil
+}
+
+func validateConfig(cfg *Config) error {
+	for id, ch := range cfg.Characters {
+		if ch.DefaultStyle != "" {
+			if _, ok := ch.Styles[ch.DefaultStyle]; !ok {
+				return fmt.Errorf("characters[%q].default_style %q not found in styles", id, ch.DefaultStyle)
+			}
+		}
+	}
+	return nil
 }
 
 // LoadProfile loads genre-specific settings from the given YAML file path.

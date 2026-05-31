@@ -7,8 +7,8 @@ Synthesize voice clips from a script
 Read script.json and call VOICEVOX to synthesize each line into WAV clips.
 The output directory will contain per-line WAV files and a clips.json manifest.
 
-Environment:
-  VOICEVOX_ENGINE_URL  URL of the VOICEVOX engine (default: http://localhost:50021)
+vox-radio.yaml is automatically loaded from the current directory.
+The voicevox.url field specifies the VOICEVOX engine URL (default: http://localhost:50021).
 
 Example:
   vox-radio synth --in work/script.json --out-dir work/clips
