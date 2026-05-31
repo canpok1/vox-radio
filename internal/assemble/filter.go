@@ -30,23 +30,29 @@ type BuildContext struct {
 	OutPath  string
 }
 
+// FFmpegInput holds a single ffmpeg input file with optional pre-input options.
+type FFmpegInput struct {
+	Path       string   // input file path
+	PreOptions []string // options placed before -i (e.g., "-stream_loop", "-1")
+}
+
 // FFmpegArgs holds the complete set of arguments for an ffmpeg call.
 type FFmpegArgs struct {
-	Inputs        []string // input file paths
-	FilterComplex string   // -filter_complex value
-	OutputArgs    []string // output options (map, codec, etc.)
+	Inputs        []FFmpegInput // input files with optional pre-options
+	FilterComplex string        // -filter_complex value
+	OutputArgs    []string      // output options (map, codec, etc.)
 	OutputPath    string
 }
 
 type filterBuilder struct {
-	inputs  []string
+	inputs  []FFmpegInput
 	filters []string
 	nextIdx int
 }
 
-func (b *filterBuilder) addInput(path string) int {
+func (b *filterBuilder) addInput(path string, preOpts ...string) int {
 	idx := b.nextIdx
-	b.inputs = append(b.inputs, path)
+	b.inputs = append(b.inputs, FFmpegInput{Path: path, PreOptions: preOpts})
 	b.nextIdx++
 	return idx
 }
@@ -346,20 +352,20 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			if !ok {
 				continue
 			}
-			bgmIdx := b.addInput(entry.File)
+			var bgmIdx int
+			if entry.Loop {
+				bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
+			} else {
+				bgmIdx = b.addInput(entry.File)
+			}
 			intervalLabel := fmt.Sprintf("[run%d_bgm%d_raw]", runIdx, i)
 			endMs := interval.endMs
 			if endMs < 0 {
 				endMs = run.durationMs
 			}
 			durationSec := float64(endMs-interval.startMs) / 1000.0
-			if entry.Loop {
-				b.addFilter(fmt.Sprintf("[%d:a]aloop=loop=-1:size=999999,volume=%.2f,atrim=duration=%.3f,adelay=%d|%d%s",
-					bgmIdx, entry.Volume, durationSec, interval.startMs, interval.startMs, intervalLabel))
-			} else {
-				b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f,adelay=%d|%d%s",
-					bgmIdx, entry.Volume, durationSec, interval.startMs, interval.startMs, intervalLabel))
-			}
+			b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f,adelay=%d|%d%s",
+				bgmIdx, entry.Volume, durationSec, interval.startMs, interval.startMs, intervalLabel))
 			bgmParts = append(bgmParts, intervalLabel)
 		}
 
