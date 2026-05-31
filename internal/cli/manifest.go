@@ -16,7 +16,7 @@ import (
 
 func newManifestCmd() *cobra.Command {
 	var profilePath string
-	var articlesPath string
+	var rundownPath string
 	var audioPath string
 	var out string
 	var scriptPath string
@@ -36,7 +36,7 @@ LLM が生成した要約をマニフェストに追加します。
 
 例:
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --audio output/episode.mp3 --out output/manifest.json
-  vox-radio manifest --profile sample-profiles/tech_profile.yaml --articles output/intermediate/01_articles.json --audio output/episode.mp3 --out output/manifest.json
+  vox-radio manifest --profile sample-profiles/tech_profile.yaml --rundown output/intermediate/02_rundown.json --audio output/episode.mp3 --out output/manifest.json
   vox-radio manifest --profile sample-profiles/tech_profile.yaml --script output/intermediate/04_script.json --audio output/episode.mp3 --out output/manifest.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("manifest", "")
@@ -53,12 +53,11 @@ LLM が生成した要約をマニフェストに追加します。
 				return fmt.Errorf("load profile: %w", err)
 			}
 
-			var articles model.Articles
-			if articlesPath != "" {
-				var err error
-				articles, err = readJSON[model.Articles](articlesPath)
+			var rd model.Rundown
+			if rundownPath != "" {
+				rd, err = readJSON[model.Rundown](rundownPath)
 				if err != nil {
-					return fmt.Errorf("read articles: %w", err)
+					return fmt.Errorf("read rundown: %w", err)
 				}
 			}
 
@@ -88,7 +87,7 @@ LLM が生成した要約をマニフェストに追加します。
 				}
 			}
 
-			m := manifest.Build(p.Program, p.Corners, articles, filepath.Base(audioPath), time.Now().UTC(), programSummary)
+			m := manifest.Build(p.Program, p.Corners, rd, filepath.Base(audioPath), time.Now().UTC(), programSummary)
 
 			if err := writeJSON(out, m); err != nil {
 				return err
@@ -101,10 +100,10 @@ LLM が生成した要約をマニフェストに追加します。
 	}
 
 	registerProfileFlag(cmd, &profilePath)
-	cmd.Flags().StringVar(&articlesPath, "articles", "", "articles.json のパス（任意）。省略するとコーナーの記事は空になる")
+	cmd.Flags().StringVar(&rundownPath, "rundown", "", "02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる")
 	cmd.Flags().StringVar(&audioPath, "audio", "", "音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）")
 	cmd.Flags().StringVar(&out, "out", "", "manifest.json の出力先パス（必須）")
-	cmd.Flags().StringVar(&scriptPath, "script", "", "script.json のパス（任意）。指定すると LLM が台本から要約を生成する")
+	cmd.Flags().StringVar(&scriptPath, "script", "", "04_script.json のパス（任意）。指定すると LLM が台本から要約を生成する")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ（--script 指定時に使用）")
 	_ = cmd.MarkFlagRequired("audio")
 	_ = cmd.MarkFlagRequired("out")

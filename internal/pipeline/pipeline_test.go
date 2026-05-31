@@ -28,16 +28,27 @@ func (s *stubCollector) RunAll(_ context.Context, _ []config.CornerConfig) (mode
 	return s.articles, s.err
 }
 
-type stubScripter struct {
-	script      model.Script
-	err         error
-	called      bool
-	gotArticles model.Articles
+type stubRundowner struct {
+	rundown model.Rundown
+	err     error
+	called  bool
 }
 
-func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, articles model.Articles, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
+func (s *stubRundowner) Run(_ context.Context, _ []config.CornerConfig, _ model.Articles) (model.Rundown, error) {
 	s.called = true
-	s.gotArticles = articles
+	return s.rundown, s.err
+}
+
+type stubScripter struct {
+	script     model.Script
+	err        error
+	called     bool
+	gotRundown model.Rundown
+}
+
+func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
+	s.called = true
+	s.gotRundown = rundown
 	return s.script, s.err
 }
 
@@ -84,6 +95,7 @@ func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (st
 
 type stubs struct {
 	col *stubCollector
+	rnd *stubRundowner
 	scr *stubScripter
 	syn *stubSynther
 	asm *stubAssembler
@@ -93,6 +105,7 @@ type stubs struct {
 func defaultStubs() stubs {
 	return stubs{
 		col: &stubCollector{articles: model.Articles{Corners: make([]model.CornerArticles, 0)}},
+		rnd: &stubRundowner{rundown: model.Rundown{Corners: make([]model.RundownCorner, 0)}},
 		scr: &stubScripter{script: model.Script{Segments: make([]model.ScriptSegment, 0)}},
 		syn: &stubSynther{clips: &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}},
 		asm: &stubAssembler{result: &assemble.Result{}},
@@ -103,6 +116,7 @@ func newRunner(s stubs) *pipeline.Runner {
 	r := &pipeline.Runner{
 		Profile:   &config.Profile{},
 		Collector: s.col,
+		Rundowner: s.rnd,
 		Scripter:  s.scr,
 		Synther:   s.syn,
 		Assembler: s.asm,
@@ -126,6 +140,9 @@ func TestRunner_Run_CallsAllSteps(t *testing.T) {
 	if !s.col.called {
 		t.Error("Collector.RunAll not called")
 	}
+	if !s.rnd.called {
+		t.Error("Rundowner.Run not called")
+	}
 	if !s.scr.called {
 		t.Error("Scripter.Generate not called")
 	}
@@ -144,7 +161,7 @@ func TestRunner_Run_SavesIntermediateFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.ScriptPath(outDir), fileio.ManifestPath(outDir)} {
+	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.RundownPath(outDir), fileio.ScriptPath(outDir), fileio.ManifestPath(outDir)} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("expected file %q to exist: %v", path, err)
 		}
@@ -170,26 +187,32 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_PassesArticlesToScripter(t *testing.T) {
+func TestRunner_Run_PassesRundownToScripter(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	article := model.Article{URL: "http://example.com", Title: "Test", Body: "body"}
-	s.col.articles = model.Articles{
-		Corners: []model.CornerArticles{
-			{CornerTitle: "テストコーナー", Articles: []model.Article{article}},
+	wantRundown := model.Rundown{
+		Corners: []model.RundownCorner{
+			{
+				Title: "テストコーナー",
+				Flow:  "記事を順に紹介",
+				Articles: []model.RundownArticle{
+					{URL: "http://example.com", Title: "記事", Summary: "要約", Points: []string{"p1"}},
+				},
+			},
 		},
 	}
+	s.rnd.rundown = wantRundown
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(s.scr.gotArticles.Corners) != 1 {
-		t.Fatalf("Scripter.Generate received %d corners, want 1", len(s.scr.gotArticles.Corners))
+	if len(s.scr.gotRundown.Corners) != 1 {
+		t.Fatalf("Scripter.Generate received %d corners, want 1", len(s.scr.gotRundown.Corners))
 	}
-	got := s.scr.gotArticles.Corners[0]
-	if len(got.Articles) != 1 || got.Articles[0].URL != article.URL {
-		t.Errorf("Scripter.Generate corner articles = %v, want [%v]", got.Articles, article)
+	got := s.scr.gotRundown.Corners[0]
+	if got.Title != "テストコーナー" {
+		t.Errorf("Rundown corner title: got %q, want %q", got.Title, "テストコーナー")
 	}
 }
 
@@ -201,8 +224,21 @@ func TestRunner_Run_CollectError(t *testing.T) {
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from Collector, got nil")
 	}
+	if s.rnd.called {
+		t.Error("Rundowner should not be called after Collector error")
+	}
+}
+
+func TestRunner_Run_RundownError(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.rnd.err = errors.New("llm error")
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
+		t.Fatal("expected error from Rundowner, got nil")
+	}
 	if s.scr.called {
-		t.Error("Scripter should not be called after Collector error")
+		t.Error("Scripter should not be called after Rundowner error")
 	}
 }
 
@@ -280,7 +316,6 @@ func TestRunner_Run_ManifestIncludesSummary(t *testing.T) {
 func TestRunner_Run_SkipsSummaryWhenSummarizerIsNil(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	// s.sum is nil — no summarizer set
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)

@@ -175,11 +175,61 @@ func TestRundown_Fields(t *testing.T) {
 	if c.Title == "" {
 		t.Error("Title must not be empty")
 	}
-	if c.Topic == "" {
-		t.Error("Topic must not be empty")
+	if c.Flow == "" {
+		t.Error("Flow must not be empty")
 	}
-	if c.TargetChars <= 0 {
-		t.Error("TargetChars must be positive")
+	if len(c.Articles) == 0 {
+		t.Error("Articles must not be empty")
+	}
+	a := c.Articles[0]
+	if a.URL == "" {
+		t.Error("Article.URL must not be empty")
+	}
+	if a.Title == "" {
+		t.Error("Article.Title must not be empty")
+	}
+	if a.Summary == "" {
+		t.Error("Article.Summary must not be empty")
+	}
+	if len(a.Points) == 0 {
+		t.Error("Article.Points must not be empty")
+	}
+}
+
+func TestRundown_CornerMap(t *testing.T) {
+	art1 := model.RundownArticle{URL: "https://example.com/1", Title: "T1", Summary: "S1", Points: []string{"p1"}}
+	art2 := model.RundownArticle{URL: "https://example.com/2", Title: "T2", Summary: "S2", Points: []string{"p2"}}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{
+			{Title: "ニュース", Flow: "最新ニュースを紹介", Articles: []model.RundownArticle{art1}},
+			{Title: "エンディング", Flow: "締めの言葉", Articles: []model.RundownArticle{art2}},
+		},
+	}
+
+	m := rd.CornerMap()
+
+	if len(m) != 2 {
+		t.Fatalf("map length: got %d, want 2", len(m))
+	}
+	news, ok := m["ニュース"]
+	if !ok {
+		t.Fatal("key ニュース not found")
+	}
+	if len(news.Articles) != 1 || news.Articles[0].URL != art1.URL {
+		t.Errorf("CornerMap[\"ニュース\"].Articles: got %v, want [%v]", news.Articles, art1)
+	}
+	if news.Flow != "最新ニュースを紹介" {
+		t.Errorf("CornerMap[\"ニュース\"].Flow: got %q, want %q", news.Flow, "最新ニュースを紹介")
+	}
+	if _, ok := m["存在しないコーナー"]; ok {
+		t.Error("missing key should not exist in map")
+	}
+}
+
+func TestRundown_CornerMap_Empty(t *testing.T) {
+	m := model.Rundown{}.CornerMap()
+	if len(m) != 0 {
+		t.Errorf("empty Rundown.CornerMap() should return empty map, got %d entries", len(m))
 	}
 }
 

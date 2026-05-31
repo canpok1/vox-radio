@@ -1,24 +1,23 @@
 ## vox-radio script
 
-LLM を使って収集した記事から台本を生成する
+LLM を使って rundown から台本を生成する
 
 ### Synopsis
 
-多段階 LLM パイプライン（summarize → write → direct）を実行し、
-articles.json から script.json を生成します。
+多段階 LLM パイプライン（write → direct）を実行し、
+02_rundown.json から 04_script.json を生成します。
 
 vox-radio.yaml はカレントディレクトリから自動読み込みされます。
-コーナー定義はプロファイルから取得します（plan ステップはありません）。
+コーナー定義はプロファイルから取得します。
 
 --step で単一ステージのみ実行できます:
-  summarize  コーナーごとに各記事を要約します（summaries.json を出力）
-  write      コーナーごとに台詞を書きます（lines.json を出力）
-  direct     台詞に SE・話者を割り当てます（script.json を出力）
+  write      コーナーごとに台詞を書きます（03_lines.json を出力）
+  direct     台詞に SE・話者を割り当てます（04_script.json を出力）
 
 例:
-  vox-radio script --in work/articles.json --out work/script.json
-  vox-radio script --out work/script.json --step write
-  vox-radio script --in work/articles.json --out work/script.json --profile sample-profiles/tech_profile.yaml
+  vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json
+  vox-radio script --out work/intermediate/04_script.json --step write
+  vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json --profile sample-profiles/tech_profile.yaml
 
 ```
 vox-radio script [flags]
@@ -28,11 +27,11 @@ vox-radio script [flags]
 
 ```
   -h, --help             help for script
-      --in string        articles.json の入力パス（フルパイプラインまたは summarize ステップで必須）
-      --out string       script.json の出力先パス（必須）
+      --in string        02_rundown.json の入力パス（フルパイプラインまたは write ステップで必須）
+      --out string       04_script.json の出力先パス（必須）
       --profile string   プロファイル YAML ファイルのパス（必須）
       --prompts string   プロンプトテンプレートを含むディレクトリ (default "prompts")
-      --step string      単一ステップを実行する: summarize|write|direct
+      --step string      単一ステップを実行する: write|direct
 ```
 
 ### SEE ALSO

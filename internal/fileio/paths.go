@@ -10,7 +10,7 @@ import (
 const (
 	FileArticles  = "01_articles.json"
 	FileSummaries = "02_summaries.json"
-	FileRundown   = "rundown.json"
+	FileRundown   = "02_rundown.json"
 	FileLines     = "03_lines.json"
 	FileScript    = "04_script.json"
 	FileEpisode   = "episode.mp3"

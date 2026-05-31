@@ -1,0 +1,85 @@
+package sel_test
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/model"
+	sel "github.com/canpok1/vox-radio/internal/rundown/select"
+	"github.com/canpok1/vox-radio/internal/script/llm"
+)
+
+type mockClient struct {
+	response json.RawMessage
+	err      error
+	captured []llm.CompletionRequest
+}
+
+func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
+	m.captured = append(m.captured, req)
+	return m.response, m.err
+}
+
+func TestLLMSelector_Select_Success(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"記事1を紹介して締める"}`),
+	}
+	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
+
+	corner := config.CornerConfig{Title: "テックニュース", Content: "最新技術を紹介", TargetDurationSec: 60}
+	articles := []model.Article{
+		{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
+		{URL: "https://example.com/2", Title: "記事2", Body: "本文2"},
+	}
+
+	got, err := s.Select(context.Background(), corner, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.SelectedURLs) != 1 {
+		t.Errorf("SelectedURLs: got %d, want 1", len(got.SelectedURLs))
+	}
+	if got.SelectedURLs[0] != "https://example.com/1" {
+		t.Errorf("SelectedURLs[0]: got %q, want %q", got.SelectedURLs[0], "https://example.com/1")
+	}
+	if got.Flow != "記事1を紹介して締める" {
+		t.Errorf("Flow: got %q, want %q", got.Flow, "記事1を紹介して締める")
+	}
+}
+
+func TestLLMSelector_Select_PromptContainsCornerAndArticles(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
+	}
+	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", TargetDurationSec: 60}
+	articles := []model.Article{
+		{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
+	}
+	_, _ = s.Select(context.Background(), corner, articles)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "テック") {
+		t.Errorf("prompt should contain corner title, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "https://example.com/1") {
+		t.Errorf("prompt should contain article URL, got: %s", prompt)
+	}
+}
+
+func TestLLMSelector_Select_LLMError(t *testing.T) {
+	mc := &mockClient{err: context.Canceled}
+	s := sel.NewLLMSelector(mc, "{{corner}} {{articles}}", 0)
+
+	_, err := s.Select(context.Background(), config.CornerConfig{Title: "t"}, []model.Article{{URL: "u"}})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}

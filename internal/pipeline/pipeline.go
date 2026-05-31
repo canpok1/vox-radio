@@ -23,9 +23,14 @@ type Collector interface {
 	RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error)
 }
 
-// Scripter generates a radio script from corner-attributed articles.
+// Rundowner selects articles and designs the talk flow for each corner.
+type Rundowner interface {
+	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error)
+}
+
+// Scripter generates a radio script from a rundown.
 type Scripter interface {
-	Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -44,11 +49,12 @@ type Options struct {
 	GeneratedAt time.Time // zero value means time.Now().UTC()
 }
 
-// Runner orchestrates the full collect→script→synth→assemble→manifest pipeline.
+// Runner orchestrates the full collect→rundown→script→synth→assemble→manifest pipeline.
 type Runner struct {
 	Profile           *config.Profile
 	Config            *config.Config
 	Collector         Collector
+	Rundowner         Rundowner
 	Scripter          Scripter
 	Synther           Synther
 	Assembler         Assembler
@@ -72,12 +78,20 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
+	rundown, err := r.Rundowner.Run(ctx, r.Profile.Corners, articles)
+	if err != nil {
+		return fmt.Errorf("rundown: %w", err)
+	}
+	if err := fileio.WriteJSON(fileio.RundownPath(outDir), rundown); err != nil {
+		return err
+	}
+
 	var chars map[string]config.CharacterConfig
 	if r.Config != nil {
 		chars = r.Config.Characters
 	}
 
-	scr, err := r.Scripter.Generate(ctx, r.Profile.Program, articles, r.Profile.Corners, chars)
+	scr, err := r.Scripter.Generate(ctx, r.Profile.Program, rundown, r.Profile.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
@@ -118,7 +132,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt, programSummary)
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

@@ -14,18 +14,16 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
-	"github.com/canpok1/vox-radio/internal/script/summarize"
 	"github.com/canpok1/vox-radio/internal/script/write"
 )
 
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
 }
 
 type LLMScriptGenerator struct {
-	summarizer   summarize.Summarizer
 	writer       write.Writer
 	director     direct.Director
 	assetCatalog model.AssetCatalog
@@ -42,7 +40,6 @@ func WithLogger(l *slog.Logger) GeneratorOption {
 }
 
 func NewLLMScriptGenerator(
-	s summarize.Summarizer,
 	w write.Writer,
 	d direct.Director,
 	assetCatalog model.AssetCatalog,
@@ -50,7 +47,6 @@ func NewLLMScriptGenerator(
 	opts ...GeneratorOption,
 ) *LLMScriptGenerator {
 	g := &LLMScriptGenerator{
-		summarizer:   s,
 		writer:       w,
 		director:     d,
 		assetCatalog: assetCatalog,
@@ -63,52 +59,17 @@ func NewLLMScriptGenerator(
 	return g
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, articles model.Articles, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
+func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
 	start := time.Now()
 
-	cornerArticlesMap := articles.CornerMap()
-
-	totalArticles := 0
-	for _, ca := range articles.Corners {
-		totalArticles += len(ca.Articles)
-	}
-
-	sumLogger := g.logger.With("step", "script/summarize")
-	sumLogger.Info(fmt.Sprintf("開始 (%d記事)", totalArticles))
-	sumStart := time.Now()
-
-	cornerSummaries := make([]model.CornerSummaries, 0, len(corners))
-	done := 0
-	for _, corner := range corners {
-		arts := cornerArticlesMap[corner.Title]
-		summaries := make([]model.Summary, 0, len(arts))
-		for _, a := range arts {
-			done++
-			sumLogger.Info(fmt.Sprintf("記事を要約中 (%d/%d)", done, totalArticles))
-			s, err := g.summarizer.Summarize(ctx, a)
-			if err != nil {
-				return model.Script{}, fmt.Errorf("summarize %q: %w", a.URL, err)
-			}
-			summaries = append(summaries, s)
-		}
-		cornerSummaries = append(cornerSummaries, model.CornerSummaries{
-			CornerTitle: corner.Title,
-			Summaries:   summaries,
-		})
-	}
-	sumLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(sumStart).Seconds()))
-
-	allSummaries := model.Summaries{Corners: cornerSummaries}
-	if err := g.saveIntermediate(fileio.FileSummaries, allSummaries); err != nil {
-		return model.Script{}, err
-	}
+	cornerMap := rundown.CornerMap()
 
 	g.logger.With("step", "script/write").Info("開始")
-	cornerLines, err := g.writeAll(ctx, program, corners, allSummaries, chars)
+	cornerLines, err := g.writeAll(ctx, program, corners, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allSummaries, chars)
+	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, cornerMap, chars)
 	allLines := flatten(cornerLines)
 	if err := g.saveIntermediate(fileio.FileLines, model.Lines{Lines: allLines}); err != nil {
 		return model.Script{}, err
@@ -125,11 +86,11 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	return scr, nil
 }
 
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
-	cornerSumsMap := sums.CornerMap()
+func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
 	result := make([][]model.Line, len(corners))
 	for i, corner := range corners {
-		lines, err := g.writer.Write(ctx, program, corner, corners, cornerSumsMap[corner.Title], chars)
+		rc := cornerMap[corner.Title]
+		lines, err := g.writer.Write(ctx, program, corner, corners, rc.Articles, rc.Flow, chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
@@ -138,7 +99,7 @@ func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.Progra
 	return result, nil
 }
 
-func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.ProgramConfig, cornerLines [][]model.Line, corners []config.CornerConfig, sums model.Summaries, chars map[string]config.CharacterConfig) [][]model.Line {
+func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.ProgramConfig, cornerLines [][]model.Line, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) [][]model.Line {
 	if len(corners) == 0 {
 		return cornerLines
 	}
@@ -159,7 +120,6 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 		return cornerLines
 	}
 
-	cornerSumsMap := sums.CornerMap()
 	worstIdx := 0
 	worstDev := 0.0
 	for i, corner := range corners {
@@ -179,7 +139,8 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	}
 
 	corner := corners[worstIdx]
-	if newLines, err := g.writer.Write(ctx, program, corner, corners, cornerSumsMap[corner.Title], chars); err == nil {
+	rc := cornerMap[corner.Title]
+	if newLines, err := g.writer.Write(ctx, program, corner, corners, rc.Articles, rc.Flow, chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines

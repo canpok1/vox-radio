@@ -4,7 +4,7 @@
 
 ### Synopsis
 
-collect → script → synth → assemble → manifest を一括実行します。
+collect → rundown → script → synth → assemble → manifest を一括実行します。
 
 中間ファイルは <out-dir>/intermediate/ に書き出され、
 最終的な episode.mp3 は <out-dir>/ 直下に配置されます。
