@@ -404,3 +404,106 @@ func TestComputeSEEvents_NoSE(t *testing.T) {
 		t.Errorf("expected 0 SE events, got %d", len(events))
 	}
 }
+
+// TestBuildFFmpegArgs_LoudnormBeforeBGMMix verifies that loudnorm is applied to speech
+// BEFORE BGM mixing, so BGM levels are unaffected by speech-driven AGC.
+func TestBuildFFmpegArgs_LoudnormBeforeBGMMix(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"main": {File: "/assets/bgm.mp3", Volume: 0.3, DuckRatio: 4.0, Loop: true},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	filters := strings.Split(args.FilterComplex, ";")
+	loudnormIdx := -1
+	bgmFilterIdx := -1
+	for i, f := range filters {
+		if strings.Contains(f, "loudnorm") && loudnormIdx == -1 {
+			loudnormIdx = i
+		}
+		if (strings.Contains(f, "aloop") || strings.Contains(f, "sidechaincompress")) && bgmFilterIdx == -1 {
+			bgmFilterIdx = i
+		}
+	}
+	if loudnormIdx == -1 {
+		t.Fatal("loudnorm not found in filter_complex")
+	}
+	if bgmFilterIdx == -1 {
+		t.Fatal("BGM filter (aloop or sidechaincompress) not found in filter_complex")
+	}
+	if loudnormIdx >= bgmFilterIdx {
+		t.Errorf("loudnorm (filter index %d) must appear before BGM mix filter (index %d); filter_complex:\n%s",
+			loudnormIdx, bgmFilterIdx, args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_FinalOutputIsAlimiter verifies that the final [out] stage uses
+// alimiter (peak protection), not a dynamic loudnorm that would cause BGM pumping.
+func TestBuildFFmpegArgs_FinalOutputIsAlimiter(t *testing.T) {
+	for _, name := range []string{"no BGM", "with BGM"} {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			assets := config.AssetsConfig{}
+			if name == "with BGM" {
+				assets.BGM = map[string]config.BGMEntry{
+					"main": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+				}
+			}
+			ctx := BuildContext{
+				Script: model.Script{
+					Segments: []model.ScriptSegment{
+						{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+					},
+				},
+				Clips: model.ClipsMeta{
+					Clips: []model.ClipMeta{
+						{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+					},
+				},
+				ClipsDir: "/clips",
+				Assets:   assets,
+				PauseSec: 0.5,
+				OutPath:  "/out.mp3",
+			}
+
+			args, err := BuildFFmpegArgs(ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			filters := strings.Split(args.FilterComplex, ";")
+			for _, f := range filters {
+				if strings.Contains(f, "[out]") {
+					if strings.Contains(f, "loudnorm") {
+						t.Errorf("final [out] must not use loudnorm (causes BGM pumping): %s", f)
+					}
+					if !strings.Contains(f, "alimiter") {
+						t.Errorf("final [out] must use alimiter for peak protection: %s", f)
+					}
+					return
+				}
+			}
+			t.Error("[out] label not found in filter_complex")
+		})
+	}
+}

@@ -68,12 +68,16 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	// Build speech track (concat with silence between clips)
 	speechLabel := buildSpeechConcat(b, bctx.Clips.Clips, clipInputIdx, bctx.PauseSec)
 
-	// If BGM is configured, split speech so it can be used as sidechain
-	hasBGM := len(bctx.Assets.BGM) > 0
-	currentLabel := speechLabel
+	// Normalize speech before any mixing.
+	// This keeps BGM/SE/jingle levels independent of speech amplitude across episodes.
+	b.addFilter(fmt.Sprintf("%sloudnorm=I=-16:TP=-1.5:LRA=11[speech_norm]", speechLabel))
+	currentLabel := "[speech_norm]"
 
+	// If BGM is configured, split normalized speech so it can be used as sidechain.
+	// Using normalized speech as sidechain prevents per-episode variation in ducking depth.
+	hasBGM := len(bctx.Assets.BGM) > 0
 	if hasBGM {
-		b.addFilter(fmt.Sprintf("%sasplit=2[speech_mix][speech_duck]", speechLabel))
+		b.addFilter(fmt.Sprintf("%sasplit=2[speech_mix][speech_duck]", currentLabel))
 		currentLabel = "[speech_mix]"
 	}
 
@@ -159,8 +163,9 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		currentLabel = "[after_bgm]"
 	}
 
-	// Loudnorm (EBU R128)
-	b.addFilter(fmt.Sprintf("%sloudnorm=I=-16:TP=-1.5:LRA=11[out]", currentLabel))
+	// Peak limiter: prevents clipping after BGM mix without dynamic re-normalization.
+	// limit=0.841 ≈ -1.5 dB TP; level=0 disables auto gain equalization.
+	b.addFilter(fmt.Sprintf("%salimiter=limit=0.841:level=0[out]", currentLabel))
 
 	return &FFmpegArgs{
 		Inputs:        b.inputs,
