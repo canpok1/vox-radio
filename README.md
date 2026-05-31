@@ -50,6 +50,7 @@ collect → script → synth → assemble → publish
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
 | `publish` | MP3 をホスティングディレクトリへコピーし、`episodes.json` と `feed.xml` を更新する |
 | `prune` | 直近 N 件を残して古いエピソードを削除し、`episodes.json` と `feed.xml` を更新する |
+| `run` | collect → script → synth → assemble → publish の全パイプラインを一括実行する |
 
 ### 設定ファイル
 
