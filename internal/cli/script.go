@@ -167,16 +167,12 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg co
 		return fmt.Errorf("parse summaries.json: %w", err)
 	}
 
-	cornerSumsMap := make(map[string][]model.Summary, len(sums.Corners))
-	for _, cs := range sums.Corners {
-		cornerSumsMap[cs.CornerTitle] = cs.Summaries
-	}
+	cornerSumsMap := sums.CornerMap()
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write"))
 	allLines := make([]model.Line, 0)
 	for _, corner := range p.Corners {
-		cornerSums := cornerSumsMap[corner.Title]
-		lines, err := w.Write(ctx, corner, cornerSums, chars)
+		lines, err := w.Write(ctx, corner, cornerSumsMap[corner.Title], chars)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
