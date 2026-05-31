@@ -10,11 +10,11 @@ import (
 )
 
 // speechNormFilter normalizes speech to EBU R128 before BGM mixing.
-// The TP ceiling (-1.5 dB) must match outputLimiterTP so the two stages are calibrated together.
+// The TP ceiling (-1.5 dB) must match outputLimiterLimit so the two stages are calibrated together.
 const (
 	speechNormFilter = "loudnorm=I=-16:TP=-1.5:LRA=11"
-	// outputLimiterTP is the linear equivalent of the TP ceiling used in speechNormFilter (10^(-1.5/20) ≈ 0.841).
-	outputLimiterTP = 0.841
+	// outputLimiterLimit is the linear equivalent of the TP ceiling used in speechNormFilter (10^(-1.5/20) ≈ 0.841).
+	outputLimiterLimit = 0.841
 )
 
 // BuildContext holds all data needed to build the ffmpeg command.
@@ -173,7 +173,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 
 	// Peak limiter: prevents clipping after BGM mix without dynamic re-normalization.
 	// level=0 disables auto gain equalization.
-	b.addFilter(fmt.Sprintf("%salimiter=limit=%.3f:level=0[out]", currentLabel, outputLimiterTP))
+	b.addFilter(fmt.Sprintf("%salimiter=limit=%.3f:level=0[out]", currentLabel, outputLimiterLimit))
 
 	return &FFmpegArgs{
 		Inputs:        b.inputs,
