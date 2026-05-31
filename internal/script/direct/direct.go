@@ -131,11 +131,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 	}
 
-	totalLines := 0
-	for _, c := range corners {
-		totalLines += len(c.Lines)
-	}
-	segments := make([]model.ScriptSegment, 0, totalLines+len(insertions)+len(pauseInsertions))
+	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions))
 
 	for ci, corner := range corners {
 		for li, line := range corner.Lines {

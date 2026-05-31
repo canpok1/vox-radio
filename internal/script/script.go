@@ -70,7 +70,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		return model.Script{}, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, cornerMap, chars)
-	scriptLines := buildScriptLines(corners, cornerLines)
+	scriptLines := BuildScriptLines(corners, cornerLines)
 	if err := g.saveIntermediate(fileio.FileLines, model.ScriptLines{Corners: scriptLines}); err != nil {
 		return model.Script{}, err
 	}
@@ -179,7 +179,8 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 	return nil
 }
 
-func buildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
+// BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
+func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
 	result := make([]model.CornerLines, len(corners))
 	for i, corner := range corners {
 		result[i] = model.CornerLines{

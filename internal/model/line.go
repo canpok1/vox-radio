@@ -9,8 +9,18 @@ type Line struct {
 	Text        string `json:"text"`
 }
 
+// Lines is the LLM response envelope used by the write step.
 type Lines struct {
 	Lines []Line `json:"lines"`
+}
+
+// TotalLines returns the total number of lines across all corners.
+func (s ScriptLines) TotalLines() int {
+	total := 0
+	for _, c := range s.Corners {
+		total += len(c.Lines)
+	}
+	return total
 }
 
 // CornerLines holds the lines and direction for one corner.

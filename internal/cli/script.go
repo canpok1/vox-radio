@@ -129,29 +129,22 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	cornerMap := rundown.CornerMap()
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	scriptLines := model.ScriptLines{Corners: make([]model.CornerLines, 0, len(p.Corners))}
-	for _, corner := range p.Corners {
+	allCornerLines := make([][]model.Line, len(p.Corners))
+	for i, corner := range p.Corners {
 		rc := cornerMap[corner.Title]
 		lines, err := w.Write(ctx, p.Program, corner, p.Corners, rc.Articles, rc.Flow, cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
-		scriptLines.Corners = append(scriptLines.Corners, model.CornerLines{
-			Title:     corner.Title,
-			Direction: corner.Direction,
-			Lines:     lines,
-		})
+		allCornerLines[i] = lines
 	}
 
+	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(p.Corners, allCornerLines)}
 	outPath := filepath.Join(workDir, "03_lines.json")
 	if err := writeJSON(outPath, scriptLines); err != nil {
 		return err
 	}
-	totalLines := 0
-	for _, cl := range scriptLines.Corners {
-		totalLines += len(cl.Lines)
-	}
-	fmt.Printf("wrote %d lines to %s\n", totalLines, outPath)
+	fmt.Printf("wrote %d lines to %s\n", scriptLines.TotalLines(), outPath)
 	return nil
 }
 
