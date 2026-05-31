@@ -19,6 +19,7 @@ synthesizing voice clips, assembling audio, and publishing RSS feeds.
 
 * [vox-radio assemble](vox-radio_assemble.md)	 - Assemble WAV clips into an MP3 episode
 * [vox-radio collect](vox-radio_collect.md)	 - Collect articles from RSS feeds and URLs per corner
+* [vox-radio manifest](vox-radio_manifest.md)	 - Generate a content manifest JSON alongside an episode
 * [vox-radio prune](vox-radio_prune.md)	 - Remove old episodes, keeping only the most recent N
 * [vox-radio publish](vox-radio_publish.md)	 - Publish an episode to the hosting directory
 * [vox-radio run](vox-radio_run.md)	 - Run the full podcast production pipeline
