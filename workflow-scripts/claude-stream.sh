@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-claude "$@" --output-format stream-json --verbose --include-partial-messages -p \
+claude "$@" --permission-mode auto --output-format stream-json --verbose --include-partial-messages -p \
   | jq -nrj --unbuffered '
     def oneline: gsub("\n"; " ⏎ ");
     def trunc($n): if length > $n then .[0:$n] + "…" else . end;

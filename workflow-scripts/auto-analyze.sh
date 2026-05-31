@@ -41,7 +41,7 @@ while true; do
     echo ""
     echo "File count: ${FILE_COUNT} (>= ${MIN_COUNT}), starting analyze-work-memo..."
 
-    "${SCRIPT_DIR}/claude-stream.sh" --permission-mode auto -p "/base-tools:analyze-work-memo"
+    "${SCRIPT_DIR}/claude-stream.sh" -p "/base-tools:analyze-work-memo"
   else
     CURRENT_STATE="waiting"
     if [[ "$PREV_STATE" != "$CURRENT_STATE" ]]; then
