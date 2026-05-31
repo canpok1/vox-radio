@@ -250,7 +250,7 @@ func TestBuildFFmpegArgs_OPJingle(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{
-				"opening": {File: "/assets/opening.wav", FadeIn: 0.5, FadeOut: 1.0},
+				"opening": {File: "/assets/opening.wav", FadeIn: 0.5},
 			},
 		},
 		OpeningJingle: "opening",
@@ -383,6 +383,39 @@ func TestBuildFFmpegArgs_BothJingles_WithPauses(t *testing.T) {
 	// Both jingles in serial concat
 	if !strings.Contains(args.FilterComplex, "concat") {
 		t.Errorf("filter_complex missing concat: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_JingleKeyMissing_SilentSkip verifies that configuring OpeningJingle
+// with a key that does not exist in Assets.Jingle does not cause an error — it is silently skipped.
+func TestBuildFFmpegArgs_JingleKeyMissing_SilentSkip(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir:      "/clips",
+		Assets:        config.AssetsConfig{},
+		OpeningJingle: "missing_key",
+		PauseSec:      0.5,
+		OutPath:       "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// No jingle file should appear in inputs
+	for _, inp := range args.Inputs {
+		if strings.Contains(inp, "jingle") {
+			t.Errorf("unexpected jingle input when key is missing: %s", inp)
+		}
 	}
 }
 
