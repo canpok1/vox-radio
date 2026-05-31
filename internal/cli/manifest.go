@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -39,12 +37,10 @@ Example:
 
 			var articles model.Articles
 			if articlesPath != "" {
-				data, err := os.ReadFile(articlesPath)
+				var err error
+				articles, err = readJSON[model.Articles](articlesPath)
 				if err != nil {
 					return fmt.Errorf("read articles: %w", err)
-				}
-				if err := json.Unmarshal(data, &articles); err != nil {
-					return fmt.Errorf("parse articles: %w", err)
 				}
 			}
 

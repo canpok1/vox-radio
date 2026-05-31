@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
@@ -13,6 +15,18 @@ import (
 
 func writeJSON(path string, v any) error {
 	return fileio.WriteJSON(path, v)
+}
+
+func readJSON[T any](path string) (T, error) {
+	var v T
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return v, err
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return v, err
+	}
+	return v, nil
 }
 
 func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, error) {

@@ -47,6 +47,7 @@ type Pruner interface {
 type Options struct {
 	OutDir      string
 	PublishOpts publish.Options
+	GeneratedAt time.Time // zero value means time.Now().UTC()
 }
 
 // Runner orchestrates the full collect→script→synth→assemble→publish→prune pipeline.
@@ -102,7 +103,11 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, time.Now().UTC())
+	generatedAt := opts.GeneratedAt
+	if generatedAt.IsZero() {
+		generatedAt = time.Now().UTC()
+	}
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, articles, fileio.FileEpisode, generatedAt)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

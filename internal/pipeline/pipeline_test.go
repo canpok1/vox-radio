@@ -161,7 +161,7 @@ func TestRunner_Run_SavesIntermediateFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.ScriptPath(outDir)} {
+	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.ScriptPath(outDir), fileio.ManifestPath(outDir)} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("expected file %q to exist: %v", path, err)
 		}
