@@ -13,6 +13,8 @@ llm:
   temperature: 0.7
   # APIリトライ回数
   max_retries: 3
+  # LLM リクエストの最小インターバル（ミリ秒）。省略時は 4500ms（≈13.3 RPM）が適用される。0 を明示するとスロットリング無効。
+  min_request_interval_ms: 4500
   # ステップごとの温度設定（省略時は上記 temperature を使用）
   steps:
     summarize: { temperature: 0.2 }

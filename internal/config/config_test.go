@@ -243,6 +243,45 @@ func TestLoadConfig_ValidationError_DefaultStyleNotInStyles(t *testing.T) {
 	}
 }
 
+func TestLLMConfig_EffectiveMinRequestIntervalMS_Unspecified(t *testing.T) {
+	c := config.LLMConfig{}
+	got := c.EffectiveMinRequestIntervalMS()
+	if got != config.DefaultMinRequestIntervalMS {
+		t.Errorf("got %d, want DefaultMinRequestIntervalMS=%d", got, config.DefaultMinRequestIntervalMS)
+	}
+}
+
+func TestLLMConfig_EffectiveMinRequestIntervalMS_Zero(t *testing.T) {
+	v := 0
+	c := config.LLMConfig{MinRequestIntervalMS: &v}
+	got := c.EffectiveMinRequestIntervalMS()
+	if got != 0 {
+		t.Errorf("got %d, want 0 (throttling disabled)", got)
+	}
+}
+
+func TestLLMConfig_EffectiveMinRequestIntervalMS_Custom(t *testing.T) {
+	v := 1000
+	c := config.LLMConfig{MinRequestIntervalMS: &v}
+	got := c.EffectiveMinRequestIntervalMS()
+	if got != 1000 {
+		t.Errorf("got %d, want 1000", got)
+	}
+}
+
+func TestLoadConfig_LLM_MinRequestIntervalMS(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_with_interval.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.LLM.MinRequestIntervalMS == nil {
+		t.Fatal("LLM.MinRequestIntervalMS should be non-nil when specified in YAML")
+	}
+	if *cfg.LLM.MinRequestIntervalMS != 2000 {
+		t.Errorf("LLM.MinRequestIntervalMS: got %d, want 2000", *cfg.LLM.MinRequestIntervalMS)
+	}
+}
+
 func TestValidateProfileCast_Valid(t *testing.T) {
 	p := &config.Profile{
 		Corners: []config.CornerConfig{

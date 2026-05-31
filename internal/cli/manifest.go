@@ -82,11 +82,12 @@ LLM が生成した要約をマニフェストに追加します。
 
 				apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
 				llmClient := llm.NewClient(llm.Config{
-					BaseURL:     cfg.LLM.BaseURL,
-					APIKey:      apiKey,
-					Model:       cfg.LLM.Model,
-					Temperature: cfg.LLM.Temperature,
-					MaxRetries:  cfg.LLM.MaxRetries,
+					BaseURL:              cfg.LLM.BaseURL,
+					APIKey:               apiKey,
+					Model:                cfg.LLM.Model,
+					Temperature:          cfg.LLM.Temperature,
+					MaxRetries:           cfg.LLM.MaxRetries,
+					MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
 				})
 
 				s := programsummary.NewLLMProgramSummarizer(llmClient, string(summaryPromptData), stepTemp(cfg.LLM, "summary"))

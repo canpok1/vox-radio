@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -20,17 +21,20 @@ const (
 
 // Config holds the settings for the OpenAI-compatible LLM client.
 type Config struct {
-	BaseURL     string
-	APIKey      string
-	Model       string
-	MaxRetries  int
-	Temperature float64
+	BaseURL              string
+	APIKey               string
+	Model                string
+	MaxRetries           int
+	Temperature          float64
+	MinRequestIntervalMS int
 }
 
 type openAIClient struct {
-	cfg      Config
-	hc       *http.Client
-	endpoint string
+	cfg             Config
+	hc              *http.Client
+	endpoint        string
+	mu              sync.Mutex
+	lastRequestTime time.Time
 }
 
 // NewClient creates a new OpenAI-compatible LLM client.
@@ -116,7 +120,43 @@ func (c *openAIClient) Complete(ctx context.Context, req CompletionRequest) (jso
 	return nil, fmt.Errorf("validation failed after %d retries", c.cfg.MaxRetries)
 }
 
+// throttle ensures the minimum interval between requests is respected.
+// It reserves a time slot under the mutex and waits outside of it,
+// respecting context cancellation.
+func (c *openAIClient) throttle(ctx context.Context) error {
+	if c.cfg.MinRequestIntervalMS <= 0 {
+		return nil
+	}
+	interval := time.Duration(c.cfg.MinRequestIntervalMS) * time.Millisecond
+
+	c.mu.Lock()
+	now := time.Now()
+	next := c.lastRequestTime.Add(interval)
+	if next.After(now) {
+		c.lastRequestTime = next
+	} else {
+		c.lastRequestTime = now
+		next = now
+	}
+	c.mu.Unlock()
+
+	waitDur := time.Until(next)
+	if waitDur <= 0 {
+		return nil
+	}
+	select {
+	case <-time.After(waitDur):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs []Message) (json.RawMessage, error) {
+	if err := c.throttle(ctx); err != nil {
+		return nil, err
+	}
+
 	model := req.Model
 	if model == "" {
 		model = c.cfg.Model

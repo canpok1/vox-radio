@@ -12,6 +12,10 @@ import (
 // used to convert target_duration_sec to a target character count.
 const CharsPerSec = 7
 
+// DefaultMinRequestIntervalMS is the default minimum interval (ms) between LLM API requests.
+// Based on gemini-3.1-flash-lite free tier (15 RPM) with ~10% safety margin: 60000/15 * 1.1 ≈ 4500.
+const DefaultMinRequestIntervalMS = 4500
+
 // DurationSecToTargetChars converts a duration in seconds to an approximate target character count.
 func DurationSecToTargetChars(sec int) int {
 	return sec * CharsPerSec
@@ -56,12 +60,22 @@ type LLMStepConfig struct {
 }
 
 type LLMConfig struct {
-	BaseURL     string                   `yaml:"base_url"`
-	APIKeyEnv   string                   `yaml:"api_key_env"`
-	Model       string                   `yaml:"model"`
-	Temperature float64                  `yaml:"temperature"`
-	MaxRetries  int                      `yaml:"max_retries"`
-	Steps       map[string]LLMStepConfig `yaml:"steps"`
+	BaseURL              string                   `yaml:"base_url"`
+	APIKeyEnv            string                   `yaml:"api_key_env"`
+	Model                string                   `yaml:"model"`
+	Temperature          float64                  `yaml:"temperature"`
+	MaxRetries           int                      `yaml:"max_retries"`
+	MinRequestIntervalMS *int                     `yaml:"min_request_interval_ms,omitempty"`
+	Steps                map[string]LLMStepConfig `yaml:"steps"`
+}
+
+// EffectiveMinRequestIntervalMS returns the resolved minimum request interval in milliseconds.
+// Nil (unspecified in YAML) returns DefaultMinRequestIntervalMS; explicit 0 disables throttling.
+func (c LLMConfig) EffectiveMinRequestIntervalMS() int {
+	if c.MinRequestIntervalMS == nil {
+		return DefaultMinRequestIntervalMS
+	}
+	return *c.MinRequestIntervalMS
 }
 
 // ProgramConfig holds program-wide settings for content generation.
