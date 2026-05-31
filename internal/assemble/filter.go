@@ -50,15 +50,11 @@ type filterBuilder struct {
 	nextIdx int
 }
 
-func (b *filterBuilder) addInput(path string) int {
+func (b *filterBuilder) addInput(path string, preOpts ...string) int {
 	idx := b.nextIdx
-	b.inputs = append(b.inputs, FFmpegInput{Path: path})
+	b.inputs = append(b.inputs, FFmpegInput{Path: path, PreOptions: preOpts})
 	b.nextIdx++
 	return idx
-}
-
-func (b *filterBuilder) addInputPreOptions(idx int, opts ...string) {
-	b.inputs[idx].PreOptions = append(b.inputs[idx].PreOptions, opts...)
 }
 
 func (b *filterBuilder) addFilter(f string) {
@@ -356,16 +352,18 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			if !ok {
 				continue
 			}
-			bgmIdx := b.addInput(entry.File)
+			var bgmIdx int
+			if entry.Loop {
+				bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
+			} else {
+				bgmIdx = b.addInput(entry.File)
+			}
 			intervalLabel := fmt.Sprintf("[run%d_bgm%d_raw]", runIdx, i)
 			endMs := interval.endMs
 			if endMs < 0 {
 				endMs = run.durationMs
 			}
 			durationSec := float64(endMs-interval.startMs) / 1000.0
-			if entry.Loop {
-				b.addInputPreOptions(bgmIdx, "-stream_loop", "-1")
-			}
 			b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f,adelay=%d|%d%s",
 				bgmIdx, entry.Volume, durationSec, interval.startMs, interval.startMs, intervalLabel))
 			bgmParts = append(bgmParts, intervalLabel)

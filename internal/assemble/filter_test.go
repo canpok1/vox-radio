@@ -9,6 +9,21 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+// hasStreamLoop reports whether the input with the given path has -stream_loop -1 in its PreOptions.
+func hasStreamLoop(inputs []FFmpegInput, path string) bool {
+	for _, inp := range inputs {
+		if inp.Path != path {
+			continue
+		}
+		for i, opt := range inp.PreOptions {
+			if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func TestBuildFFmpegArgs_NoClips_Error(t *testing.T) {
 	ctx := BuildContext{
 		Script:   model.Script{},
@@ -223,21 +238,15 @@ func TestBuildFFmpegArgs_BGMSegment_StartsAndStops(t *testing.T) {
 	}
 
 	foundBGM := false
-	foundStreamLoop := false
 	for _, inp := range args.Inputs {
 		if inp.Path == "/assets/bgm.mp3" {
 			foundBGM = true
-			for i, opt := range inp.PreOptions {
-				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
-					foundStreamLoop = true
-				}
-			}
 		}
 	}
 	if !foundBGM {
 		t.Errorf("BGM input /assets/bgm.mp3 not found in inputs: %v", args.Inputs)
 	}
-	if !foundStreamLoop {
+	if !hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
 		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
 	}
 	if strings.Contains(args.FilterComplex, "aloop") {
@@ -927,21 +936,15 @@ func TestBuildFFmpegArgs_PauseSegment_BGMContinues(t *testing.T) {
 
 	// BGM should be present and loop (continues through pause)
 	foundBGM := false
-	foundStreamLoop := false
 	for _, inp := range args.Inputs {
 		if inp.Path == "/assets/bgm.mp3" {
 			foundBGM = true
-			for i, opt := range inp.PreOptions {
-				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
-					foundStreamLoop = true
-				}
-			}
 		}
 	}
 	if !foundBGM {
 		t.Errorf("BGM input not found in inputs: %v", args.Inputs)
 	}
-	if !foundStreamLoop {
+	if !hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
 		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
 	}
 	if strings.Contains(args.FilterComplex, "aloop") {
@@ -984,18 +987,19 @@ func TestBuildFFmpegArgs_BGMLoop_StreamLoop(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// -stream_loop -1 must be set as PreOptions on the BGM input.
-	foundStreamLoop := false
+	// BGM must be present in inputs.
+	foundBGM := false
 	for _, inp := range args.Inputs {
 		if inp.Path == "/assets/bgm.mp3" {
-			for i, opt := range inp.PreOptions {
-				if opt == "-stream_loop" && i+1 < len(inp.PreOptions) && inp.PreOptions[i+1] == "-1" {
-					foundStreamLoop = true
-				}
-			}
+			foundBGM = true
 		}
 	}
-	if !foundStreamLoop {
+	if !foundBGM {
+		t.Errorf("BGM input /assets/bgm.mp3 not found in inputs: %v", args.Inputs)
+	}
+
+	// -stream_loop -1 must be set as PreOptions on the BGM input.
+	if !hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
 		t.Errorf("loop:true BGM should have -stream_loop -1 in PreOptions, inputs: %v", args.Inputs)
 	}
 
