@@ -21,7 +21,7 @@ allowed-tools: Bash, Read, Grep, Glob, Edit
 grep -n "Short:\|Long:" internal/cli/*.go
 ```
 
-`Short` または `Long` が空文字列・未設定のコマンドを特定する。
+出力結果を目視して、`Short` または `Long` の行がないコマンドを特定する（空文字列は別途 `grep -n 'Short:.*""'` で確認すること）。
 
 #### 1b. docs/cli/ の鮮度チェック
 
@@ -30,7 +30,7 @@ grep -n "Short:\|Long:" internal/cli/*.go
 ```bash
 TMPDIR=$(mktemp -d)
 cp docs/cli/* "$TMPDIR/"
-make docs 2>/dev/null
+make docs
 diff -rq "$TMPDIR/" docs/cli/
 cp "$TMPDIR/"* docs/cli/
 rm -rf "$TMPDIR"
@@ -86,8 +86,12 @@ make docs
 
 ### ステップ5: 修正をコミットする
 
+変更したファイルのみをステージングする（Short/Long を修正した場合のみ `internal/cli/` を追加する）。
+
 ```bash
-git add docs/cli/ README.md internal/cli/
+git add docs/cli/ README.md
+# Short/Long を修正した場合はさらに追加
+# git add internal/cli/<変更したファイル>
 git commit -m "docs: CLIドキュメントを更新する"
 ```
 

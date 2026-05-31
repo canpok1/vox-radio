@@ -18,7 +18,7 @@ tools: Bash, Glob, Grep, Read
 grep -n "Short:\|Long:" internal/cli/*.go
 ```
 
-`Short` または `Long` が空文字列・未設定のコマンドファイルを特定して報告する。
+出力結果を目視して、`Short` または `Long` の行がないコマンドファイルを特定して報告する（このgrepはフィールドの存在確認であり、空文字列は別途 `grep -n 'Short:.*""'` で確認すること）。
 
 ### 2. docs/cli/ の鮮度チェック（作業ツリーを汚さない方式）
 
@@ -27,11 +27,10 @@ grep -n "Short:\|Long:" internal/cli/*.go
 ```bash
 TMPDIR=$(mktemp -d)
 cp docs/cli/* "$TMPDIR/"
-make docs 2>/dev/null
-DIFF=$(diff -rq "$TMPDIR/" docs/cli/ 2>&1)
+make docs
+diff -rq "$TMPDIR/" docs/cli/
 cp "$TMPDIR/"* docs/cli/
 rm -rf "$TMPDIR"
-echo "$DIFF"
 ```
 
 差分がなければ「ドキュメント最新」と報告する。差分があればファイル名を列挙する。
