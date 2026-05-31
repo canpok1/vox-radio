@@ -83,14 +83,12 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 	}
 
 	bctx := BuildContext{
-		Script:        script,
-		Clips:         clips,
-		ClipsDir:      clipsDir,
-		Assets:        a.AssetsConfig,
-		PauseSec:      pauseSec,
-		OutPath:       outPath,
-		OpeningJingle: a.Program.OpeningJingle,
-		EndingJingle:  a.Program.EndingJingle,
+		Script:   injectProgramJingles(script, a.Program),
+		Clips:    clips,
+		ClipsDir: clipsDir,
+		Assets:   a.AssetsConfig,
+		PauseSec: pauseSec,
+		OutPath:  outPath,
 	}
 
 	ffArgs, err := BuildFFmpegArgs(bctx)
