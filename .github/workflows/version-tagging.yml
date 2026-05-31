@@ -1,0 +1,31 @@
+name: version-tagging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-version-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.create-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Create and push version tag
+        run: ./.github/scripts/create-version-tag.sh
+      - name: Get created tag
+        id: create-tag
+        run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+  # GITHUB_TOKENでpushしたタグはrelease.ymlをトリガーしないため、goreleaser.ymlを直接呼ぶ
+  release:
+    needs: create-version-tag
+    uses: ./.github/workflows/goreleaser.yml
+    with:
+      goreleaser-args: "release --clean"
+      checkout-ref: ${{ needs.create-version-tag.outputs.tag }}
+    secrets: inherit
