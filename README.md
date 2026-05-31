@@ -58,8 +58,10 @@ collect → script → synth → assemble → publish
 
 | 種別 | ファイル | 内容 |
 |------|---------|------|
-| 共通設定 (config) | `vox-radio.yaml`（リポジトリ直下） | LLM のみ（ジャンル非依存） |
+| 共通設定 (config) | `vox-radio.yaml`（カレントディレクトリ、自動読込） | LLM / VOICEVOX URL / キャラカタログ |
 | ジャンル別設定 (profile) | `profiles/<genre>/profile.yaml` | feeds / show / assets / podcast |
+
+`vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
 
 プロファイルは `profiles/` ディレクトリに配置します。サンプルは `profiles/tech/`（技術ニュース用）と `profiles/test/`（動作確認用）です。詳細は [profiles/README.md](profiles/README.md) を参照してください。
 
@@ -71,7 +73,7 @@ vox-radio collect --out work/articles.json --profile profiles/tech/profile.yaml
 
 # 台本を生成
 vox-radio script --in work/articles.json --out work/script.json \
-    --config vox-radio.yaml --profile profiles/tech/profile.yaml
+    --profile profiles/tech/profile.yaml
 
 # 音声合成（設定不要）
 vox-radio synth --in work/script.json --out-dir work/clips

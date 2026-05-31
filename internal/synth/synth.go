@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 )
@@ -15,14 +16,17 @@ import (
 type Synth struct {
 	Client      VoicevoxClient
 	ShowConfig  model.ShowConfig
+	Config      *config.Config
 	getDuration func(path string) (float64, error)
 }
 
-// New creates a new Synth with an HTTP VOICEVOX client
-func New(engineURL string, showConfig model.ShowConfig) *Synth {
+// New creates a new Synth with an HTTP VOICEVOX client.
+// cfg carries the character catalog for future speaker resolution (#2).
+func New(engineURL string, showConfig model.ShowConfig, cfg *config.Config) *Synth {
 	return &Synth{
 		Client:      NewClient(engineURL),
 		ShowConfig:  showConfig,
+		Config:      cfg,
 		getDuration: mediainfo.Duration,
 	}
 }

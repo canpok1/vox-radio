@@ -9,6 +9,8 @@ Run collect → script → synth → assemble → publish → prune in one shot.
 Intermediate files are written to <out-dir>/intermediate/ and the final
 episode.mp3 is placed directly under <out-dir>/.
 
+vox-radio.yaml is automatically loaded from the current directory.
+
 Example:
   vox-radio run
   vox-radio run --out-dir output --profile profiles/tech/profile.yaml
@@ -22,7 +24,6 @@ vox-radio run [flags]
 
 ```
       --base-url string      base URL for audio/feed URLs (default: site_url from profile)
-      --config string        common config YAML file path (LLM settings) (default "vox-radio.yaml")
       --date string          episode date YYYY-MM-DD (default: today)
       --description string   episode description
   -h, --help                 help for run

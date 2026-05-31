@@ -1,0 +1,21 @@
+llm:
+  base_url: https://example.com
+  api_key_env: TEST_KEY
+  model: test-model
+  temperature: 0.7
+  max_retries: 3
+  steps:
+    summarize: { temperature: 0.2 }
+
+voicevox:
+  url: http://localhost:50021
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ"]
+    personality: ["元気"]
+    default_style: 存在しないスタイル
+    styles:
+      ノーマル: 3

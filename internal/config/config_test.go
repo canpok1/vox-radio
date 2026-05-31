@@ -151,3 +151,56 @@ func TestLoadProfile_MissingFile(t *testing.T) {
 		t.Error("expected error for missing file")
 	}
 }
+
+func TestLoadConfig_Voicevox(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Voicevox.URL == "" {
+		t.Error("Voicevox.URL must not be empty")
+	}
+}
+
+func TestLoadConfig_Characters(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if len(cfg.Characters) == 0 {
+		t.Error("Characters must not be empty")
+	}
+
+	ch, ok := cfg.Characters["zundamon"]
+	if !ok {
+		t.Fatal("Characters[\"zundamon\"] not found")
+	}
+	if ch.Name == "" {
+		t.Error("CharacterConfig.Name must not be empty")
+	}
+	if ch.Pronoun == "" {
+		t.Error("CharacterConfig.Pronoun must not be empty")
+	}
+	if len(ch.SpeechSuffix) == 0 {
+		t.Error("CharacterConfig.SpeechSuffix must not be empty")
+	}
+	if len(ch.Personality) == 0 {
+		t.Error("CharacterConfig.Personality must not be empty")
+	}
+	if ch.DefaultStyle == "" {
+		t.Error("CharacterConfig.DefaultStyle must not be empty")
+	}
+	if len(ch.Styles) == 0 {
+		t.Error("CharacterConfig.Styles must not be empty")
+	}
+	if _, ok := ch.Styles[ch.DefaultStyle]; !ok {
+		t.Errorf("DefaultStyle %q not found in Styles", ch.DefaultStyle)
+	}
+}
+
+func TestLoadConfig_ValidationError_DefaultStyleNotInStyles(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_invalid_default_style.yaml")
+	if err == nil {
+		t.Error("expected error when default_style is not in styles")
+	}
+}

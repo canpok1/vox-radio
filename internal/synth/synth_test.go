@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -211,6 +212,22 @@ func TestSynth_Run_UsesSpeakerFromShowConfig(t *testing.T) {
 		if gotSpeakers[i] != want[i] {
 			t.Errorf("speaker[%d]: got %d, want %d", i, gotSpeakers[i], want[i])
 		}
+	}
+}
+
+func TestNew_StoresConfig(t *testing.T) {
+	cfg := &config.Config{
+		Voicevox: config.VoicevoxConfig{URL: "http://localhost:50021"},
+		Characters: map[string]config.CharacterConfig{
+			"zundamon": {Name: "ずんだもん", DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+		},
+	}
+	showConfig := model.ShowConfig{DefaultSpeaker: 3, Speakers: map[string]int{}}
+
+	s := New("http://localhost:50021", showConfig, cfg)
+
+	if s.Config != cfg {
+		t.Error("New should store the config in Synth.Config")
 	}
 }
 

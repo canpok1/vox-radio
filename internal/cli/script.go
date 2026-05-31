@@ -23,7 +23,6 @@ func newScriptCmd() *cobra.Command {
 	var in string
 	var out string
 	var step string
-	var configPath string
 	var profilePath string
 	var promptsDir string
 
@@ -32,6 +31,8 @@ func newScriptCmd() *cobra.Command {
 		Short: "Generate a script from collected articles using LLM",
 		Long: `Run the multi-stage LLM pipeline (summarize → plan → write → direct) to
 produce script.json from articles.json.
+
+vox-radio.yaml is automatically loaded from the current directory.
 
 Use --step to run a single stage independently:
   summarize  Summarize each article (writes summaries.json)
@@ -42,9 +43,9 @@ Use --step to run a single stage independently:
 Example:
   vox-radio script --in work/articles.json --out work/script.json
   vox-radio script --out work/script.json --step plan
-  vox-radio script --in work/articles.json --out work/script.json --config vox-radio.yaml --profile profiles/tech/profile.yaml`,
+  vox-radio script --in work/articles.json --out work/script.json --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadConfig(configPath)
+			cfg, err := config.LoadConfig("vox-radio.yaml")
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -95,7 +96,6 @@ Example:
 	cmd.Flags().StringVar(&in, "in", "", "input articles.json path (required for full pipeline or summarize step)")
 	cmd.Flags().StringVar(&out, "out", "", "output script.json path (required)")
 	cmd.Flags().StringVar(&step, "step", "", "run a single step: summarize|plan|write|direct")
-	cmd.Flags().StringVar(&configPath, "config", "vox-radio.yaml", "common config YAML file path (LLM settings)")
 	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	_ = cmd.MarkFlagRequired("out")

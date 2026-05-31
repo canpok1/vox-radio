@@ -23,7 +23,6 @@ import (
 
 func newRunCmd() *cobra.Command {
 	var outDir string
-	var configPath string
 	var profilePath string
 	var promptsDir string
 	var date string
@@ -40,12 +39,14 @@ func newRunCmd() *cobra.Command {
 Intermediate files are written to <out-dir>/intermediate/ and the final
 episode.mp3 is placed directly under <out-dir>/.
 
+vox-radio.yaml is automatically loaded from the current directory.
+
 Example:
   vox-radio run
   vox-radio run --out-dir output --profile profiles/tech/profile.yaml
   vox-radio run --hosting ghpages --date 2026-01-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadConfig(configPath)
+			cfg, err := config.LoadConfig("vox-radio.yaml")
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -81,7 +82,7 @@ Example:
 				intermediateDir,
 			)
 
-			engineURL := os.Getenv("VOICEVOX_ENGINE_URL")
+			engineURL := cfg.Voicevox.URL
 			if engineURL == "" {
 				engineURL = "http://localhost:50021"
 			}
@@ -98,7 +99,7 @@ Example:
 				Profile:   p,
 				Collector: collect.New(nil),
 				Scripter:  scripter,
-				Synther:   synth.New(engineURL, p.Show),
+				Synther:   synth.New(engineURL, p.Show, cfg),
 				Assembler: assemble.New(p.Assets, p.Show),
 				Publisher: publish.New(h, p.Podcast),
 				Pruner:    publish.NewPruner(h, keep),
@@ -123,7 +124,6 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&outDir, "out-dir", "output", "output directory (episode.mp3 placed here, intermediate files in <out-dir>/intermediate/)")
-	cmd.Flags().StringVar(&configPath, "config", "vox-radio.yaml", "common config YAML file path (LLM settings)")
 	cmd.Flags().StringVar(&profilePath, "profile", "profiles/test/profile.yaml", "profile YAML file path")
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "directory containing prompt templates")
 	cmd.Flags().StringVar(&date, "date", "", "episode date YYYY-MM-DD (default: today)")
