@@ -44,17 +44,9 @@ Example:
   vox-radio script --out work/script.json --step write
   vox-radio script --in work/articles.json --out work/script.json --profile profiles/tech/profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadConfig("vox-radio.yaml")
+			cfg, p, err := loadConfigAndProfile(profilePath)
 			if err != nil {
-				return fmt.Errorf("load config: %w", err)
-			}
-
-			p, err := config.LoadProfile(profilePath)
-			if err != nil {
-				return fmt.Errorf("load profile: %w", err)
-			}
-			if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
-				return fmt.Errorf("profile validation: %w", err)
+				return err
 			}
 
 			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)

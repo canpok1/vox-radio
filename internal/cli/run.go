@@ -7,7 +7,6 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/collect"
-	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/pipeline"
 	"github.com/canpok1/vox-radio/internal/publish"
@@ -45,17 +44,9 @@ Example:
   vox-radio run --out-dir output --profile profiles/tech/profile.yaml
   vox-radio run --hosting ghpages --date 2026-01-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadConfig("vox-radio.yaml")
+			cfg, p, err := loadConfigAndProfile(profilePath)
 			if err != nil {
-				return fmt.Errorf("load config: %w", err)
-			}
-
-			p, err := config.LoadProfile(profilePath)
-			if err != nil {
-				return fmt.Errorf("load profile: %w", err)
-			}
-			if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
-				return fmt.Errorf("profile validation: %w", err)
+				return err
 			}
 
 			apiKey := os.Getenv(cfg.LLM.APIKeyEnv)

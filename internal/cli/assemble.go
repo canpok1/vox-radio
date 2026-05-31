@@ -56,8 +56,6 @@ Example:
 				}
 				assetsConfig = p.Assets
 				program = p.Program
-			} else {
-				program = config.ProgramConfig{SegmentPauseSec: 0.3}
 			}
 
 			a := assemble.New(assetsConfig, program)
