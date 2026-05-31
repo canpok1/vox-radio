@@ -31,7 +31,7 @@ func TestLLMProgramSummarizer_Summarize_ReturnsSummaryText(t *testing.T) {
 	scr := model.Script{
 		Segments: []model.ScriptSegment{
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "今日はAIについて話すのだ"},
-			{Type: model.SegmentTypeSE, SEName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "そうですね"},
 		},
 	}
@@ -54,7 +54,7 @@ func TestLLMProgramSummarizer_Summarize_PromptContainsSpeechLines(t *testing.T) 
 	scr := model.Script{
 		Segments: []model.ScriptSegment{
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "AIチップの話"},
-			{Type: model.SegmentTypeSE, SEName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "最新ニュースです"},
 		},
 	}
@@ -81,7 +81,7 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 
 	scr := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSE, SEName: "opening_jingle"},
+			{Type: model.SegmentTypeSE, AssetName: "opening_jingle"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
 		},
 	}

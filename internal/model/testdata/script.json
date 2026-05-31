@@ -10,8 +10,12 @@
       "text": "今日のテックニュースを始めましょう。"
     },
     {
+      "type": "bgm",
+      "asset_name": "talk_bgm"
+    },
+    {
       "type": "se",
-      "se_name": "chime"
+      "asset_name": "chime"
     },
     {
       "type": "speech",
@@ -20,7 +24,11 @@
     },
     {
       "type": "se",
-      "se_name": "transition"
+      "asset_name": "transition"
+    },
+    {
+      "type": "bgm",
+      "asset_name": ""
     },
     {
       "type": "speech",

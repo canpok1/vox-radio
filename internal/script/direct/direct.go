@@ -10,18 +10,19 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
-var seInsertionsSchema = json.RawMessage(`{
+var insertionsSchema = json.RawMessage(`{
   "type": "object",
-  "required": ["se_insertions"],
+  "required": ["insertions"],
   "properties": {
-    "se_insertions": {
+    "insertions": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["after_line_index", "se_name"],
+        "required": ["after_line_index", "type", "asset_name"],
         "properties": {
           "after_line_index": {"type": "integer", "minimum": 0},
-          "se_name":          {"type": "string"},
+          "type":             {"type": "string", "enum": ["se", "bgm", "jingle"]},
+          "asset_name":       {"type": "string"},
           "reason":           {"type": "string"}
         },
         "additionalProperties": false
@@ -32,17 +33,18 @@ var seInsertionsSchema = json.RawMessage(`{
 }`)
 
 type Director interface {
-	Direct(ctx context.Context, lines []model.Line, se model.SECatalog) (model.Script, error)
+	Direct(ctx context.Context, lines []model.Line, catalog model.AssetCatalog) (model.Script, error)
 }
 
-type seInsertion struct {
-	AfterLineIndex int    `json:"after_line_index"`
-	SEName         string `json:"se_name"`
-	Reason         string `json:"reason,omitempty"`
+type insertion struct {
+	AfterLineIndex int               `json:"after_line_index"`
+	Type           model.SegmentType `json:"type"`
+	AssetName      string            `json:"asset_name"`
+	Reason         string            `json:"reason,omitempty"`
 }
 
-type seInsertionsResponse struct {
-	SEInsertions []seInsertion `json:"se_insertions"`
+type insertionsResponse struct {
+	Insertions []insertion `json:"insertions"`
 }
 
 type LLMDirector struct {
@@ -55,39 +57,41 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, se model.SECatalog) (model.Script, error) {
+func (d *LLMDirector) Direct(ctx context.Context, lines []model.Line, catalog model.AssetCatalog) (model.Script, error) {
 	linesJSON, err := json.Marshal(model.Lines{Lines: lines})
 	if err != nil {
 		return model.Script{}, fmt.Errorf("marshal lines: %w", err)
 	}
 
-	seJSON, err := json.Marshal(se)
+	catalogJSON, err := json.Marshal(catalog)
 	if err != nil {
-		return model.Script{}, fmt.Errorf("marshal se catalog: %w", err)
+		return model.Script{}, fmt.Errorf("marshal asset catalog: %w", err)
 	}
 
-	prompt := strings.ReplaceAll(d.promptTemplate, "{{lines}}", string(linesJSON))
-	prompt = strings.ReplaceAll(prompt, "{{se_catalog}}", string(seJSON))
+	prompt := strings.NewReplacer(
+		"{{lines}}", string(linesJSON),
+		"{{asset_catalog}}", string(catalogJSON),
+	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema:  seInsertionsSchema,
+		JSONSchema:  insertionsSchema,
 		Temperature: d.temperature,
 	})
 	if err != nil {
 		return model.Script{}, fmt.Errorf("llm complete: %w", err)
 	}
 
-	var resp seInsertionsResponse
+	var resp insertionsResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
-		return model.Script{}, fmt.Errorf("unmarshal se insertions: %w", err)
+		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
-	return buildScript(lines, resp.SEInsertions), nil
+	return buildScript(lines, resp.Insertions), nil
 }
 
-func buildScript(lines []model.Line, insertions []seInsertion) model.Script {
-	insertionMap := make(map[int][]seInsertion, len(insertions))
+func buildScript(lines []model.Line, insertions []insertion) model.Script {
+	insertionMap := make(map[int][]insertion, len(insertions))
 	for _, ins := range insertions {
 		insertionMap[ins.AfterLineIndex] = append(insertionMap[ins.AfterLineIndex], ins)
 	}
@@ -102,8 +106,8 @@ func buildScript(lines []model.Line, insertions []seInsertion) model.Script {
 		})
 		for _, ins := range insertionMap[i] {
 			segments = append(segments, model.ScriptSegment{
-				Type:   model.SegmentTypeSE,
-				SEName: ins.SEName,
+				Type:      ins.Type,
+				AssetName: ins.AssetName,
 			})
 		}
 	}

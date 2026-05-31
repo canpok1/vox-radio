@@ -244,3 +244,80 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 		t.Errorf("ffmpeg output should go to writer: %q", ffmpegOutput.String())
 	}
 }
+
+// TestAssembler_Run_RealYAMLKeys verifies that asset keys from the actual YAML profile
+// are correctly wired through to the ffmpeg command, preventing silent disable recurrence.
+// This is the integration test that catches the bug described in Issue #98
+// where YAML keys ("opening"/"ending") didn't match the code's expected keys ("op"/"ed").
+func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
+	// Load the testdata profile to get real YAML asset keys.
+	profile, err := config.LoadProfile("../../internal/config/testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("load profile: %v", err)
+	}
+
+	var capturedArgs []string
+	a := &Assembler{
+		AssetsConfig: profile.Assets,
+		Program:      profile.Program,
+		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
+			capturedArgs = args
+			return nil
+		},
+		getDuration: func(_ string) (float64, error) { return 30.0, nil },
+		getFileSize: func(_ string) (int64, error) { return 1024, nil },
+		logger:      slog.Default(),
+	}
+
+	// Build a script that uses the exact YAML keys for jingle and bgm.
+	openingKey := profile.Program.OpeningJingle
+	endingKey := profile.Program.EndingJingle
+	if openingKey == "" || endingKey == "" {
+		t.Skip("profile has no opening/ending jingle configured")
+	}
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+		},
+	}
+
+	dir := t.TempDir()
+	_, err = a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify that the opening jingle file appears in the ffmpeg arguments.
+	// If the YAML key doesn't match what the code looks up, the jingle would be silently skipped.
+	if openingEntry, ok := profile.Assets.Jingle[openingKey]; ok {
+		foundOpening := false
+		for _, arg := range capturedArgs {
+			if arg == openingEntry.File {
+				foundOpening = true
+			}
+		}
+		if !foundOpening {
+			t.Errorf("opening jingle file %q (key=%q) not found in ffmpeg args: %v",
+				openingEntry.File, openingKey, capturedArgs)
+		}
+	}
+
+	if endingEntry, ok := profile.Assets.Jingle[endingKey]; ok {
+		foundEnding := false
+		for _, arg := range capturedArgs {
+			if arg == endingEntry.File {
+				foundEnding = true
+			}
+		}
+		if !foundEnding {
+			t.Errorf("ending jingle file %q (key=%q) not found in ffmpeg args: %v",
+				endingEntry.File, endingKey, capturedArgs)
+		}
+	}
+}

@@ -54,7 +54,7 @@ func TestSynth_Run_SkipsSESegments(t *testing.T) {
 	script := model.Script{
 		Segments: []model.ScriptSegment{
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
-			{Type: model.SegmentTypeSE, SEName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "よろしく"},
 		},
 	}
@@ -313,7 +313,7 @@ func TestSynth_Run_EmptyClipsJSON_WhenNoSpeechSegments(t *testing.T) {
 	s := newTestSynth()
 	script := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSE, SEName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
 		},
 	}
 

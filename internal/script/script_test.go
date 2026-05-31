@@ -56,7 +56,7 @@ type mockDirector struct {
 	err    error
 }
 
-func (m *mockDirector) Direct(_ context.Context, lines []model.Line, _ model.SECatalog) (model.Script, error) {
+func (m *mockDirector) Direct(_ context.Context, lines []model.Line, _ model.AssetCatalog) (model.Script, error) {
 	if m.err != nil {
 		return model.Script{}, m.err
 	}
@@ -99,7 +99,7 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.SECatalog{Names: []string{"chime"}},
+		model.AssetCatalog{SE: []string{"chime"}, BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -117,7 +117,7 @@ func TestLLMScriptGenerator_Generate_SummarizeError(t *testing.T) {
 		&mockSummarizer{err: context.Canceled},
 		&mockWriter{},
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -132,7 +132,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{err: context.Canceled},
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -160,7 +160,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -186,7 +186,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -204,7 +204,7 @@ func TestLLMScriptGenerator_Generate_EmptyArticles(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -222,7 +222,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		&mockSummarizer{},
 		&mockWriter{},
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -247,7 +247,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 		&mockSummarizer{},
 		mw,
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		"",
 	)
 
@@ -280,7 +280,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	gen := script.NewLLMScriptGenerator(ms, mw, md, model.SECatalog{}, "", script.WithLogger(logger))
+	gen := script.NewLLMScriptGenerator(ms, mw, md, model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)}, "", script.WithLogger(logger))
 
 	_, err := gen.Generate(context.Background(), articles, corners, testChars)
 	if err != nil {
@@ -304,7 +304,7 @@ func TestLLMScriptGenerator_Generate_SavesNumberedIntermediateFiles(t *testing.T
 		&mockSummarizer{},
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.SECatalog{},
+		model.AssetCatalog{SE: make([]string, 0), BGM: make([]string, 0), Jingle: make([]string, 0)},
 		workDir,
 	)
 

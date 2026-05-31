@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -68,17 +69,17 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return fmt.Errorf("create work dir: %w", err)
 			}
 
-			seCatalog := buildSECatalog(p.Assets)
+			assetCatalog := buildAssetCatalog(p.Assets)
 
 			switch step {
 			case "":
-				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts, seCatalog, logger)
+				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts, assetCatalog, logger)
 			case "summarize":
 				return runScriptSummarize(context.Background(), in, workDir, llmClient, cfg.LLM, prompts)
 			case "write":
 				return runScriptWrite(context.Background(), workDir, llmClient, cfg.LLM, p, cfg.Characters, prompts)
 			case "direct":
-				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, seCatalog)
+				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog)
 			default:
 				return fmt.Errorf("unknown step %q: use summarize|write|direct", step)
 			}
@@ -95,7 +96,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 	return cmd
 }
 
-func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string, seCatalog model.SECatalog, logger *slog.Logger) error {
+func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, llmCfg config.LLMConfig, p *config.Profile, chars map[string]config.CharacterConfig, prompts map[string]string, assetCatalog model.AssetCatalog, logger *slog.Logger) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
@@ -108,7 +109,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, l
 		summarize.NewLLMSummarizer(c, prompts["summarize"], stepTemp(llmCfg, "summarize")),
 		write.NewLLMWriter(c, prompts["write"], stepTemp(llmCfg, "write")),
 		direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct")),
-		seCatalog,
+		assetCatalog,
 		workDir,
 		script.WithLogger(logger),
 	)
@@ -188,7 +189,7 @@ func runScriptWrite(ctx context.Context, workDir string, c llm.Client, llmCfg co
 	return nil
 }
 
-func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, seCatalog model.SECatalog) error {
+func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog) error {
 	linesPath := filepath.Join(workDir, "lines.json")
 	data, err := os.ReadFile(linesPath)
 	if err != nil {
@@ -200,7 +201,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	}
 
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"))
-	scr, err := d.Direct(ctx, linesWrapper.Lines, seCatalog)
+	scr, err := d.Direct(ctx, linesWrapper.Lines, assetCatalog)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
 	}
@@ -225,13 +226,21 @@ func loadPrompts(dir string) (map[string]string, error) {
 	return prompts, nil
 }
 
-func buildSECatalog(assets config.AssetsConfig) model.SECatalog {
-	names := make([]string, 0, len(assets.SE))
-	for name := range assets.SE {
-		names = append(names, name)
+func buildAssetCatalog(assets config.AssetsConfig) model.AssetCatalog {
+	return model.AssetCatalog{
+		SE:     sortedKeys(assets.SE),
+		BGM:    sortedKeys(assets.BGM),
+		Jingle: sortedKeys(assets.Jingle),
 	}
-	sort.Strings(names)
-	return model.SECatalog{Names: names}
+}
+
+// sortedKeys returns a sorted, non-nil slice of map keys.
+// slices.Sorted returns nil for empty iterators, causing JSON to marshal as null instead of [].
+func sortedKeys[V any](m map[string]V) []string {
+	if len(m) == 0 {
+		return make([]string, 0)
+	}
+	return slices.Sorted(maps.Keys(m))
 }
 
 func stepTemp(llmCfg config.LLMConfig, name string) float64 {
