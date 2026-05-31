@@ -9,19 +9,20 @@ program:
   site_url: https://example.github.io/vox-radio/
   max_items: 7
   segment_pause_sec: 0.3
+  target_duration_sec: 240
 
 corners:
   - title: "オープニング"
     content: "番組の挨拶と本日のトピック紹介"
     cast:
       zundamon: "元気に挨拶する進行役"
-    target_chars: 200
+    target_duration_sec: 30
   - title: "今日のテックニュース"
     content: "テック記事を2〜3本、噛み砕いて紹介"
     cast:
       zundamon: "司会"
       metan: "解説役"
-    target_chars: 1300
+    target_duration_sec: 180
     source:
       feeds:
         - url: https://example.com/rss.xml
@@ -34,7 +35,7 @@ corners:
     content: "まとめと次回予告"
     cast:
       zundamon: "進行役"
-    target_chars: 200
+    target_duration_sec: 30
 
 assets:
   jingle:

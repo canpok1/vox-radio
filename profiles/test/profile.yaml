@@ -9,13 +9,14 @@ program:
   site_url: https://example.github.io/vox-radio/
   max_items: 3
   segment_pause_sec: 0.3
+  target_duration_sec: 60
 
 corners:
   - title: "メインコーナー"
     content: "本日のニュースを紹介"
     cast:
       zundamon: "進行役"
-    target_chars: 300
+    target_duration_sec: 45
     source:
       feeds:
         - url: https://example.com/rss.xml

@@ -48,22 +48,23 @@ program:
   explicit: false
   cover_image_url: https://example.com/cover.jpg
   site_url: https://example.com/
-  max_items: 7            # フィードに載せる最大件数
-  segment_pause_sec: 0.3  # セリフ間の無音（秒）
+  max_items: 7             # フィードに載せる最大件数
+  segment_pause_sec: 0.3   # セリフ間の無音（秒）
+  target_duration_sec: 240 # 番組全体の目標再生時間（秒）
 
 corners:                  # 固定コーナーのリスト
   - title: "オープニング"
     content: "番組の挨拶と本日のトピック紹介"
     cast:
       zundamon: "元気に挨拶する進行役"  # キャラID: そのコーナーの役割指示
-    target_chars: 200      # 目標文字数（暫定）
+    target_duration_sec: 30  # コーナーの目標再生時間（秒）
     # source なし → 収集スキップ（挨拶のみのコーナーに使用）
   - title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"
       metan: "解説役"
-    target_chars: 1300
+    target_duration_sec: 180
     source:                # このコーナーのデータソース（省略可）
       feeds:
         - url: https://example.com/rss.xml
@@ -85,9 +86,10 @@ assets:
 ### フィールド説明
 
 - `program`: 番組全体の設定（旧 `podcast` + `show.segment_pause_sec`）
+  - `target_duration_sec`: 番組全体の目標再生時間（秒）
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
-  - `target_chars`: 暫定の目標文字数（#4 で再生時間化予定）
+  - `target_duration_sec`: コーナーの目標再生時間（秒）。台本生成時に文字数係数（≈7文字/秒）で換算される
   - `source`（省略可）: コーナーのデータソース。省略したコーナーは収集をスキップ
     - `feeds`: RSS フィードのリスト（`url` / `max_items`）
     - `articles`: 個別記事 URL のリスト
