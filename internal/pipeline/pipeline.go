@@ -15,7 +15,7 @@ import (
 
 // ProgramSummarizer generates a summary of the episode from the final script.
 type ProgramSummarizer interface {
-	Summarize(ctx context.Context, scr model.Script) (string, error)
+	Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error)
 }
 
 // CornerSummarizer generates a summary for a single corner from its script lines.
@@ -122,12 +122,15 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		generatedAt = time.Now().UTC()
 	}
 
-	var programSummary string
+	var programSummary model.ProgramSummary
 	if r.ProgramSummarizer != nil {
 		programSummary, err = r.ProgramSummarizer.Summarize(ctx, scr)
 		if err != nil {
 			return fmt.Errorf("summarize program: %w", err)
 		}
+	}
+	if programSummary.ConversationNotes == nil {
+		programSummary.ConversationNotes = make([]model.ConversationNote, 0)
 	}
 
 	var cornerSummaries map[string]model.CornerSummary
@@ -154,7 +157,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary, cornerSummaries)
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

@@ -86,9 +86,9 @@ type stubProgramSummarizer struct {
 	called  bool
 }
 
-func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (string, error) {
+func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (model.ProgramSummary, error) {
 	s.called = true
-	return s.summary, s.err
+	return model.ProgramSummary{Summary: s.summary, ConversationNotes: make([]model.ConversationNote, 0)}, s.err
 }
 
 type stubCornerSummarizer struct {

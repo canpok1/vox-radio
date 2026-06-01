@@ -35,7 +35,7 @@ func TestBuild(t *testing.T) {
 	}
 
 	t.Run("title and description from program", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		if got.Title != program.Title {
 			t.Errorf("Title = %q, want %q", got.Title, program.Title)
 		}
@@ -45,14 +45,14 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("audio_file is set", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		if got.AudioFile != "episode.mp3" {
 			t.Errorf("AudioFile = %q, want %q", got.AudioFile, "episode.mp3")
 		}
 	})
 
 	t.Run("datetime is RFC3339 UTC", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		want := "2026-05-31T12:34:56Z"
 		if got.Datetime != want {
 			t.Errorf("Datetime = %q, want %q", got.Datetime, want)
@@ -60,7 +60,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corners in profile order", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		if len(got.Corners) != len(corners) {
 			t.Fatalf("len(Corners) = %d, want %d", len(got.Corners), len(corners))
 		}
@@ -72,7 +72,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner without articles has empty array not null", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		opening := got.Corners[0]
 		if opening.Articles == nil {
 			t.Error("Articles for corner without articles must be [] not nil")
@@ -83,7 +83,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("articles attributed to correct corner", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		techCorner := got.Corners[1]
 		if len(techCorner.Articles) != 1 {
 			t.Fatalf("len(Articles) = %d, want 1", len(techCorner.Articles))
@@ -98,7 +98,7 @@ func TestBuild(t *testing.T) {
 
 	t.Run("empty rundown produces empty articles arrays", func(t *testing.T) {
 		emptyRundown := model.Rundown{}
-		got := manifest.Build(program, corners, emptyRundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, emptyRundown, "episode.mp3", fixedTime, "", nil, nil)
 		for i, c := range got.Corners {
 			if c.Articles == nil {
 				t.Errorf("Corners[%d].Articles must be [] not nil", i)
@@ -107,7 +107,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corners slice is not nil", func(t *testing.T) {
-		got := manifest.Build(program, []config.CornerConfig{}, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, []config.CornerConfig{}, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		if got.Corners == nil {
 			t.Error("Corners must be [] not nil")
 		}
@@ -115,14 +115,14 @@ func TestBuild(t *testing.T) {
 
 	t.Run("summary is set from argument", func(t *testing.T) {
 		want := "今回はAIチップと最新ニュースを紹介しました。"
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, want, nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, want, nil, nil)
 		if got.Summary != want {
 			t.Errorf("Summary = %q, want %q", got.Summary, want)
 		}
 	})
 
 	t.Run("empty summary when empty string given", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		if got.Summary != "" {
 			t.Errorf("Summary = %q, want empty", got.Summary)
 		}
@@ -139,7 +139,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 		}
-		got := manifest.Build(program, corners, rundownWithTwo, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundownWithTwo, "episode.mp3", fixedTime, "", nil, nil)
 		techCorner := got.Corners[1]
 		if len(techCorner.Articles) != 1 {
 			t.Errorf("Articles count = %d, want 1 (only selected articles)", len(techCorner.Articles))
@@ -153,7 +153,7 @@ func TestBuild(t *testing.T) {
 				Points:  []string{"要点1", "要点2"},
 			},
 		}
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries, nil)
 		techCorner := got.Corners[1]
 		if techCorner.Summary != "AIチップについて話しました。" {
 			t.Errorf("Corners[1].Summary = %q, want %q", techCorner.Summary, "AIチップについて話しました。")
@@ -167,7 +167,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner points is empty array not nil when no corner summary provided", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
 		for i, c := range got.Corners {
 			if c.Points == nil {
 				t.Errorf("Corners[%d].Points must be [] not nil", i)
@@ -179,9 +179,32 @@ func TestBuild(t *testing.T) {
 		cornerSummaries := map[string]model.CornerSummary{
 			"オープニング": {Summary: "開始", Points: nil},
 		}
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries)
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries, nil)
 		if got.Corners[0].Points == nil {
 			t.Error("Points must be [] not nil even when CornerSummary.Points is nil")
+		}
+	})
+
+	t.Run("conversation notes are included", func(t *testing.T) {
+		notes := []model.ConversationNote{
+			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
+		}
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, notes)
+		if len(got.ConversationNotes) != 1 {
+			t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
+		}
+		if got.ConversationNotes[0].Category != "近況" {
+			t.Errorf("ConversationNotes[0].Category: got %q, want %q", got.ConversationNotes[0].Category, "近況")
+		}
+	})
+
+	t.Run("conversation notes is empty array not nil when nil given", func(t *testing.T) {
+		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil)
+		if got.ConversationNotes == nil {
+			t.Error("ConversationNotes must be [] not nil")
+		}
+		if len(got.ConversationNotes) != 0 {
+			t.Errorf("ConversationNotes: got %d, want 0", len(got.ConversationNotes))
 		}
 	})
 }

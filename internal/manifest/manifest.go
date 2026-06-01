@@ -7,9 +7,10 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-// Build constructs a Manifest from program config, corners, rundown, generation time, episode summary, and optional corner summaries.
+// Build constructs a Manifest from program config, corners, rundown, generation time, episode summary, optional corner summaries, and conversation notes.
 // cornerSummaries maps corner title to its LLM-generated summary; nil means no corner summaries.
-func Build(program config.ProgramConfig, corners []config.CornerConfig, rundown model.Rundown, audioFile string, generatedAt time.Time, summary string, cornerSummaries map[string]model.CornerSummary) model.Manifest {
+// conversationNotes contains non-rundown conversation information extracted from the episode.
+func Build(program config.ProgramConfig, corners []config.CornerConfig, rundown model.Rundown, audioFile string, generatedAt time.Time, summary string, cornerSummaries map[string]model.CornerSummary, conversationNotes []model.ConversationNote) model.Manifest {
 	cornerMap := rundown.CornerMap()
 	manifestCorners := make([]model.ManifestCorner, 0, len(corners))
 	for _, c := range corners {
@@ -30,12 +31,17 @@ func Build(program config.ProgramConfig, corners []config.CornerConfig, rundown 
 			Articles: refs,
 		})
 	}
+	notes := conversationNotes
+	if notes == nil {
+		notes = make([]model.ConversationNote, 0)
+	}
 	return model.Manifest{
-		Title:       program.Title,
-		Description: program.Description,
-		Summary:     summary,
-		Datetime:    generatedAt.UTC().Format(time.RFC3339),
-		AudioFile:   audioFile,
-		Corners:     manifestCorners,
+		Title:             program.Title,
+		Description:       program.Description,
+		Summary:           summary,
+		Datetime:          generatedAt.UTC().Format(time.RFC3339),
+		AudioFile:         audioFile,
+		Corners:           manifestCorners,
+		ConversationNotes: notes,
 	}
 }

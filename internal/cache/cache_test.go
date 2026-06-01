@@ -421,3 +421,46 @@ func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
 		t.Error("Corners[0].Points must be [] not nil")
 	}
 }
+
+func TestBuildEntryFromManifest_ConversationNotesCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners:  []model.ManifestCorner{},
+		ConversationNotes: []model.ConversationNote{
+			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
+		},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+
+	if len(got.ConversationNotes) != 1 {
+		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
+	}
+	n := got.ConversationNotes[0]
+	if n.Category != "近況" {
+		t.Errorf("ConversationNotes[0].Category: got %q, want %q", n.Category, "近況")
+	}
+	if len(n.CharacterIDs) != 1 || n.CharacterIDs[0] != "zundamon" {
+		t.Errorf("ConversationNotes[0].CharacterIDs: got %v, want [zundamon]", n.CharacterIDs)
+	}
+	if n.Note != "カフェにハマっている" {
+		t.Errorf("ConversationNotes[0].Note: got %q, want %q", n.Note, "カフェにハマっている")
+	}
+}
+
+func TestBuildEntryFromManifest_ConversationNotesNeverNil(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners:  []model.ManifestCorner{},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+
+	if got.ConversationNotes == nil {
+		t.Error("ConversationNotes must be [] not nil")
+	}
+}

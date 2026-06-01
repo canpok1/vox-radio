@@ -513,3 +513,99 @@ func TestClipsMeta_Fields(t *testing.T) {
 		t.Error("Text must not be empty")
 	}
 }
+
+func TestConversationNote_JSONRoundTrip(t *testing.T) {
+	note := model.ConversationNote{
+		Category:     "近況",
+		CharacterIDs: []string{"zundamon", "metan"},
+		Note:         "ずんだもんがカフェにハマっている",
+	}
+	b, err := json.Marshal(note)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	var got model.ConversationNote
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if got.Category != "近況" {
+		t.Errorf("Category: got %q, want %q", got.Category, "近況")
+	}
+	if len(got.CharacterIDs) != 2 || got.CharacterIDs[0] != "zundamon" {
+		t.Errorf("CharacterIDs: got %v, want [zundamon metan]", got.CharacterIDs)
+	}
+	if got.Note != "ずんだもんがカフェにハマっている" {
+		t.Errorf("Note: got %q, want %q", got.Note, "ずんだもんがカフェにハマっている")
+	}
+}
+
+func TestConversationNote_CharacterIDsEmptyArrayNotNull(t *testing.T) {
+	note := model.ConversationNote{
+		Category:     "ハプニング",
+		CharacterIDs: make([]string, 0),
+		Note:         "誰かが噛んだ",
+	}
+	b, err := json.Marshal(note)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, `"character_ids":[]`) {
+		t.Errorf("character_ids should be [] not null: %s", s)
+	}
+}
+
+func TestProgramSummary_JSONRoundTrip(t *testing.T) {
+	ps := model.ProgramSummary{
+		Summary: "番組全体の要約",
+		ConversationNotes: []model.ConversationNote{
+			{Category: "掛け合い", CharacterIDs: []string{"zundamon"}, Note: "ずんだもんが食レポした"},
+		},
+	}
+	b, err := json.Marshal(ps)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	var got model.ProgramSummary
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if got.Summary != "番組全体の要約" {
+		t.Errorf("Summary: got %q, want %q", got.Summary, "番組全体の要約")
+	}
+	if len(got.ConversationNotes) != 1 {
+		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
+	}
+	if got.ConversationNotes[0].Category != "掛け合い" {
+		t.Errorf("ConversationNotes[0].Category: got %q, want %q", got.ConversationNotes[0].Category, "掛け合い")
+	}
+}
+
+func TestProgramSummary_ConversationNotesEmptyArrayNotNull(t *testing.T) {
+	ps := model.ProgramSummary{
+		Summary:           "要約",
+		ConversationNotes: make([]model.ConversationNote, 0),
+	}
+	b, err := json.Marshal(ps)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, `"conversation_notes":[]`) {
+		t.Errorf("conversation_notes should be [] not null: %s", s)
+	}
+}
+
+func TestManifest_ConversationNotesEmptyArrayNotNull(t *testing.T) {
+	m := model.Manifest{
+		ConversationNotes: make([]model.ConversationNote, 0),
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	s := string(b)
+	if !strings.Contains(s, `"conversation_notes":[]`) {
+		t.Errorf("conversation_notes should be [] not null: %s", s)
+	}
+}

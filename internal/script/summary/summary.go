@@ -12,16 +12,29 @@ import (
 
 var summarySchema = json.RawMessage(`{
   "type": "object",
-  "required": ["summary"],
+  "required": ["summary", "conversation_notes"],
   "properties": {
-    "summary": {"type": "string"}
+    "summary": {"type": "string"},
+    "conversation_notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "character_ids", "note"],
+        "properties": {
+          "category":      {"type": "string"},
+          "character_ids": {"type": "array", "items": {"type": "string"}},
+          "note":          {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "additionalProperties": false
 }`)
 
 // ProgramSummarizer generates a summary of the episode from the script.
 type ProgramSummarizer interface {
-	Summarize(ctx context.Context, scr model.Script) (string, error)
+	Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error)
 }
 
 // LLMProgramSummarizer generates a program summary using an LLM.
@@ -36,22 +49,28 @@ func NewLLMProgramSummarizer(client llm.Client, promptTemplate string, temperatu
 	return &LLMProgramSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature}
 }
 
-type summaryResponse struct {
-	Summary string `json:"summary"`
+type speechEntry struct {
+	Speaker string `json:"speaker"`
+	Text    string `json:"text"`
 }
 
-// Summarize generates a program summary from the speech segments of the script.
-func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) (string, error) {
-	lines := make([]string, 0)
+type summaryResponse struct {
+	Summary           string                   `json:"summary"`
+	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
+}
+
+// Summarize generates a program summary and conversation notes from the script's speech segments.
+func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error) {
+	entries := make([]speechEntry, 0)
 	for _, seg := range scr.Segments {
 		if seg.Type == model.SegmentTypeSpeech && seg.Text != "" {
-			lines = append(lines, seg.Text)
+			entries = append(entries, speechEntry{Speaker: seg.SpeakerRole, Text: seg.Text})
 		}
 	}
 
-	linesJSON, err := json.Marshal(lines)
+	linesJSON, err := json.Marshal(entries)
 	if err != nil {
-		return "", fmt.Errorf("marshal script lines: %w", err)
+		return model.ProgramSummary{}, fmt.Errorf("marshal script lines: %w", err)
 	}
 
 	prompt := strings.NewReplacer("{{script_lines}}", string(linesJSON)).Replace(s.promptTemplate)
@@ -62,13 +81,26 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) 
 		Temperature: s.temperature,
 	})
 	if err != nil {
-		return "", fmt.Errorf("llm complete: %w", err)
+		return model.ProgramSummary{}, fmt.Errorf("llm complete: %w", err)
 	}
 
 	var resp summaryResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
-		return "", fmt.Errorf("unmarshal response: %w", err)
+		return model.ProgramSummary{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	return resp.Summary, nil
+	// Normalize nil slices to empty slices so JSON marshals as [] not null.
+	if resp.ConversationNotes == nil {
+		resp.ConversationNotes = make([]model.ConversationNote, 0)
+	}
+	for i := range resp.ConversationNotes {
+		if resp.ConversationNotes[i].CharacterIDs == nil {
+			resp.ConversationNotes[i].CharacterIDs = make([]string, 0)
+		}
+	}
+
+	return model.ProgramSummary{
+		Summary:           resp.Summary,
+		ConversationNotes: resp.ConversationNotes,
+	}, nil
 }

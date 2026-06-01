@@ -29,11 +29,12 @@ type CornerEntry struct {
 
 // Entry represents a single episode in the JSONL history file.
 type Entry struct {
-	ProgramID string        `json:"program_id"`
-	Datetime  string        `json:"datetime"`
-	Title     string        `json:"title"`
-	Summary   string        `json:"summary"`
-	Corners   []CornerEntry `json:"corners"`
+	ProgramID         string                   `json:"program_id"`
+	Datetime          string                   `json:"datetime"`
+	Title             string                   `json:"title"`
+	Summary           string                   `json:"summary"`
+	Corners           []CornerEntry            `json:"corners"`
+	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
 }
 
 // Manager handles JSONL cache file operations for a single program.
@@ -174,12 +175,17 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		corners[i] = CornerEntry{Title: mc.Title, Summary: mc.Summary, Points: points, Articles: articles}
 	}
 
+	notes := m.ConversationNotes
+	if notes == nil {
+		notes = make([]model.ConversationNote, 0)
+	}
 	return Entry{
-		ProgramID: programID,
-		Datetime:  m.Datetime,
-		Title:     m.Title,
-		Summary:   m.Summary,
-		Corners:   corners,
+		ProgramID:         programID,
+		Datetime:          m.Datetime,
+		Title:             m.Title,
+		Summary:           m.Summary,
+		Corners:           corners,
+		ConversationNotes: notes,
 	}
 }
 
