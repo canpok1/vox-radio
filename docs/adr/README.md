@@ -28,3 +28,4 @@
 | [0020](0020-corner-level-bgm-jingle-provenance.md) | BGM・ジングルの挿入をprofile.yamlのコーナー設定駆動へ移行し、program OP/ED指定を廃止する | 採用 | 2026-06-01 |
 | [0021](0021-intra-episode-corner-context.md) | コーナー台本生成に同一回の生成済みセリフを文脈として渡す | 採用 | 2026-06-01 |
 | [0022](0022-dify-api-llm-provider.md) | LLM プロバイダに Dify API 経由の利用を追加する | 採用 | 2026-06-01 |
+| [0023](0023-embed-prompts-in-binary.md) | プロンプトをバイナリに同梱し --prompts フラグを廃止する | 採用 | 2026-06-01 |
