@@ -108,6 +108,28 @@ func TestLLMSelector_Select_PastURLsInjectedInPrompt(t *testing.T) {
 	}
 }
 
+func TestLLMSelector_Select_PromptUsesSemanticFieldName(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
+	}
+	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 120}
+	articles := []model.Article{{URL: "https://example.com/1", Title: "記事1"}}
+	_, _ = s.Select(context.Background(), corner, articles)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if strings.Contains(prompt, "length_sec") {
+		t.Errorf("prompt must not contain internal field name 'length_sec', got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "target_duration_seconds") {
+		t.Errorf("prompt should contain semantic field name 'target_duration_seconds', got: %s", prompt)
+	}
+}
+
 func TestLLMSelector_Select_NoPastURLs_ShowsNone(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
