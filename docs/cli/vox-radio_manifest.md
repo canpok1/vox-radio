@@ -36,7 +36,6 @@ vox-radio manifest [flags]
       --lines string     03_lines.json のパス（任意）。指定すると LLM がコーナー台本からコーナー単位要約を生成する
       --out string       manifest.json の出力先パス（必須）
       --profile string   プロファイル YAML ファイルのパス（必須）
-      --prompts string   プロンプトテンプレートを含むディレクトリ（--script / --lines 指定時に使用） (default "prompts")
       --rundown string   02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
       --script string    04_script.json のパス（任意）。指定すると LLM が台本から番組要約を生成する
 ```

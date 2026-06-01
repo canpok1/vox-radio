@@ -1,6 +1,6 @@
 # 設定YAML・プロンプト編集ルール
 
-対象ファイル: `*.yaml` / `profiles/**/*.yaml` / `prompts/*.md` / `internal/config/testdata/*.yaml`
+対象ファイル: `*.yaml` / `profiles/**/*.yaml` / `internal/cli/prompts/*.md` / `internal/config/testdata/*.yaml`
 
 ## 設定YAMLの編集
 
