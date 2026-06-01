@@ -609,3 +609,47 @@ func TestManifest_ConversationNotesEmptyArrayNotNull(t *testing.T) {
 		t.Errorf("conversation_notes should be [] not null: %s", s)
 	}
 }
+
+func TestCornerLines_AssetFields_MarshaledAndUnmarshaled(t *testing.T) {
+	cl := model.CornerLines{
+		Title:         "C1",
+		OpeningJingle: "opening",
+		EndingJingle:  "ending",
+		BGM:           "talk_bgm",
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "hello"}},
+	}
+	data, err := json.Marshal(cl)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var got model.CornerLines
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if got.OpeningJingle != "opening" {
+		t.Errorf("OpeningJingle: got %q, want opening", got.OpeningJingle)
+	}
+	if got.EndingJingle != "ending" {
+		t.Errorf("EndingJingle: got %q, want ending", got.EndingJingle)
+	}
+	if got.BGM != "talk_bgm" {
+		t.Errorf("BGM: got %q, want talk_bgm", got.BGM)
+	}
+}
+
+func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
+	cl := model.CornerLines{
+		Title: "C1",
+		Lines: []model.Line{{SpeakerRole: "host", Text: "hello"}},
+	}
+	data, err := json.Marshal(cl)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	jsonStr := string(data)
+	for _, field := range []string{`"opening_jingle"`, `"ending_jingle"`, `"bgm"`} {
+		if strings.Contains(jsonStr, field) {
+			t.Errorf("field %q should be omitted when empty, got: %s", field, jsonStr)
+		}
+	}
+}

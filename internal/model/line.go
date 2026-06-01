@@ -15,10 +15,15 @@ type Lines struct {
 }
 
 // CornerLines holds the lines and direction for one corner.
+// Asset fields (OpeningJingle, EndingJingle, BGM) are transferred from CornerConfig
+// and persisted in 03_lines.json for deterministic segment injection.
 type CornerLines struct {
-	Title     string `json:"title"`
-	Direction string `json:"direction,omitempty"`
-	Lines     []Line `json:"lines"`
+	Title         string `json:"title"`
+	Direction     string `json:"direction,omitempty"`
+	Lines         []Line `json:"lines"`
+	OpeningJingle string `json:"opening_jingle,omitempty"`
+	EndingJingle  string `json:"ending_jingle,omitempty"`
+	BGM           string `json:"bgm,omitempty"`
 }
 
 // ScriptLines is the root structure of 03_lines.json.
