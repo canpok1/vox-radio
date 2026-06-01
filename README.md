@@ -45,6 +45,28 @@ make build VERSION=v0.1.0
 vox-radio --version
 ```
 
+### 動作確認用サンプル実行
+
+`sample-profiles/tech_profile.yaml` を使ってパイプライン全体を試すには `make run-sample` を実行します。
+
+```bash
+make run-sample
+```
+
+出力先は `output/<YYYYMMDDHHMMSS>/` ディレクトリになります（例: `output/20260601053357/episode.mp3`）。
+
+プロファイルや出力先を変更する場合は `PROFILE` / `OUT_DIR` 変数で上書きできます。
+
+```bash
+# 別のプロファイルを使う
+make run-sample PROFILE=sample-profiles/other_profile.yaml
+
+# 出力先を指定する
+make run-sample OUT_DIR=output/test
+```
+
+> **前提条件:** `GEMINI_API_KEY` 環境変数と VOICEVOX Engine が必要です。
+
 ### パイプライン概要
 
 vox-radio は以下のパイプラインでポッドキャストを自動生成します。
