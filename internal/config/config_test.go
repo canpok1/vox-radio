@@ -32,14 +32,20 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	t.Run("LLM", func(t *testing.T) {
-		if cfg.LLM.BaseURL == "" {
-			t.Error("LLM.BaseURL must not be empty")
+		if cfg.LLM.EffectiveProvider() == "" {
+			t.Error("LLM.EffectiveProvider() must not be empty")
 		}
-		if cfg.LLM.APIKeyEnv == "" {
-			t.Error("LLM.APIKeyEnv must not be empty")
+		if cfg.LLM.OpenAI == nil {
+			t.Fatal("LLM.OpenAI block must not be nil")
 		}
-		if cfg.LLM.Model == "" {
-			t.Error("LLM.Model must not be empty")
+		if cfg.LLM.OpenAI.BaseURL == "" {
+			t.Error("LLM.OpenAI.BaseURL must not be empty")
+		}
+		if cfg.LLM.OpenAI.APIKeyEnv == "" {
+			t.Error("LLM.OpenAI.APIKeyEnv must not be empty")
+		}
+		if cfg.LLM.OpenAI.Model == "" {
+			t.Error("LLM.OpenAI.Model must not be empty")
 		}
 		if cfg.LLM.MaxRetries <= 0 {
 			t.Error("LLM.MaxRetries must be positive")
@@ -737,5 +743,65 @@ func TestLoadProfile_AssetsDescription(t *testing.T) {
 	}
 	if jingle.Description == "" {
 		t.Error("Jingle[\"opening\"].Description must not be empty (testdata should include description)")
+	}
+}
+
+func TestLLMConfig_EffectiveProvider_Empty(t *testing.T) {
+	c := config.LLMConfig{}
+	if got := c.EffectiveProvider(); got != config.DefaultProvider {
+		t.Errorf("EffectiveProvider() = %q, want %q", got, config.DefaultProvider)
+	}
+}
+
+func TestLLMConfig_EffectiveProvider_OpenAI(t *testing.T) {
+	c := config.LLMConfig{Provider: "openai"}
+	if got := c.EffectiveProvider(); got != "openai" {
+		t.Errorf("EffectiveProvider() = %q, want %q", got, "openai")
+	}
+}
+
+func TestLLMConfig_EffectiveProvider_DifyChat(t *testing.T) {
+	c := config.LLMConfig{Provider: config.ProviderDifyChat}
+	if got := c.EffectiveProvider(); got != config.ProviderDifyChat {
+		t.Errorf("EffectiveProvider() = %q, want %q", got, config.ProviderDifyChat)
+	}
+}
+
+func TestLoadConfig_DifyChat(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_dify_chat.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.LLM.EffectiveProvider() != config.ProviderDifyChat {
+		t.Errorf("provider = %q, want %q", cfg.LLM.EffectiveProvider(), config.ProviderDifyChat)
+	}
+	if cfg.LLM.DifyChat == nil {
+		t.Fatal("LLM.DifyChat must not be nil")
+	}
+	if cfg.LLM.DifyChat.BaseURL == "" {
+		t.Error("LLM.DifyChat.BaseURL must not be empty")
+	}
+	if cfg.LLM.DifyChat.APIKeyEnv == "" {
+		t.Error("LLM.DifyChat.APIKeyEnv must not be empty")
+	}
+	if cfg.LLM.DifyChat.User != "vox-radio" {
+		t.Errorf("LLM.DifyChat.User = %q, want %q", cfg.LLM.DifyChat.User, "vox-radio")
+	}
+	if len(cfg.LLM.DifyChat.Inputs) == 0 {
+		t.Error("LLM.DifyChat.Inputs must not be empty")
+	}
+}
+
+func TestLoadConfig_ValidationError_MissingOpenAIBlock(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_missing_openai_block.yaml")
+	if err == nil {
+		t.Error("expected error when openai provider has no openai block")
+	}
+}
+
+func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_missing_dify_block.yaml")
+	if err == nil {
+		t.Error("expected error when dify-chat provider has no dify-chat block")
 	}
 }

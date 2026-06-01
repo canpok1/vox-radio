@@ -19,26 +19,79 @@ const (
 	DefaultModel   = "gemini-3.1-flash-lite"
 )
 
-// Config holds the settings for the OpenAI-compatible LLM client.
+// DifyChatClientConfig holds connection settings for the Dify chat-messages provider.
+type DifyChatClientConfig struct {
+	BaseURL string
+	APIKey  string
+	User    string
+	Inputs  map[string]string
+}
+
+// Config holds the settings for the LLM client factory.
 type Config struct {
+	Provider             string
 	BaseURL              string
 	APIKey               string
 	Model                string
 	MaxRetries           int
 	Temperature          float64
 	MinRequestIntervalMS int
+	DifyChat             *DifyChatClientConfig
+}
+
+// throttler manages rate limiting for LLM API calls.
+type throttler struct {
+	minIntervalMS int
+	mu            sync.Mutex
+	lastTime      time.Time
+}
+
+func (t *throttler) throttle(ctx context.Context) error {
+	if t.minIntervalMS <= 0 {
+		return nil
+	}
+	interval := time.Duration(t.minIntervalMS) * time.Millisecond
+
+	t.mu.Lock()
+	now := time.Now()
+	next := t.lastTime.Add(interval)
+	if next.Before(now) {
+		next = now
+	}
+	t.lastTime = next
+	t.mu.Unlock()
+
+	waitDur := time.Until(next)
+	if waitDur <= 0 {
+		return nil
+	}
+	select {
+	case <-time.After(waitDur):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 type openAIClient struct {
-	cfg             Config
-	hc              *http.Client
-	endpoint        string
-	mu              sync.Mutex
-	lastRequestTime time.Time
+	cfg      Config
+	hc       *http.Client
+	endpoint string
+	throttler
 }
 
-// NewClient creates a new OpenAI-compatible LLM client.
+// NewClient creates a new LLM client, selecting the implementation based on Config.Provider.
+// Empty Provider defaults to the OpenAI-compatible implementation.
 func NewClient(cfg Config) Client {
+	switch cfg.Provider {
+	case "dify-chat":
+		return newDifyChatClient(cfg)
+	default:
+		return newOpenAIClient(cfg)
+	}
+}
+
+func newOpenAIClient(cfg Config) Client {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
 	}
@@ -46,9 +99,10 @@ func NewClient(cfg Config) Client {
 		cfg.Model = DefaultModel
 	}
 	return &openAIClient{
-		cfg:      cfg,
-		hc:       &http.Client{Timeout: 60 * time.Second},
-		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
+		cfg:       cfg,
+		hc:        &http.Client{Timeout: 60 * time.Second},
+		endpoint:  strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
+		throttler: throttler{minIntervalMS: cfg.MinRequestIntervalMS},
 	}
 }
 
@@ -120,36 +174,6 @@ func (c *openAIClient) Complete(ctx context.Context, req CompletionRequest) (jso
 	return nil, fmt.Errorf("validation failed after %d retries", c.cfg.MaxRetries)
 }
 
-// throttle ensures the minimum interval between requests is respected.
-// It reserves a time slot under the mutex and waits outside of it,
-// respecting context cancellation.
-func (c *openAIClient) throttle(ctx context.Context) error {
-	if c.cfg.MinRequestIntervalMS <= 0 {
-		return nil
-	}
-	interval := time.Duration(c.cfg.MinRequestIntervalMS) * time.Millisecond
-
-	c.mu.Lock()
-	now := time.Now()
-	next := c.lastRequestTime.Add(interval)
-	if next.Before(now) {
-		next = now
-	}
-	c.lastRequestTime = next
-	c.mu.Unlock()
-
-	waitDur := time.Until(next)
-	if waitDur <= 0 {
-		return nil
-	}
-	select {
-	case <-time.After(waitDur):
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs []Message) (json.RawMessage, error) {
 	if err := c.throttle(ctx); err != nil {
 		return nil, err
@@ -171,14 +195,17 @@ func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs 
 		Temperature: temperature,
 	}
 
-	apiReq.ResponseFormat = &responseFormat{Type: "json_object"}
 	if len(req.JSONSchema) > 0 {
-		apiReq.ResponseFormat.Type = "json_schema"
-		apiReq.ResponseFormat.JSONSchema = &schemaSpec{
-			Name:   "output",
-			Schema: req.JSONSchema,
-			Strict: true,
+		apiReq.ResponseFormat = &responseFormat{
+			Type: "json_schema",
+			JSONSchema: &schemaSpec{
+				Name:   "output",
+				Schema: req.JSONSchema,
+				Strict: true,
+			},
 		}
+	} else {
+		apiReq.ResponseFormat = &responseFormat{Type: "json_object"}
 	}
 
 	body, err := json.Marshal(apiReq)

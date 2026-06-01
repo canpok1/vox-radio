@@ -1,13 +1,15 @@
 llm:
-  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-  api_key_env: GEMINI_API_KEY
-  model: gemini-3.1-flash-lite
+  provider: openai
   temperature: 0.7
   max_retries: 3
   steps:
     summarize: { temperature: 0.2 }
     write:     { temperature: 0.8 }
     direct:    { temperature: 0.2 }
+  openai:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    model: gemini-3.1-flash-lite
 
 voicevox:
   url: http://localhost:50021

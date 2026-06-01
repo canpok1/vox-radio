@@ -5,9 +5,7 @@ cache:
   llm_context_entries: 10  # LLM へ渡す直近エピソード件数
 
 llm:
-  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-  api_key_env: GEMINI_API_KEY
-  model: gemini-3.1-flash-lite
+  provider: openai            # or dify-chat
   temperature: 0.7
   max_retries: 3
   min_request_interval_ms: 4500
@@ -16,6 +14,17 @@ llm:
     plan:      { temperature: 0.4 }
     write:     { temperature: 0.8 }
     direct:    { temperature: 0.2 }
+  openai:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    model: gemini-3.1-flash-lite
+  # dify-chat:
+  #   base_url: https://api.dify.ai/v1
+  #   api_key_env: DIFY_API_KEY
+  #   user: vox-radio            # 利用者識別子（省略時は vox-radio）
+  #   inputs:
+  #     temperature: "${temperature}"   # 完全一致なので数値で送信
+  #     lang: ja
 
 voicevox:
   url: http://voicevox:50021
