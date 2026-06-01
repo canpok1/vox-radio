@@ -27,6 +27,12 @@ install:
 docs:
 	go run ./tools/gendocs
 
+check-samples: build
+	./$(BINARY_NAME) config check vox-radio.yaml
+	./$(BINARY_NAME) config check internal/cli/templates/vox-radio.yaml
+	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" profile check profile.yaml
+	for f in sample-profiles/*.yaml; do ./$(BINARY_NAME) profile check "$$f"; done
+
 all: build
 
-.PHONY: all setup build clean test fmt lint install docs
+.PHONY: all setup build clean test fmt lint install docs check-samples

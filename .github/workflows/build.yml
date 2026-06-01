@@ -38,3 +38,6 @@ jobs:
 
     - name: Build
       run: make build
+
+    - name: Validate sample configs
+      run: make check-samples

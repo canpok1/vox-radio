@@ -30,6 +30,8 @@ func NewRootCmd() *cobra.Command {
 		newAssembleCmd(),
 		newManifestCmd(),
 		newRunCmd(),
+		newConfigCmd(),
+		newProfileCmd(),
 	)
 
 	return root

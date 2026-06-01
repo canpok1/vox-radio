@@ -401,11 +401,48 @@ func resolveFile(base, file string) string {
 	return file
 }
 
+// LoadConfigStrict loads common settings from the given YAML file path with strict parsing.
+// Unknown keys in the YAML will cause an error (detects typos).
+func LoadConfigStrict(path string) (*Config, error) {
+	cfg := &Config{}
+	if err := loadYAMLStrict(path, cfg); err != nil {
+		return nil, err
+	}
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// LoadProfileStrict loads genre-specific settings from the given YAML file path with strict parsing.
+// Unknown keys in the YAML will cause an error (detects typos).
+// Relative asset file paths are resolved relative to the profile file's directory.
+func LoadProfileStrict(path string) (*Profile, error) {
+	p := &Profile{}
+	if err := loadYAMLStrict(path, p); err != nil {
+		return nil, err
+	}
+	resolveAssetPaths(filepath.Dir(path), &p.Assets)
+	return p, nil
+}
+
 func loadYAML(path string, dest any) error {
+	return decodeYAML(path, dest, false)
+}
+
+func loadYAMLStrict(path string, dest any) error {
+	return decodeYAML(path, dest, true)
+}
+
+func decodeYAML(path string, dest any, strict bool) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = f.Close() }()
-	return yaml.NewDecoder(f).Decode(dest)
+	dec := yaml.NewDecoder(f)
+	if strict {
+		dec.KnownFields(true)
+	}
+	return dec.Decode(dest)
 }

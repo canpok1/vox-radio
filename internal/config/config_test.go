@@ -657,6 +657,48 @@ func TestLoadProfile_ProgramIDEmpty_NoError(t *testing.T) {
 	}
 }
 
+func TestLoadConfigStrict_UnknownKeyErrors(t *testing.T) {
+	_, err := config.LoadConfigStrict("testdata/config_unknown_key.yaml")
+	if err == nil {
+		t.Error("expected error for unknown key in strict mode")
+	}
+}
+
+func TestLoadConfigStrict_ValidYAML_Success(t *testing.T) {
+	_, err := config.LoadConfigStrict("testdata/config.yaml")
+	if err != nil {
+		t.Errorf("unexpected error for valid config in strict mode: %v", err)
+	}
+}
+
+func TestLoadConfig_UnknownKey_NoError(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_unknown_key.yaml")
+	if err != nil {
+		t.Errorf("LoadConfig should not error on unknown key (non-strict): %v", err)
+	}
+}
+
+func TestLoadProfileStrict_UnknownKeyErrors(t *testing.T) {
+	_, err := config.LoadProfileStrict("testdata/profile_unknown_key.yaml")
+	if err == nil {
+		t.Error("expected error for unknown key in strict mode")
+	}
+}
+
+func TestLoadProfileStrict_ValidYAML_Success(t *testing.T) {
+	_, err := config.LoadProfileStrict("testdata/profile.yaml")
+	if err != nil {
+		t.Errorf("unexpected error for valid profile in strict mode: %v", err)
+	}
+}
+
+func TestLoadProfile_UnknownKey_NoError(t *testing.T) {
+	_, err := config.LoadProfile("testdata/profile_unknown_key.yaml")
+	if err != nil {
+		t.Errorf("LoadProfile should not error on unknown key (non-strict): %v", err)
+	}
+}
+
 func TestLoadConfig_Cache_DefaultsToDisabled(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/config.yaml")
 	if err != nil {
