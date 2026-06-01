@@ -40,9 +40,9 @@ type articleForPrompt struct {
 
 // cornerForPrompt is the subset of corner data passed to the LLM.
 type cornerForPrompt struct {
-	Title     string `json:"title"`
-	Content   string `json:"content"`
-	LengthSec int    `json:"length_sec"`
+	Title                 string `json:"title"`
+	Content               string `json:"content"`
+	TargetDurationSeconds int    `json:"target_duration_seconds"`
 }
 
 type selectResponse struct {
@@ -69,9 +69,9 @@ func (s *LLMSelector) SetPastURLs(urls []string) {
 
 func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error) {
 	cp := cornerForPrompt{
-		Title:     corner.Title,
-		Content:   corner.Content,
-		LengthSec: corner.LengthSec,
+		Title:                 corner.Title,
+		Content:               corner.Content,
+		TargetDurationSeconds: corner.LengthSec,
 	}
 	cornerJSON, err := json.Marshal(cp)
 	if err != nil {
