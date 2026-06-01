@@ -61,7 +61,7 @@ collect → rundown → script → synth → assemble → manifest
 | `script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
 | `synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
-| `manifest` | 番組内容（タイトル・概要・要約・コーナー・記事）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--script` を指定すると LLM で台本ベースの要約を生成する |
+| `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--script` で番組全体要約、`--lines` でコーナー単位の会話要約を LLM で生成して付加する |
 | `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
 
 ### 設定ファイルの作成

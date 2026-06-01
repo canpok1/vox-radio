@@ -22,6 +22,8 @@ type ArticleEntry struct {
 // CornerEntry holds corner data for a single episode history entry.
 type CornerEntry struct {
 	Title    string         `json:"title"`
+	Summary  string         `json:"summary"`
+	Points   []string       `json:"points"`
 	Articles []ArticleEntry `json:"articles"`
 }
 
@@ -165,7 +167,11 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 			}
 			articles[j] = ae
 		}
-		corners[i] = CornerEntry{Title: mc.Title, Articles: articles}
+		points := mc.Points
+		if points == nil {
+			points = make([]string, 0)
+		}
+		corners[i] = CornerEntry{Title: mc.Title, Summary: mc.Summary, Points: points, Articles: articles}
 	}
 
 	return Entry{

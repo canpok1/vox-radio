@@ -1,0 +1,79 @@
+package summary
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/script/llm"
+)
+
+var cornerSummarySchema = json.RawMessage(`{
+  "type": "object",
+  "required": ["summary", "points"],
+  "properties": {
+    "summary": {"type": "string"},
+    "points": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}`)
+
+// LLMCornerSummarizer generates a corner summary using an LLM.
+type LLMCornerSummarizer struct {
+	client         llm.Client
+	promptTemplate string
+	temperature    float64
+}
+
+// NewLLMCornerSummarizer creates a new LLMCornerSummarizer.
+func NewLLMCornerSummarizer(client llm.Client, promptTemplate string, temperature float64) *LLMCornerSummarizer {
+	return &LLMCornerSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature}
+}
+
+type cornerSummaryResponse struct {
+	Summary string   `json:"summary"`
+	Points  []string `json:"points"`
+}
+
+// SummarizeCorner generates a summary and points for a single corner from its script lines.
+func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines) (model.CornerSummary, error) {
+	lines := make([]string, 0, len(corner.Lines))
+	for _, l := range corner.Lines {
+		if l.Text != "" {
+			lines = append(lines, l.Text)
+		}
+	}
+
+	linesJSON, err := json.Marshal(lines)
+	if err != nil {
+		return model.CornerSummary{}, fmt.Errorf("marshal corner lines: %w", err)
+	}
+
+	prompt := strings.NewReplacer(
+		"{{corner_title}}", corner.Title,
+		"{{script_lines}}", string(linesJSON),
+	).Replace(s.promptTemplate)
+
+	raw, err := s.client.Complete(ctx, llm.CompletionRequest{
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  cornerSummarySchema,
+		Temperature: s.temperature,
+	})
+	if err != nil {
+		return model.CornerSummary{}, fmt.Errorf("llm complete: %w", err)
+	}
+
+	var resp cornerSummaryResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return model.CornerSummary{}, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	points := resp.Points
+	if points == nil {
+		points = make([]string, 0)
+	}
+
+	return model.CornerSummary{Summary: resp.Summary, Points: points}, nil
+}
