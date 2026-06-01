@@ -1,8 +1,6 @@
 program:
   title: "テストニュース"
   description: "テスト用"
-  segment_pause_sec: 0.3
-  length_sec: 75
   typo_unknown_field: should_cause_strict_error
 
 corners:

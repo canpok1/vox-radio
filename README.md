@@ -276,8 +276,6 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 |---|---|---|---|
 | `title` | string | 任意 | 番組タイトル |
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用） |
-| `segment_pause_sec` | float64 | 任意 | コーナー間の無音時間（秒）。デフォルト: 0（Go ゼロ値） |
-| `length_sec` | int | 任意 | 番組全体の目標収録時間（秒）。デフォルト: 0（Go ゼロ値） |
 
 #### `corners` セクション
 
@@ -294,6 +292,8 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `start_jingle` | string | 任意 | コーナー開始ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の前に確定的に挿入される |
 | `end_jingle` | string | 任意 | コーナー終了ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の後に確定的に挿入される |
 | `bgm` | string | 任意 | コーナー中 BGM のキー名（`assets.bgm` のキーと一致させること）。コーナー本編を開始/停止セグメントで挟む |
+| `start_pause_sec` | float64 | 任意 | コーナー先頭（`start_jingle` より前）に挿入する無音時間（秒）。0 または省略時は挿入しない |
+| `end_pause_sec` | float64 | 任意 | コーナー末尾（`end_jingle` より後）に挿入する無音時間（秒）。0 または省略時は挿入しない |
 
 ##### `corners[].source` サブフィールド
 

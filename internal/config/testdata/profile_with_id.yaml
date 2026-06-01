@@ -2,8 +2,6 @@ program:
   id: "test-program"
   title: "テストニュース"
   description: "テスト用"
-  segment_pause_sec: 0.3
-  length_sec: 75
 
 corners:
   - title: "オープニング"

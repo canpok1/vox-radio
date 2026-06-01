@@ -398,6 +398,140 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	}
 }
 
+func TestBuildScript_StartPauseSec_InjectedBeforeStartJingle(t *testing.T) {
+	d := noInsertionDirector()
+
+	corners := []model.CornerLines{{
+		Title:         "C1",
+		StartJingle:   "opening",
+		StartPauseSec: 1.0,
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [pause(1.0), jingle(opening), speech]
+	if len(got.Segments) != 3 {
+		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypePause {
+		t.Errorf("Segment[0].Type: got %q, want pause", got.Segments[0].Type)
+	}
+	if got.Segments[0].DurationSec != 1.0 {
+		t.Errorf("Segment[0].DurationSec: got %f, want 1.0", got.Segments[0].DurationSec)
+	}
+	if got.Segments[1].Type != model.SegmentTypeJingle {
+		t.Errorf("Segment[1].Type: got %q, want jingle", got.Segments[1].Type)
+	}
+}
+
+func TestBuildScript_EndPauseSec_InjectedAfterEndJingle(t *testing.T) {
+	d := noInsertionDirector()
+
+	corners := []model.CornerLines{{
+		Title:       "C1",
+		EndJingle:   "ending",
+		EndPauseSec: 2.0,
+		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech, jingle(ending), pause(2.0)]
+	if len(got.Segments) != 3 {
+		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeJingle {
+		t.Errorf("Segment[1].Type: got %q, want jingle", got.Segments[1].Type)
+	}
+	if got.Segments[2].Type != model.SegmentTypePause {
+		t.Errorf("Segment[2].Type: got %q, want pause", got.Segments[2].Type)
+	}
+	if got.Segments[2].DurationSec != 2.0 {
+		t.Errorf("Segment[2].DurationSec: got %f, want 2.0", got.Segments[2].DurationSec)
+	}
+}
+
+func TestBuildScript_ZeroStartPauseSec_NoInjection(t *testing.T) {
+	d := noInsertionDirector()
+
+	corners := []model.CornerLines{{
+		Title:         "C1",
+		StartPauseSec: 0,
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech] — no pause injected when StartPauseSec == 0
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[0].Type: got %q, want speech", got.Segments[0].Type)
+	}
+}
+
+func TestBuildScript_ZeroEndPauseSec_NoInjection(t *testing.T) {
+	d := noInsertionDirector()
+
+	corners := []model.CornerLines{{
+		Title:       "C1",
+		EndPauseSec: 0,
+		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech] — no pause injected when EndPauseSec == 0
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[0].Type: got %q, want speech", got.Segments[0].Type)
+	}
+}
+
+func TestBuildScript_AdjacentCorners_BothPausesInjected(t *testing.T) {
+	d := noInsertionDirector()
+
+	corners := []model.CornerLines{
+		{
+			Title:       "C1",
+			EndPauseSec: 1.0,
+			Lines:       []model.Line{{SpeakerRole: "host", Text: "コーナー1"}},
+		},
+		{
+			Title:         "C2",
+			StartPauseSec: 0.5,
+			Lines:         []model.Line{{SpeakerRole: "host", Text: "コーナー2"}},
+		},
+	}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech_c1, pause(1.0), pause(0.5), speech_c2]
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypePause || got.Segments[1].DurationSec != 1.0 {
+		t.Errorf("Segment[1]: want pause(1.0), got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypePause || got.Segments[2].DurationSec != 0.5 {
+		t.Errorf("Segment[2]: want pause(0.5), got %+v", got.Segments[2])
+	}
+}
+
 func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 	var capturedPrompt string
 	mc := &capturingClient{
