@@ -18,15 +18,7 @@ func profileTestdataPath(rel string) string {
 // Returns the absolute path of the vox-radio.yaml placed in the temp dir.
 func setupProfileCheckDir(t *testing.T, configSrc string) string {
 	t.Helper()
-	orig, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(orig) })
+	dir := chdirTemp(t)
 
 	data, err := os.ReadFile(configSrc)
 	if err != nil {

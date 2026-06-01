@@ -2,7 +2,6 @@ package cli_test
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -56,19 +55,11 @@ func TestConfigCheck_InvalidDefaultStyle_Error(t *testing.T) {
 }
 
 func TestConfigCheck_DefaultPath_MissingFile_Error(t *testing.T) {
-	orig, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(orig) })
+	chdirTemp(t)
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"config", "check"})
-	err = cmd.Execute()
+	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error when vox-radio.yaml does not exist in cwd")
 	}
