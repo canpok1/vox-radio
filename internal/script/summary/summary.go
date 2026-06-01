@@ -54,14 +54,9 @@ type speechEntry struct {
 	Text    string `json:"text"`
 }
 
-type summaryResponse struct {
-	Summary           string                   `json:"summary"`
-	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
-}
-
 // Summarize generates a program summary and conversation notes from the script's speech segments.
 func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error) {
-	entries := make([]speechEntry, 0)
+	entries := make([]speechEntry, 0, len(scr.Segments))
 	for _, seg := range scr.Segments {
 		if seg.Type == model.SegmentTypeSpeech && seg.Text != "" {
 			entries = append(entries, speechEntry{Speaker: seg.SpeakerRole, Text: seg.Text})
@@ -84,23 +79,20 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) 
 		return model.ProgramSummary{}, fmt.Errorf("llm complete: %w", err)
 	}
 
-	var resp summaryResponse
-	if err := json.Unmarshal(raw, &resp); err != nil {
+	var result model.ProgramSummary
+	if err := json.Unmarshal(raw, &result); err != nil {
 		return model.ProgramSummary{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
 	// Normalize nil slices to empty slices so JSON marshals as [] not null.
-	if resp.ConversationNotes == nil {
-		resp.ConversationNotes = make([]model.ConversationNote, 0)
+	if result.ConversationNotes == nil {
+		result.ConversationNotes = make([]model.ConversationNote, 0)
 	}
-	for i := range resp.ConversationNotes {
-		if resp.ConversationNotes[i].CharacterIDs == nil {
-			resp.ConversationNotes[i].CharacterIDs = make([]string, 0)
+	for i := range result.ConversationNotes {
+		if result.ConversationNotes[i].CharacterIDs == nil {
+			result.ConversationNotes[i].CharacterIDs = make([]string, 0)
 		}
 	}
 
-	return model.ProgramSummary{
-		Summary:           resp.Summary,
-		ConversationNotes: resp.ConversationNotes,
-	}, nil
+	return result, nil
 }

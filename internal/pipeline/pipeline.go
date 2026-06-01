@@ -129,9 +129,6 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 			return fmt.Errorf("summarize program: %w", err)
 		}
 	}
-	if programSummary.ConversationNotes == nil {
-		programSummary.ConversationNotes = make([]model.ConversationNote, 0)
-	}
 
 	var cornerSummaries map[string]model.CornerSummary
 	if r.CornerSummarizer != nil {
