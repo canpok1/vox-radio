@@ -1009,6 +1009,66 @@ func TestBuildFFmpegArgs_BGMLoop_StreamLoop(t *testing.T) {
 	}
 }
 
+// TestBuildFFmpegArgs_BGMStopThenPlay_BothIntervalsInOutput verifies that when BGM stops
+// and restarts within one run, both intervals appear in the filter output.
+// This is a regression test for the bug where amix with duration=first truncated
+// the second and later BGM intervals.
+func TestBuildFFmpegArgs_BGMStopThenPlay_BothIntervalsInOutput(t *testing.T) {
+	// Script: BGM(a), speech1, BGM(""), speech2, BGM(a), speech3
+	// Interval 1: [0, ~2500ms], Interval 2: [~6000ms, end]
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+				{Type: model.SegmentTypeBGM, AssetName: ""},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "no bgm"},
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "bgm again"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+				{Index: 2, File: "clip_002.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// speech1(2s) + pauseSec(0.5s) = 2500ms → BGM stop
+	// speech2(3s) + pauseSec(0.5s) = 3500ms → BGM restart at 2500+3500=6000ms
+	// 2nd interval adelay should be 6000ms
+	if !strings.Contains(args.FilterComplex, "adelay=6000|6000") {
+		t.Errorf("2nd BGM interval should have adelay=6000 (started after speech1+pause+speech2+pause), filter: %s", args.FilterComplex)
+	}
+
+	// The filter that merges the two BGM raw intervals (bgm0_raw + bgm1_raw) must use
+	// duration=longest so neither interval is truncated.
+	// (The later BGM×speech amix intentionally uses duration=first; only the interval merge is checked here.)
+	filters := strings.Split(args.FilterComplex, ";")
+	for _, f := range filters {
+		if strings.Contains(f, "bgm0_raw") && strings.Contains(f, "bgm1_raw") {
+			if !strings.Contains(f, "duration=longest") {
+				t.Errorf("BGM interval amix must use duration=longest (not duration=first): %s", f)
+			}
+		}
+	}
+}
+
 // TestBuildFFmpegArgs_BGMNoLoop_NoStreamLoop verifies that loop:false BGM does NOT
 // get -stream_loop -1 (it should play once and stop).
 func TestBuildFFmpegArgs_BGMNoLoop_NoStreamLoop(t *testing.T) {
