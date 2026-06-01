@@ -5,18 +5,18 @@
 
 ## コンテキスト
 
-ADR 0002 は LLM プロバイダ切替を **OpenAI 互換 1 実装 ＋ `base_url`/`model` 差し替え**に統一し、列挙型での分岐を却下した。一方で LLM を Dify アプリ経由でも利用したい要望が生じた。Dify はアプリ種別ごとにエンドポイントと入出力が異なり、いずれも `model`/`temperature`/`json_schema` は **Dify アプリ側設定に固定**され送信できない。このため `base_url`/`model` 差し替えでは吸収できず、ADR 0002 の前提が崩れる。
+ADR 0002 は LLM プロバイダ切替を **OpenAI 互換 1 実装 ＋ `base_url`/`model` 差し替え**に統一し、列挙型での分岐を却下した。一方で LLM を Dify アプリ経由でも利用したい要望が生じた。Dify はアプリ種別ごとにエンドポイントと入出力が異なり、いずれも `model`/`temperature`/`json_schema` は **Dify アプリ側設定に固定**され送信できない。このため `base_url`/`model` 差し替えでは吸収できない。
 
 ## 決定
 
-`LLMConfig` に `provider` 列挙（`openai`/`dify-chat`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。`Client` インターフェース（`Complete`）は変更しない。Dify はアプリ種別でエンドポイントが異なるため **プロバイダ名に種別を含めて明示する**（`dify-chat` は `chat-messages` 専用。将来 workflow 対応時は `dify-workflow` を別実装で追加）。`dify-chat` は **ゲートウェイ**として使い、組み立てたプロンプトを `query` に渡し `answer` を得る（プロンプトと JSON Schema 検証は vox-radio 側に温存）。`json_schema` は送れないため構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。`temperature` も標準では送れないが、`dify-chat.inputs` の値に `${temperature}` プレースホルダーを書けば per-step 値に置換して渡せる（書かなければ渡さない）。HTTP は `safejob/dify-sdk-go`（依存ゼロ・MIT）の blocking 呼び出しを用いる。
+`LLMConfig` に `provider` 列挙（`openai`/`dify-chat`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。接続情報（`base_url`/`api_key_env`）と `model` は provider 別ブロックへ分離し、温度・`steps` 等は共通に保つ。`Client` インターフェース（`Complete`）は変更しない。Dify はアプリ種別でエンドポイントが異なるため **プロバイダ名に種別を含めて明示する**（`dify-chat` は `chat-messages` 専用。将来は `dify-workflow` を別実装で追加）。`dify-chat` は **ゲートウェイ**として使い、プロンプトを `query` に渡し `answer` を得る（JSON Schema 検証は vox-radio 側に温存）。`json_schema` は送れないため構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。`temperature` は `dify-chat.inputs` の `${temperature}` プレースホルダーで per-step 値を渡せる（任意）。HTTP は `safejob/dify-sdk-go`（依存ゼロ・MIT）の blocking 呼び出しを用いる。
 
 ## 結果
 
-- 設定値 1 つで OpenAI 互換と Dify を切替でき、既定 `openai` で後方互換を維持できる。
-- `ScriptGenerator`/`Client` 境界は不変のため、ドメイン層と各ステップは影響を受けない。
+- `provider` で OpenAI/Dify を切替える。接続情報・`model` は provider 別ブロックに再編し、既存 yaml は移行要。
+- `Client` 境界は不変のため、ドメイン層と各ステップは影響を受けない。
 - ADR 0002 の「列挙型を持たない」原則は崩すが、ワイヤープロトコルの統一思想は OpenAI 側で維持する。
-- Dify 利用時は strict schema が効かず品質は検証＋リトライ依存。temperature は `inputs` 経由（Dify 側バインド要）でのみ反映できる。検証・修復ロジックは両実装で共有する。
+- Dify 利用時は strict schema が効かず品質は検証＋リトライ依存。温度は Dify アプリ側で変数バインドした場合のみ効く。検証・修復ロジックは両実装で共有する。
 
 ## 検討した代替案
 
