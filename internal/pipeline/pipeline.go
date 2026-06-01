@@ -18,6 +18,11 @@ type ProgramSummarizer interface {
 	Summarize(ctx context.Context, scr model.Script) (string, error)
 }
 
+// CornerSummarizer generates a summary for a single corner from its script lines.
+type CornerSummarizer interface {
+	SummarizeCorner(ctx context.Context, corner model.CornerLines) (model.CornerSummary, error)
+}
+
 // Collector gathers articles per corner from configured sources.
 type Collector interface {
 	RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error)
@@ -58,7 +63,8 @@ type Runner struct {
 	Scripter          Scripter
 	Synther           Synther
 	Assembler         Assembler
-	ProgramSummarizer ProgramSummarizer // optional; if nil, summary is omitted from manifest
+	ProgramSummarizer ProgramSummarizer // optional; if nil, program summary is omitted from manifest
+	CornerSummarizer  CornerSummarizer  // optional; if nil, corner summaries are omitted from manifest
 	Logger            *slog.Logger      // optional; if nil, slog.Default() is used
 }
 
@@ -124,6 +130,21 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		}
 	}
 
+	cornerSummaries := make(map[string]model.CornerSummary)
+	if r.CornerSummarizer != nil {
+		var scriptLines model.ScriptLines
+		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
+			return fmt.Errorf("read script lines for corner summarization: %w", err)
+		}
+		for _, cl := range scriptLines.Corners {
+			cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl)
+			if err != nil {
+				return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
+			}
+			cornerSummaries[cl.Title] = cs
+		}
+	}
+
 	logger := r.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -132,7 +153,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary)
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary, cornerSummaries)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

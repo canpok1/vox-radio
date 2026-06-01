@@ -105,6 +105,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
 				Assembler:         assemble.New(p.Assets, p.Program, assemble.WithLogger(logger), assemble.WithFFmpegWriter(logFile)),
 				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary")),
+				CornerSummarizer:  programsummary.NewLLMCornerSummarizer(llmClient, prompts["corner_summary"], stepTemp(cfg.LLM, "corner_summary")),
 				Logger:            logger,
 			}
 

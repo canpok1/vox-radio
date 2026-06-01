@@ -91,15 +91,27 @@ func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (st
 	return s.summary, s.err
 }
 
+type stubCornerSummarizer struct {
+	result model.CornerSummary
+	err    error
+	called bool
+}
+
+func (s *stubCornerSummarizer) SummarizeCorner(_ context.Context, _ model.CornerLines) (model.CornerSummary, error) {
+	s.called = true
+	return s.result, s.err
+}
+
 // --- helpers ---
 
 type stubs struct {
-	col *stubCollector
-	rnd *stubRundowner
-	scr *stubScripter
-	syn *stubSynther
-	asm *stubAssembler
-	sum *stubProgramSummarizer
+	col  *stubCollector
+	rnd  *stubRundowner
+	scr  *stubScripter
+	syn  *stubSynther
+	asm  *stubAssembler
+	sum  *stubProgramSummarizer
+	csum *stubCornerSummarizer
 }
 
 func defaultStubs() stubs {
@@ -123,6 +135,9 @@ func newRunner(s stubs) *pipeline.Runner {
 	}
 	if s.sum != nil {
 		r.ProgramSummarizer = s.sum
+	}
+	if s.csum != nil {
+		r.CornerSummarizer = s.csum
 	}
 	return r
 }
@@ -354,5 +369,90 @@ func TestRunner_Run_LogsManifestStep(t *testing.T) {
 	logs := buf.String()
 	if !strings.Contains(logs, "manifest") {
 		t.Errorf("should log manifest step: %q", logs)
+	}
+}
+
+func writeScriptLines(t *testing.T, outDir string, sl model.ScriptLines) {
+	t.Helper()
+	if err := fileio.WriteJSON(fileio.LinesPath(outDir), sl); err != nil {
+		t.Fatalf("write script lines: %v", err)
+	}
+}
+
+func TestRunner_Run_CallsCornerSummarizer(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "要約", Points: []string{"p1"}}}
+
+	writeScriptLines(t, outDir, model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
+		},
+	})
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !s.csum.called {
+		t.Error("CornerSummarizer.SummarizeCorner not called")
+	}
+}
+
+func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "コーナー要約テスト", Points: []string{"要点A"}}}
+
+	writeScriptLines(t, outDir, model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
+		},
+	})
+
+	r := newRunner(s)
+	r.Profile = &config.Profile{
+		Corners: []config.CornerConfig{{Title: "テストコーナー"}},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(fileio.ManifestPath(outDir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if !strings.Contains(string(data), "コーナー要約テスト") {
+		t.Errorf("manifest should contain corner summary, got: %s", data)
+	}
+}
+
+func TestRunner_Run_SkipsCornerSummaryWhenSummarizerIsNil(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(fileio.ManifestPath(outDir)); err != nil {
+		t.Fatalf("manifest should exist: %v", err)
+	}
+}
+
+func TestRunner_Run_CornerSummarizerError(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.csum = &stubCornerSummarizer{err: errors.New("llm error")}
+
+	writeScriptLines(t, outDir, model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "コーナー", Lines: []model.Line{{Text: "テスト"}}},
+		},
+	})
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
+		t.Fatal("expected error from CornerSummarizer, got nil")
 	}
 }

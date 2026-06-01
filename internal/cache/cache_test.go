@@ -370,3 +370,54 @@ func TestBuildEntryFromManifest_EmptyCorners(t *testing.T) {
 		t.Errorf("Corners: got %d, want 0", len(got.Corners))
 	}
 }
+
+func TestBuildEntryFromManifest_CornerSummaryAndPointsIncluded(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners: []model.ManifestCorner{
+			{
+				Title:   "コーナーA",
+				Summary: "コーナーAの会話要約",
+				Points:  []string{"要点1", "要点2"},
+			},
+		},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+
+	if len(got.Corners) != 1 {
+		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
+	}
+	c := got.Corners[0]
+	if c.Summary != "コーナーAの会話要約" {
+		t.Errorf("Corners[0].Summary: got %q, want %q", c.Summary, "コーナーAの会話要約")
+	}
+	if len(c.Points) != 2 {
+		t.Fatalf("Corners[0].Points: got %d, want 2", len(c.Points))
+	}
+	if c.Points[0] != "要点1" {
+		t.Errorf("Corners[0].Points[0]: got %q, want %q", c.Points[0], "要点1")
+	}
+}
+
+func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners: []model.ManifestCorner{
+			{Title: "コーナーA"},
+		},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+
+	if len(got.Corners) != 1 {
+		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
+	}
+	if got.Corners[0].Points == nil {
+		t.Error("Corners[0].Points must be [] not nil")
+	}
+}
