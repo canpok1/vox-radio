@@ -82,13 +82,18 @@ func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta
 
 type stubProgramSummarizer struct {
 	summary string
+	notes   []model.ConversationNote
 	err     error
 	called  bool
 }
 
-func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (string, error) {
+func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (model.ProgramSummary, error) {
 	s.called = true
-	return s.summary, s.err
+	notes := s.notes
+	if notes == nil {
+		notes = make([]model.ConversationNote, 0)
+	}
+	return model.ProgramSummary{Summary: s.summary, ConversationNotes: notes}, s.err
 }
 
 type stubCornerSummarizer struct {
@@ -454,5 +459,32 @@ func TestRunner_Run_CornerSummarizerError(t *testing.T) {
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from CornerSummarizer, got nil")
+	}
+}
+
+func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.sum = &stubProgramSummarizer{
+		summary: "要約",
+		notes: []model.ConversationNote{
+			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
+		},
+	}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	manifestPath := fileio.ManifestPath(outDir)
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if !strings.Contains(string(data), "カフェにハマっている") {
+		t.Errorf("manifest should contain conversation note, got: %s", string(data))
+	}
+	if !strings.Contains(string(data), `"conversation_notes"`) {
+		t.Errorf("manifest should contain conversation_notes field, got: %s", string(data))
 	}
 }

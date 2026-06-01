@@ -24,7 +24,7 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 
 func TestLLMProgramSummarizer_Summarize_ReturnsSummaryText(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"summary":"技術ニュースとAIの最新動向を紹介しました。"}`),
+		response: json.RawMessage(`{"summary":"技術ニュースとAIの最新動向を紹介しました。","conversation_notes":[]}`),
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
 
@@ -40,14 +40,103 @@ func TestLLMProgramSummarizer_Summarize_ReturnsSummaryText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got != "技術ニュースとAIの最新動向を紹介しました。" {
-		t.Errorf("Summary = %q, want %q", got, "技術ニュースとAIの最新動向を紹介しました。")
+	if got.Summary != "技術ニュースとAIの最新動向を紹介しました。" {
+		t.Errorf("Summary = %q, want %q", got.Summary, "技術ニュースとAIの最新動向を紹介しました。")
 	}
 }
 
-func TestLLMProgramSummarizer_Summarize_PromptContainsSpeechLines(t *testing.T) {
+func TestLLMProgramSummarizer_Summarize_ReturnsConversationNotes(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"summary":"要約"}`),
+		response: json.RawMessage(`{
+			"summary": "要約",
+			"conversation_notes": [
+				{"category": "近況", "character_ids": ["zundamon"], "note": "カフェにハマっている"}
+			]
+		}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+
+	scr := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "カフェの話"},
+		},
+	}
+
+	got, err := s.Summarize(context.Background(), scr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.ConversationNotes) != 1 {
+		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
+	}
+	n := got.ConversationNotes[0]
+	if n.Category != "近況" {
+		t.Errorf("Category: got %q, want %q", n.Category, "近況")
+	}
+	if len(n.CharacterIDs) != 1 || n.CharacterIDs[0] != "zundamon" {
+		t.Errorf("CharacterIDs: got %v, want [zundamon]", n.CharacterIDs)
+	}
+	if n.Note != "カフェにハマっている" {
+		t.Errorf("Note: got %q, want %q", n.Note, "カフェにハマっている")
+	}
+}
+
+func TestLLMProgramSummarizer_Summarize_NilConversationNotesNormalized(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","conversation_notes":null}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+
+	scr := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+
+	got, err := s.Summarize(context.Background(), scr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ConversationNotes == nil {
+		t.Error("ConversationNotes must not be nil (should be normalized to empty slice)")
+	}
+	if len(got.ConversationNotes) != 0 {
+		t.Errorf("ConversationNotes: got %d items, want 0", len(got.ConversationNotes))
+	}
+}
+
+func TestLLMProgramSummarizer_Summarize_NilCharacterIDsNormalized(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{
+			"summary": "要約",
+			"conversation_notes": [
+				{"category": "ハプニング", "character_ids": null, "note": "なにかが起きた"}
+			]
+		}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+
+	scr := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+
+	got, err := s.Summarize(context.Background(), scr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.ConversationNotes) != 1 {
+		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
+	}
+	if got.ConversationNotes[0].CharacterIDs == nil {
+		t.Error("CharacterIDs must not be nil (should be normalized to empty slice)")
+	}
+}
+
+func TestLLMProgramSummarizer_Summarize_PromptContainsSpeakerAndText(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
 
@@ -71,11 +160,17 @@ func TestLLMProgramSummarizer_Summarize_PromptContainsSpeechLines(t *testing.T) 
 	if !strings.Contains(prompt, "最新ニュースです") {
 		t.Errorf("prompt should contain speech text, got: %s", prompt)
 	}
+	if !strings.Contains(prompt, "zundamon") {
+		t.Errorf("prompt should contain speaker role, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "metan") {
+		t.Errorf("prompt should contain speaker role, got: %s", prompt)
+	}
 }
 
 func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"summary":"要約"}`),
+		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
