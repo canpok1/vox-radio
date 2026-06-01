@@ -23,3 +23,4 @@
 | [0015](0015-rundown-step-as-single-source-of-truth.md) | 番組構成(rundown)ステップを新設し、扱う記事の正とする | 採用 | 2026-05-31 |
 | [0016](0016-move-op-ed-jingle-injection-to-script-generation.md) | OP/EDジングルの挿入タイミングをassembleステップからscript生成ステップへ移行する | 採用 | 2026-05-31 |
 | [0017](0017-separate-direction-field-and-corner-nested-lines.md) | 演出説明フィールドを台本生成から分離し、セリフをコーナー単位のネスト構造で保持する | 採用 | 2026-05-31 |
+| [0018](0018-manifest-corner-summary.md) | コーナー単位サマリーを manifest に追加し履歴キャッシュへ集約する | 採用 | 2026-06-01 |
