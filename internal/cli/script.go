@@ -130,13 +130,15 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	allCornerLines := make([][]model.Line, len(p.Corners))
+	previous := make([]model.CornerLines, 0, len(p.Corners))
 	for i, corner := range p.Corners {
 		rc := cornerMap[corner.Title]
-		lines, err := w.Write(ctx, p.Program, corner, p.Corners, rc.Articles, rc.Flow, cfg.Characters)
+		lines, err := w.Write(ctx, p.Program, corner, p.Corners, previous, rc.Articles, rc.Flow, cfg.Characters)
 		if err != nil {
 			return fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
 		allCornerLines[i] = lines
+		previous = append(previous, model.CornerLines{Title: corner.Title, Lines: lines})
 	}
 
 	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(p.Corners, allCornerLines)}

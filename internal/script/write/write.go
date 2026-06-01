@@ -28,6 +28,19 @@ type cornerOutline struct {
 	Content string `json:"content"`
 }
 
+// previousCornerForPrompt is the context of a previously generated corner, passed to the LLM.
+// Only title and lines (speaker_role + text) are included; voice presets are excluded.
+type previousCornerForPrompt struct {
+	Title string                  `json:"title"`
+	Lines []previousLineForPrompt `json:"lines"`
+}
+
+// previousLineForPrompt holds only the fields needed for intra-episode context.
+type previousLineForPrompt struct {
+	SpeakerRole string `json:"speaker_role"`
+	Text        string `json:"text"`
+}
+
 // programForPrompt is the program structure passed to the LLM to prevent fabrication.
 type programForPrompt struct {
 	Title       string          `json:"title"`
@@ -36,7 +49,7 @@ type programForPrompt struct {
 }
 
 type Writer interface {
-	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
+	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
 
 type LLMWriter struct {
@@ -57,7 +70,7 @@ func (w *LLMWriter) SetPastEpisodes(eps []cache.Entry) {
 	w.pastEpisodes = eps
 }
 
-func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
+func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
 	promptCorner := cornerForPrompt{
 		Title:       corner.Title,
 		Content:     corner.Content,
@@ -101,6 +114,21 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		}
 	}
 
+	previousCornersStr := "（なし）"
+	if len(previousCorners) > 0 {
+		prompts := make([]previousCornerForPrompt, len(previousCorners))
+		for i, pc := range previousCorners {
+			lines := make([]previousLineForPrompt, len(pc.Lines))
+			for j, l := range pc.Lines {
+				lines[j] = previousLineForPrompt{SpeakerRole: l.SpeakerRole, Text: l.Text}
+			}
+			prompts[i] = previousCornerForPrompt{Title: pc.Title, Lines: lines}
+		}
+		if b, err := json.Marshal(prompts); err == nil {
+			previousCornersStr = string(b)
+		}
+	}
+
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
@@ -109,6 +137,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{cast_info}}", castInfo,
 		"{{preset_info}}", presetInfo,
 		"{{past_episodes}}", pastEpisodesStr,
+		"{{previous_corners}}", previousCornersStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)
