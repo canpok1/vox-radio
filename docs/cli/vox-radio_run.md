@@ -25,7 +25,6 @@ vox-radio run [flags]
   -h, --help             help for run
       --out-dir string   出力ディレクトリ（episode.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置） (default "output")
       --profile string   プロファイル YAML ファイルのパス（必須）
-      --prompts string   プロンプトテンプレートを含むディレクトリ (default "prompts")
 ```
 
 ### SEE ALSO

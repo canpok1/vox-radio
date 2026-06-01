@@ -30,7 +30,6 @@ vox-radio script [flags]
       --in string        02_rundown.json の入力パス（フルパイプラインまたは write ステップで必須）
       --out string       04_script.json の出力先パス（必須）
       --profile string   プロファイル YAML ファイルのパス（必須）
-      --prompts string   プロンプトテンプレートを含むディレクトリ (default "prompts")
       --step string      単一ステップを実行する: write|direct
 ```
 

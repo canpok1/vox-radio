@@ -24,7 +24,6 @@ vox-radio rundown [flags]
       --in string        01_articles.json の入力パス（必須）
       --out string       02_rundown.json の出力先パス（必須）
       --profile string   プロファイル YAML ファイルのパス（必須）
-      --prompts string   プロンプトテンプレートを含むディレクトリ (default "prompts")
 ```
 
 ### SEE ALSO
