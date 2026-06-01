@@ -63,6 +63,8 @@ collect → rundown → script → synth → assemble → manifest
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
 | `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--script` で番組全体要約と会話メモ（`conversation_notes`）、`--lines` でコーナー単位の会話要約を LLM で生成して付加する |
 | `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
+| `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
+| `profile check` | プロファイル YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
 
 ### 設定ファイルの作成
 

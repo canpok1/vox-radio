@@ -286,8 +286,12 @@ type Profile struct {
 
 // LoadConfig loads common settings from the given YAML file path.
 func LoadConfig(path string) (*Config, error) {
+	return loadConfigWith(path, false)
+}
+
+func loadConfigWith(path string, strict bool) (*Config, error) {
 	cfg := &Config{}
-	if err := loadYAML(path, cfg); err != nil {
+	if err := decodeYAML(path, cfg, strict); err != nil {
 		return nil, err
 	}
 	if err := validateConfig(cfg); err != nil {
@@ -337,8 +341,12 @@ func validateVoicevoxPresets(p *VoicevoxPresets) error {
 // LoadProfile loads genre-specific settings from the given YAML file path.
 // Relative asset file paths are resolved relative to the profile file's directory.
 func LoadProfile(path string) (*Profile, error) {
+	return loadProfileWith(path, false)
+}
+
+func loadProfileWith(path string, strict bool) (*Profile, error) {
 	p := &Profile{}
-	if err := loadYAML(path, p); err != nil {
+	if err := decodeYAML(path, p, strict); err != nil {
 		return nil, err
 	}
 	resolveAssetPaths(filepath.Dir(path), &p.Assets)
@@ -401,11 +409,28 @@ func resolveFile(base, file string) string {
 	return file
 }
 
-func loadYAML(path string, dest any) error {
+// LoadConfigStrict loads common settings from the given YAML file path with strict parsing.
+// Unknown keys in the YAML will cause an error (detects typos).
+func LoadConfigStrict(path string) (*Config, error) {
+	return loadConfigWith(path, true)
+}
+
+// LoadProfileStrict loads genre-specific settings from the given YAML file path with strict parsing.
+// Unknown keys in the YAML will cause an error (detects typos).
+// Relative asset file paths are resolved relative to the profile file's directory.
+func LoadProfileStrict(path string) (*Profile, error) {
+	return loadProfileWith(path, true)
+}
+
+func decodeYAML(path string, dest any, strict bool) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = f.Close() }()
-	return yaml.NewDecoder(f).Decode(dest)
+	dec := yaml.NewDecoder(f)
+	if strict {
+		dec.KnownFields(true)
+	}
+	return dec.Decode(dest)
 }

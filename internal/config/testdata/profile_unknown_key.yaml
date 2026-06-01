@@ -1,0 +1,21 @@
+program:
+  title: "テストニュース"
+  description: "テスト用"
+  segment_pause_sec: 0.3
+  length_sec: 75
+  typo_unknown_field: should_cause_strict_error
+
+corners:
+  - title: "オープニング"
+    content: "番組の挨拶とトピック紹介"
+    direction: "冒頭でオープニングジングルを流す。"
+    cast:
+      zundamon: "元気に挨拶する進行役"
+    length_sec: 45
+    start_jingle: opening
+
+assets:
+  jingle:
+    opening: { file: assets/jingle/opening.mp3, fade_in: 0.5, fade_out: 0.5, description: "番組冒頭で流すオープニングジングル" }
+  se: {}
+  bgm: {}
