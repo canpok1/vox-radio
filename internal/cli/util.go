@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -28,11 +27,7 @@ func writeJSON(path string, v any) error {
 
 func readJSON[T any](path string) (T, error) {
 	var v T
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return v, err
-	}
-	if err := json.Unmarshal(data, &v); err != nil {
+	if err := fileio.ReadJSON(path, &v); err != nil {
 		return v, err
 	}
 	return v, nil

@@ -83,3 +83,47 @@ func TestLLMSelector_Select_LLMError(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+func TestLLMSelector_Select_PastURLsInjectedInPrompt(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/new"],"flow":"フロー"}`),
+	}
+	s := sel.NewLLMSelector(mc, "past={{past_urls}} articles={{articles}} corner={{corner}}", 0)
+	s.SetPastURLs([]string{"https://example.com/old1", "https://example.com/old2"})
+
+	_, err := s.Select(context.Background(), config.CornerConfig{Title: "t"}, []model.Article{{URL: "https://example.com/new", Title: "新しい記事"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "https://example.com/old1") {
+		t.Errorf("prompt should contain past URL 'old1', got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "https://example.com/old2") {
+		t.Errorf("prompt should contain past URL 'old2', got: %s", prompt)
+	}
+}
+
+func TestLLMSelector_Select_NoPastURLs_ShowsNone(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
+	}
+	s := sel.NewLLMSelector(mc, "past={{past_urls}}", 0)
+
+	_, err := s.Select(context.Background(), config.CornerConfig{Title: "t"}, []model.Article{{URL: "https://example.com/1"}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "なし") {
+		t.Errorf("prompt should indicate no past URLs, got: %s", prompt)
+	}
+}

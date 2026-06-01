@@ -3,10 +3,15 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/collect"
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/pipeline"
 	"github.com/canpok1/vox-radio/internal/rundown"
 	sel "github.com/canpok1/vox-radio/internal/rundown/select"
@@ -60,11 +65,26 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			intermediateDir := fileio.IntermediateDir(outDir)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
+			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
+
+			var cacheMgr *cache.Manager
+			if cfg.Cache.Enabled && p.Program.ID != "" {
+				cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
+				cacheMgr = cache.New(cachePath)
+				entries, err := cacheMgr.Load()
+				if err != nil {
+					return fmt.Errorf("load cache: %w", err)
+				}
+				recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
+				selector.SetPastURLs(cache.PastURLs(recent))
+				writer.SetPastEpisodes(recent)
+			}
+
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer)
 
 			scripter := script.NewLLMScriptGenerator(
-				write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg),
+				writer,
 				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct")),
 				assetCatalog,
 				intermediateDir,
@@ -94,6 +114,12 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return err
 			}
 
+			if cacheMgr != nil {
+				if err := appendToCache(cacheMgr, p.Program.ID, outDir, cfg.Cache, logger); err != nil {
+					logger.Warn("cache append failed (non-fatal)", "err", err)
+				}
+			}
+
 			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir))
 			return nil
 		},
@@ -104,4 +130,22 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 	cmd.Flags().StringVar(&promptsDir, "prompts", "prompts", "プロンプトテンプレートを含むディレクトリ")
 
 	return cmd
+}
+
+func appendToCache(mgr *cache.Manager, programID string, outDir string, cacheCfg config.CacheConfig, logger *slog.Logger) error {
+	var m model.Manifest
+	if err := fileio.ReadJSON(fileio.ManifestPath(outDir), &m); err != nil {
+		return fmt.Errorf("read manifest: %w", err)
+	}
+	var rd model.Rundown
+	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+		return fmt.Errorf("read rundown: %w", err)
+	}
+
+	entry := cache.BuildEntryFromManifest(programID, m, rd)
+	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
+		return err
+	}
+	logger.Info("cache entry appended", "program_id", programID)
+	return nil
 }

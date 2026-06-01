@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
@@ -313,6 +314,57 @@ func TestLLMWriter_Write_DirectionNotInPrompt(t *testing.T) {
 	}
 	if strings.Contains(prompt, "direction") {
 		t.Errorf("direction key must not appear in write prompt, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_PastEpisodesInjectedInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "past={{past_episodes}}", 0, nil)
+	w.SetPastEpisodes([]cache.Entry{
+		{
+			ProgramID: "tech-daily",
+			Title:     "過去エピソード1",
+			Summary:   "先週の要約",
+			Corners: []cache.CornerEntry{
+				{Articles: []cache.ArticleEntry{
+					{Title: "過去記事", URL: "https://example.com/old"},
+				}},
+			},
+		},
+	})
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "過去エピソード1") {
+		t.Errorf("prompt should contain past episode title, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "https://example.com/old") {
+		t.Errorf("prompt should contain past article URL, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_NoPastEpisodes_ShowsNone(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "past={{past_episodes}}", 0, nil)
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "なし") {
+		t.Errorf("prompt should indicate no past episodes, got: %s", prompt)
 	}
 }
 
