@@ -116,7 +116,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			if cacheMgr != nil {
 				if err := appendToCache(cacheMgr, p.Program.ID, outDir, cfg.Cache, logger); err != nil {
-					logger.Warn(fmt.Sprintf("cache append failed (non-fatal): %v", err))
+					logger.Warn("cache append failed (non-fatal)", "err", err)
 				}
 			}
 

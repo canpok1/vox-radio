@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
+	"github.com/canpok1/vox-radio/internal/model"
 )
 
 func writeJSONL(t *testing.T, path string, entries []cache.Entry) {
@@ -279,5 +280,93 @@ func TestPastURLs_EmptyEntries(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Errorf("PastURLs: expected empty slice, got %d", len(got))
+	}
+}
+
+func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
+	m := model.Manifest{
+		Title:    "テストエピソード",
+		Summary:  "全体要約",
+		Datetime: "2026-06-01T07:00:00+09:00",
+		Corners: []model.ManifestCorner{
+			{
+				Title: "コーナーA",
+				Articles: []model.ArticleRef{
+					{Title: "記事1", URL: "https://example.com/1"},
+					{Title: "記事2", URL: "https://example.com/2"},
+				},
+			},
+		},
+	}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{
+			{
+				Title: "コーナーA",
+				Articles: []model.RundownArticle{
+					{URL: "https://example.com/1", Title: "記事1", Summary: "記事1の要約", Points: []string{"ポイント1"}},
+				},
+			},
+		},
+	}
+
+	got := cache.BuildEntryFromManifest("prog-id", m, rd)
+
+	if got.ProgramID != "prog-id" {
+		t.Errorf("ProgramID: got %q, want %q", got.ProgramID, "prog-id")
+	}
+	if got.Title != "テストエピソード" {
+		t.Errorf("Title: got %q, want %q", got.Title, "テストエピソード")
+	}
+	if got.Summary != "全体要約" {
+		t.Errorf("Summary: got %q, want %q", got.Summary, "全体要約")
+	}
+	if got.Datetime != "2026-06-01T07:00:00+09:00" {
+		t.Errorf("Datetime: got %q, want %q", got.Datetime, "2026-06-01T07:00:00+09:00")
+	}
+	if len(got.Corners) != 1 {
+		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
+	}
+	if got.Corners[0].Title != "コーナーA" {
+		t.Errorf("Corners[0].Title: got %q, want %q", got.Corners[0].Title, "コーナーA")
+	}
+	if len(got.Corners[0].Articles) != 2 {
+		t.Fatalf("Corners[0].Articles: got %d, want 2", len(got.Corners[0].Articles))
+	}
+
+	// Article with rundown data should have summary and points merged
+	a1 := got.Corners[0].Articles[0]
+	if a1.URL != "https://example.com/1" {
+		t.Errorf("Articles[0].URL: got %q, want %q", a1.URL, "https://example.com/1")
+	}
+	if a1.Summary != "記事1の要約" {
+		t.Errorf("Articles[0].Summary: got %q, want %q", a1.Summary, "記事1の要約")
+	}
+	if len(a1.Points) != 1 || a1.Points[0] != "ポイント1" {
+		t.Errorf("Articles[0].Points: got %v, want [ポイント1]", a1.Points)
+	}
+
+	// Article without rundown data should still be included, with empty summary/points
+	a2 := got.Corners[0].Articles[1]
+	if a2.URL != "https://example.com/2" {
+		t.Errorf("Articles[1].URL: got %q, want %q", a2.URL, "https://example.com/2")
+	}
+	if a2.Summary != "" {
+		t.Errorf("Articles[1].Summary: expected empty for unknown URL, got %q", a2.Summary)
+	}
+	if len(a2.Points) != 0 {
+		t.Errorf("Articles[1].Points: expected empty, got %v", a2.Points)
+	}
+}
+
+func TestBuildEntryFromManifest_EmptyCorners(t *testing.T) {
+	m := model.Manifest{Title: "空", Datetime: "2026-06-01T00:00:00Z"}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+	if got.Corners == nil {
+		t.Error("Corners should be non-nil for empty manifest")
+	}
+	if len(got.Corners) != 0 {
+		t.Errorf("Corners: got %d, want 0", len(got.Corners))
 	}
 }
