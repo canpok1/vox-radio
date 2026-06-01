@@ -281,10 +281,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 }
 
 func TestLLMDirector_Direct_BGMDoesNotLeakToNextCorner(t *testing.T) {
-	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[]}`),
-	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{
@@ -302,11 +299,13 @@ func TestLLMDirector_Direct_BGMDoesNotLeakToNextCorner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// C1: [bgm(start), speech, bgm(stop)], C2: [speech]
+	// [bgm(talk_bgm), speech_c1, bgm("" stop), speech_c2] — stop emitted at C2 entry
 	if len(got.Segments) != 4 {
 		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
 	}
-	// After C1 (bgm stop at index 2), C2 should just be speech
+	if got.Segments[2].Type != model.SegmentTypeBGM || got.Segments[2].AssetName != "" {
+		t.Errorf("Segment[2]: want bgm(stop), got %+v", got.Segments[2])
+	}
 	if got.Segments[3].Type != model.SegmentTypeSpeech {
 		t.Errorf("Segment[3]: want speech (C2), got %+v", got.Segments[3])
 	}
