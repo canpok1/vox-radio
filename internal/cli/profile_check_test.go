@@ -15,8 +15,7 @@ func profileTestdataPath(rel string) string {
 }
 
 // setupProfileCheckDir creates a temp dir with vox-radio.yaml and changes cwd to it.
-// Returns the absolute path of the vox-radio.yaml placed in the temp dir.
-func setupProfileCheckDir(t *testing.T, configSrc string) string {
+func setupProfileCheckDir(t *testing.T, configSrc string) {
 	t.Helper()
 	dir := chdirTemp(t)
 
@@ -24,11 +23,9 @@ func setupProfileCheckDir(t *testing.T, configSrc string) string {
 	if err != nil {
 		t.Fatalf("read config src: %v", err)
 	}
-	dst := filepath.Join(dir, "vox-radio.yaml")
-	if err := os.WriteFile(dst, data, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "vox-radio.yaml"), data, 0600); err != nil {
 		t.Fatalf("write vox-radio.yaml: %v", err)
 	}
-	return dst
 }
 
 func TestProfileCheck_ValidProfile_Success(t *testing.T) {
@@ -95,20 +92,11 @@ assets:
 }
 
 func TestProfileCheck_MissingConfig_Error(t *testing.T) {
-	orig, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := t.TempDir()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(orig) })
+	chdirTemp(t) // no vox-radio.yaml in cwd
 
-	// no vox-radio.yaml in cwd
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"profile", "check", profileTestdataPath("profile.yaml")})
-	err = cmd.Execute()
+	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error when vox-radio.yaml is missing in cwd")
 	}
