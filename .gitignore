@@ -46,9 +46,8 @@ go.work.sum
 # vox-radio キャッシュ
 .vox-radio/
 
-# 生成物（中間生成物・最終成果物・ログ）
+# 生成物（中間生成物・最終成果物）
 output/
-logs/
 
 # Claudeのスケジュールされたタスクのロックファイル
 .claude/scheduled_tasks.lock

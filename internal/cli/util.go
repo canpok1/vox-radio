@@ -33,12 +33,14 @@ func readJSON[T any](path string) (T, error) {
 	return v, nil
 }
 
+const defaultLogDir = ".vox-radio/logs"
+
 // setupLogger creates a fan-out logger (stderr INFO+, logFile DEBUG+) and returns it with the
 // log file handle. The caller must close the file when done.
-// logDir defaults to "./logs" if empty.
+// logDir defaults to ".vox-radio/logs" if empty.
 func setupLogger(commandName string, logDir string) (*slog.Logger, *os.File, error) {
 	if logDir == "" {
-		logDir = "logs"
+		logDir = defaultLogDir
 	}
 	return logging.NewSetup(time.Now(), commandName, logDir)
 }
