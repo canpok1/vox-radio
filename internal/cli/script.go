@@ -131,7 +131,7 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	allCornerLines, err := script.WriteAll(ctx, w, p.Program, p.Corners, cornerMap, cfg.Characters)
 	if err != nil {
-		return err
+		return fmt.Errorf("write corners: %w", err)
 	}
 
 	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(p.Corners, allCornerLines)}

@@ -65,7 +65,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	cornerMap := rundown.CornerMap()
 
 	g.logger.With("step", "script/write").Info("開始")
-	cornerLines, err := g.writeAll(ctx, program, corners, cornerMap, chars)
+	cornerLines, err := WriteAll(ctx, g.writer, program, corners, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
@@ -100,10 +100,6 @@ func WriteAll(ctx context.Context, w write.Writer, program config.ProgramConfig,
 		previous = append(previous, model.CornerLines{Title: corner.Title, Lines: lines})
 	}
 	return result, nil
-}
-
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
-	return WriteAll(ctx, g.writer, program, corners, cornerMap, chars)
 }
 
 // buildPreviousCorners assembles the first n corners into a []model.CornerLines for context passing.
