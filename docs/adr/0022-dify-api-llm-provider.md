@@ -9,7 +9,7 @@ ADR 0002 は LLM プロバイダ切替を **OpenAI 互換 1 実装 ＋ `base_url
 
 ## 決定
 
-`LLMConfig` に `provider` 列挙（`openai`/`dify`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。`Client` インターフェース（`Complete`）は変更しない。Dify は **ゲートウェイ**として使い、vox-radio が組み立てた system+user プロンプトを `query` に渡す（プロンプトと JSON Schema 検証は vox-radio 側に温存）。`json_schema` は送れないため構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。`temperature` も標準パラメータでは送れないが、Dify の `inputs`（任意変数）経由で**オプトインで渡せる口**を設ける（注入キー未設定なら渡さない。静的な任意変数も `inputs` に載せられる）。実際に効かせるかは Dify アプリ側の変数バインド次第。Dify アプリは単一とし、HTTP は `safejob/dify-sdk-go`（依存ゼロ・blocking chat 対応・MIT）の `RunBlock` を用いる。
+`LLMConfig` に `provider` 列挙（`openai`/`dify`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。`Client` インターフェース（`Complete`）は変更しない。Dify は **ゲートウェイ**として使い、vox-radio が組み立てた system+user プロンプトを `query` に渡す（プロンプトと JSON Schema 検証は vox-radio 側に温存）。`json_schema` は送れないため構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。`temperature` も標準パラメータでは送れないが、Dify の `inputs`（任意変数）経由で渡せる。`inputs` の値に `${temperature}` プレースホルダーを書くと per-step temperature に置換して送る（書かなければ渡さない）ことで、渡す変数を `inputs` に一元化する。実際に効かせるかは Dify アプリ側の変数バインド次第。Dify アプリは単一とし、HTTP は `safejob/dify-sdk-go`（依存ゼロ・MIT）の blocking 呼び出しを用いる。
 
 ## 結果
 
