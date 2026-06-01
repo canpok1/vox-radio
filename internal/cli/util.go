@@ -44,15 +44,36 @@ func setupLogger(commandName string, logDir string) (*slog.Logger, *os.File, err
 }
 
 func newLLMClient(cfg *config.Config) llm.Client {
-	apiKey := os.Getenv(cfg.LLM.APIKeyEnv)
-	return llm.NewClient(llm.Config{
-		BaseURL:              cfg.LLM.BaseURL,
-		APIKey:               apiKey,
-		Model:                cfg.LLM.Model,
+	llmCfg := llm.Config{
+		Provider:             cfg.LLM.EffectiveProvider(),
 		Temperature:          cfg.LLM.Temperature,
 		MaxRetries:           cfg.LLM.MaxRetries,
 		MinRequestIntervalMS: cfg.LLM.EffectiveMinRequestIntervalMS(),
-	})
+	}
+
+	switch llmCfg.Provider {
+	case config.ProviderDifyChat:
+		if dc := cfg.LLM.DifyChat; dc != nil {
+			user := dc.User
+			if user == "" {
+				user = config.DefaultDifyUser
+			}
+			llmCfg.DifyChat = &llm.DifyChatClientConfig{
+				BaseURL: dc.BaseURL,
+				APIKey:  os.Getenv(dc.APIKeyEnv),
+				User:    user,
+				Inputs:  dc.Inputs,
+			}
+		}
+	default: // openai
+		if oa := cfg.LLM.OpenAI; oa != nil {
+			llmCfg.BaseURL = oa.BaseURL
+			llmCfg.APIKey = os.Getenv(oa.APIKeyEnv)
+			llmCfg.Model = oa.Model
+		}
+	}
+
+	return llm.NewClient(llmCfg)
 }
 
 func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, error) {

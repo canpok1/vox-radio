@@ -3,12 +3,8 @@
 
 # LLM（大規模言語モデル）の接続設定
 llm:
-  # LLM API のベースURL（OpenAI 互換エンドポイント）
-  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-  # APIキーを格納する環境変数名（export GEMINI_API_KEY=xxx などで設定）
-  api_key_env: GEMINI_API_KEY
-  # 使用するモデル名
-  model: gemini-3.1-flash-lite
+  # プロバイダ: openai（デフォルト）または dify-chat
+  provider: openai
   # 生成のランダム性（0.0〜1.0）。低いほど安定、高いほど多様な出力になる
   temperature: 0.7
   # APIリトライ回数
@@ -21,6 +17,22 @@ llm:
     plan:      { temperature: 0.4 }
     write:     { temperature: 0.8 }
     direct:    { temperature: 0.2 }
+  # OpenAI 互換プロバイダの接続設定（provider: openai 時に必須）
+  openai:
+    # LLM API のベースURL（OpenAI 互換エンドポイント）
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    # APIキーを格納する環境変数名（export GEMINI_API_KEY=xxx などで設定）
+    api_key_env: GEMINI_API_KEY
+    # 使用するモデル名
+    model: gemini-3.1-flash-lite
+  # Dify chat-messages の接続設定（provider: dify-chat 時に必須）
+  # dify-chat:
+  #   base_url: https://api.dify.ai/v1
+  #   api_key_env: DIFY_API_KEY
+  #   user: vox-radio            # 利用者識別子（省略時は vox-radio）
+  #   inputs:                    # Dify アプリに渡す変数（省略可）
+  #     temperature: "${temperature}"   # 完全一致なので数値で送信
+  #     lang: ja
 
 # VOICEVOX 音声合成エンジンの接続設定
 voicevox:

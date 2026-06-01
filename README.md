@@ -153,12 +153,37 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
+| `provider` | string | 任意 | LLM プロバイダ。`openai`（デフォルト）または `dify-chat` |
+| `temperature` | float64 | 任意 | 生成のランダム性（0.0〜1.0）。デフォルト: 0（Go ゼロ値） |
+| `max_retries` | int | 任意 | APIリトライ回数。デフォルト: 0（Go ゼロ値） |
+| `min_request_interval_ms` | *int | 任意 | リクエスト間隔（ミリ秒）。省略時は 4500ms |
+| `steps` | map[string]LLMStepConfig | 任意 | ステップごとの設定（キー: ステップ名） |
+| `openai` | OpenAIConfig | `provider: openai` 時必須 | OpenAI 互換プロバイダの接続設定 |
+| `dify-chat` | DifyChatConfig | `provider: dify-chat` 時必須 | Dify chat-messages の接続設定 |
+
+##### `llm.openai` サブフィールド（`provider: openai` 時）
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
 | `base_url` | string | 必須 | LLM API のベースURL（OpenAI 互換エンドポイント） |
 | `api_key_env` | string | 必須 | APIキーを格納する環境変数名 |
 | `model` | string | 必須 | 使用するモデル名 |
-| `temperature` | float64 | 任意 | 生成のランダム性（0.0〜1.0）。デフォルト: 0（Go ゼロ値） |
-| `max_retries` | int | 任意 | APIリトライ回数。デフォルト: 0（Go ゼロ値） |
-| `steps` | map[string]LLMStepConfig | 任意 | ステップごとの設定（キー: ステップ名） |
+
+##### `llm.dify-chat` サブフィールド（`provider: dify-chat` 時）
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `base_url` | string | 必須 | Dify API サーバーURL（例: `https://api.dify.ai/v1`） |
+| `api_key_env` | string | 必須 | Dify API キーを格納する環境変数名 |
+| `user` | string | 任意 | 利用者識別子。省略時は `vox-radio` |
+| `inputs` | map[string]string | 任意 | Dify アプリに渡す変数。値に `${temperature}` プレースホルダーを書ける |
+
+`inputs` の `${temperature}` プレースホルダーについて:
+- 値が `"${temperature}"` だけの場合（完全一致）→ そのステップの temperature を **JSON 数値**で送信
+- 値に `${temperature}` が含まれる場合（部分一致）→ 文字列として補間
+- プレースホルダーを書かない場合 → temperature を inputs に含めない
+
+> **注意**: inputs に temperature を載せても、Dify アプリ側でその変数をモデルパラメータにバインドしない限り効果はありません。
 
 ##### `llm.steps.<step>` サブフィールド
 

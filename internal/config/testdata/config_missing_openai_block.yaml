@@ -4,16 +4,9 @@ llm:
   max_retries: 3
   steps:
     write: { temperature: 0.8 }
-  openai:
-    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-    api_key_env: GEMINI_API_KEY
-    model: gemini-3.1-flash-lite
 
 voicevox:
   url: http://localhost:50021
-  presets:
-    pitch:
-      超高め: 0.5  # out of range [-0.15, 0.15]
 
 characters:
   zundamon:
