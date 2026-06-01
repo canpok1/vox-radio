@@ -43,6 +43,9 @@ go.work.sum
 # vox-actor
 .vox-actor/
 
+# vox-radio キャッシュ
+.vox-radio/
+
 # 生成物（中間生成物・最終成果物・ログ）
 output/
 logs/

@@ -1,3 +1,9 @@
+cache:
+  enabled: true            # キャッシュ機能の有効/無効（program.id 未設定時は常に無効）
+  max_entries: 100         # JSONL に保持する最大エピソード数（超過分は古い行から削除）
+  retention_days: 90       # 保持日数（超過した古い行は削除）
+  llm_context_entries: 10  # LLM へ渡す直近エピソード件数
+
 llm:
   base_url: https://generativelanguage.googleapis.com/v1beta/openai/
   api_key_env: GEMINI_API_KEY

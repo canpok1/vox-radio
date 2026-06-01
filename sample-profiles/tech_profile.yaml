@@ -1,4 +1,5 @@
 program:
+  id: "tech-daily"
   title: "今日のテックニュース"
   description: "毎日5分のニュースラジオ"
   segment_pause_sec: 0.3
