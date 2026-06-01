@@ -26,3 +26,4 @@
 | [0018](0018-manifest-corner-summary.md) | コーナー単位サマリーを manifest に追加し履歴キャッシュへ集約する | 採用 | 2026-06-01 |
 | [0019](0019-conversation-notes-in-manifest.md) | 番組構成外の会話情報を会話メモとして manifest に残し履歴へ集約する | 採用 | 2026-06-01 |
 | [0020](0020-corner-level-bgm-jingle-provenance.md) | BGM・ジングルの挿入をprofile.yamlのコーナー設定駆動へ移行し、program OP/ED指定を廃止する | 採用 | 2026-06-01 |
+| [0021](0021-intra-episode-corner-context.md) | コーナー台本生成に同一回の生成済みセリフを文脈として渡す | 採用 | 2026-06-01 |
