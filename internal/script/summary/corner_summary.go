@@ -20,11 +20,6 @@ var cornerSummarySchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
-// CornerSummarizer generates a summary for a single corner.
-type CornerSummarizer interface {
-	SummarizeCorner(ctx context.Context, corner model.CornerLines) (model.CornerSummary, error)
-}
-
 // LLMCornerSummarizer generates a corner summary using an LLM.
 type LLMCornerSummarizer struct {
 	client         llm.Client

@@ -130,12 +130,13 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		}
 	}
 
-	cornerSummaries := make(map[string]model.CornerSummary)
+	var cornerSummaries map[string]model.CornerSummary
 	if r.CornerSummarizer != nil {
 		var scriptLines model.ScriptLines
 		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
 			return fmt.Errorf("read script lines for corner summarization: %w", err)
 		}
+		cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
 		for _, cl := range scriptLines.Corners {
 			cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl)
 			if err != nil {

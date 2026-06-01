@@ -54,7 +54,7 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) 
 		return "", fmt.Errorf("marshal script lines: %w", err)
 	}
 
-	prompt := strings.ReplaceAll(s.promptTemplate, "{{script_lines}}", string(linesJSON))
+	prompt := strings.NewReplacer("{{script_lines}}", string(linesJSON)).Replace(s.promptTemplate)
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
