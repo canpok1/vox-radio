@@ -9,7 +9,7 @@ import (
 )
 
 // CharsPerSec is the approximate number of characters spoken per second,
-// used to convert target_duration_sec to a target character count.
+// used to convert length_sec to a target character count.
 const CharsPerSec = 7
 
 // DefaultMinRequestIntervalMS is the default minimum interval (ms) between LLM API requests.
@@ -124,11 +124,11 @@ func (c CacheConfig) EffectiveLLMContextEntries() int {
 
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
-	ID                string  `yaml:"id,omitempty"`
-	Title             string  `yaml:"title"`
-	Description       string  `yaml:"description"`
-	SegmentPauseSec   float64 `yaml:"segment_pause_sec"`
-	TargetDurationSec int     `yaml:"target_duration_sec"`
+	ID              string  `yaml:"id,omitempty"`
+	Title           string  `yaml:"title"`
+	Description     string  `yaml:"description"`
+	SegmentPauseSec float64 `yaml:"segment_pause_sec"`
+	LengthSec       int     `yaml:"length_sec"`
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
@@ -139,15 +139,15 @@ type SourceConfig struct {
 
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
-	Title             string            `yaml:"title"`
-	Content           string            `yaml:"content"`
-	Direction         string            `yaml:"direction,omitempty"`
-	Cast              map[string]string `yaml:"cast"`
-	TargetDurationSec int               `yaml:"target_duration_sec"`
-	Source            *SourceConfig     `yaml:"source,omitempty"`
-	OpeningJingle     string            `yaml:"opening_jingle,omitempty"`
-	EndingJingle      string            `yaml:"ending_jingle,omitempty"`
-	BGM               string            `yaml:"bgm,omitempty"`
+	Title       string            `yaml:"title"`
+	Content     string            `yaml:"content"`
+	Direction   string            `yaml:"direction,omitempty"`
+	Cast        map[string]string `yaml:"cast"`
+	LengthSec   int               `yaml:"length_sec"`
+	Source      *SourceConfig     `yaml:"source,omitempty"`
+	StartJingle string            `yaml:"start_jingle,omitempty"`
+	EndJingle   string            `yaml:"end_jingle,omitempty"`
+	BGM         string            `yaml:"bgm,omitempty"`
 }
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.
@@ -360,14 +360,14 @@ func ValidateProfileCast(p *Profile, chars map[string]CharacterConfig) error {
 // ValidateProfileAssets checks that corner-level jingle/bgm keys reference existing assets.
 func ValidateProfileAssets(p *Profile) error {
 	for _, corner := range p.Corners {
-		if corner.OpeningJingle != "" {
-			if _, ok := p.Assets.Jingle[corner.OpeningJingle]; !ok {
-				return fmt.Errorf("corners[%q].opening_jingle: unknown jingle key %q", corner.Title, corner.OpeningJingle)
+		if corner.StartJingle != "" {
+			if _, ok := p.Assets.Jingle[corner.StartJingle]; !ok {
+				return fmt.Errorf("corners[%q].start_jingle: unknown jingle key %q", corner.Title, corner.StartJingle)
 			}
 		}
-		if corner.EndingJingle != "" {
-			if _, ok := p.Assets.Jingle[corner.EndingJingle]; !ok {
-				return fmt.Errorf("corners[%q].ending_jingle: unknown jingle key %q", corner.Title, corner.EndingJingle)
+		if corner.EndJingle != "" {
+			if _, ok := p.Assets.Jingle[corner.EndJingle]; !ok {
+				return fmt.Errorf("corners[%q].end_jingle: unknown jingle key %q", corner.Title, corner.EndJingle)
 			}
 		}
 		if corner.BGM != "" {

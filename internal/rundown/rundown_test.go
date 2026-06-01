@@ -46,7 +46,7 @@ var _ summarize.Summarizer = (*mockSummarizer)(nil)
 // --- helpers ---
 
 func defaultCorner(title string) config.CornerConfig {
-	return config.CornerConfig{Title: title, Content: "内容", TargetDurationSec: 60}
+	return config.CornerConfig{Title: title, Content: "内容", LengthSec: 60}
 }
 
 func article(url string) model.Article {

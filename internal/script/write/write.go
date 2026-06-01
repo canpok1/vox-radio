@@ -14,7 +14,7 @@ import (
 )
 
 // cornerForPrompt is the subset of corner data passed to the LLM.
-// TargetChars is computed from TargetDurationSec via config.DurationSecToTargetChars.
+// TargetChars is computed from LengthSec via config.DurationSecToTargetChars.
 type cornerForPrompt struct {
 	Title       string            `json:"title"`
 	Content     string            `json:"content"`
@@ -62,7 +62,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		Title:       corner.Title,
 		Content:     corner.Content,
 		Cast:        corner.Cast,
-		TargetChars: config.DurationSecToTargetChars(corner.TargetDurationSec),
+		TargetChars: config.DurationSecToTargetChars(corner.LengthSec),
 	}
 	cornerJSON, err := json.Marshal(promptCorner)
 	if err != nil {

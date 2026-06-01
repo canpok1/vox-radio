@@ -13,7 +13,7 @@ program:
   # コーナー間の無音時間（秒）
   segment_pause_sec: 0.3
   # 番組全体の目標収録時間（秒）
-  target_duration_sec: 240
+  length_sec: 240
 
 # コーナー定義（番組を構成する各コーナーを順番に記述）
 corners:
@@ -25,16 +25,16 @@ corners:
     cast:
       zundamon: "元気に挨拶する進行役"
     # このコーナーの目標時間（秒）
-    target_duration_sec: 30
+    length_sec: 30
     # コーナー開始ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
-    # opening_jingle: opening
+    # start_jingle: opening
 
   - title: "メインコーナー"
     content: "メインコンテンツの紹介"
     cast:
       zundamon: "進行役"
       metan: "解説役"
-    target_duration_sec: 180
+    length_sec: 180
     # コーナー中BGM（assets.bgm のキー名。不要な場合は行ごと削除）
     # bgm: talk_bgm
     # ソース設定（RSSフィードや記事URLからコンテンツを収集する場合に設定）
@@ -49,9 +49,9 @@ corners:
     content: "まとめと締め"
     cast:
       zundamon: "進行役"
-    target_duration_sec: 30
+    length_sec: 30
     # コーナー終了ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
-    # ending_jingle: ending
+    # end_jingle: ending
 
 # アセット設定（ジングル・SE・BGM）
 # バイナリ素材ファイルは別途用意してください。

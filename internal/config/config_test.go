@@ -77,13 +77,13 @@ func TestLoadProfile(t *testing.T) {
 			t.Fatal("Corners must not be empty")
 		}
 		corner0 := profile.Corners[0]
-		if corner0.OpeningJingle == "" {
-			t.Error("Corners[0].OpeningJingle must not be empty")
+		if corner0.StartJingle == "" {
+			t.Error("Corners[0].StartJingle must not be empty")
 		}
 		if len(profile.Corners) > 1 {
 			corner1 := profile.Corners[1]
-			if corner1.EndingJingle == "" {
-				t.Error("Corners[1].EndingJingle must not be empty")
+			if corner1.EndJingle == "" {
+				t.Error("Corners[1].EndJingle must not be empty")
 			}
 			if corner1.BGM == "" {
 				t.Error("Corners[1].BGM must not be empty")
@@ -105,14 +105,14 @@ func TestLoadProfile(t *testing.T) {
 		if len(c.Cast) == 0 {
 			t.Error("Corners[0].Cast must not be empty")
 		}
-		if c.TargetDurationSec <= 0 {
-			t.Error("Corners[0].TargetDurationSec must be positive")
+		if c.LengthSec <= 0 {
+			t.Error("Corners[0].LengthSec must be positive")
 		}
 	})
 
-	t.Run("ProgramTargetDurationSec", func(t *testing.T) {
-		if profile.Program.TargetDurationSec <= 0 {
-			t.Error("Program.TargetDurationSec must be positive")
+	t.Run("ProgramLengthSec", func(t *testing.T) {
+		if profile.Program.LengthSec <= 0 {
+			t.Error("Program.LengthSec must be positive")
 		}
 	})
 
@@ -212,7 +212,7 @@ func TestLoadProfile_MissingFile(t *testing.T) {
 func TestValidateProfileAssets_Valid(t *testing.T) {
 	p := &config.Profile{
 		Corners: []config.CornerConfig{
-			{Title: "C1", OpeningJingle: "opening", EndingJingle: "ending", BGM: "talk_bgm"},
+			{Title: "C1", StartJingle: "opening", EndJingle: "ending", BGM: "talk_bgm"},
 		},
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{
@@ -229,10 +229,10 @@ func TestValidateProfileAssets_Valid(t *testing.T) {
 	}
 }
 
-func TestValidateProfileAssets_UnknownOpeningJingle(t *testing.T) {
+func TestValidateProfileAssets_UnknownStartJingle(t *testing.T) {
 	p := &config.Profile{
 		Corners: []config.CornerConfig{
-			{Title: "C1", OpeningJingle: "nonexistent"},
+			{Title: "C1", StartJingle: "nonexistent"},
 		},
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{},
@@ -240,14 +240,14 @@ func TestValidateProfileAssets_UnknownOpeningJingle(t *testing.T) {
 		},
 	}
 	if err := config.ValidateProfileAssets(p); err == nil {
-		t.Error("expected error for unknown opening_jingle key")
+		t.Error("expected error for unknown start_jingle key")
 	}
 }
 
-func TestValidateProfileAssets_UnknownEndingJingle(t *testing.T) {
+func TestValidateProfileAssets_UnknownEndJingle(t *testing.T) {
 	p := &config.Profile{
 		Corners: []config.CornerConfig{
-			{Title: "C1", EndingJingle: "nonexistent"},
+			{Title: "C1", EndJingle: "nonexistent"},
 		},
 		Assets: config.AssetsConfig{
 			Jingle: map[string]config.JingleEntry{},
@@ -255,7 +255,7 @@ func TestValidateProfileAssets_UnknownEndingJingle(t *testing.T) {
 		},
 	}
 	if err := config.ValidateProfileAssets(p); err == nil {
-		t.Error("expected error for unknown ending_jingle key")
+		t.Error("expected error for unknown end_jingle key")
 	}
 }
 

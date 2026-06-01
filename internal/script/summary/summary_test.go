@@ -176,7 +176,7 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 
 	scr := model.Script{
 		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSE, AssetName: "opening_jingle"},
+			{Type: model.SegmentTypeSE, AssetName: "start_jingle"},
 			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
 		},
 	}
@@ -187,7 +187,7 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if strings.Contains(prompt, "opening_jingle") {
+	if strings.Contains(prompt, "start_jingle") {
 		t.Errorf("prompt should not contain SE names, got: %s", prompt)
 	}
 }

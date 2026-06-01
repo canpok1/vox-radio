@@ -29,7 +29,7 @@ func TestLLMSelector_Select_Success(t *testing.T) {
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
-	corner := config.CornerConfig{Title: "テックニュース", Content: "最新技術を紹介", TargetDurationSec: 60}
+	corner := config.CornerConfig{Title: "テックニュース", Content: "最新技術を紹介", LengthSec: 60}
 	articles := []model.Article{
 		{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
 		{URL: "https://example.com/2", Title: "記事2", Body: "本文2"},
@@ -56,7 +56,7 @@ func TestLLMSelector_Select_PromptContainsCornerAndArticles(t *testing.T) {
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
-	corner := config.CornerConfig{Title: "テック", Content: "内容", TargetDurationSec: 60}
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
 	articles := []model.Article{
 		{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
 	}

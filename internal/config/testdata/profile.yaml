@@ -2,7 +2,7 @@ program:
   title: "テストニュース"
   description: "テスト用"
   segment_pause_sec: 0.3
-  target_duration_sec: 75
+  length_sec: 75
 
 corners:
   - title: "オープニング"
@@ -10,14 +10,14 @@ corners:
     direction: "冒頭でオープニングジングルを流す。"
     cast:
       zundamon: "元気に挨拶する進行役"
-    target_duration_sec: 45
-    opening_jingle: opening
+    length_sec: 45
+    start_jingle: opening
   - title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"
-    target_duration_sec: 30
-    ending_jingle: ending
+    length_sec: 30
+    end_jingle: ending
     bgm: talk_bgm
     source:
       feeds:

@@ -142,16 +142,16 @@ func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_CornerOpeningJinglePrependedFirst(t *testing.T) {
+func TestLLMDirector_Direct_CornerStartJinglePrependedFirst(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:         "C1",
-		OpeningJingle: "opening",
-		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:       "C1",
+		StartJingle: "opening",
+		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -167,16 +167,16 @@ func TestLLMDirector_Direct_CornerOpeningJinglePrependedFirst(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_CornerEndingJingleAppendedLast(t *testing.T) {
+func TestLLMDirector_Direct_CornerEndJingleAppendedLast(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:        "C1",
-		EndingJingle: "ending",
-		Lines:        []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:     "C1",
+		EndJingle: "ending",
+		Lines:     []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -199,11 +199,11 @@ func TestLLMDirector_Direct_CornerAllAssets_CorrectOrder(t *testing.T) {
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:         "C1",
-		OpeningJingle: "op",
-		BGM:           "bgm1",
-		EndingJingle:  "ed",
-		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:       "C1",
+		StartJingle: "op",
+		BGM:         "bgm1",
+		EndJingle:   "ed",
+		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -261,11 +261,11 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:         "C1",
-		OpeningJingle: "opening",
-		EndingJingle:  "ending",
-		BGM:           "talk_bgm",
-		Lines:         []model.Line{{SpeakerRole: "host", Text: "hello"}},
+		Title:       "C1",
+		StartJingle: "opening",
+		EndJingle:   "ending",
+		BGM:         "talk_bgm",
+		Lines:       []model.Line{{SpeakerRole: "host", Text: "hello"}},
 	}}
 
 	_, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -273,7 +273,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, key := range []string{"opening_jingle", "ending_jingle", "bgm"} {
+	for _, key := range []string{"start_jingle", "end_jingle", "bgm"} {
 		if strings.Contains(capturedPrompt, `"`+key+`"`) {
 			t.Errorf("field %q should not appear in LLM payload, got: %s", key, capturedPrompt)
 		}

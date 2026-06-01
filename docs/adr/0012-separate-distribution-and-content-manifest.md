@@ -15,6 +15,7 @@ vox-radio は `collect → script → synth → assemble → publish → prune` 
 - mp3 と同時に、番組内容を記した **コンテンツ manifest（JSON, `manifest.json`）** をサイドカー出力する。配信側リポジトリはこれを入力に feed 生成・配信する。manifest がツール間の契約となる。
 - manifest は**番組内容**（`title` / `description` / `datetime` / `audio_file` / `corners[].articles`）を記し、**技術的事実（bytes/duration）は含めない**（配信側が必要なら ffprobe で取得）。`datetime` は manifest 出力時点の RFC3339・UTC。
 - `program` 設定から配信専用フィールド（`language`/`author`/`category`/`explicit`/`cover_image_url`/`site_url`/`max_items`）を削除し、生成関連（`title`/`description`/`segment_pause_sec`、将来 `target_duration_sec`）のみ残す。
+  ※ 注記: 本ADR記載の `target_duration_sec` はその後 `length_sec` にリネームした（Issue #154）。
 - 台本ベースの番組要約（`manifest.summary`）は将来の LLM ステップとして追加できるよう、manifest を拡張可能な形にしておく。
 
 ## 結果

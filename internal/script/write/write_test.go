@@ -44,7 +44,7 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "corner={{corner}} articles={{articles}} flow={{flow}} cast={{cast_info}}", 0, nil)
 
-	corner := config.CornerConfig{Title: "コーナー1", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
+	corner := config.CornerConfig{Title: "コーナー1", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 14}
 	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "記事1", Summary: "要約", Points: []string{"p1"}}}
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
@@ -66,7 +66,7 @@ func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "c={{corner}} a={{articles}} f={{flow}} cast={{cast_info}}", 0, nil)
 
-	corner := config.CornerConfig{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
+	corner := config.CornerConfig{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 14}
 	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "AI記事", Summary: "AI要約", Points: []string{"p1"}}}
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
@@ -277,7 +277,7 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	w := write.NewLLMWriter(mc, "c={{corner}}", 0, nil)
 
 	// 14sec * 7chars/sec = 98 chars
-	corner := config.CornerConfig{Title: "Test", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 14}
+	corner := config.CornerConfig{Title: "Test", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 14}
 	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, "", nil)
 
 	if len(mc.captured) == 0 {
@@ -287,8 +287,8 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	if !strings.Contains(prompt, `"target_chars":98`) {
 		t.Errorf("prompt should contain target_chars:98 (14sec*7), got: %s", prompt)
 	}
-	if strings.Contains(prompt, "target_duration_sec") {
-		t.Errorf("prompt should not expose target_duration_sec to LLM, got: %s", prompt)
+	if strings.Contains(prompt, "length_sec") {
+		t.Errorf("prompt should not expose length_sec to LLM, got: %s", prompt)
 	}
 }
 

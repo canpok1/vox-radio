@@ -63,7 +63,7 @@ var testChars = map[string]config.CharacterConfig{
 }
 
 var testCorners = []config.CornerConfig{
-	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
+	{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 }
 
 // corneredRundown wraps rundown articles into a model.Rundown attributed to the given corner title.
@@ -114,10 +114,10 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 }
 
 func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
-	// TargetDurationSec=15 → 105 chars, but writer first returns 1 char total (huge deficit)
+	// LengthSec=15 → 105 chars, but writer first returns 1 char total (huge deficit)
 	// should trigger regen of the worst corner
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	shortLines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}                                                  // 1 char
@@ -145,7 +145,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	// 95 chars → ~9.5% deviation (target=105 = 15sec*7), within 20% threshold
@@ -204,7 +204,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 0},
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 0},
 	}
 	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "A"}}
@@ -325,7 +325,7 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 
 	corners := []config.CornerConfig{
-		{Title: "AIコーナー", Content: "AI紹介", Direction: "冒頭でSEを流す。", Cast: map[string]string{"zundamon": "司会"}, TargetDurationSec: 15},
+		{Title: "AIコーナー", Content: "AI紹介", Direction: "冒頭でSEを流す。", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
@@ -361,27 +361,27 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 
 func TestBuildScriptLines_TransfersCornerAssets(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "OP", Direction: "dir", OpeningJingle: "opening", BGM: "bgm1"},
-		{Title: "ED", EndingJingle: "ending"},
+		{Title: "OP", Direction: "dir", StartJingle: "opening", BGM: "bgm1"},
+		{Title: "ED", EndJingle: "ending"},
 	}
 	lines := [][]model.Line{
 		{{SpeakerRole: "host", Text: "A"}},
 		{{SpeakerRole: "host", Text: "B"}},
 	}
 	got := script.BuildScriptLines(corners, lines)
-	if got[0].OpeningJingle != "opening" {
-		t.Errorf("Corners[0].OpeningJingle: got %q, want opening", got[0].OpeningJingle)
+	if got[0].StartJingle != "opening" {
+		t.Errorf("Corners[0].StartJingle: got %q, want opening", got[0].StartJingle)
 	}
 	if got[0].BGM != "bgm1" {
 		t.Errorf("Corners[0].BGM: got %q, want bgm1", got[0].BGM)
 	}
-	if got[0].EndingJingle != "" {
-		t.Errorf("Corners[0].EndingJingle: got %q, want empty", got[0].EndingJingle)
+	if got[0].EndJingle != "" {
+		t.Errorf("Corners[0].EndJingle: got %q, want empty", got[0].EndJingle)
 	}
-	if got[1].EndingJingle != "ending" {
-		t.Errorf("Corners[1].EndingJingle: got %q, want ending", got[1].EndingJingle)
+	if got[1].EndJingle != "ending" {
+		t.Errorf("Corners[1].EndJingle: got %q, want ending", got[1].EndJingle)
 	}
-	if got[1].OpeningJingle != "" {
-		t.Errorf("Corners[1].OpeningJingle: got %q, want empty", got[1].OpeningJingle)
+	if got[1].StartJingle != "" {
+		t.Errorf("Corners[1].StartJingle: got %q, want empty", got[1].StartJingle)
 	}
 }
