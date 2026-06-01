@@ -105,7 +105,7 @@ func TestDifyChatComplete_SchemaRetry_ConversationIDCarried(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		n := callCount.Add(1)
 
-		var body map[string]interface{}
+		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
 			if convID, ok := body["conversation_id"].(string); ok {
 				receivedConvIDs = append(receivedConvIDs, convID)
@@ -195,7 +195,7 @@ func TestDifyChatComplete_APIError(t *testing.T) {
 }
 
 func TestDifyChatComplete_Inputs_TemperatureExact(t *testing.T) {
-	var receivedBody map[string]interface{}
+	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -225,7 +225,7 @@ func TestDifyChatComplete_Inputs_TemperatureExact(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	inputs, ok := receivedBody["inputs"].(map[string]interface{})
+	inputs, ok := receivedBody["inputs"].(map[string]any)
 	if !ok {
 		t.Fatalf("inputs not found in request body")
 	}
@@ -247,7 +247,7 @@ func TestDifyChatComplete_Inputs_TemperatureExact(t *testing.T) {
 }
 
 func TestDifyChatComplete_Inputs_TemperaturePartial(t *testing.T) {
-	var receivedBody map[string]interface{}
+	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -277,7 +277,7 @@ func TestDifyChatComplete_Inputs_TemperaturePartial(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	inputs, ok := receivedBody["inputs"].(map[string]interface{})
+	inputs, ok := receivedBody["inputs"].(map[string]any)
 	if !ok {
 		t.Fatalf("inputs not found in request body")
 	}
@@ -295,7 +295,7 @@ func TestDifyChatComplete_Inputs_TemperaturePartial(t *testing.T) {
 }
 
 func TestDifyChatComplete_Inputs_NoTemperaturePlaceholder(t *testing.T) {
-	var receivedBody map[string]interface{}
+	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -325,7 +325,7 @@ func TestDifyChatComplete_Inputs_NoTemperaturePlaceholder(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	inputs, ok := receivedBody["inputs"].(map[string]interface{})
+	inputs, ok := receivedBody["inputs"].(map[string]any)
 	if !ok {
 		t.Fatalf("inputs not found in request body")
 	}
@@ -335,6 +335,38 @@ func TestDifyChatComplete_Inputs_NoTemperaturePlaceholder(t *testing.T) {
 	}
 	if inputs["lang"] != "ja" {
 		t.Errorf("lang = %v, want %q", inputs["lang"], "ja")
+	}
+}
+
+func TestDifyChatComplete_QueryBuildsFromMessages(t *testing.T) {
+	var receivedQuery string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			if q, ok := body["query"].(string); ok {
+				receivedQuery = q
+			}
+		}
+		_, _ = w.Write(makeDifyResponse(t, `{}`, "conv-001"))
+	}))
+	defer ts.Close()
+
+	c := llm.NewClient(newDifyTestConfig(ts, 0))
+	_, err := c.Complete(context.Background(), llm.CompletionRequest{
+		Messages: []llm.Message{
+			{Role: "system", Content: "You are helpful."},
+			{Role: "user", Content: "Say hello"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "You are helpful.\n\nSay hello"
+	if receivedQuery != want {
+		t.Errorf("query = %q, want %q", receivedQuery, want)
 	}
 }
 

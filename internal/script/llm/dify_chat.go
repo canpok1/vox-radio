@@ -93,7 +93,7 @@ func (c *difyChatClient) Complete(ctx context.Context, req CompletionRequest) (j
 	return nil, fmt.Errorf("validation failed after %d retries", c.cfg.MaxRetries)
 }
 
-func (c *difyChatClient) callDify(ctx context.Context, query, conversationID string, inputs map[string]interface{}) (json.RawMessage, string, error) {
+func (c *difyChatClient) callDify(ctx context.Context, query, conversationID string, inputs map[string]any) (json.RawMessage, string, error) {
 	if err := c.throttle(ctx); err != nil {
 		return nil, "", err
 	}
@@ -129,8 +129,8 @@ func buildDifyQuery(msgs []Message) string {
 
 // buildDifyInputs resolves ${temperature} placeholders in input values and returns map[string]any.
 // Exact match → float64 (JSON number); partial match → string interpolation; no match → original string.
-func buildDifyInputs(inputs map[string]string, temperature float64) map[string]interface{} {
-	result := make(map[string]interface{}, len(inputs))
+func buildDifyInputs(inputs map[string]string, temperature float64) map[string]any {
+	result := make(map[string]any, len(inputs))
 	tempStr := strconv.FormatFloat(temperature, 'f', -1, 64)
 	for k, v := range inputs {
 		if v == difyTemperaturePlaceholder {
