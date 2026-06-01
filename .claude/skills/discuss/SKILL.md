@@ -62,6 +62,19 @@ allowed-tools: Bash, Read, Grep, Glob, Agent, AskUserQuestion, Skill, mcp__githu
 - アーキテクチャ・技術選定・データ形式など重要判断が含まれる場合は **`create-adr` スキルを起動**してADRを作成し、Issueから参照する（判断したセッションで作成）。
 - 些末な選択は対象外（ADRスパム防止）。
 
+#### ADR を作成したら必ずコミットして PR を作成する
+
+ADR ファイル（`docs/adr/NNNN-*.md`）と `docs/adr/README.md` のインデックス追記を作成したら、**そのタイミングで必ずコミットし PR を作成する**こと（ADR を未コミットのまま放置しない）。
+
+1. **作業ブランチを確保する** — `git rev-parse --abbrev-ref HEAD` で現在のブランチを確認し、`main` の場合は**必ず最初に作業ブランチを作成**してから作業する（`main` へ直接コミットしない）。
+   ```bash
+   git rev-parse --abbrev-ref HEAD   # main なら↓
+   git checkout -b <作業ブランチ名>
+   ```
+2. **コミットする** — ADR ファイルとインデックス追記をコミットに含める。
+3. **PR を作成する** — `create-pr` スキル等で PR を作成する（タイトル・本文・フッター付与）。
+4. **同一セッションで複数の ADR／関連ファイルを作成した場合は同じ PR にまとめる**（ADR ごとに PR を乱立させない）。
+
 ### ステップ7: 仕上げ確認（CLAUDE.md「作成後に不備確認」）
 
 - 作成・修正した Issue を読み返し（`mcp__github__issue_read`）、レイアウト崩れ・フッター・受け入れ条件の抜けを確認する。
