@@ -9,14 +9,14 @@ ADR 0002 は LLM プロバイダ切替を **OpenAI 互換 1 実装 ＋ `base_url
 
 ## 決定
 
-`LLMConfig` に `provider` 列挙（`openai`/`dify`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。`Client` インターフェース（`Complete`）は変更しない。Dify は **ゲートウェイ**として使い、vox-radio が組み立てた system+user プロンプトを `query` に渡す（プロンプトと JSON Schema 検証は vox-radio 側に温存）。`model`/`temperature`/`json_schema` は送れないため per-step temperature は Dify 利用時は無効とし、構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。Dify アプリは単一とし、HTTP は `safejob/dify-sdk-go`（依存ゼロ・blocking chat 対応・MIT）の `RunBlock` を用いる。
+`LLMConfig` に `provider` 列挙（`openai`/`dify`、既定 `openai`）を追加し、`llm` パッケージ内の factory で実装を選択する。`Client` インターフェース（`Complete`）は変更しない。Dify は **ゲートウェイ**として使い、vox-radio が組み立てた system+user プロンプトを `query` に渡す（プロンプトと JSON Schema 検証は vox-radio 側に温存）。`json_schema` は送れないため構造化出力は既存のスキーマ検証＋自己修復リトライで担保する。`temperature` も標準パラメータでは送れないが、Dify の `inputs`（任意変数）経由で**オプトインで渡せる口**を設ける（注入キー未設定なら渡さない。静的な任意変数も `inputs` に載せられる）。実際に効かせるかは Dify アプリ側の変数バインド次第。Dify アプリは単一とし、HTTP は `safejob/dify-sdk-go`（依存ゼロ・blocking chat 対応・MIT）の `RunBlock` を用いる。
 
 ## 結果
 
 - 設定値 1 つで OpenAI 互換と Dify を切替でき、既定 `openai` で後方互換を維持できる。
 - `ScriptGenerator`/`Client` 境界は不変のため、ドメイン層と各ステップは影響を受けない。
 - ADR 0002 の「列挙型を持たない」原則は崩すが、対象は 2 値の限定的な分岐に留め、ワイヤープロトコルの統一思想は OpenAI 側で維持する。
-- Dify 利用時は per-step temperature と strict schema が効かず、品質は検証＋リトライ依存になる。検証・修復ロジックは両実装で共有して重複を避ける。
+- Dify 利用時は strict schema が効かず品質は検証＋リトライ依存。temperature は `inputs` 経由（オプトイン＋Dify 側バインド）でのみ反映できる。検証・修復ロジックは両実装で共有して重複を避ける。
 
 ## 検討した代替案
 
