@@ -81,27 +81,9 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		return model.Script{}, fmt.Errorf("direct: %w", err)
 	}
 
-	scr = InjectProgramJingles(scr, program)
-
 	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
 	return scr, nil
-}
-
-// InjectProgramJingles prepends and appends jingle segments based on program config.
-func InjectProgramJingles(scr model.Script, program config.ProgramConfig) model.Script {
-	if program.OpeningJingle == "" && program.EndingJingle == "" {
-		return scr
-	}
-	segments := make([]model.ScriptSegment, 0, len(scr.Segments)+2)
-	if program.OpeningJingle != "" {
-		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.OpeningJingle})
-	}
-	segments = append(segments, scr.Segments...)
-	if program.EndingJingle != "" {
-		segments = append(segments, model.ScriptSegment{Type: model.SegmentTypeJingle, AssetName: program.EndingJingle})
-	}
-	return model.Script{Segments: segments}
 }
 
 func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
@@ -180,13 +162,18 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
+// Asset fields (OpeningJingle, EndingJingle, BGM) are transferred from CornerConfig
+// so they are available during deterministic segment injection in the direct step.
 func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
 	result := make([]model.CornerLines, len(corners))
 	for i, corner := range corners {
 		result[i] = model.CornerLines{
-			Title:     corner.Title,
-			Direction: corner.Direction,
-			Lines:     cornerLines[i],
+			Title:         corner.Title,
+			Direction:     corner.Direction,
+			Lines:         cornerLines[i],
+			OpeningJingle: corner.OpeningJingle,
+			EndingJingle:  corner.EndingJingle,
+			BGM:           corner.BGM,
 		}
 	}
 	return result

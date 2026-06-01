@@ -270,10 +270,18 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	}
 
 	// Build a script that already contains jingle segments (as produced by script.Generate).
-	openingKey := profile.Program.OpeningJingle
-	endingKey := profile.Program.EndingJingle
+	// Collect opening/ending jingle keys from corners (replacing program-level config).
+	var openingKey, endingKey string
+	for _, corner := range profile.Corners {
+		if openingKey == "" && corner.OpeningJingle != "" {
+			openingKey = corner.OpeningJingle
+		}
+		if endingKey == "" && corner.EndingJingle != "" {
+			endingKey = corner.EndingJingle
+		}
+	}
 	if openingKey == "" || endingKey == "" {
-		t.Skip("profile has no opening/ending jingle configured")
+		t.Skip("profile has no opening/ending jingle configured in corners")
 	}
 
 	script := model.Script{

@@ -41,9 +41,7 @@ func oneCorner(title string, lines ...model.Line) []model.CornerLines {
 // helper: single empty catalog
 func emptyCatalog() model.AssetCatalog {
 	return model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{},
 	}
 }
 
@@ -58,9 +56,7 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "よろしく"},
 	)
 	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
-		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
 	got, err := d.Direct(context.Background(), corners, catalog)
@@ -88,9 +84,7 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "続き"},
 	)
 	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
 	got, err := d.Direct(context.Background(), corners, catalog)
@@ -115,73 +109,206 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_WithBGMInsertion(t *testing.T) {
+func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"bgm","asset_name":"talk_bgm"},{"corner_index":0,"after_line_index":1,"type":"bgm","asset_name":""}]}`),
+		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	corners := oneCorner("C1",
-		model.Line{SpeakerRole: "host", Text: "BGM開始"},
-		model.Line{SpeakerRole: "guest", Text: "BGM停止"},
-	)
-	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{},
-		BGM:    []model.AssetCatalogEntry{{Name: "talk_bgm"}},
-		Jingle: []model.AssetCatalogEntry{},
-	}
+	corners := []model.CornerLines{{
+		Title: "C1",
+		BGM:   "talk_bgm",
+		Lines: []model.Line{
+			{SpeakerRole: "host", Text: "話す"},
+		},
+	}}
 
-	got, err := d.Direct(context.Background(), corners, catalog)
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// [speech, bgm(start), speech, bgm(stop)]
-	if len(got.Segments) != 4 {
-		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
-	}
-	if got.Segments[1].Type != model.SegmentTypeBGM {
-		t.Errorf("Segment[1].Type: got %q, want bgm", got.Segments[1].Type)
-	}
-	if got.Segments[1].AssetName != "talk_bgm" {
-		t.Errorf("Segment[1].AssetName: got %q, want talk_bgm", got.Segments[1].AssetName)
-	}
-	if got.Segments[3].Type != model.SegmentTypeBGM {
-		t.Errorf("Segment[3].Type: got %q, want bgm", got.Segments[3].Type)
-	}
-	if got.Segments[3].AssetName != "" {
-		t.Errorf("Segment[3].AssetName: got %q, want empty (stop)", got.Segments[3].AssetName)
-	}
-}
-
-func TestLLMDirector_Direct_WithJingleInsertion(t *testing.T) {
-	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"jingle","asset_name":"eyecatch"}]}`),
-	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
-
-	corners := oneCorner("C1",
-		model.Line{SpeakerRole: "host", Text: "コーナー1"},
-		model.Line{SpeakerRole: "guest", Text: "コーナー2"},
-	)
-	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{{Name: "eyecatch"}},
-	}
-
-	got, err := d.Direct(context.Background(), corners, catalog)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// [speech, jingle(eyecatch), speech]
+	// [bgm(start), speech, bgm(stop)]
 	if len(got.Segments) != 3 {
 		t.Fatalf("Segments: got %d, want 3", len(got.Segments))
 	}
-	if got.Segments[1].Type != model.SegmentTypeJingle {
-		t.Errorf("Segment[1].Type: got %q, want jingle", got.Segments[1].Type)
+	if got.Segments[0].Type != model.SegmentTypeBGM || got.Segments[0].AssetName != "talk_bgm" {
+		t.Errorf("Segment[0]: got %+v, want bgm(talk_bgm)", got.Segments[0])
 	}
-	if got.Segments[1].AssetName != "eyecatch" {
-		t.Errorf("Segment[1].AssetName: got %q, want eyecatch", got.Segments[1].AssetName)
+	if got.Segments[1].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[1]: got %+v, want speech", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeBGM || got.Segments[2].AssetName != "" {
+		t.Errorf("Segment[2]: got %+v, want bgm(stop)", got.Segments[2])
+	}
+}
+
+func TestLLMDirector_Direct_CornerOpeningJinglePrependedFirst(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{{
+		Title:         "C1",
+		OpeningJingle: "opening",
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [jingle(opening), speech]
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "opening" {
+		t.Errorf("Segment[0]: got %+v, want jingle(opening)", got.Segments[0])
+	}
+}
+
+func TestLLMDirector_Direct_CornerEndingJingleAppendedLast(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{{
+		Title:        "C1",
+		EndingJingle: "ending",
+		Lines:        []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech, jingle(ending)]
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[1].Type != model.SegmentTypeJingle || got.Segments[1].AssetName != "ending" {
+		t.Errorf("Segment[1]: got %+v, want jingle(ending)", got.Segments[1])
+	}
+}
+
+func TestLLMDirector_Direct_CornerAllAssets_CorrectOrder(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{{
+		Title:         "C1",
+		OpeningJingle: "op",
+		BGM:           "bgm1",
+		EndingJingle:  "ed",
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [jingle(op), bgm(start), speech, bgm(stop), jingle(ed)]
+	if len(got.Segments) != 5 {
+		t.Fatalf("Segments: got %d, want 5", len(got.Segments))
+	}
+	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "op" {
+		t.Errorf("Segment[0]: want jingle(op), got %+v", got.Segments[0])
+	}
+	if got.Segments[1].Type != model.SegmentTypeBGM || got.Segments[1].AssetName != "bgm1" {
+		t.Errorf("Segment[1]: want bgm(bgm1), got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[2]: want speech, got %+v", got.Segments[2])
+	}
+	if got.Segments[3].Type != model.SegmentTypeBGM || got.Segments[3].AssetName != "" {
+		t.Errorf("Segment[3]: want bgm(stop), got %+v", got.Segments[3])
+	}
+	if got.Segments[4].Type != model.SegmentTypeJingle || got.Segments[4].AssetName != "ed" {
+		t.Errorf("Segment[4]: want jingle(ed), got %+v", got.Segments[4])
+	}
+}
+
+func TestLLMDirector_Direct_NoAssets_OnlySpeech(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{{
+		Title: "C1",
+		Lines: []model.Line{{SpeakerRole: "host", Text: "話す"}},
+	}}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// [speech]
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1 (no asset = no extra segments)", len(got.Segments))
+	}
+}
+
+func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{{
+		Title:         "C1",
+		OpeningJingle: "opening",
+		EndingJingle:  "ending",
+		BGM:           "talk_bgm",
+		Lines:         []model.Line{{SpeakerRole: "host", Text: "hello"}},
+	}}
+
+	_, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, key := range []string{"opening_jingle", "ending_jingle", "bgm"} {
+		if strings.Contains(capturedPrompt, `"`+key+`"`) {
+			t.Errorf("field %q should not appear in LLM payload, got: %s", key, capturedPrompt)
+		}
+	}
+}
+
+func TestLLMDirector_Direct_BGMDoesNotLeakToNextCorner(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{
+		{
+			Title: "C1",
+			BGM:   "talk_bgm",
+			Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}},
+		},
+		{
+			Title: "C2",
+			Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}},
+		},
+	}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// C1: [bgm(start), speech, bgm(stop)], C2: [speech]
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4", len(got.Segments))
+	}
+	// After C1 (bgm stop at index 2), C2 should just be speech
+	if got.Segments[3].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[3]: want speech (C2), got %+v", got.Segments[3])
 	}
 }
 
@@ -196,9 +323,7 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "transition"}},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "transition"}},
 	}
 
 	got, err := d.Direct(context.Background(), corners, catalog)
@@ -283,9 +408,7 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
 
 	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
 	}
 
 	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
@@ -307,9 +430,7 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
 
 	catalog := model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
 	}
 
 	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
@@ -485,9 +606,7 @@ func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
 	}
 
 	got, err := d.Direct(context.Background(), corners, model.AssetCatalog{
-		SE:     []model.AssetCatalogEntry{{Name: "chime"}},
-		BGM:    []model.AssetCatalogEntry{},
-		Jingle: []model.AssetCatalogEntry{},
+		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
