@@ -48,7 +48,7 @@ var insertionsSchema = json.RawMessage(`{
 }`)
 
 // cornerLLMPayload is the subset of CornerLines sent to the LLM.
-// Asset fields (OpeningJingle, EndingJingle, BGM) are excluded because
+// Asset fields (StartJingle, EndJingle, BGM) are excluded because
 // they are injected deterministically and must not influence SE/pause placement.
 type cornerLLMPayload struct {
 	Title     string       `json:"title"`
@@ -152,10 +152,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
 	for ci, corner := range corners {
-		if corner.OpeningJingle != "" {
+		if corner.StartJingle != "" {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeJingle,
-				AssetName: corner.OpeningJingle,
+				AssetName: corner.StartJingle,
 			})
 		}
 		if corner.BGM != "" {
@@ -196,10 +196,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 				AssetName: "",
 			})
 		}
-		if corner.EndingJingle != "" {
+		if corner.EndJingle != "" {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeJingle,
-				AssetName: corner.EndingJingle,
+				AssetName: corner.EndJingle,
 			})
 		}
 	}

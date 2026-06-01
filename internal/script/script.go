@@ -105,7 +105,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	}
 	totalTarget := 0
 	for _, c := range corners {
-		totalTarget += config.DurationSecToTargetChars(c.TargetDurationSec)
+		totalTarget += config.DurationSecToTargetChars(c.LengthSec)
 	}
 	if totalTarget <= 0 {
 		return cornerLines
@@ -123,7 +123,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	worstIdx := 0
 	worstDev := 0.0
 	for i, corner := range corners {
-		targetChars := config.DurationSecToTargetChars(corner.TargetDurationSec)
+		targetChars := config.DurationSecToTargetChars(corner.LengthSec)
 		if targetChars <= 0 {
 			continue
 		}
@@ -162,18 +162,18 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
-// Asset fields (OpeningJingle, EndingJingle, BGM) are transferred from CornerConfig
+// Asset fields (StartJingle, EndJingle, BGM) are transferred from CornerConfig
 // so they are available during deterministic segment injection in the direct step.
 func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
 	result := make([]model.CornerLines, len(corners))
 	for i, corner := range corners {
 		result[i] = model.CornerLines{
-			Title:         corner.Title,
-			Direction:     corner.Direction,
-			Lines:         cornerLines[i],
-			OpeningJingle: corner.OpeningJingle,
-			EndingJingle:  corner.EndingJingle,
-			BGM:           corner.BGM,
+			Title:       corner.Title,
+			Direction:   corner.Direction,
+			Lines:       cornerLines[i],
+			StartJingle: corner.StartJingle,
+			EndJingle:   corner.EndJingle,
+			BGM:         corner.BGM,
 		}
 	}
 	return result

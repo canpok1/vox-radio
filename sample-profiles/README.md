@@ -36,7 +36,7 @@ program:
   title: "番組タイトル"
   description: "番組の説明"
   segment_pause_sec: 0.3   # セリフ間の無音（秒）
-  target_duration_sec: 240 # 番組全体の目標再生時間（秒）
+  length_sec: 240 # 番組全体の目標再生時間（秒）
 
 corners:                  # 固定コーナーのリスト
   - title: "オープニング"
@@ -44,14 +44,14 @@ corners:                  # 固定コーナーのリスト
     direction: "冒頭でオープニングジングルを流す。"  # 演出説明（省略可）
     cast:
       zundamon: "元気に挨拶する進行役"  # キャラID: そのコーナーの役割指示
-    target_duration_sec: 30  # コーナーの目標再生時間（秒）
+    length_sec: 30  # コーナーの目標再生時間（秒）
     # source なし → 収集スキップ（挨拶のみのコーナーに使用）
   - title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"
       metan: "解説役"
-    target_duration_sec: 180
+    length_sec: 180
     source:                # このコーナーのデータソース（省略可）
       feeds:
         - url: https://example.com/rss.xml
@@ -72,13 +72,13 @@ assets:
 
 ### フィールド説明
 
-- `program`: 番組コンテンツ生成に必要な設定（title/description/segment_pause_sec/target_duration_sec のみ。配信専用フィールドは配信リポジトリ側で管理）
-  - `target_duration_sec`: 番組全体の目標再生時間（秒）
+- `program`: 番組コンテンツ生成に必要な設定（title/description/segment_pause_sec/length_sec のみ。配信専用フィールドは配信リポジトリ側で管理）
+  - `length_sec`: 番組全体の目標再生時間（秒）
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
   - `content`（省略可）: コーナーの内容説明。台本生成（write）LLM への指示に使用される。演出指示は含めないこと
   - `direction`（省略可）: コーナーの演出説明（ジングル・SE・BGMの挿入タイミングなど）。演出生成（direct）LLM のみに渡される。台本生成 LLM へは渡されないため、キャラクターがセリフとして口走ることがない
-  - `target_duration_sec`: コーナーの目標再生時間（秒）。台本生成時に文字数係数（≈7文字/秒）で換算される
+  - `length_sec`: コーナーの目標再生時間（秒）。台本生成時に文字数係数（≈7文字/秒）で換算される
   - `source`（省略可）: コーナーのデータソース。省略したコーナーは収集をスキップ
     - `feeds`: RSS フィードのリスト（`url` / `max_items`）
     - `articles`: 個別記事 URL のリスト
