@@ -6,7 +6,7 @@ OUT_DIR ?= output/$(shell date +%Y%m%d%H%M%S)
 
 setup:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
-	go install github.com/goreleaser/goreleaser/v2@latest
+	go install github.com/goreleaser/goreleaser/v2@v2.14.3
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/vox-radio
