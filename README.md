@@ -220,6 +220,24 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `url` | string | 必須 | VOICEVOX Engine のURL |
+| `presets` | *VoicevoxPresets | 任意 | 抑揚・音高・話速プリセット定義。省略時はコード組込みのデフォルトプリセットが適用される |
+
+##### `voicevox.presets` サブフィールド
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `intonation` | map[string]float64 | 任意 | 抑揚プリセット（intonationScale, 0.0〜2.0）。省略時はデフォルト7段階が適用される |
+| `pitch` | map[string]float64 | 任意 | 音高プリセット（pitchScale, -0.15〜0.15）。省略時はデフォルト7段階が適用される |
+| `speed` | map[string]float64 | 任意 | 話速プリセット（speedScale, 0.5〜2.0）。省略時はデフォルト7段階が適用される |
+
+#### `cache` セクション
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `enabled` | bool | 任意 | キャッシュ機能の有効/無効。デフォルト: false。`program.id` 未設定時は常に無効 |
+| `max_entries` | int | 任意 | JSONL に保持する最大エピソード数（超過分は古い行から削除）。デフォルト: 100 |
+| `retention_days` | int | 任意 | 保持日数（超過した古い行は削除）。デフォルト: 90 |
+| `llm_context_entries` | int | 任意 | LLM へ渡す直近エピソード件数。デフォルト: 10 |
 
 #### `characters` セクション
 
