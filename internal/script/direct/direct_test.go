@@ -45,6 +45,12 @@ func emptyCatalog() model.AssetCatalog {
 	}
 }
 
+// helper: director that returns no insertions (common setup for structural tests)
+func noInsertionDirector() *direct.LLMDirector {
+	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
+	return direct.NewLLMDirector(mc, "{{corners}}", 0)
+}
+
 func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
@@ -623,8 +629,7 @@ func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
 // TestBuildScript_SameBGM_ContinuousPlay verifies that consecutive corners with the same BGM
 // do not insert stop/start segments between them (continuous playback).
 func TestBuildScript_SameBGM_ContinuousPlay(t *testing.T) {
-	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{Title: "C1", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
@@ -653,8 +658,7 @@ func TestBuildScript_SameBGM_ContinuousPlay(t *testing.T) {
 // TestBuildScript_DifferentBGM_SeamlessSwitch verifies that adjacent corners with different BGMs
 // switch without a stop segment (no silent gap).
 func TestBuildScript_DifferentBGM_SeamlessSwitch(t *testing.T) {
-	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{Title: "C1", BGM: "bgm_a", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
@@ -686,8 +690,7 @@ func TestBuildScript_DifferentBGM_SeamlessSwitch(t *testing.T) {
 // TestBuildScript_BGMToNoBGM_StopAtBoundary verifies that when a BGM corner is followed by
 // a no-BGM corner, the stop segment is inserted at the beginning of the second corner.
 func TestBuildScript_BGMToNoBGM_StopAtBoundary(t *testing.T) {
-	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{Title: "C1", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
@@ -719,8 +722,7 @@ func TestBuildScript_BGMToNoBGM_StopAtBoundary(t *testing.T) {
 // TestBuildScript_LastCorner_NoBGMStop verifies that the last corner with BGM
 // does not get a trailing BGM stop segment.
 func TestBuildScript_LastCorner_NoBGMStop(t *testing.T) {
-	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{Title: "C1", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
@@ -745,8 +747,7 @@ func TestBuildScript_LastCorner_NoBGMStop(t *testing.T) {
 // TestBuildScript_EndJingle_ResetsBGM verifies that an EndJingle resets activeBGM,
 // causing the same BGM to restart after the jingle.
 func TestBuildScript_EndJingle_ResetsBGM(t *testing.T) {
-	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
 		{Title: "C1", BGM: "talk_bgm", EndJingle: "jingle", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},

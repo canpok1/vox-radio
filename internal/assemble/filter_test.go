@@ -1062,11 +1062,8 @@ func TestBuildFFmpegArgs_BGMStopThenPlay_BothIntervalsInOutput(t *testing.T) {
 	filters := strings.Split(args.FilterComplex, ";")
 	for _, f := range filters {
 		if strings.Contains(f, "bgm0_raw") && strings.Contains(f, "bgm1_raw") {
-			if strings.Contains(f, "duration=first") {
-				t.Errorf("BGM interval amix must not use duration=first (truncates 2nd interval): %s", f)
-			}
 			if !strings.Contains(f, "duration=longest") {
-				t.Errorf("BGM interval amix must use duration=longest: %s", f)
+				t.Errorf("BGM interval amix must use duration=longest (not duration=first): %s", f)
 			}
 		}
 	}
