@@ -33,7 +33,7 @@
 make release-check
 ```
 
-`goreleaser check` を実行し、設定の構文エラーや不整合を検出します。`goreleaser` は devcontainer 起動時に自動インストールされます。devcontainer 外で作業する場合は [GoReleaser のインストール手順](https://goreleaser.com/install/) を参照してください。
+`goreleaser check` を実行し、設定の構文エラーや不整合を検出します。`goreleaser` は devcontainer 起動時または `make setup` 実行時に自動インストールされます。
 
 ## CLIの使い方
 
