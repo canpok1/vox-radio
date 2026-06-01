@@ -149,7 +149,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 	}
 
-	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions))
+	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
 	for ci, corner := range corners {
 		if corner.OpeningJingle != "" {
