@@ -129,4 +129,33 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if err := config.ValidateProfileCast(profile, cfg.Characters); err != nil {
 		t.Fatalf("ValidateProfileCast failed: %v", err)
 	}
+
+	// cache フィールドのアサート
+	if !cfg.Cache.Enabled {
+		t.Error("cfg.Cache.Enabled should be true")
+	}
+	if cfg.Cache.MaxEntries != config.DefaultCacheMaxEntries {
+		t.Errorf("cfg.Cache.MaxEntries = %d, want %d", cfg.Cache.MaxEntries, config.DefaultCacheMaxEntries)
+	}
+	if cfg.Cache.RetentionDays != config.DefaultCacheRetentionDays {
+		t.Errorf("cfg.Cache.RetentionDays = %d, want %d", cfg.Cache.RetentionDays, config.DefaultCacheRetentionDays)
+	}
+	if cfg.Cache.LLMContextEntries != config.DefaultCacheLLMContextEntries {
+		t.Errorf("cfg.Cache.LLMContextEntries = %d, want %d", cfg.Cache.LLMContextEntries, config.DefaultCacheLLMContextEntries)
+	}
+
+	// voicevox.presets のアサート
+	if cfg.Voicevox.Presets == nil {
+		t.Fatal("cfg.Voicevox.Presets should not be nil after init")
+	}
+	presets := cfg.Voicevox.EffectivePresets()
+	if v, ok := presets.ResolveIntonation("標準"); !ok || v != 1.0 {
+		t.Errorf("presets.Intonation[標準] = %v (ok=%v), want 1.0", v, ok)
+	}
+	if v, ok := presets.ResolvePitch("標準"); !ok || v != 0.0 {
+		t.Errorf("presets.Pitch[標準] = %v (ok=%v), want 0.0", v, ok)
+	}
+	if v, ok := presets.ResolveSpeed("標準"); !ok || v != 1.0 {
+		t.Errorf("presets.Speed[標準] = %v (ok=%v), want 1.0", v, ok)
+	}
 }
