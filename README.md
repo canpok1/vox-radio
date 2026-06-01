@@ -25,6 +25,16 @@
 
 > **注意:** `.devcontainer/.env` には秘密情報が含まれるため、コミットしないこと（`.gitignore` で除外済み）。
 
+## リリース設定の検証
+
+`.goreleaser.yaml` を編集した後は、CI を待たずにローカルで構文・設定を検証できます。
+
+```bash
+make release-check
+```
+
+`goreleaser check` を実行し、設定の構文エラーや不整合を検出します。`goreleaser` は devcontainer 起動時または `make setup` 実行時に自動インストールされます。
+
 ## CLIの使い方
 
 ### ビルド
