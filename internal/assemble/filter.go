@@ -350,7 +350,7 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 				bgmFullLabel = bgmParts[0]
 			} else {
 				bgmFullLabel = fmt.Sprintf("[run%d_bgm_full]", runIdx)
-				b.addFilter(fmt.Sprintf("%samix=inputs=%d:duration=first:normalize=0%s",
+				b.addFilter(fmt.Sprintf("%samix=inputs=%d:duration=longest:normalize=0%s",
 					strings.Join(bgmParts, ""), len(bgmParts), bgmFullLabel))
 			}
 
