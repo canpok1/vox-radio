@@ -151,18 +151,23 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
+	activeBGM := ""
+
 	for ci, corner := range corners {
 		if corner.StartJingle != "" {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeJingle,
 				AssetName: corner.StartJingle,
 			})
+			activeBGM = ""
 		}
-		if corner.BGM != "" {
+
+		if corner.BGM != activeBGM {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeBGM,
 				AssetName: corner.BGM,
 			})
+			activeBGM = corner.BGM
 		}
 
 		for li, line := range corner.Lines {
@@ -190,17 +195,12 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			}
 		}
 
-		if corner.BGM != "" {
-			segments = append(segments, model.ScriptSegment{
-				Type:      model.SegmentTypeBGM,
-				AssetName: "",
-			})
-		}
 		if corner.EndJingle != "" {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeJingle,
 				AssetName: corner.EndJingle,
 			})
+			activeBGM = ""
 		}
 	}
 
