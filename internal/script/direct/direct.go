@@ -22,7 +22,7 @@ var insertionsSchema = json.RawMessage(`{
         "properties": {
           "corner_index":     {"type": "integer", "minimum": 0},
           "after_line_index": {"type": "integer", "minimum": 0},
-          "type":             {"type": "string", "enum": ["se", "bgm", "jingle"]},
+          "type":             {"type": "string", "enum": ["se"]},
           "asset_name":       {"type": "string"},
           "reason":           {"type": "string"}
         },
@@ -46,6 +46,15 @@ var insertionsSchema = json.RawMessage(`{
   },
   "additionalProperties": false
 }`)
+
+// cornerLLMPayload is the subset of CornerLines sent to the LLM.
+// Asset fields (OpeningJingle, EndingJingle, BGM) are excluded because
+// they are injected deterministically and must not influence SE/pause placement.
+type cornerLLMPayload struct {
+	Title     string       `json:"title"`
+	Direction string       `json:"direction,omitempty"`
+	Lines     []model.Line `json:"lines"`
+}
 
 type Director interface {
 	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error)
@@ -82,7 +91,16 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 }
 
 func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error) {
-	cornersJSON, err := json.Marshal(corners)
+	payload := make([]cornerLLMPayload, len(corners))
+	for i, c := range corners {
+		payload[i] = cornerLLMPayload{
+			Title:     c.Title,
+			Direction: c.Direction,
+			Lines:     c.Lines,
+		}
+	}
+
+	cornersJSON, err := json.Marshal(payload)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("marshal corners: %w", err)
 	}
@@ -131,9 +149,22 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 	}
 
-	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions))
+	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
 	for ci, corner := range corners {
+		if corner.OpeningJingle != "" {
+			segments = append(segments, model.ScriptSegment{
+				Type:      model.SegmentTypeJingle,
+				AssetName: corner.OpeningJingle,
+			})
+		}
+		if corner.BGM != "" {
+			segments = append(segments, model.ScriptSegment{
+				Type:      model.SegmentTypeBGM,
+				AssetName: corner.BGM,
+			})
+		}
+
 		for li, line := range corner.Lines {
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,
@@ -157,6 +188,19 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 					DurationSec: p.DurationSec,
 				})
 			}
+		}
+
+		if corner.BGM != "" {
+			segments = append(segments, model.ScriptSegment{
+				Type:      model.SegmentTypeBGM,
+				AssetName: "",
+			})
+		}
+		if corner.EndingJingle != "" {
+			segments = append(segments, model.ScriptSegment{
+				Type:      model.SegmentTypeJingle,
+				AssetName: corner.EndingJingle,
+			})
 		}
 	}
 

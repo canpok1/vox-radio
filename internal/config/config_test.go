@@ -1,9 +1,7 @@
 package config_test
 
 import (
-	"maps"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -72,11 +70,24 @@ func TestLoadProfile(t *testing.T) {
 		if profile.Program.SegmentPauseSec <= 0 {
 			t.Error("Program.SegmentPauseSec must be positive")
 		}
-		if profile.Program.OpeningJingle == "" {
-			t.Error("Program.OpeningJingle must not be empty")
+	})
+
+	t.Run("CornerAssets", func(t *testing.T) {
+		if len(profile.Corners) == 0 {
+			t.Fatal("Corners must not be empty")
 		}
-		if profile.Program.EndingJingle == "" {
-			t.Error("Program.EndingJingle must not be empty")
+		corner0 := profile.Corners[0]
+		if corner0.OpeningJingle == "" {
+			t.Error("Corners[0].OpeningJingle must not be empty")
+		}
+		if len(profile.Corners) > 1 {
+			corner1 := profile.Corners[1]
+			if corner1.EndingJingle == "" {
+				t.Error("Corners[1].EndingJingle must not be empty")
+			}
+			if corner1.BGM == "" {
+				t.Error("Corners[1].BGM must not be empty")
+			}
 		}
 	})
 
@@ -198,35 +209,93 @@ func TestLoadProfile_MissingFile(t *testing.T) {
 	}
 }
 
-// TestLoadProfile_OpeningJingleKeyMatchesAssets verifies that Program.OpeningJingle
-// references a key that actually exists in Assets.Jingle, preventing silent misconfiguration.
-func TestLoadProfile_OpeningJingleKeyMatchesAssets(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
-	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+func TestValidateProfileAssets_Valid(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "C1", OpeningJingle: "opening", EndingJingle: "ending", BGM: "talk_bgm"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"opening": {File: "opening.mp3"},
+				"ending":  {File: "ending.mp3"},
+			},
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "bgm.mp3"},
+			},
+		},
 	}
-	if profile.Program.OpeningJingle == "" {
-		t.Skip("no opening_jingle configured")
-	}
-	if _, ok := profile.Assets.Jingle[profile.Program.OpeningJingle]; !ok {
-		t.Errorf("Program.OpeningJingle %q not found in Assets.Jingle (keys: %v)",
-			profile.Program.OpeningJingle, slices.Sorted(maps.Keys(profile.Assets.Jingle)))
+	if err := config.ValidateProfileAssets(p); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-// TestLoadProfile_EndingJingleKeyMatchesAssets verifies that Program.EndingJingle
-// references a key that actually exists in Assets.Jingle.
-func TestLoadProfile_EndingJingleKeyMatchesAssets(t *testing.T) {
+func TestValidateProfileAssets_UnknownOpeningJingle(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "C1", OpeningJingle: "nonexistent"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{},
+			BGM:    map[string]config.BGMEntry{},
+		},
+	}
+	if err := config.ValidateProfileAssets(p); err == nil {
+		t.Error("expected error for unknown opening_jingle key")
+	}
+}
+
+func TestValidateProfileAssets_UnknownEndingJingle(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "C1", EndingJingle: "nonexistent"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{},
+			BGM:    map[string]config.BGMEntry{},
+		},
+	}
+	if err := config.ValidateProfileAssets(p); err == nil {
+		t.Error("expected error for unknown ending_jingle key")
+	}
+}
+
+func TestValidateProfileAssets_UnknownBGM(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "C1", BGM: "nonexistent"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{},
+			BGM:    map[string]config.BGMEntry{},
+		},
+	}
+	if err := config.ValidateProfileAssets(p); err == nil {
+		t.Error("expected error for unknown bgm key")
+	}
+}
+
+func TestValidateProfileAssets_EmptyFields_NoError(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "C1"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{},
+			BGM:    map[string]config.BGMEntry{},
+		},
+	}
+	if err := config.ValidateProfileAssets(p); err != nil {
+		t.Errorf("unexpected error for empty fields: %v", err)
+	}
+}
+
+func TestLoadProfile_ValidateProfileAssetsIntegration(t *testing.T) {
 	profile, err := config.LoadProfile("testdata/profile.yaml")
 	if err != nil {
 		t.Fatalf("LoadProfile failed: %v", err)
 	}
-	if profile.Program.EndingJingle == "" {
-		t.Skip("no ending_jingle configured")
-	}
-	if _, ok := profile.Assets.Jingle[profile.Program.EndingJingle]; !ok {
-		t.Errorf("Program.EndingJingle %q not found in Assets.Jingle (keys: %v)",
-			profile.Program.EndingJingle, slices.Sorted(maps.Keys(profile.Assets.Jingle)))
+	if err := config.ValidateProfileAssets(profile); err != nil {
+		t.Errorf("ValidateProfileAssets failed on testdata profile: %v", err)
 	}
 }
 

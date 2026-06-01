@@ -129,8 +129,6 @@ type ProgramConfig struct {
 	Description       string  `yaml:"description"`
 	SegmentPauseSec   float64 `yaml:"segment_pause_sec"`
 	TargetDurationSec int     `yaml:"target_duration_sec"`
-	OpeningJingle     string  `yaml:"opening_jingle,omitempty"`
-	EndingJingle      string  `yaml:"ending_jingle,omitempty"`
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
@@ -147,6 +145,9 @@ type CornerConfig struct {
 	Cast              map[string]string `yaml:"cast"`
 	TargetDurationSec int               `yaml:"target_duration_sec"`
 	Source            *SourceConfig     `yaml:"source,omitempty"`
+	OpeningJingle     string            `yaml:"opening_jingle,omitempty"`
+	EndingJingle      string            `yaml:"ending_jingle,omitempty"`
+	BGM               string            `yaml:"bgm,omitempty"`
 }
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.
@@ -350,6 +351,28 @@ func ValidateProfileCast(p *Profile, chars map[string]CharacterConfig) error {
 		for charID := range corner.Cast {
 			if _, ok := chars[charID]; !ok {
 				return fmt.Errorf("corners[%q].cast: unknown character %q", corner.Title, charID)
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateProfileAssets checks that corner-level jingle/bgm keys reference existing assets.
+func ValidateProfileAssets(p *Profile) error {
+	for _, corner := range p.Corners {
+		if corner.OpeningJingle != "" {
+			if _, ok := p.Assets.Jingle[corner.OpeningJingle]; !ok {
+				return fmt.Errorf("corners[%q].opening_jingle: unknown jingle key %q", corner.Title, corner.OpeningJingle)
+			}
+		}
+		if corner.EndingJingle != "" {
+			if _, ok := p.Assets.Jingle[corner.EndingJingle]; !ok {
+				return fmt.Errorf("corners[%q].ending_jingle: unknown jingle key %q", corner.Title, corner.EndingJingle)
+			}
+		}
+		if corner.BGM != "" {
+			if _, ok := p.Assets.BGM[corner.BGM]; !ok {
+				return fmt.Errorf("corners[%q].bgm: unknown bgm key %q", corner.Title, corner.BGM)
 			}
 		}
 	}

@@ -86,7 +86,7 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.AssetCatalog{SE: []model.AssetCatalogEntry{{Name: "chime"}}, BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: []model.AssetCatalogEntry{{Name: "chime"}}},
 		"",
 	)
 
@@ -103,7 +103,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{err: context.Canceled},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -130,7 +130,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -155,7 +155,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -172,7 +172,7 @@ func TestLLMScriptGenerator_Generate_EmptyRundown(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -189,7 +189,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -213,7 +213,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 	gen := script.NewLLMScriptGenerator(
 		mw,
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		"",
 	)
 
@@ -246,7 +246,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
 
 	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
@@ -269,7 +269,7 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		workDir,
 	)
 
@@ -330,7 +330,7 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
 		&mockDirector{},
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
 		workDir,
 	)
 
@@ -359,105 +359,29 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 	}
 }
 
-// newJingleTestGen creates a generator with a fixed-script director for jingle injection tests.
-// The mockDirector returns its fixed script, so mockWriter content is irrelevant.
-func newJingleTestGen() *script.LLMScriptGenerator {
-	speechSeg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"}
-	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{speechSeg}}}
-	return script.NewLLMScriptGenerator(
-		&mockWriter{},
-		md,
-		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0), BGM: make([]model.AssetCatalogEntry, 0), Jingle: make([]model.AssetCatalogEntry, 0)},
-		"",
-	)
-}
-
-func TestLLMScriptGenerator_Generate_InjectsOpeningAndEndingJingles(t *testing.T) {
-	gen := newJingleTestGen()
-	program := config.ProgramConfig{OpeningJingle: "opening", EndingJingle: "ending"}
-	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestBuildScriptLines_TransfersCornerAssets(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "OP", Direction: "dir", OpeningJingle: "opening", BGM: "bgm1"},
+		{Title: "ED", EndingJingle: "ending"},
 	}
-
-	if len(got.Segments) != 3 {
-		t.Fatalf("expected 3 segments (opening jingle + speech + ending jingle), got %d", len(got.Segments))
+	lines := [][]model.Line{
+		{{SpeakerRole: "host", Text: "A"}},
+		{{SpeakerRole: "host", Text: "B"}},
 	}
-	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "opening" {
-		t.Errorf("first segment should be opening jingle, got %+v", got.Segments[0])
+	got := script.BuildScriptLines(corners, lines)
+	if got[0].OpeningJingle != "opening" {
+		t.Errorf("Corners[0].OpeningJingle: got %q, want opening", got[0].OpeningJingle)
 	}
-	if got.Segments[1].Type != model.SegmentTypeSpeech {
-		t.Errorf("second segment should be speech, got %+v", got.Segments[1])
+	if got[0].BGM != "bgm1" {
+		t.Errorf("Corners[0].BGM: got %q, want bgm1", got[0].BGM)
 	}
-	if got.Segments[2].Type != model.SegmentTypeJingle || got.Segments[2].AssetName != "ending" {
-		t.Errorf("third segment should be ending jingle, got %+v", got.Segments[2])
+	if got[0].EndingJingle != "" {
+		t.Errorf("Corners[0].EndingJingle: got %q, want empty", got[0].EndingJingle)
 	}
-}
-
-func TestLLMScriptGenerator_Generate_NoJinglesWhenConfigEmpty(t *testing.T) {
-	gen := newJingleTestGen()
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if got[1].EndingJingle != "ending" {
+		t.Errorf("Corners[1].EndingJingle: got %q, want ending", got[1].EndingJingle)
 	}
-
-	if len(got.Segments) != 1 {
-		t.Fatalf("expected 1 segment (no jingles), got %d", len(got.Segments))
-	}
-	if got.Segments[0].Type != model.SegmentTypeSpeech {
-		t.Errorf("expected speech segment, got %+v", got.Segments[0])
-	}
-}
-
-func TestLLMScriptGenerator_Generate_InjectsOnlyOpeningJingle(t *testing.T) {
-	gen := newJingleTestGen()
-	program := config.ProgramConfig{OpeningJingle: "opening"}
-	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(got.Segments) != 2 {
-		t.Fatalf("expected 2 segments (opening jingle + speech), got %d", len(got.Segments))
-	}
-	if got.Segments[0].Type != model.SegmentTypeJingle || got.Segments[0].AssetName != "opening" {
-		t.Errorf("first segment should be opening jingle, got %+v", got.Segments[0])
-	}
-}
-
-func TestLLMScriptGenerator_Generate_InjectsOnlyEndingJingle(t *testing.T) {
-	gen := newJingleTestGen()
-	program := config.ProgramConfig{EndingJingle: "ending"}
-	got, err := gen.Generate(context.Background(), program, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(got.Segments) != 2 {
-		t.Fatalf("expected 2 segments (speech + ending jingle), got %d", len(got.Segments))
-	}
-	if got.Segments[1].Type != model.SegmentTypeJingle || got.Segments[1].AssetName != "ending" {
-		t.Errorf("last segment should be ending jingle, got %+v", got.Segments[1])
-	}
-}
-
-func TestInjectProgramJingles_BothEmpty_ReturnsOriginal(t *testing.T) {
-	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, Text: "x"}
-	scr := model.Script{Segments: []model.ScriptSegment{seg}}
-	got := script.InjectProgramJingles(scr, config.ProgramConfig{})
-	if len(got.Segments) != 1 || got.Segments[0].Text != "x" {
-		t.Errorf("expected unchanged script, got %+v", got.Segments)
-	}
-}
-
-func TestInjectProgramJingles_BothSet_PrependAndAppend(t *testing.T) {
-	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, Text: "mid"}
-	scr := model.Script{Segments: []model.ScriptSegment{seg}}
-	got := script.InjectProgramJingles(scr, config.ProgramConfig{OpeningJingle: "op", EndingJingle: "ed"})
-	if len(got.Segments) != 3 {
-		t.Fatalf("expected 3 segments, got %d", len(got.Segments))
-	}
-	if got.Segments[0].AssetName != "op" || got.Segments[2].AssetName != "ed" {
-		t.Errorf("unexpected jingle placement: %+v", got.Segments)
+	if got[1].OpeningJingle != "" {
+		t.Errorf("Corners[1].OpeningJingle: got %q, want empty", got[1].OpeningJingle)
 	}
 }

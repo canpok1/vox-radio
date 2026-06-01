@@ -4,8 +4,6 @@ program:
   description: "テスト用"
   segment_pause_sec: 0.3
   target_duration_sec: 75
-  opening_jingle: opening
-  ending_jingle: ending
 
 corners:
   - title: "オープニング"
@@ -13,6 +11,8 @@ corners:
     cast:
       zundamon: "元気に挨拶する進行役"
     target_duration_sec: 45
+    opening_jingle: opening
+    ending_jingle: ending
 
 assets:
   jingle:

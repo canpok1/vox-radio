@@ -26,3 +26,7 @@ breaking change あり：既存 `script.json` の `se_name` キーを `asset_nam
 **A. キー名の一致のみ修正**（`op`→`opening` 等）: 最小修正だが任意位置ジングル要件を満たせないため却下。
 
 **B. OP/ED を BuildContext フィールドとして維持し BGM/Jingle のみ Script 制御**: 部分統一にとどまりアーキテクチャが複雑化するため却下。
+
+## 後続の変更
+
+ADR 0020 にて BGM/中間ジングルの LLM 配置と program OP/ED 指定を廃止し、コーナー毎 profile.yaml 設定駆動へ移行した（本 ADR の「決定事項3: provenance」を部分的に上書き）。

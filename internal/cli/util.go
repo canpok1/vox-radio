@@ -67,5 +67,8 @@ func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, 
 	if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
 		return nil, nil, fmt.Errorf("profile validation: %w", err)
 	}
+	if err := config.ValidateProfileAssets(p); err != nil {
+		return nil, nil, fmt.Errorf("profile validation: %w", err)
+	}
 	return cfg, p, nil
 }

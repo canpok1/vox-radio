@@ -7,10 +7,8 @@ type AssetCatalogEntry struct {
 	Description string `json:"description,omitempty"`
 }
 
-// AssetCatalog holds the available asset entries for each category (SE, BGM, Jingle).
-// Used to inform the LLM which assets are available for insertion.
+// AssetCatalog holds the available SE asset entries for the LLM.
+// BGM and Jingle are now configured per-corner in the profile and are not passed to the LLM.
 type AssetCatalog struct {
-	SE     []AssetCatalogEntry `json:"se"`
-	BGM    []AssetCatalogEntry `json:"bgm"`
-	Jingle []AssetCatalogEntry `json:"jingle"`
+	SE []AssetCatalogEntry `json:"se"`
 }
