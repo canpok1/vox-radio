@@ -29,3 +29,4 @@
 | [0021](0021-intra-episode-corner-context.md) | コーナー台本生成に同一回の生成済みセリフを文脈として渡す | 採用 | 2026-06-01 |
 | [0022](0022-dify-api-llm-provider.md) | LLM プロバイダに Dify API 経由の利用を追加する | 採用 | 2026-06-01 |
 | [0023](0023-embed-prompts-in-binary.md) | プロンプトをバイナリに同梱し --prompts フラグを廃止する | 採用 | 2026-06-01 |
+| [0024](0024-corner-level-pause-and-remove-program-pause-length.md) | コーナーごとの開始/終了無音設定と program.segment_pause_sec / program.length_sec の削除 | 採用 | 2026-06-01 |

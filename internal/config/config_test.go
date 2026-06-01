@@ -73,9 +73,6 @@ func TestLoadProfile(t *testing.T) {
 		if profile.Program.Title == "" {
 			t.Error("Program.Title must not be empty")
 		}
-		if profile.Program.SegmentPauseSec <= 0 {
-			t.Error("Program.SegmentPauseSec must be positive")
-		}
 	})
 
 	t.Run("CornerAssets", func(t *testing.T) {
@@ -113,12 +110,6 @@ func TestLoadProfile(t *testing.T) {
 		}
 		if c.LengthSec <= 0 {
 			t.Error("Corners[0].LengthSec must be positive")
-		}
-	})
-
-	t.Run("ProgramLengthSec", func(t *testing.T) {
-		if profile.Program.LengthSec <= 0 {
-			t.Error("Program.LengthSec must be positive")
 		}
 	})
 

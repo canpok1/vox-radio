@@ -77,17 +77,12 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
-	pauseSec := a.Program.SegmentPauseSec
-	if pauseSec == 0 {
-		pauseSec = defaultPauseSec
-	}
-
 	bctx := BuildContext{
 		Script:   script,
 		Clips:    clips,
 		ClipsDir: clipsDir,
 		Assets:   a.AssetsConfig,
-		PauseSec: pauseSec,
+		PauseSec: defaultPauseSec,
 		OutPath:  outPath,
 	}
 

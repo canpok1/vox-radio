@@ -181,12 +181,14 @@ func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line)
 	result := make([]model.CornerLines, len(corners))
 	for i, corner := range corners {
 		result[i] = model.CornerLines{
-			Title:       corner.Title,
-			Direction:   corner.Direction,
-			Lines:       cornerLines[i],
-			StartJingle: corner.StartJingle,
-			EndJingle:   corner.EndJingle,
-			BGM:         corner.BGM,
+			Title:         corner.Title,
+			Direction:     corner.Direction,
+			Lines:         cornerLines[i],
+			StartJingle:   corner.StartJingle,
+			EndJingle:     corner.EndJingle,
+			BGM:           corner.BGM,
+			StartPauseSec: corner.StartPauseSec,
+			EndPauseSec:   corner.EndPauseSec,
 		}
 	}
 	return result

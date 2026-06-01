@@ -159,11 +159,9 @@ func (c CacheConfig) EffectiveLLMContextEntries() int {
 
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
-	ID              string  `yaml:"id,omitempty"`
-	Title           string  `yaml:"title"`
-	Description     string  `yaml:"description"`
-	SegmentPauseSec float64 `yaml:"segment_pause_sec"`
-	LengthSec       int     `yaml:"length_sec"`
+	ID          string `yaml:"id,omitempty"`
+	Title       string `yaml:"title"`
+	Description string `yaml:"description"`
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
@@ -174,15 +172,17 @@ type SourceConfig struct {
 
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
-	Title       string            `yaml:"title"`
-	Content     string            `yaml:"content"`
-	Direction   string            `yaml:"direction,omitempty"`
-	Cast        map[string]string `yaml:"cast"`
-	LengthSec   int               `yaml:"length_sec"`
-	Source      *SourceConfig     `yaml:"source,omitempty"`
-	StartJingle string            `yaml:"start_jingle,omitempty"`
-	EndJingle   string            `yaml:"end_jingle,omitempty"`
-	BGM         string            `yaml:"bgm,omitempty"`
+	Title         string            `yaml:"title"`
+	Content       string            `yaml:"content"`
+	Direction     string            `yaml:"direction,omitempty"`
+	Cast          map[string]string `yaml:"cast"`
+	LengthSec     int               `yaml:"length_sec"`
+	Source        *SourceConfig     `yaml:"source,omitempty"`
+	StartJingle   string            `yaml:"start_jingle,omitempty"`
+	EndJingle     string            `yaml:"end_jingle,omitempty"`
+	BGM           string            `yaml:"bgm,omitempty"`
+	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
+	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
 }
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.

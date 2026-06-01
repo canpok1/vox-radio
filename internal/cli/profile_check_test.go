@@ -63,8 +63,6 @@ func TestProfileCheck_UnknownCast_Error(t *testing.T) {
 	profileContent := []byte(`program:
   title: "テスト"
   description: "テスト"
-  segment_pause_sec: 0.3
-  length_sec: 60
 
 corners:
   - title: "コーナー1"

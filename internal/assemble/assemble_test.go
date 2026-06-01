@@ -17,7 +17,7 @@ import (
 func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler {
 	return &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
+		Program:      config.ProgramConfig{},
 		runFFmpeg:    func(_ context.Context, _ []string, _ io.Writer) error { return ffmpegErr },
 		getDuration:  func(_ string) (float64, error) { return duration, nil },
 		getFileSize:  func(_ string) (int64, error) { return size, nil },
@@ -29,7 +29,7 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 	var capturedArgs []string
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
+		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
 			capturedArgs = args
 			return nil
@@ -142,7 +142,7 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	var capturedArgs []string
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		Program:      config.ProgramConfig{SegmentPauseSec: 0}, // zero → default
+		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
 			capturedArgs = args
 			return nil
@@ -211,7 +211,7 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 	var ffmpegOutput strings.Builder
 	a := &Assembler{
 		AssetsConfig: config.AssetsConfig{},
-		Program:      config.ProgramConfig{SegmentPauseSec: 0.5},
+		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, _ []string, w io.Writer) error {
 			if w != nil {
 				_, _ = io.WriteString(w, "ffmpeg output here")
