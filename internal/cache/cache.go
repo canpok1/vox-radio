@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/canpok1/vox-radio/internal/model"
 )
 
 // ArticleEntry holds article data for a single episode history entry.
@@ -56,6 +58,7 @@ func (m *Manager) Load() ([]Entry, error) {
 
 	var entries []Entry
 	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -71,7 +74,7 @@ func (m *Manager) Load() ([]Entry, error) {
 		return nil, fmt.Errorf("scan cache: %w", err)
 	}
 	if entries == nil {
-		entries = make([]Entry, 0)
+		return make([]Entry, 0), nil
 	}
 	return entries, nil
 }
@@ -133,6 +136,45 @@ func Recent(entries []Entry, n int) []Entry {
 		return entries
 	}
 	return entries[len(entries)-n:]
+}
+
+// BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, and rundown.
+// Rundown data (summary, points) is merged into the manifest's article references by URL.
+func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown) Entry {
+	rdArticleByURL := make(map[string]model.RundownArticle)
+	for _, c := range rd.Corners {
+		for _, a := range c.Articles {
+			rdArticleByURL[a.URL] = a
+		}
+	}
+
+	corners := make([]CornerEntry, len(m.Corners))
+	for i, mc := range m.Corners {
+		articles := make([]ArticleEntry, len(mc.Articles))
+		for j, ar := range mc.Articles {
+			ae := ArticleEntry{
+				Title:  ar.Title,
+				URL:    ar.URL,
+				Points: make([]string, 0),
+			}
+			if rda, ok := rdArticleByURL[ar.URL]; ok {
+				ae.Summary = rda.Summary
+				if rda.Points != nil {
+					ae.Points = rda.Points
+				}
+			}
+			articles[j] = ae
+		}
+		corners[i] = CornerEntry{Title: mc.Title, Articles: articles}
+	}
+
+	return Entry{
+		ProgramID: programID,
+		Datetime:  m.Datetime,
+		Title:     m.Title,
+		Summary:   m.Summary,
+		Corners:   corners,
+	}
 }
 
 // PastURLs extracts all unique article URLs from entries, in order.

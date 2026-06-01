@@ -142,50 +142,10 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, cacheCfg
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	entry := buildCacheEntry(programID, m, rd)
+	entry := cache.BuildEntryFromManifest(programID, m, rd)
 	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
 		return err
 	}
 	logger.Info("cache entry appended", "program_id", programID)
 	return nil
-}
-
-func buildCacheEntry(programID string, m model.Manifest, rd model.Rundown) cache.Entry {
-	rdArticleByURL := make(map[string]model.RundownArticle)
-	for _, c := range rd.Corners {
-		for _, a := range c.Articles {
-			rdArticleByURL[a.URL] = a
-		}
-	}
-
-	corners := make([]cache.CornerEntry, len(m.Corners))
-	for i, mc := range m.Corners {
-		articles := make([]cache.ArticleEntry, len(mc.Articles))
-		for j, ar := range mc.Articles {
-			ae := cache.ArticleEntry{
-				Title:  ar.Title,
-				URL:    ar.URL,
-				Points: make([]string, 0),
-			}
-			if rda, ok := rdArticleByURL[ar.URL]; ok {
-				ae.Summary = rda.Summary
-				if rda.Points != nil {
-					ae.Points = rda.Points
-				}
-			}
-			articles[j] = ae
-		}
-		corners[i] = cache.CornerEntry{
-			Title:    mc.Title,
-			Articles: articles,
-		}
-	}
-
-	return cache.Entry{
-		ProgramID: programID,
-		Datetime:  m.Datetime,
-		Title:     m.Title,
-		Summary:   m.Summary,
-		Corners:   corners,
-	}
 }
