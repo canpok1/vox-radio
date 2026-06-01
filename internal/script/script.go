@@ -88,15 +88,26 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 
 func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
 	result := make([][]model.Line, len(corners))
+	previous := make([]model.CornerLines, 0, len(corners))
 	for i, corner := range corners {
 		rc := cornerMap[corner.Title]
-		lines, err := g.writer.Write(ctx, program, corner, corners, rc.Articles, rc.Flow, chars)
+		lines, err := g.writer.Write(ctx, program, corner, corners, previous, rc.Articles, rc.Flow, chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
 		result[i] = lines
+		previous = append(previous, model.CornerLines{Title: corner.Title, Lines: lines})
 	}
 	return result, nil
+}
+
+// buildPreviousCorners assembles the first n corners into a []model.CornerLines for context passing.
+func buildPreviousCorners(corners []config.CornerConfig, cornerLines [][]model.Line, n int) []model.CornerLines {
+	previous := make([]model.CornerLines, n)
+	for i := range n {
+		previous[i] = model.CornerLines{Title: corners[i].Title, Lines: cornerLines[i]}
+	}
+	return previous
 }
 
 func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.ProgramConfig, cornerLines [][]model.Line, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) [][]model.Line {
@@ -140,7 +151,8 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 
 	corner := corners[worstIdx]
 	rc := cornerMap[corner.Title]
-	if newLines, err := g.writer.Write(ctx, program, corner, corners, rc.Articles, rc.Flow, chars); err == nil {
+	previous := buildPreviousCorners(corners, cornerLines, worstIdx)
+	if newLines, err := g.writer.Write(ctx, program, corner, corners, previous, rc.Articles, rc.Flow, chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines
