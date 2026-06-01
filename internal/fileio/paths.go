@@ -58,6 +58,18 @@ func EnsureOutputDirs(outDir string) error {
 	return os.MkdirAll(ClipsDir(outDir), 0o755)
 }
 
+// ReadJSON reads a JSON file at path and unmarshals it into v.
+func ReadJSON(path string, v any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	if err := json.Unmarshal(data, v); err != nil {
+		return fmt.Errorf("unmarshal %s: %w", path, err)
+	}
+	return nil
+}
+
 // WriteJSON marshals v to indented JSON and writes it to path,
 // creating parent directories as needed.
 func WriteJSON(path string, v any) error {

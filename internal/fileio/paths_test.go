@@ -93,6 +93,36 @@ func TestWriteJSON(t *testing.T) {
 	}
 }
 
+func TestReadJSON(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "data.json")
+
+	type payload struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	want := payload{Name: "ずんだもん", Age: 0}
+	if err := fileio.WriteJSON(path, want); err != nil {
+		t.Fatalf("WriteJSON: %v", err)
+	}
+
+	var got payload
+	if err := fileio.ReadJSON(path, &got); err != nil {
+		t.Fatalf("ReadJSON: %v", err)
+	}
+	if got.Name != want.Name {
+		t.Errorf("Name: got %q, want %q", got.Name, want.Name)
+	}
+}
+
+func TestReadJSON_MissingFile(t *testing.T) {
+	var v any
+	err := fileio.ReadJSON(filepath.Join(t.TempDir(), "nonexistent.json"), &v)
+	if err == nil {
+		t.Error("ReadJSON: expected error for missing file, got nil")
+	}
+}
+
 func TestEnsureOutputDirs(t *testing.T) {
 	tmp := t.TempDir()
 	outDir := filepath.Join(tmp, "output")

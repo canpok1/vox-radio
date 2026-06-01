@@ -526,6 +526,78 @@ func TestLoadConfig_ValidationError_PresetOutOfRange(t *testing.T) {
 	}
 }
 
+func TestCacheConfig_EffectiveMaxEntries_Zero(t *testing.T) {
+	c := config.CacheConfig{}
+	if got := c.EffectiveMaxEntries(); got != config.DefaultCacheMaxEntries {
+		t.Errorf("got %d, want DefaultCacheMaxEntries=%d", got, config.DefaultCacheMaxEntries)
+	}
+}
+
+func TestCacheConfig_EffectiveMaxEntries_Custom(t *testing.T) {
+	c := config.CacheConfig{MaxEntries: 50}
+	if got := c.EffectiveMaxEntries(); got != 50 {
+		t.Errorf("got %d, want 50", got)
+	}
+}
+
+func TestCacheConfig_EffectiveRetentionDays_Zero(t *testing.T) {
+	c := config.CacheConfig{}
+	if got := c.EffectiveRetentionDays(); got != config.DefaultCacheRetentionDays {
+		t.Errorf("got %d, want DefaultCacheRetentionDays=%d", got, config.DefaultCacheRetentionDays)
+	}
+}
+
+func TestCacheConfig_EffectiveRetentionDays_Custom(t *testing.T) {
+	c := config.CacheConfig{RetentionDays: 30}
+	if got := c.EffectiveRetentionDays(); got != 30 {
+		t.Errorf("got %d, want 30", got)
+	}
+}
+
+func TestCacheConfig_EffectiveLLMContextEntries_Zero(t *testing.T) {
+	c := config.CacheConfig{}
+	if got := c.EffectiveLLMContextEntries(); got != config.DefaultCacheLLMContextEntries {
+		t.Errorf("got %d, want DefaultCacheLLMContextEntries=%d", got, config.DefaultCacheLLMContextEntries)
+	}
+}
+
+func TestCacheConfig_EffectiveLLMContextEntries_Custom(t *testing.T) {
+	c := config.CacheConfig{LLMContextEntries: 5}
+	if got := c.EffectiveLLMContextEntries(); got != 5 {
+		t.Errorf("got %d, want 5", got)
+	}
+}
+
+func TestLoadProfile_ProgramID(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile_with_id.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	if profile.Program.ID != "test-program" {
+		t.Errorf("Program.ID: got %q, want %q", profile.Program.ID, "test-program")
+	}
+}
+
+func TestLoadProfile_ProgramIDEmpty_NoError(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	if profile.Program.ID != "" {
+		t.Errorf("Program.ID: expected empty, got %q", profile.Program.ID)
+	}
+}
+
+func TestLoadConfig_Cache_DefaultsToDisabled(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Cache.Enabled {
+		t.Error("Cache.Enabled should default to false when not set in YAML")
+	}
+}
+
 func TestLoadProfile_AssetsDescription(t *testing.T) {
 	profile, err := config.LoadProfile("testdata/profile.yaml")
 	if err != nil {

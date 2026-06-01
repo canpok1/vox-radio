@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
@@ -43,11 +44,17 @@ type LLMWriter struct {
 	promptTemplate string
 	temperature    float64
 	config         *config.Config
+	pastEpisodes   []cache.Entry
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
 func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64, cfg *config.Config) *LLMWriter {
 	return &LLMWriter{client: client, promptTemplate: promptTemplate, temperature: temperature, config: cfg}
+}
+
+// SetPastEpisodes configures recent past episodes to inject into the script generation prompt.
+func (w *LLMWriter) SetPastEpisodes(eps []cache.Entry) {
+	w.pastEpisodes = eps
 }
 
 func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
@@ -87,6 +94,13 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	castInfo := buildCastInfo(corner.Cast, chars)
 	presetInfo := buildPresetInfo(presets)
 
+	pastEpisodesStr := "（なし）"
+	if len(w.pastEpisodes) > 0 {
+		if b, err := json.Marshal(w.pastEpisodes); err == nil {
+			pastEpisodesStr = string(b)
+		}
+	}
+
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
@@ -94,6 +108,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{flow}}", flow,
 		"{{cast_info}}", castInfo,
 		"{{preset_info}}", presetInfo,
+		"{{past_episodes}}", pastEpisodesStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)
