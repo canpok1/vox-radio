@@ -65,7 +65,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	cornerMap := rundown.CornerMap()
 
 	g.logger.With("step", "script/write").Info("開始")
-	cornerLines, err := g.writeAll(ctx, program, corners, cornerMap, chars)
+	cornerLines, err := WriteAll(ctx, g.writer, program, corners, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
@@ -86,12 +86,13 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	return scr, nil
 }
 
-func (g *LLMScriptGenerator) writeAll(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
+// WriteAll writes lines for each corner in order, passing previously generated corners as context.
+func WriteAll(ctx context.Context, w write.Writer, program config.ProgramConfig, corners []config.CornerConfig, cornerMap map[string]model.RundownCorner, chars map[string]config.CharacterConfig) ([][]model.Line, error) {
 	result := make([][]model.Line, len(corners))
 	previous := make([]model.CornerLines, 0, len(corners))
 	for i, corner := range corners {
 		rc := cornerMap[corner.Title]
-		lines, err := g.writer.Write(ctx, program, corner, corners, previous, rc.Articles, rc.Flow, chars)
+		lines, err := w.Write(ctx, program, corner, corners, previous, rc.Articles, rc.Flow, chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
 		}
