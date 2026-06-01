@@ -446,3 +446,57 @@ func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing
 		t.Errorf("C3's previousCorners[1].Title: got %q, want C2", mw.receivedPrevious[2][1].Title)
 	}
 }
+
+func TestWriteAll(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "C1", Content: "内容1", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{Title: "C2", Content: "内容2", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{Title: "C3", Content: "内容3", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+	cornerMap := map[string]model.RundownCorner{
+		"C1": {Title: "C1", Flow: "フロー1", Articles: []model.RundownArticle{{URL: "https://example.com/1"}}},
+		"C2": {Title: "C2", Flow: "フロー2", Articles: []model.RundownArticle{{URL: "https://example.com/2"}}},
+		"C3": {Title: "C3", Flow: "フロー3", Articles: []model.RundownArticle{{URL: "https://example.com/3"}}},
+	}
+	c1Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C1のセリフ"}}
+	c2Lines := []model.Line{{SpeakerRole: "metan", Text: "C2のセリフ"}}
+	c3Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C3のセリフ"}}
+
+	mw := &mockWriter{responses: [][]model.Line{c1Lines, c2Lines, c3Lines}}
+
+	got, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, cornerMap, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(got))
+	}
+	if len(mw.receivedPrevious[0]) != 0 {
+		t.Errorf("C1 should receive empty previousCorners, got %d", len(mw.receivedPrevious[0]))
+	}
+	if len(mw.receivedPrevious[1]) != 1 {
+		t.Fatalf("C2 should receive 1 previousCorner, got %d", len(mw.receivedPrevious[1]))
+	}
+	if mw.receivedPrevious[1][0].Title != "C1" {
+		t.Errorf("C2's previousCorners[0].Title: got %q, want C1", mw.receivedPrevious[1][0].Title)
+	}
+	if len(mw.receivedPrevious[2]) != 2 {
+		t.Fatalf("C3 should receive 2 previousCorners, got %d", len(mw.receivedPrevious[2]))
+	}
+}
+
+func TestWriteAll_Error(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "C1", Content: "内容1", LengthSec: 15},
+	}
+	cornerMap := map[string]model.RundownCorner{
+		"C1": {Title: "C1", Flow: "フロー1"},
+	}
+
+	mw := &mockWriter{err: context.Canceled}
+
+	_, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, cornerMap, testChars)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
