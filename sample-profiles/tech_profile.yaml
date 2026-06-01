@@ -4,7 +4,6 @@ program:
   description: "毎日5分のニュースラジオ"
   segment_pause_sec: 0.3
   target_duration_sec: 240
-  opening_jingle: opening
 
 corners:
   - title: "オープニング"
@@ -14,12 +13,14 @@ corners:
       zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
       metan: "MC。ずんだもんの相棒。ツッコミ担当。"
     target_duration_sec: 30
+    opening_jingle: opening  # コーナー開始ジングル
   - title: "今日のテックニュース"
     content: "テック記事を2〜3本、漫才風に噛み砕いて紹介"
     cast:
       zundamon: "MC。ボケ担当、あまり詳しくない設定。"
       metan: "MC。解説役、ツッコミ担当。"
     target_duration_sec: 180
+    bgm: coffee_break  # コーナー中BGM
     source:
       feeds:
         - url: https://zenn.dev/feed
@@ -28,7 +29,7 @@ corners:
           max_items: 5
   - title: "エンディング"
     content: "次回も聴いて欲しいという宣伝をする。"
-    direction: "最後にエンディングジングルを流す。"
+    direction: "エンディングでまとめる。"
     cast:
       zundamon: "MC。進行役。ボケ担当。"
       metan: "MC。相棒。ツッコミ担当。"
