@@ -38,6 +38,9 @@ check-samples: build
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" profile check profile.yaml
 	for f in sample-profiles/*.yaml; do ./$(BINARY_NAME) profile check "$$f"; done
 
+release-check:
+	goreleaser check
+
 all: build
 
-.PHONY: all setup build clean test fmt lint install docs check-samples run-sample
+.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check
