@@ -39,13 +39,6 @@ type Config struct {
 	DifyChat             *DifyChatClientConfig
 }
 
-func (c Config) effectiveProvider() string {
-	if c.Provider == "" {
-		return "openai"
-	}
-	return c.Provider
-}
-
 // throttler manages rate limiting for LLM API calls.
 type throttler struct {
 	minIntervalMS int
@@ -88,8 +81,9 @@ type openAIClient struct {
 }
 
 // NewClient creates a new LLM client, selecting the implementation based on Config.Provider.
+// Empty Provider defaults to the OpenAI-compatible implementation.
 func NewClient(cfg Config) Client {
-	switch cfg.effectiveProvider() {
+	switch cfg.Provider {
 	case "dify-chat":
 		return newDifyChatClient(cfg)
 	default:
@@ -201,14 +195,17 @@ func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs 
 		Temperature: temperature,
 	}
 
-	apiReq.ResponseFormat = &responseFormat{Type: "json_object"}
 	if len(req.JSONSchema) > 0 {
-		apiReq.ResponseFormat.Type = "json_schema"
-		apiReq.ResponseFormat.JSONSchema = &schemaSpec{
-			Name:   "output",
-			Schema: req.JSONSchema,
-			Strict: true,
+		apiReq.ResponseFormat = &responseFormat{
+			Type: "json_schema",
+			JSONSchema: &schemaSpec{
+				Name:   "output",
+				Schema: req.JSONSchema,
+				Strict: true,
+			},
 		}
+	} else {
+		apiReq.ResponseFormat = &responseFormat{Type: "json_object"}
 	}
 
 	body, err := json.Marshal(apiReq)

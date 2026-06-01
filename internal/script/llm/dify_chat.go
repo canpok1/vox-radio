@@ -31,23 +31,17 @@ func newDifyChatClient(cfg Config) Client {
 	if user == "" {
 		user = "vox-radio"
 	}
-	dcCfg := DifyChatClientConfig{
-		BaseURL: dc.BaseURL,
-		APIKey:  dc.APIKey,
-		User:    user,
-		Inputs:  dc.Inputs,
-	}
 
 	bc, _ := dify.NewClient(dify.ClientConfig{
-		ApiServer: dcCfg.BaseURL,
-		ApiKey:    dcCfg.APIKey,
-		User:      dcCfg.User,
+		ApiServer: dc.BaseURL,
+		ApiKey:    dc.APIKey,
+		User:      user,
 		Timeout:   60 * time.Second,
 	})
 
 	return &difyChatClient{
 		cfg:        cfg,
-		dcCfg:      dcCfg,
+		dcCfg:      DifyChatClientConfig{BaseURL: dc.BaseURL, APIKey: dc.APIKey, User: user, Inputs: dc.Inputs},
 		baseClient: bc,
 		throttler:  throttler{minIntervalMS: cfg.MinRequestIntervalMS},
 	}
