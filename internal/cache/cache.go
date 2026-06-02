@@ -31,6 +31,8 @@ type CornerEntry struct {
 type Entry struct {
 	ProgramID         string                   `json:"program_id"`
 	Datetime          string                   `json:"datetime"`
+	EpisodeNumber     int                      `json:"episode_number,omitempty"`
+	EpisodeTitle      string                   `json:"episode_title,omitempty"`
 	Title             string                   `json:"title"`
 	Summary           string                   `json:"summary"`
 	Corners           []CornerEntry            `json:"corners"`
@@ -182,11 +184,28 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 	return Entry{
 		ProgramID:         programID,
 		Datetime:          m.Datetime,
+		EpisodeNumber:     m.EpisodeNumber,
+		EpisodeTitle:      m.EpisodeTitle,
 		Title:             m.Title,
 		Summary:           m.Summary,
 		Corners:           corners,
 		ConversationNotes: notes,
 	}
+}
+
+// NextEpisodeNumber returns the episode number to assign to the next episode.
+// If entries is empty, returns 1.
+// If the latest entry has EpisodeNumber > 0, returns that number + 1.
+// Otherwise (legacy entries without episode_number), returns len(entries) + 1.
+func NextEpisodeNumber(entries []Entry) int {
+	if len(entries) == 0 {
+		return 1
+	}
+	latest := entries[len(entries)-1]
+	if latest.EpisodeNumber > 0 {
+		return latest.EpisodeNumber + 1
+	}
+	return len(entries) + 1
 }
 
 // PastURLs extracts all unique article URLs from entries, in order.

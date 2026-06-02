@@ -450,6 +450,26 @@ func TestBuildEntryFromManifest_ConversationNotesCopied(t *testing.T) {
 	}
 }
 
+func TestBuildEntryFromManifest_EpisodeNumberAndTitleCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:         "エピソード",
+		Datetime:      "2026-06-01T00:00:00Z",
+		EpisodeNumber: 7,
+		EpisodeTitle:  "今週の技術ニュース",
+		Corners:       []model.ManifestCorner{},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd)
+
+	if got.EpisodeNumber != 7 {
+		t.Errorf("EpisodeNumber: got %d, want 7", got.EpisodeNumber)
+	}
+	if got.EpisodeTitle != "今週の技術ニュース" {
+		t.Errorf("EpisodeTitle: got %q, want %q", got.EpisodeTitle, "今週の技術ニュース")
+	}
+}
+
 func TestBuildEntryFromManifest_ConversationNotesNeverNil(t *testing.T) {
 	m := model.Manifest{
 		Title:    "エピソード",
@@ -462,5 +482,35 @@ func TestBuildEntryFromManifest_ConversationNotesNeverNil(t *testing.T) {
 
 	if got.ConversationNotes == nil {
 		t.Error("ConversationNotes must be [] not nil")
+	}
+}
+
+func TestNextEpisodeNumber_NoEntries_ReturnsOne(t *testing.T) {
+	got := cache.NextEpisodeNumber([]cache.Entry{})
+	if got != 1 {
+		t.Errorf("NextEpisodeNumber(empty): got %d, want 1", got)
+	}
+}
+
+func TestNextEpisodeNumber_LatestHasEpisodeNumber_ReturnsNextNumber(t *testing.T) {
+	entries := []cache.Entry{
+		{EpisodeNumber: 3},
+		{EpisodeNumber: 5},
+	}
+	got := cache.NextEpisodeNumber(entries)
+	if got != 6 {
+		t.Errorf("NextEpisodeNumber(latest=5): got %d, want 6", got)
+	}
+}
+
+func TestNextEpisodeNumber_LegacyEntries_ReturnsLenPlusOne(t *testing.T) {
+	entries := []cache.Entry{
+		{EpisodeNumber: 0},
+		{EpisodeNumber: 0},
+		{EpisodeNumber: 0},
+	}
+	got := cache.NextEpisodeNumber(entries)
+	if got != 4 {
+		t.Errorf("NextEpisodeNumber(3 legacy entries): got %d, want 4", got)
 	}
 }

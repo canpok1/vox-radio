@@ -7,6 +7,17 @@ import (
 	"github.com/canpok1/vox-radio/internal/cache"
 )
 
+// episodeHeader returns the heading string for a single episode entry.
+func episodeHeader(e cache.Entry) string {
+	if e.EpisodeNumber <= 0 {
+		return e.Datetime
+	}
+	if e.EpisodeTitle != "" {
+		return fmt.Sprintf("第%d回（%s）%s", e.EpisodeNumber, e.EpisodeTitle, e.Datetime)
+	}
+	return fmt.Sprintf("第%d回 %s", e.EpisodeNumber, e.Datetime)
+}
+
 // formatPastEpisodes formats past episodes as a concise text block for LLM injection.
 // Episodes are ordered newest first. Returns "（なし）" if eps is empty.
 func formatPastEpisodes(eps []cache.Entry) string {
@@ -19,7 +30,7 @@ func formatPastEpisodes(eps []cache.Entry) string {
 
 	for i := len(eps) - 1; i >= 0; i-- {
 		e := eps[i]
-		fmt.Fprintf(&sb, "\n### %s\n", e.Datetime)
+		fmt.Fprintf(&sb, "\n### %s\n", episodeHeader(e))
 
 		if e.Summary != "" {
 			fmt.Fprintf(&sb, "概要: %s\n", e.Summary)
