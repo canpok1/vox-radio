@@ -3,6 +3,7 @@ package rundown
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -15,14 +16,28 @@ type Rundowner interface {
 	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error)
 }
 
-// LLMRundowner uses Selector + Summarizer to produce a Rundown.
-type LLMRundowner struct {
-	selector   sel.Selector
-	summarizer summarize.Summarizer
+// ArticleFetcher fetches the full body text of an article by URL.
+type ArticleFetcher interface {
+	FetchFullText(ctx context.Context, url string) (string, error)
 }
 
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer) *LLMRundowner {
-	return &LLMRundowner{selector: selector, summarizer: summarizer}
+// LLMRundowner uses Selector + Summarizer to produce a Rundown.
+type LLMRundowner struct {
+	selector     sel.Selector
+	summarizer   summarize.Summarizer
+	fetcher      ArticleFetcher
+	excludedURLs map[string]struct{}
+}
+
+// NewLLMRundowner creates a LLMRundowner.
+// fetcher may be nil (skips full-text fetch).
+// excludedURLs is the set of article URLs to exclude before selection (nil = no exclusion).
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher, excludedURLs []string) *LLMRundowner {
+	excluded := make(map[string]struct{}, len(excludedURLs))
+	for _, u := range excludedURLs {
+		excluded[u] = struct{}{}
+	}
+	return &LLMRundowner{selector: selector, summarizer: summarizer, fetcher: fetcher, excludedURLs: excluded}
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error) {
@@ -31,6 +46,18 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 
 	for _, corner := range corners {
 		cornerArticles := articleMap[corner.Title]
+
+		filtered := make([]model.Article, 0, len(cornerArticles))
+		for _, a := range cornerArticles {
+			if _, excluded := r.excludedURLs[a.URL]; !excluded {
+				filtered = append(filtered, a)
+			}
+		}
+		if n := len(cornerArticles) - len(filtered); n > 0 {
+			slog.Info("excluded past articles", "corner", corner.Title, "count", n)
+		}
+		cornerArticles = filtered
+
 		if len(cornerArticles) == 0 {
 			rundownCorners = append(rundownCorners, model.RundownCorner{
 				Title:    corner.Title,
@@ -56,6 +83,15 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			a, ok := articleByURL[url]
 			if !ok {
 				continue
+			}
+			if r.fetcher != nil {
+				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
+					slog.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+				} else if fullText == "" {
+					slog.Warn("full text fetch returned empty body, using feed body", "url", url)
+				} else {
+					a.Body = fullText
+				}
 			}
 			sum, err := r.summarizer.Summarize(ctx, a)
 			if err != nil {

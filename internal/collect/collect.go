@@ -64,6 +64,15 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig) ([]model.Ar
 	return articles, nil
 }
 
+// FetchFullText fetches the full body text of the article at url.
+func (c *Collector) FetchFullText(ctx context.Context, url string) (string, error) {
+	article, err := c.fetchArticle(ctx, url)
+	if err != nil {
+		return "", err
+	}
+	return article.Body, nil
+}
+
 // RunAll collects articles per corner, skipping corners with no source.
 func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error) {
 	logger := c.logger.With("step", "collect")
