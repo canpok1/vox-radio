@@ -54,7 +54,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rd := rundown.NewLLMRundowner(selector, summarizer, nil)
+			rd := rundown.NewLLMRundowner(selector, summarizer, nil, nil)
 
 			result, err := rd.Run(context.Background(), p.Corners, articles)
 			if err != nil {

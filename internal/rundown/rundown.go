@@ -29,17 +29,15 @@ type LLMRundowner struct {
 	excludedURLs map[string]struct{}
 }
 
-// NewLLMRundowner creates a LLMRundowner. fetcher may be nil (skips full-text fetch).
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher) *LLMRundowner {
-	return &LLMRundowner{selector: selector, summarizer: summarizer, fetcher: fetcher}
-}
-
-// SetExcludedURLs sets URLs to exclude from candidates before selection.
-func (r *LLMRundowner) SetExcludedURLs(urls []string) {
-	r.excludedURLs = make(map[string]struct{}, len(urls))
-	for _, u := range urls {
-		r.excludedURLs[u] = struct{}{}
+// NewLLMRundowner creates a LLMRundowner.
+// fetcher may be nil (skips full-text fetch).
+// excludedURLs is the set of article URLs to exclude before selection (nil = no exclusion).
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher, excludedURLs []string) *LLMRundowner {
+	excluded := make(map[string]struct{}, len(excludedURLs))
+	for _, u := range excludedURLs {
+		excluded[u] = struct{}{}
 	}
+	return &LLMRundowner{selector: selector, summarizer: summarizer, fetcher: fetcher, excludedURLs: excluded}
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error) {
@@ -49,19 +47,16 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	for _, corner := range corners {
 		cornerArticles := articleMap[corner.Title]
 
-		if len(r.excludedURLs) > 0 {
-			filtered := make([]model.Article, 0, len(cornerArticles))
-			for _, a := range cornerArticles {
-				if _, excluded := r.excludedURLs[a.URL]; !excluded {
-					filtered = append(filtered, a)
-				}
+		filtered := make([]model.Article, 0, len(cornerArticles))
+		for _, a := range cornerArticles {
+			if _, excluded := r.excludedURLs[a.URL]; !excluded {
+				filtered = append(filtered, a)
 			}
-			excluded := len(cornerArticles) - len(filtered)
-			if excluded > 0 {
-				slog.Info("excluded past articles", "corner", corner.Title, "count", excluded)
-			}
-			cornerArticles = filtered
 		}
+		if n := len(cornerArticles) - len(filtered); n > 0 {
+			slog.Info("excluded past articles", "corner", corner.Title, "count", n)
+		}
+		cornerArticles = filtered
 
 		if len(cornerArticles) == 0 {
 			rundownCorners = append(rundownCorners, model.RundownCorner{

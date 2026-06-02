@@ -85,7 +85,7 @@ func article(url string) model.Article {
 
 func TestLLMRundowner_Run_EmptyArticles_SkipsSelection(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "flow"}}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil)
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -132,7 +132,7 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 			},
 		},
 	}
-	rd := rundown.NewLLMRundowner(ms, msum, nil)
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -181,7 +181,7 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 
 func TestLLMRundowner_Run_SelectorError(t *testing.T) {
 	ms := &mockSelector{err: errors.New("LLM error")}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil)
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -199,7 +199,7 @@ func TestLLMRundowner_Run_SelectorError(t *testing.T) {
 func TestLLMRundowner_Run_SummarizerError(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "f"}}
 	msum := &mockSummarizer{err: errors.New("sum error")}
-	rd := rundown.NewLLMRundowner(ms, msum, nil)
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -218,7 +218,7 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 	ms := &mockSelector{
 		result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "flow"},
 	}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil)
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	cornerTitles := []string{"オープニング", "テック", "エンディング"}
 	var cornerArticles []model.CornerArticles
@@ -249,7 +249,7 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 }
 
 func TestLLMRundowner_Run_ArticlesNotNilForEmptyCorner(t *testing.T) {
-	rd := rundown.NewLLMRundowner(&mockSelector{}, &mockSummarizer{}, nil)
+	rd := rundown.NewLLMRundowner(&mockSelector{}, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -271,8 +271,7 @@ func TestLLMRundowner_Run_ExcludedURLsFilteredBeforeSelect(t *testing.T) {
 	ms := &mockSelector{
 		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/2"}, Flow: "flow"},
 	}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil)
-	rd.SetExcludedURLs([]string{"https://example.com/1"})
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1"})
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -301,8 +300,7 @@ func TestLLMRundowner_Run_ExcludedURLsFilteredBeforeSelect(t *testing.T) {
 
 func TestLLMRundowner_Run_AllArticlesExcluded_EmptyCorner(t *testing.T) {
 	ms := &mockSelector{}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil)
-	rd.SetExcludedURLs([]string{"https://example.com/1", "https://example.com/2"})
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1", "https://example.com/2"})
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -342,7 +340,7 @@ func TestLLMRundowner_Run_FetcherSuccess_BodyReplaced(t *testing.T) {
 			"https://example.com/1": "全文テキスト",
 		},
 	}
-	rd := rundown.NewLLMRundowner(ms, msum, mf)
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -374,7 +372,7 @@ func TestLLMRundowner_Run_FetcherFailure_FallbackToFeedBody(t *testing.T) {
 	}
 	msum := &mockSummarizer{}
 	mf := &mockFetcher{err: errors.New("connection refused")}
-	rd := rundown.NewLLMRundowner(ms, msum, mf)
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -402,7 +400,7 @@ func TestLLMRundowner_Run_FetcherNil_SkipsFetch(t *testing.T) {
 		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
 	}
 	msum := &mockSummarizer{}
-	rd := rundown.NewLLMRundowner(ms, msum, nil)
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
