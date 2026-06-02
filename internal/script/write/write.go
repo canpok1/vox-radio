@@ -107,12 +107,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	castInfo := buildCastInfo(corner.Cast, chars)
 	presetInfo := buildPresetInfo(presets)
 
-	pastEpisodesStr := "（なし）"
-	if len(w.pastEpisodes) > 0 {
-		if b, err := json.Marshal(w.pastEpisodes); err == nil {
-			pastEpisodesStr = string(b)
-		}
-	}
+	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
 
 	previousCornersStr := "（なし）"
 	if len(previousCorners) > 0 {
