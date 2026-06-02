@@ -16,23 +16,33 @@ set -euo pipefail
 REPO="canpok1/vox-radio"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 
-# ---- 引数パース ----
-if [[ $# -gt 1 ]]; then
-  echo "Usage: $0 [VERSION]" >&2
-  echo "  VERSION: release tag (e.g. v0.0.1). Omit to install the latest." >&2
-  exit 1
-fi
-
-if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
+usage() {
   echo "Usage: $0 [VERSION]" >&2
   echo "  VERSION: release tag (e.g. v0.0.1). Omit to install the latest." >&2
   echo "" >&2
   echo "Environment variables:" >&2
   echo "  INSTALL_DIR  Installation directory (default: /usr/local/bin)" >&2
+}
+
+# ---- 引数パース ----
+if [[ $# -gt 1 ]]; then
+  usage
+  exit 1
+fi
+
+if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
+  usage
   exit 0
 fi
 
 VERSION="${1:-}"
+
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "ERROR: $1 が必要です" >&2
+    exit 1
+  fi
+}
 
 # ---- 必須コマンド検出 ----
 if command -v curl >/dev/null 2>&1; then
@@ -44,15 +54,7 @@ else
   exit 1
 fi
 
-if ! command -v tar >/dev/null 2>&1; then
-  echo "ERROR: tar が必要です" >&2
-  exit 1
-fi
-
-if ! command -v uname >/dev/null 2>&1; then
-  echo "ERROR: uname が必要です" >&2
-  exit 1
-fi
+require_cmd tar
 
 # sha256 検証コマンドを選択
 if command -v sha256sum >/dev/null 2>&1; then
@@ -96,14 +98,21 @@ download() {
   fi
 }
 
+download_stdout() {
+  local url="$1"
+  if [[ "$DOWNLOADER" == "curl" ]]; then
+    curl -fsSL "$url"
+  else
+    wget -qO- "$url"
+  fi
+}
+
 # ---- latest 解決 ----
 if [[ -z "$VERSION" ]]; then
   echo "最新バージョンを GitHub API から解決しています..."
-  api_url="https://api.github.com/repos/${REPO}/releases/latest"
-  api_response_file="$(mktemp)"
-  download "$api_url" "$api_response_file"
-  VERSION="$(grep '"tag_name"' "$api_response_file" | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')"
-  rm -f "$api_response_file"
+  VERSION="$(download_stdout "https://api.github.com/repos/${REPO}/releases/latest" \
+    | grep '"tag_name"' \
+    | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')"
   if [[ -z "$VERSION" ]]; then
     echo "ERROR: latest バージョンの解決に失敗しました" >&2
     exit 1
@@ -133,9 +142,8 @@ download "$CHECKSUMS_URL" "$TMPDIR_WORK/$CHECKSUMS_NAME"
 
 # ---- sha256 検証 ----
 echo "チェックサムを検証しています..."
-# checksums.txt 内から対象アセットの行のみ抽出して検証
-grep "$ASSET_NAME" "$TMPDIR_WORK/$CHECKSUMS_NAME" > "$TMPDIR_WORK/expected.txt"
-(cd "$TMPDIR_WORK" && $SHA256CMD --check expected.txt)
+grep "$ASSET_NAME" "$TMPDIR_WORK/$CHECKSUMS_NAME" \
+  | (cd "$TMPDIR_WORK" && $SHA256CMD --check -)
 echo "チェックサム OK"
 
 # ---- 展開 ----
