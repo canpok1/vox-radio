@@ -114,13 +114,14 @@ func TestManager_Append_CreatesFileAndAppends(t *testing.T) {
 	}
 }
 
-func TestManager_Append_PrunesWhenExceedsMaxEntries(t *testing.T) {
+func TestManager_Append_CompactsWhenExceedsMaxEntries(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "cache.jsonl")
 
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約", Articles: []cache.ArticleEntry{{URL: "https://example.com/1"}}}
 	existing := []cache.Entry{
-		{ProgramID: "p", Datetime: "2026-01-01T00:00:00Z", Title: "古い1", Corners: []cache.CornerEntry{}},
-		{ProgramID: "p", Datetime: "2026-01-02T00:00:00Z", Title: "古い2", Corners: []cache.CornerEntry{}},
+		{ProgramID: "p", Datetime: "2026-01-01T00:00:00Z", Title: "古い1", Corners: []cache.CornerEntry{corner}},
+		{ProgramID: "p", Datetime: "2026-01-02T00:00:00Z", Title: "古い2", Corners: []cache.CornerEntry{corner}},
 	}
 	writeJSONL(t, path, existing)
 
@@ -129,7 +130,7 @@ func TestManager_Append_PrunesWhenExceedsMaxEntries(t *testing.T) {
 		ProgramID: "p",
 		Datetime:  "2026-01-03T00:00:00Z",
 		Title:     "新しい",
-		Corners:   []cache.CornerEntry{},
+		Corners:   []cache.CornerEntry{corner},
 	}
 
 	if err := m.Append(newEntry, 2, 9999); err != nil {
@@ -140,28 +141,40 @@ func TestManager_Append_PrunesWhenExceedsMaxEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("got %d entries after pruning maxEntries=2, want 2", len(got))
+	// compact keeps all 3 entries (no deletion)
+	if len(got) != 3 {
+		t.Fatalf("got %d entries after compacting maxEntries=2, want 3 (all kept)", len(got))
 	}
-	// oldest entry should be pruned
-	if got[0].Title != "古い2" {
-		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "古い2")
+	// oldest entry should have corners/notes compacted (emptied)
+	if got[0].Title != "古い1" {
+		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "古い1")
 	}
-	if got[1].Title != "新しい" {
-		t.Errorf("Entry[1].Title: got %q, want %q", got[1].Title, "新しい")
+	if len(got[0].Corners) != 0 {
+		t.Errorf("Entry[0].Corners: got %d corners, want 0 (compacted)", len(got[0].Corners))
+	}
+	// newer entries should keep full data
+	if got[1].Title != "古い2" {
+		t.Errorf("Entry[1].Title: got %q, want %q", got[1].Title, "古い2")
+	}
+	if len(got[1].Corners) != 1 {
+		t.Errorf("Entry[1].Corners: got %d corners, want 1 (kept)", len(got[1].Corners))
+	}
+	if got[2].Title != "新しい" {
+		t.Errorf("Entry[2].Title: got %q, want %q", got[2].Title, "新しい")
 	}
 }
 
-func TestManager_Append_PrunesOldEntriesByRetentionDays(t *testing.T) {
+func TestManager_Append_CompactsOldEntriesByRetentionDays(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "cache.jsonl")
 
 	oldDatetime := time.Now().AddDate(0, 0, -100).Format(time.RFC3339)
 	recentDatetime := time.Now().AddDate(0, 0, -1).Format(time.RFC3339)
 
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約", Articles: []cache.ArticleEntry{{URL: "https://example.com/1"}}}
 	existing := []cache.Entry{
-		{ProgramID: "p", Datetime: oldDatetime, Title: "古すぎる", Corners: []cache.CornerEntry{}},
-		{ProgramID: "p", Datetime: recentDatetime, Title: "最近", Corners: []cache.CornerEntry{}},
+		{ProgramID: "p", Datetime: oldDatetime, Title: "古すぎる", Corners: []cache.CornerEntry{corner}},
+		{ProgramID: "p", Datetime: recentDatetime, Title: "最近", Corners: []cache.CornerEntry{corner}},
 	}
 	writeJSONL(t, path, existing)
 
@@ -170,7 +183,7 @@ func TestManager_Append_PrunesOldEntriesByRetentionDays(t *testing.T) {
 		ProgramID: "p",
 		Datetime:  time.Now().Format(time.RFC3339),
 		Title:     "今",
-		Corners:   []cache.CornerEntry{},
+		Corners:   []cache.CornerEntry{corner},
 	}
 
 	if err := m.Append(newEntry, 100, 90); err != nil {
@@ -181,11 +194,23 @@ func TestManager_Append_PrunesOldEntriesByRetentionDays(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("got %d entries (retention_days=90 should drop entry 100 days old), want 2", len(got))
+	// compact keeps all 3 entries (no deletion)
+	if len(got) != 3 {
+		t.Fatalf("got %d entries (retention_days=90 should compact but not delete entry 100 days old), want 3", len(got))
 	}
-	if got[0].Title != "最近" {
-		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "最近")
+	// oldest entry should have corners/notes compacted
+	if got[0].Title != "古すぎる" {
+		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "古すぎる")
+	}
+	if len(got[0].Corners) != 0 {
+		t.Errorf("Entry[0].Corners: got %d corners, want 0 (compacted)", len(got[0].Corners))
+	}
+	// recent entries should keep full data
+	if got[1].Title != "最近" {
+		t.Errorf("Entry[1].Title: got %q, want %q", got[1].Title, "最近")
+	}
+	if len(got[1].Corners) != 1 {
+		t.Errorf("Entry[1].Corners: got %d corners, want 1 (kept)", len(got[1].Corners))
 	}
 }
 
@@ -309,7 +334,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 		},
 	}
 
-	got := cache.BuildEntryFromManifest("prog-id", m, rd)
+	got := cache.BuildEntryFromManifest("prog-id", m, rd, 0, 0)
 
 	if got.ProgramID != "prog-id" {
 		t.Errorf("ProgramID: got %q, want %q", got.ProgramID, "prog-id")
@@ -362,7 +387,7 @@ func TestBuildEntryFromManifest_EmptyCorners(t *testing.T) {
 	m := model.Manifest{Title: "空", Datetime: "2026-06-01T00:00:00Z"}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 	if got.Corners == nil {
 		t.Error("Corners should be non-nil for empty manifest")
 	}
@@ -385,7 +410,7 @@ func TestBuildEntryFromManifest_CornerSummaryAndPointsIncluded(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -412,7 +437,7 @@ func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -433,7 +458,7 @@ func TestBuildEntryFromManifest_ConversationNotesCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 
 	if len(got.ConversationNotes) != 1 {
 		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
@@ -460,7 +485,7 @@ func TestBuildEntryFromManifest_EpisodeNumberAndTitleCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 
 	if got.EpisodeNumber != 7 {
 		t.Errorf("EpisodeNumber: got %d, want 7", got.EpisodeNumber)
@@ -478,7 +503,7 @@ func TestBuildEntryFromManifest_ConversationNotesNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
 
 	if got.ConversationNotes == nil {
 		t.Error("ConversationNotes must be [] not nil")
@@ -512,5 +537,139 @@ func TestNextEpisodeNumber_LegacyEntries_ReturnsLenPlusOne(t *testing.T) {
 	got := cache.NextEpisodeNumber(entries)
 	if got != 4 {
 		t.Errorf("NextEpisodeNumber(3 legacy entries): got %d, want 4", got)
+	}
+}
+
+func TestBuildEntryFromManifest_NewFields_Populated(t *testing.T) {
+	m := model.Manifest{
+		Title:       "エピソード",
+		Datetime:    "2026-06-01T00:00:00Z",
+		Description: "番組説明テキスト",
+		AudioFile:   "episode.mp3",
+		Corners:     []model.ManifestCorner{},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 12345678, 1800)
+
+	if got.Description != "番組説明テキスト" {
+		t.Errorf("Description: got %q, want %q", got.Description, "番組説明テキスト")
+	}
+	if got.AudioFile != "episode.mp3" {
+		t.Errorf("AudioFile: got %q, want %q", got.AudioFile, "episode.mp3")
+	}
+	if got.Bytes != 12345678 {
+		t.Errorf("Bytes: got %d, want 12345678", got.Bytes)
+	}
+	if got.DurationSec != 1800 {
+		t.Errorf("DurationSec: got %d, want 1800", got.DurationSec)
+	}
+}
+
+func TestCompact_KeepsAllEntries(t *testing.T) {
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+	entries := []cache.Entry{
+		{Datetime: "2026-01-01T00:00:00Z", Title: "e1", Corners: []cache.CornerEntry{corner}},
+		{Datetime: "2026-01-02T00:00:00Z", Title: "e2", Corners: []cache.CornerEntry{corner}},
+		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}},
+	}
+
+	got := cache.Compact(entries, 2, 9999)
+
+	if len(got) != 3 {
+		t.Fatalf("Compact: got %d entries, want 3 (all kept)", len(got))
+	}
+}
+
+func TestCompact_EmptiesCornersAndNotes_ForEntriesOutsideMaxEntries(t *testing.T) {
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+	note := model.ConversationNote{Category: "近況", Note: "メモ"}
+	entries := []cache.Entry{
+		{Datetime: "2026-01-01T00:00:00Z", Title: "e1", Corners: []cache.CornerEntry{corner}, ConversationNotes: []model.ConversationNote{note}},
+		{Datetime: "2026-01-02T00:00:00Z", Title: "e2", Corners: []cache.CornerEntry{corner}, ConversationNotes: []model.ConversationNote{note}},
+		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}, ConversationNotes: []model.ConversationNote{note}},
+	}
+
+	got := cache.Compact(entries, 2, 9999)
+
+	// entry[0] is outside maxEntries=2 window, should be compacted
+	if len(got[0].Corners) != 0 {
+		t.Errorf("Compact: entry[0].Corners should be empty (compacted), got %d", len(got[0].Corners))
+	}
+	if len(got[0].ConversationNotes) != 0 {
+		t.Errorf("Compact: entry[0].ConversationNotes should be empty (compacted), got %d", len(got[0].ConversationNotes))
+	}
+	// entries[1,2] are within window, should keep full data
+	if len(got[1].Corners) != 1 {
+		t.Errorf("Compact: entry[1].Corners should have 1 (kept), got %d", len(got[1].Corners))
+	}
+	if len(got[2].Corners) != 1 {
+		t.Errorf("Compact: entry[2].Corners should have 1 (kept), got %d", len(got[2].Corners))
+	}
+}
+
+func TestCompact_EmptiesCornersAndNotes_ForOldEntries(t *testing.T) {
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+	oldDatetime := time.Now().AddDate(0, 0, -100).Format(time.RFC3339)
+	recentDatetime := time.Now().AddDate(0, 0, -1).Format(time.RFC3339)
+
+	entries := []cache.Entry{
+		{Datetime: oldDatetime, Title: "old", Corners: []cache.CornerEntry{corner}},
+		{Datetime: recentDatetime, Title: "recent", Corners: []cache.CornerEntry{corner}},
+	}
+
+	got := cache.Compact(entries, 100, 90)
+
+	// old entry should be compacted (outside retention_days=90)
+	if len(got[0].Corners) != 0 {
+		t.Errorf("Compact: old entry.Corners should be empty (compacted), got %d", len(got[0].Corners))
+	}
+	// recent entry should keep full data
+	if len(got[1].Corners) != 1 {
+		t.Errorf("Compact: recent entry.Corners should have 1 (kept), got %d", len(got[1].Corners))
+	}
+}
+
+func TestCompact_KeepsLightweightFields(t *testing.T) {
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+	entries := []cache.Entry{
+		{
+			Datetime:    "2026-01-01T00:00:00Z",
+			Title:       "e1",
+			Summary:     "要約",
+			Description: "番組説明",
+			AudioFile:   "episode.mp3",
+			Bytes:       12345,
+			DurationSec: 600,
+			Corners:     []cache.CornerEntry{corner},
+		},
+		{Datetime: "2026-01-02T00:00:00Z", Title: "e2", Corners: []cache.CornerEntry{corner}},
+		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}},
+	}
+
+	got := cache.Compact(entries, 2, 9999)
+
+	// entry[0] is compacted, but lightweight fields must be preserved
+	e0 := got[0]
+	if e0.Title != "e1" {
+		t.Errorf("Compact: entry[0].Title: got %q, want e1", e0.Title)
+	}
+	if e0.Summary != "要約" {
+		t.Errorf("Compact: entry[0].Summary: got %q, want 要約", e0.Summary)
+	}
+	if e0.Description != "番組説明" {
+		t.Errorf("Compact: entry[0].Description: got %q, want 番組説明", e0.Description)
+	}
+	if e0.AudioFile != "episode.mp3" {
+		t.Errorf("Compact: entry[0].AudioFile: got %q, want episode.mp3", e0.AudioFile)
+	}
+	if e0.Bytes != 12345 {
+		t.Errorf("Compact: entry[0].Bytes: got %d, want 12345", e0.Bytes)
+	}
+	if e0.DurationSec != 600 {
+		t.Errorf("Compact: entry[0].DurationSec: got %d, want 600", e0.DurationSec)
+	}
+	if len(e0.Corners) != 0 {
+		t.Errorf("Compact: entry[0].Corners should be empty (compacted), got %d", len(e0.Corners))
 	}
 }

@@ -200,3 +200,26 @@ func TestFormatPastEpisodes_LegacyEntry_NoEpisodeNumberDisplay(t *testing.T) {
 		t.Errorf("formatPastEpisodes() should NOT contain '第0回' for legacy entries, got:\n%s", got)
 	}
 }
+
+func TestFormatPastEpisodes_NewTechnicalFields_NotLeakedToLLM(t *testing.T) {
+	eps := []cache.Entry{
+		{
+			Datetime:    "2024-01-01T10:00:00Z",
+			Summary:     "エピソード概要",
+			Description: "番組説明テキスト",
+			AudioFile:   "episode.mp3",
+			Bytes:       12345678,
+			DurationSec: 1800,
+		},
+	}
+	got := formatPastEpisodes(eps)
+
+	for _, notWant := range []string{"番組説明テキスト", "episode.mp3", "12345678", "1800"} {
+		if strings.Contains(got, notWant) {
+			t.Errorf("formatPastEpisodes() should NOT contain %q\ngot:\n%s", notWant, got)
+		}
+	}
+	if !strings.Contains(got, "エピソード概要") {
+		t.Errorf("formatPastEpisodes() should contain 'エピソード概要'")
+	}
+}

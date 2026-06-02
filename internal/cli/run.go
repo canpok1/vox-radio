@@ -11,6 +11,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/collect"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/pipeline"
 	"github.com/canpok1/vox-radio/internal/rundown"
@@ -147,7 +148,21 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, cacheCfg
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	entry := cache.BuildEntryFromManifest(programID, m, rd)
+	episodePath := fileio.EpisodePath(outDir)
+	var bytes int64
+	var durationSec int
+	if b, err := mediainfo.FileSize(episodePath); err != nil {
+		logger.Warn("mediainfo.FileSize failed (non-fatal)", "err", err)
+	} else {
+		bytes = b
+	}
+	if d, err := mediainfo.Duration(episodePath); err != nil {
+		logger.Warn("mediainfo.Duration failed (non-fatal)", "err", err)
+	} else {
+		durationSec = int(d)
+	}
+
+	entry := cache.BuildEntryFromManifest(programID, m, rd, bytes, durationSec)
 	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
 		return err
 	}

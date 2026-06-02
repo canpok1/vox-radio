@@ -32,6 +32,7 @@ func NewRootCmd() *cobra.Command {
 		newRunCmd(),
 		newConfigCmd(),
 		newProfileCmd(),
+		newFeedgenCmd(),
 	)
 
 	return root
