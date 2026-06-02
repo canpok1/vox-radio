@@ -55,16 +55,10 @@ type LLMSelector struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
-	pastURLs       []string
 }
 
 func NewLLMSelector(client llm.Client, promptTemplate string, temperature float64) *LLMSelector {
 	return &LLMSelector{client: client, promptTemplate: promptTemplate, temperature: temperature}
-}
-
-// SetPastURLs configures the URLs of articles handled in past episodes for deduplication.
-func (s *LLMSelector) SetPastURLs(urls []string) {
-	s.pastURLs = urls
 }
 
 func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error) {
@@ -87,17 +81,9 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 		return SelectResult{}, fmt.Errorf("marshal articles: %w", err)
 	}
 
-	pastURLsStr := "（なし）"
-	if len(s.pastURLs) > 0 {
-		if b, err := json.Marshal(s.pastURLs); err == nil {
-			pastURLsStr = string(b)
-		}
-	}
-
 	prompt := strings.NewReplacer(
 		"{{corner}}", string(cornerJSON),
 		"{{articles}}", string(articlesJSON),
-		"{{past_urls}}", pastURLsStr,
 	).Replace(s.promptTemplate)
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{

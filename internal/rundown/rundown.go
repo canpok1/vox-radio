@@ -3,6 +3,7 @@ package rundown
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -17,12 +18,21 @@ type Rundowner interface {
 
 // LLMRundowner uses Selector + Summarizer to produce a Rundown.
 type LLMRundowner struct {
-	selector   sel.Selector
-	summarizer summarize.Summarizer
+	selector     sel.Selector
+	summarizer   summarize.Summarizer
+	excludedURLs map[string]struct{}
 }
 
 func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer) *LLMRundowner {
 	return &LLMRundowner{selector: selector, summarizer: summarizer}
+}
+
+// SetExcludedURLs sets URLs to exclude from candidates before selection.
+func (r *LLMRundowner) SetExcludedURLs(urls []string) {
+	r.excludedURLs = make(map[string]struct{}, len(urls))
+	for _, u := range urls {
+		r.excludedURLs[u] = struct{}{}
+	}
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error) {
@@ -31,6 +41,21 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 
 	for _, corner := range corners {
 		cornerArticles := articleMap[corner.Title]
+
+		if len(r.excludedURLs) > 0 {
+			filtered := make([]model.Article, 0, len(cornerArticles))
+			for _, a := range cornerArticles {
+				if _, excluded := r.excludedURLs[a.URL]; !excluded {
+					filtered = append(filtered, a)
+				}
+			}
+			excluded := len(cornerArticles) - len(filtered)
+			if excluded > 0 {
+				slog.Info("excluded past articles", "corner", corner.Title, "count", excluded)
+			}
+			cornerArticles = filtered
+		}
+
 		if len(cornerArticles) == 0 {
 			rundownCorners = append(rundownCorners, model.RundownCorner{
 				Title:    corner.Title,

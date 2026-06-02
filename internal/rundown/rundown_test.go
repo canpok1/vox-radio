@@ -15,13 +15,15 @@ import (
 // --- mocks ---
 
 type mockSelector struct {
-	result sel.SelectResult
-	err    error
-	called bool
+	result           sel.SelectResult
+	err              error
+	called           bool
+	receivedArticles []model.Article
 }
 
-func (m *mockSelector) Select(_ context.Context, _ config.CornerConfig, _ []model.Article) (sel.SelectResult, error) {
+func (m *mockSelector) Select(_ context.Context, _ config.CornerConfig, articles []model.Article) (sel.SelectResult, error) {
 	m.called = true
+	m.receivedArticles = articles
 	return m.result, m.err
 }
 
@@ -236,5 +238,70 @@ func TestLLMRundowner_Run_ArticlesNotNilForEmptyCorner(t *testing.T) {
 	}
 	if got.Corners[0].Articles == nil {
 		t.Error("Articles must not be nil (JSON should marshal as [] not null)")
+	}
+}
+
+func TestLLMRundowner_Run_ExcludedURLsFilteredBeforeSelect(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/2"}, Flow: "flow"},
+	}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{})
+	rd.SetExcludedURLs([]string{"https://example.com/1"})
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "除外記事", Body: "body"},
+					{URL: "https://example.com/2", Title: "対象記事", Body: "body"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(ms.receivedArticles) != 1 {
+		t.Fatalf("selector should receive 1 article after exclusion, got %d", len(ms.receivedArticles))
+	}
+	if ms.receivedArticles[0].URL != "https://example.com/2" {
+		t.Errorf("selector should receive non-excluded article URL, got %q", ms.receivedArticles[0].URL)
+	}
+}
+
+func TestLLMRundowner_Run_AllArticlesExcluded_EmptyCorner(t *testing.T) {
+	ms := &mockSelector{}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{})
+	rd.SetExcludedURLs([]string{"https://example.com/1", "https://example.com/2"})
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "除外1", Body: "body"},
+					{URL: "https://example.com/2", Title: "除外2", Body: "body"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	got, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ms.called {
+		t.Error("selector should not be called when all articles are excluded")
+	}
+	if len(got.Corners) != 1 {
+		t.Fatalf("should have 1 corner, got %d", len(got.Corners))
+	}
+	if len(got.Corners[0].Articles) != 0 {
+		t.Errorf("corner should have no articles when all excluded, got %d", len(got.Corners[0].Articles))
 	}
 }
