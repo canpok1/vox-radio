@@ -314,8 +314,7 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 		}
 		seIdx := b.addInput(entry.File)
 		seKey := fmt.Sprintf("run%d_se%d", runIdx, i)
-		seRawLabel := fmt.Sprintf("[%d:a]", seIdx)
-		seLabel := applySilenceTrim(b, seRawLabel, seKey, entry.EffectiveTrimSilence())
+		seLabel := applySilenceTrim(b, fmt.Sprintf("[%d:a]", seIdx), seKey, entry.EffectiveTrimSilence())
 		delayedLabel := fmt.Sprintf("[%s]", seKey)
 		nextLabel := fmt.Sprintf("[run%d_after_se%d]", runIdx, i)
 		b.addFilter(fmt.Sprintf("%svolume=%.2f,adelay=%d|%d%s",
