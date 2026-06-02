@@ -1,0 +1,48 @@
+package write
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/canpok1/vox-radio/internal/cache"
+)
+
+// formatPastEpisodes formats past episodes as a concise text block for LLM injection.
+// Episodes are ordered newest first. Returns "（なし）" if eps is empty.
+func formatPastEpisodes(eps []cache.Entry) string {
+	if len(eps) == 0 {
+		return "（なし）"
+	}
+
+	var sb strings.Builder
+	fmt.Fprintln(&sb, "## 過去のエピソード（新しい順）")
+
+	for i := len(eps) - 1; i >= 0; i-- {
+		e := eps[i]
+		fmt.Fprintf(&sb, "\n### %s\n", e.Datetime)
+
+		if e.Summary != "" {
+			fmt.Fprintf(&sb, "概要: %s\n", e.Summary)
+		}
+
+		for _, c := range e.Corners {
+			fmt.Fprintf(&sb, "- %s: %s\n", c.Title, c.Summary)
+			for _, p := range c.Points {
+				fmt.Fprintf(&sb, "  ・%s\n", p)
+			}
+		}
+
+		if len(e.ConversationNotes) > 0 {
+			fmt.Fprintln(&sb, "会話メモ:")
+			for _, n := range e.ConversationNotes {
+				if len(n.CharacterIDs) > 0 {
+					fmt.Fprintf(&sb, "- (%s/%s) %s\n", n.Category, strings.Join(n.CharacterIDs, ","), n.Note)
+				} else {
+					fmt.Fprintf(&sb, "- (%s) %s\n", n.Category, n.Note)
+				}
+			}
+		}
+	}
+
+	return sb.String()
+}

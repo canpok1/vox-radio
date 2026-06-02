@@ -324,11 +324,16 @@ func TestLLMWriter_Write_PastEpisodesInjectedInPrompt(t *testing.T) {
 		{
 			ProgramID: "tech-daily",
 			Title:     "過去エピソード1",
+			Datetime:  "2024-01-01T10:00:00Z",
 			Summary:   "先週の要約",
 			Corners: []cache.CornerEntry{
-				{Articles: []cache.ArticleEntry{
-					{Title: "過去記事", URL: "https://example.com/old"},
-				}},
+				{
+					Title:   "コーナー1",
+					Summary: "コーナー概要",
+					Articles: []cache.ArticleEntry{
+						{Title: "過去記事", URL: "https://example.com/old"},
+					},
+				},
 			},
 		},
 	})
@@ -342,11 +347,17 @@ func TestLLMWriter_Write_PastEpisodesInjectedInPrompt(t *testing.T) {
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if !strings.Contains(prompt, "過去エピソード1") {
-		t.Errorf("prompt should contain past episode title, got: %s", prompt)
+	if !strings.Contains(prompt, "先週の要約") {
+		t.Errorf("prompt should contain past episode summary, got: %s", prompt)
 	}
-	if !strings.Contains(prompt, "https://example.com/old") {
-		t.Errorf("prompt should contain past article URL, got: %s", prompt)
+	if !strings.Contains(prompt, "コーナー1") {
+		t.Errorf("prompt should contain past corner title, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "過去エピソード1") {
+		t.Errorf("prompt should NOT contain past episode title (Entry.Title excluded), got: %s", prompt)
+	}
+	if strings.Contains(prompt, "https://example.com/old") {
+		t.Errorf("prompt should NOT contain article URL (Articles excluded), got: %s", prompt)
 	}
 }
 
