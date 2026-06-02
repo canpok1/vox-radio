@@ -796,3 +796,39 @@ func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
 		t.Error("expected error when dify-chat provider has no dify-chat block")
 	}
 }
+
+func boolPtr(v bool) *bool { return &v }
+
+func TestJingleEntry_EffectiveTrimSilence(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, true},
+		{boolPtr(false), false},
+		{boolPtr(true), true},
+	}
+	for _, c := range cases {
+		e := config.JingleEntry{TrimSilence: c.ptr}
+		if got := e.EffectiveTrimSilence(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
+	}
+}
+
+func TestSEEntry_EffectiveTrimSilence(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, true},
+		{boolPtr(false), false},
+		{boolPtr(true), true},
+	}
+	for _, c := range cases {
+		e := config.SEEntry{TrimSilence: c.ptr}
+		if got := e.EffectiveTrimSilence(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
+	}
+}

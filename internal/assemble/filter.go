@@ -16,6 +16,9 @@ const (
 	outputNormFilter = "loudnorm=I=-16:TP=-1.5:LRA=11"
 	// outputLimiterLimit is the linear equivalent of the TP ceiling used in outputNormFilter (10^(-1.5/20) ≈ 0.841).
 	outputLimiterLimit = 0.841
+	// silenceTrimThreshold is the amplitude below which audio is treated as silence
+	// when stripping leading/trailing silence from jingle/SE inputs.
+	silenceTrimThreshold = "-50dB"
 )
 
 // BuildContext holds all data needed to build the ffmpeg command.
@@ -310,10 +313,12 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			continue
 		}
 		seIdx := b.addInput(entry.File)
-		delayedLabel := fmt.Sprintf("[run%d_se%d]", runIdx, i)
+		seKey := fmt.Sprintf("run%d_se%d", runIdx, i)
+		seLabel := applySilenceTrim(b, fmt.Sprintf("[%d:a]", seIdx), seKey, entry.EffectiveTrimSilence())
+		delayedLabel := fmt.Sprintf("[%s]", seKey)
 		nextLabel := fmt.Sprintf("[run%d_after_se%d]", runIdx, i)
-		b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,adelay=%d|%d%s",
-			seIdx, entry.Volume, ev.offsetMs, ev.offsetMs, delayedLabel))
+		b.addFilter(fmt.Sprintf("%svolume=%.2f,adelay=%d|%d%s",
+			seLabel, entry.Volume, ev.offsetMs, ev.offsetMs, delayedLabel))
 		b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=first:normalize=0%s",
 			currentLabel, delayedLabel, nextLabel))
 		currentLabel = nextLabel
@@ -412,10 +417,24 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 	return concatLabel
 }
 
-// buildJingleFadeIn applies fade-in to a jingle input and returns the resulting label.
+// applySilenceTrim strips leading and trailing silence from currentLabel when enabled.
+// Trailing silence is removed via the areverse trick (same pattern as applyFadeOut).
+// Returns currentLabel unchanged when enabled is false.
+func applySilenceTrim(b *filterBuilder, currentLabel string, key string, enabled bool) string {
+	if !enabled {
+		return currentLabel
+	}
+	outLabel := fmt.Sprintf("[%s_st]", key)
+	b.addFilter(fmt.Sprintf(
+		"%ssilenceremove=start_periods=1:start_threshold=%s,areverse,silenceremove=start_periods=1:start_threshold=%s,areverse%s",
+		currentLabel, silenceTrimThreshold, silenceTrimThreshold, outLabel))
+	return outLabel
+}
+
+// buildJingleFadeIn applies silence trim then fade-in to a jingle input and returns the resulting label.
 func buildJingleFadeIn(b *filterBuilder, idx int, entry config.JingleEntry) string {
-	rawLabel := fmt.Sprintf("[%d:a]", idx)
-	return applyFadeIn(b, rawLabel, idx, entry.FadeIn)
+	label := applySilenceTrim(b, fmt.Sprintf("[%d:a]", idx), fmt.Sprintf("jingle%d", idx), entry.EffectiveTrimSilence())
+	return applyFadeIn(b, label, idx, entry.FadeIn)
 }
 
 // applyFadeOut applies fade-out to the current label and returns the resulting label.
