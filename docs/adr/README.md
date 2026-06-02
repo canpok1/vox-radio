@@ -32,3 +32,4 @@
 | [0024](0024-corner-level-pause-and-remove-program-pause-length.md) | コーナーごとの開始/終了無音設定と program.segment_pause_sec / program.length_sec の削除 | 採用 | 2026-06-01 |
 | [0025](0025-se-sequential-playback-default.md) | SE の既定再生方式を順次再生（serial）に変更し per-SE overlay フラグを追加する | 採用 | 2026-06-02 |
 | [0026](0026-feed-generation-as-vox-radio-subcommand.md) | feed 生成ツールを vox-radio の feedgen サブコマンドとして集約する（ADR-0012 の修正） | 採用 | 2026-06-02 |
+| [0027](0027-move-katakana-conversion-from-write-to-direct.md) | カタカナ化（読み変換）を write から direct へ移し、summary 入力を write 出力に変更する | 採用 | 2026-06-02 |

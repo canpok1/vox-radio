@@ -42,6 +42,19 @@ var insertionsSchema = json.RawMessage(`{
         },
         "additionalProperties": false
       }
+    },
+    "line_conversions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["corner_index", "line_index", "text"],
+        "properties": {
+          "corner_index": {"type": "integer", "minimum": 0},
+          "line_index":   {"type": "integer", "minimum": 0},
+          "text":         {"type": "string"}
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false
@@ -75,9 +88,16 @@ type pauseInsertion struct {
 	Reason         string  `json:"reason,omitempty"`
 }
 
+type lineConversion struct {
+	CornerIndex int    `json:"corner_index"`
+	LineIndex   int    `json:"line_index"`
+	Text        string `json:"text"`
+}
+
 type insertionsResponse struct {
 	Insertions      []insertion      `json:"insertions"`
 	PauseInsertions []pauseInsertion `json:"pause_insertions"`
+	LineConversions []lineConversion `json:"line_conversions"`
 }
 
 type LLMDirector struct {
@@ -129,12 +149,12 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions), nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, resp.LineConversions), nil
 }
 
 type insertKey struct{ cornerIdx, lineIdx int }
 
-func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion) model.Script {
+func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
 		key := insertKey{ins.CornerIndex, ins.AfterLineIndex}
@@ -147,6 +167,12 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			key := insertKey{p.CornerIndex, p.AfterLineIndex}
 			pauseMap[key] = append(pauseMap[key], p)
 		}
+	}
+
+	conversionMap := make(map[insertKey]string, len(lineConversions))
+	for _, lc := range lineConversions {
+		key := insertKey{lc.CornerIndex, lc.LineIndex}
+		conversionMap[key] = lc.Text
 	}
 
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
@@ -178,6 +204,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 
 		for li, line := range corner.Lines {
+			text := line.Text
+			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
+				text = converted
+			}
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,
 				SpeakerRole: line.SpeakerRole,
@@ -185,7 +215,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 				Intonation:  line.Intonation,
 				Pitch:       line.Pitch,
 				Speed:       line.Speed,
-				Text:        line.Text,
+				Text:        text,
 			})
 			key := insertKey{ci, li}
 			for _, ins := range insertionMap[key] {

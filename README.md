@@ -110,7 +110,7 @@ collect → rundown → script → synth → assemble → manifest
 | `script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
 | `synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
-| `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--script` で番組全体要約と会話メモ（`conversation_notes`）、`--lines` でコーナー単位の会話要約を LLM で生成して付加する |
+| `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
 | `feedgen` | キャッシュ（`.jsonl`）と `distribution.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |

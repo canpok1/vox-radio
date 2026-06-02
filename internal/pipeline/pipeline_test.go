@@ -87,7 +87,7 @@ type stubProgramSummarizer struct {
 	called  bool
 }
 
-func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.Script) (model.ProgramSummary, error) {
+func (s *stubProgramSummarizer) Summarize(_ context.Context, _ model.ScriptLines) (model.ProgramSummary, error) {
 	s.called = true
 	notes := s.notes
 	if notes == nil {
@@ -304,6 +304,8 @@ func TestRunner_Run_CallsProgramSummarizer(t *testing.T) {
 	s := defaultStubs()
 	s.sum = &stubProgramSummarizer{summary: "今回は技術ニュースを紹介しました。"}
 
+	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
+
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -318,6 +320,8 @@ func TestRunner_Run_ManifestIncludesSummary(t *testing.T) {
 	s := defaultStubs()
 	wantSummary := "今回は技術ニュースを紹介しました。"
 	s.sum = &stubProgramSummarizer{summary: wantSummary}
+
+	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -351,6 +355,8 @@ func TestRunner_Run_ProgramSummarizerError(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.sum = &stubProgramSummarizer{err: errors.New("llm error")}
+
+	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from ProgramSummarizer, got nil")
@@ -522,6 +528,8 @@ func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
 			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
 		},
 	}
+
+	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
