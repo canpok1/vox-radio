@@ -422,3 +422,36 @@ func TestLLMRundowner_Run_FetcherNil_SkipsFetch(t *testing.T) {
 		t.Errorf("summarizer should receive original feed body when fetcher is nil, got %q", body)
 	}
 }
+
+func TestLLMRundowner_Run_FetcherEmptyBody_FallbackToFeedBody(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
+	}
+	msum := &mockSummarizer{}
+	mf := &mockFetcher{
+		bodyByURL: map[string]string{
+			"https://example.com/1": "",
+		},
+	}
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "フィードスニペット"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードスニペット" {
+		t.Errorf("summarizer should receive feed body when full text is empty, got %q", body)
+	}
+}

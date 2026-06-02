@@ -87,6 +87,8 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			if r.fetcher != nil {
 				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
 					slog.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+				} else if fullText == "" {
+					slog.Warn("full text fetch returned empty body, using feed body", "url", url)
 				} else {
 					a.Body = fullText
 				}
