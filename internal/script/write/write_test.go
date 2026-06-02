@@ -474,3 +474,41 @@ func TestLLMWriter_Write_NoPreviousCorners_ShowsNone(t *testing.T) {
 		t.Errorf("prompt should show （なし） when no previous corners, got: %s", prompt)
 	}
 }
+
+func TestLLMWriter_SetEpisodeNumber_InjectsNumberIntoPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "episode={{episode_number}}", 0, nil)
+	w.SetEpisodeNumber(5)
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "5") {
+		t.Errorf("prompt should contain episode number 5, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_SetEpisodeNumber_Zero_InjectsUnknown(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "episode={{episode_number}}", 0, nil)
+	// default is 0 (no SetEpisodeNumber call)
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "（不明）") {
+		t.Errorf("prompt should contain （不明） when episode number is 0, got: %s", prompt)
+	}
+}

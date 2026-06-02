@@ -50,8 +50,9 @@ type Assembler interface {
 
 // Options configures a single pipeline run.
 type Options struct {
-	OutDir      string
-	GeneratedAt time.Time // zero value means time.Now().UTC()
+	OutDir        string
+	GeneratedAt   time.Time // zero value means time.Now().UTC()
+	EpisodeNumber int       // 0 means unknown (omitted from manifest)
 }
 
 // Runner orchestrates the full collect→rundown→script→synth→assemble→manifest pipeline.
@@ -165,7 +166,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes)
+	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes, opts.EpisodeNumber, programSummary.EpisodeTitle)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

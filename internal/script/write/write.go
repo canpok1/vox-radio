@@ -58,6 +58,7 @@ type LLMWriter struct {
 	temperature    float64
 	config         *config.Config
 	pastEpisodes   []cache.Entry
+	episodeNumber  int
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
@@ -68,6 +69,12 @@ func NewLLMWriter(client llm.Client, promptTemplate string, temperature float64,
 // SetPastEpisodes configures recent past episodes to inject into the script generation prompt.
 func (w *LLMWriter) SetPastEpisodes(eps []cache.Entry) {
 	w.pastEpisodes = eps
+}
+
+// SetEpisodeNumber configures the episode number to inject into the script generation prompt.
+// 0 means unknown (will be rendered as "（不明）").
+func (w *LLMWriter) SetEpisodeNumber(n int) {
+	w.episodeNumber = n
 }
 
 func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
@@ -109,6 +116,11 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 
 	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
 
+	episodeNumberStr := "（不明）"
+	if w.episodeNumber > 0 {
+		episodeNumberStr = fmt.Sprintf("%d", w.episodeNumber)
+	}
+
 	previousCornersStr := "（なし）"
 	if len(previousCorners) > 0 {
 		prompts := make([]previousCornerForPrompt, len(previousCorners))
@@ -133,6 +145,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{preset_info}}", presetInfo,
 		"{{past_episodes}}", pastEpisodesStr,
 		"{{previous_corners}}", previousCornersStr,
+		"{{episode_number}}", episodeNumberStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)

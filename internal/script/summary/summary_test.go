@@ -192,6 +192,27 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 	}
 }
 
+func TestLLMProgramSummarizer_Summarize_ReturnsEpisodeTitle(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","episode_title":"今週の面白技術","conversation_notes":[]}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+
+	scr := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+
+	got, err := s.Summarize(context.Background(), scr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.EpisodeTitle != "今週の面白技術" {
+		t.Errorf("EpisodeTitle = %q, want %q", got.EpisodeTitle, "今週の面白技術")
+	}
+}
+
 func TestLLMProgramSummarizer_Summarize_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)

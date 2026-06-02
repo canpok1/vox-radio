@@ -12,9 +12,10 @@ import (
 
 var summarySchema = json.RawMessage(`{
   "type": "object",
-  "required": ["summary", "conversation_notes"],
+  "required": ["summary", "episode_title", "conversation_notes"],
   "properties": {
     "summary": {"type": "string"},
+    "episode_title": {"type": "string"},
     "conversation_notes": {
       "type": "array",
       "items": {

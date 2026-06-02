@@ -19,7 +19,15 @@ func formatPastEpisodes(eps []cache.Entry) string {
 
 	for i := len(eps) - 1; i >= 0; i-- {
 		e := eps[i]
-		fmt.Fprintf(&sb, "\n### %s\n", e.Datetime)
+		if e.EpisodeNumber > 0 {
+			if e.EpisodeTitle != "" {
+				fmt.Fprintf(&sb, "\n### 第%d回（%s）%s\n", e.EpisodeNumber, e.EpisodeTitle, e.Datetime)
+			} else {
+				fmt.Fprintf(&sb, "\n### 第%d回 %s\n", e.EpisodeNumber, e.Datetime)
+			}
+		} else {
+			fmt.Fprintf(&sb, "\n### %s\n", e.Datetime)
+		}
 
 		if e.Summary != "" {
 			fmt.Fprintf(&sb, "概要: %s\n", e.Summary)
