@@ -35,11 +35,11 @@ func formatPastEpisodes(eps []cache.Entry) string {
 		if len(e.ConversationNotes) > 0 {
 			fmt.Fprintln(&sb, "会話メモ:")
 			for _, n := range e.ConversationNotes {
+				charIDs := ""
 				if len(n.CharacterIDs) > 0 {
-					fmt.Fprintf(&sb, "- (%s/%s) %s\n", n.Category, strings.Join(n.CharacterIDs, ","), n.Note)
-				} else {
-					fmt.Fprintf(&sb, "- (%s) %s\n", n.Category, n.Note)
+					charIDs = "/" + strings.Join(n.CharacterIDs, ",")
 				}
+				fmt.Fprintf(&sb, "- (%s%s) %s\n", n.Category, charIDs, n.Note)
 			}
 		}
 	}
