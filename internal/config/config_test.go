@@ -799,44 +799,36 @@ func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
 
 func boolPtr(v bool) *bool { return &v }
 
-func TestJingleEntry_EffectiveTrimSilence_Nil(t *testing.T) {
-	e := config.JingleEntry{}
-	if got := e.EffectiveTrimSilence(); got != true {
-		t.Errorf("got %v, want true (nil defaults to true)", got)
+func TestJingleEntry_EffectiveTrimSilence(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, true},
+		{boolPtr(false), false},
+		{boolPtr(true), true},
+	}
+	for _, c := range cases {
+		e := config.JingleEntry{TrimSilence: c.ptr}
+		if got := e.EffectiveTrimSilence(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
 	}
 }
 
-func TestJingleEntry_EffectiveTrimSilence_False(t *testing.T) {
-	e := config.JingleEntry{TrimSilence: boolPtr(false)}
-	if got := e.EffectiveTrimSilence(); got != false {
-		t.Errorf("got %v, want false", got)
+func TestSEEntry_EffectiveTrimSilence(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, true},
+		{boolPtr(false), false},
+		{boolPtr(true), true},
 	}
-}
-
-func TestJingleEntry_EffectiveTrimSilence_True(t *testing.T) {
-	e := config.JingleEntry{TrimSilence: boolPtr(true)}
-	if got := e.EffectiveTrimSilence(); got != true {
-		t.Errorf("got %v, want true", got)
-	}
-}
-
-func TestSEEntry_EffectiveTrimSilence_Nil(t *testing.T) {
-	e := config.SEEntry{}
-	if got := e.EffectiveTrimSilence(); got != true {
-		t.Errorf("got %v, want true (nil defaults to true)", got)
-	}
-}
-
-func TestSEEntry_EffectiveTrimSilence_False(t *testing.T) {
-	e := config.SEEntry{TrimSilence: boolPtr(false)}
-	if got := e.EffectiveTrimSilence(); got != false {
-		t.Errorf("got %v, want false", got)
-	}
-}
-
-func TestSEEntry_EffectiveTrimSilence_True(t *testing.T) {
-	e := config.SEEntry{TrimSilence: boolPtr(true)}
-	if got := e.EffectiveTrimSilence(); got != true {
-		t.Errorf("got %v, want true", got)
+	for _, c := range cases {
+		e := config.SEEntry{TrimSilence: c.ptr}
+		if got := e.EffectiveTrimSilence(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
 	}
 }

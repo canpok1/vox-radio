@@ -434,8 +434,7 @@ func applySilenceTrim(b *filterBuilder, currentLabel string, key string, enabled
 
 // buildJingleFadeIn applies silence trim then fade-in to a jingle input and returns the resulting label.
 func buildJingleFadeIn(b *filterBuilder, idx int, entry config.JingleEntry) string {
-	rawLabel := fmt.Sprintf("[%d:a]", idx)
-	label := applySilenceTrim(b, rawLabel, fmt.Sprintf("jingle%d", idx), entry.EffectiveTrimSilence())
+	label := applySilenceTrim(b, fmt.Sprintf("[%d:a]", idx), fmt.Sprintf("jingle%d", idx), entry.EffectiveTrimSilence())
 	return applyFadeIn(b, label, idx, entry.FadeIn)
 }
 
