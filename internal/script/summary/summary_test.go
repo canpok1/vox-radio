@@ -28,15 +28,16 @@ func TestLLMProgramSummarizer_Summarize_ReturnsSummaryText(t *testing.T) {
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "今日はAIについて話すのだ"},
-			{Type: model.SegmentTypeSE, AssetName: "chime"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "そうですね"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{
+				{SpeakerRole: "zundamon", Text: "今日はAIについて話すのだ"},
+				{SpeakerRole: "metan", Text: "そうですね"},
+			}},
 		},
 	}
 
-	got, err := s.Summarize(context.Background(), scr)
+	got, err := s.Summarize(context.Background(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -56,13 +57,15 @@ func TestLLMProgramSummarizer_Summarize_ReturnsConversationNotes(t *testing.T) {
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "カフェの話"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{
+				{SpeakerRole: "zundamon", Text: "カフェの話"},
+			}},
 		},
 	}
 
-	got, err := s.Summarize(context.Background(), scr)
+	got, err := s.Summarize(context.Background(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,13 +90,13 @@ func TestLLMProgramSummarizer_Summarize_NilConversationNotesNormalized(t *testin
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		},
 	}
 
-	got, err := s.Summarize(context.Background(), scr)
+	got, err := s.Summarize(context.Background(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -116,13 +119,13 @@ func TestLLMProgramSummarizer_Summarize_NilCharacterIDsNormalized(t *testing.T) 
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		},
 	}
 
-	got, err := s.Summarize(context.Background(), scr)
+	got, err := s.Summarize(context.Background(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -140,15 +143,16 @@ func TestLLMProgramSummarizer_Summarize_PromptContainsSpeakerAndText(t *testing.
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "AIチップの話"},
-			{Type: model.SegmentTypeSE, AssetName: "chime"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "metan", Text: "最新ニュースです"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{
+				{SpeakerRole: "zundamon", Text: "AIチップの話"},
+				{SpeakerRole: "metan", Text: "最新ニュースです"},
+			}},
 		},
 	}
 
-	_, _ = s.Summarize(context.Background(), scr)
+	_, _ = s.Summarize(context.Background(), lines)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -174,14 +178,14 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSE, AssetName: "start_jingle"},
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "こんにちは"},
+	// SE はそもそも ScriptLines に存在しないため、SE フィールドが含まれないことを確認
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}},
 		},
 	}
 
-	_, _ = s.Summarize(context.Background(), scr)
+	_, _ = s.Summarize(context.Background(), lines)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -198,13 +202,13 @@ func TestLLMProgramSummarizer_Summarize_ReturnsEpisodeTitle(t *testing.T) {
 	}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		},
 	}
 
-	got, err := s.Summarize(context.Background(), scr)
+	got, err := s.Summarize(context.Background(), lines)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -217,13 +221,13 @@ func TestLLMProgramSummarizer_Summarize_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
 
-	scr := model.Script{
-		Segments: []model.ScriptSegment{
-			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		},
 	}
 
-	_, err := s.Summarize(context.Background(), scr)
+	_, err := s.Summarize(context.Background(), lines)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -939,3 +939,98 @@ func TestLLMDirector_Direct_DirectionInPrompt(t *testing.T) {
 		t.Errorf("direction value should appear in direct prompt, got: %s", capturedPrompt)
 	}
 }
+
+func TestLLMDirector_Direct_LineConversionApplied(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えーあい"},{"corner_index":0,"line_index":1,"text":"りどみーどっとえむでぃー"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "AI"},
+		model.Line{SpeakerRole: "guest", Text: "README.md"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[0].Text != "えーあい" {
+		t.Errorf("Segment[0].Text: got %q, want えーあい (converted)", got.Segments[0].Text)
+	}
+	if got.Segments[1].Text != "りどみーどっとえむでぃー" {
+		t.Errorf("Segment[1].Text: got %q, want りどみーどっとえむでぃー (converted)", got.Segments[1].Text)
+	}
+}
+
+func TestLLMDirector_Direct_LineConversionFallback_MissingEntry(t *testing.T) {
+	mc := &mockClient{
+		// line_conversions has only line 0; line 1 is missing → fallback to original
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えーあい"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "AI"},
+		model.Line{SpeakerRole: "guest", Text: "README.md"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[0].Text != "えーあい" {
+		t.Errorf("Segment[0].Text: got %q, want えーあい (converted)", got.Segments[0].Text)
+	}
+	if got.Segments[1].Text != "README.md" {
+		t.Errorf("Segment[1].Text: got %q, want README.md (original fallback)", got.Segments[1].Text)
+	}
+}
+
+func TestLLMDirector_Direct_LineConversionFallback_EmptyConversions(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "AI"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "AI" {
+		t.Errorf("Segment[0].Text: got %q, want AI (original fallback)", got.Segments[0].Text)
+	}
+}
+
+func TestLLMDirector_Direct_LineConversionFallback_EmptyConvertedText(t *testing.T) {
+	mc := &mockClient{
+		// converted text is empty string → fallback to original
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":""}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "AI"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Segments[0].Text != "AI" {
+		t.Errorf("Segment[0].Text: got %q, want AI (empty converted text → original fallback)", got.Segments[0].Text)
+	}
+}

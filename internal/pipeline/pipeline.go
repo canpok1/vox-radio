@@ -13,9 +13,9 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-// ProgramSummarizer generates a summary of the episode from the final script.
+// ProgramSummarizer generates a summary of the episode from the write-step output lines.
 type ProgramSummarizer interface {
-	Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error)
+	Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error)
 }
 
 // CornerSummarizer generates a summary for a single corner from its script lines.
@@ -135,19 +135,20 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		summaryLogger.Info("開始")
 		summaryStart := time.Now()
 
+		var scriptLines model.ScriptLines
+		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
+			return fmt.Errorf("read script lines for summarization: %w", err)
+		}
+
 		if r.ProgramSummarizer != nil {
 			summaryLogger.Info("番組全体を要約中")
-			programSummary, err = r.ProgramSummarizer.Summarize(ctx, scr)
+			programSummary, err = r.ProgramSummarizer.Summarize(ctx, scriptLines)
 			if err != nil {
 				return fmt.Errorf("summarize program: %w", err)
 			}
 		}
 
 		if r.CornerSummarizer != nil {
-			var scriptLines model.ScriptLines
-			if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
-				return fmt.Errorf("read script lines for corner summarization: %w", err)
-			}
 			cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
 			for i, cl := range scriptLines.Corners {
 				summaryLogger.Info(fmt.Sprintf("コーナー「%s」を要約中 (%d/%d)", cl.Title, i+1, len(scriptLines.Corners)))

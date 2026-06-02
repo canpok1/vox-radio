@@ -33,9 +33,9 @@ var summarySchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
-// ProgramSummarizer generates a summary of the episode from the script.
+// ProgramSummarizer generates a summary of the episode from the write-step output.
 type ProgramSummarizer interface {
-	Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error)
+	Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error)
 }
 
 // LLMProgramSummarizer generates a program summary using an LLM.
@@ -55,12 +55,15 @@ type speechEntry struct {
 	Text    string `json:"text"`
 }
 
-// Summarize generates a program summary and conversation notes from the script's speech segments.
-func (s *LLMProgramSummarizer) Summarize(ctx context.Context, scr model.Script) (model.ProgramSummary, error) {
-	entries := make([]speechEntry, 0, len(scr.Segments))
-	for _, seg := range scr.Segments {
-		if seg.Type == model.SegmentTypeSpeech && seg.Text != "" {
-			entries = append(entries, speechEntry{Speaker: seg.SpeakerRole, Text: seg.Text})
+// Summarize generates a program summary and conversation notes from the write-step output lines.
+func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error) {
+	totalLines := lines.TotalLines()
+	entries := make([]speechEntry, 0, totalLines)
+	for _, corner := range lines.Corners {
+		for _, line := range corner.Lines {
+			if line.Text != "" {
+				entries = append(entries, speechEntry{Speaker: line.SpeakerRole, Text: line.Text})
+			}
 		}
 	}
 
