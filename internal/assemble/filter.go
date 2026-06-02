@@ -76,8 +76,10 @@ type seEvent struct {
 
 // speechItem represents an element in the speech timeline: either a clip or an explicit pause.
 type speechItem struct {
-	clipIndex   int     // >= 0 for a clip, -1 for an explicit pause
-	durationSec float64 // used when clipIndex == -1
+	clipIndex     int     // >= 0 for a clip, -1 for an explicit pause
+	durationSec   float64 // used when clipIndex == -1
+	speakerRole   string  // speaker role for clip items (empty for pauses)
+	pauseAfterSec float64 // silence to insert after this clip (0 = continuation, >0 = pause duration)
 }
 
 // bgmInterval represents a BGM active period within a run.
@@ -121,7 +123,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 			runLabels[i] = ""
 			continue
 		}
-		label := buildRun(b, run, clipInputIdx, bctx.Assets, bctx.PauseSec, i)
+		label := buildRun(b, run, clipInputIdx, bctx.Assets, i)
 		runLabels[i] = label
 	}
 
@@ -192,6 +194,21 @@ func hasClips(items []speechItem) bool {
 	return slices.ContainsFunc(items, func(it speechItem) bool { return it.clipIndex >= 0 })
 }
 
+// nextClipSpeakerRole scans segments forward from index from+1 and returns the speaker_role
+// of the next speech segment, skipping SE/BGM segments. Returns ("", false) when a pause or
+// jingle segment is encountered first, or when the end of segments is reached.
+func nextClipSpeakerRole(segments []model.ScriptSegment, from int) (string, bool) {
+	for j := from + 1; j < len(segments); j++ {
+		switch segments[j].Type {
+		case model.SegmentTypeSpeech:
+			return segments[j].SpeakerRole, true
+		case model.SegmentTypePause, model.SegmentTypeJingle:
+			return "", false
+		}
+	}
+	return "", false
+}
+
 // collectRuns scans the script and splits it into runs separated by jingle segments.
 // Returns the list of runs and the list of jingle asset names between them.
 func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) ([]runData, []string) {
@@ -201,15 +218,23 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) 
 
 	current := newRun()
 
-	for _, seg := range script.Segments {
+	for i, seg := range script.Segments {
 		switch seg.Type {
 		case model.SegmentTypeSpeech:
 			if clipIdx < len(clips) {
-				current.speechItems = append(current.speechItems, speechItem{clipIndex: clipIdx})
-				current.durationMs += int(clips[clipIdx].DurationSec * 1000)
+				nextRole, hasNext := nextClipSpeakerRole(script.Segments, i)
+				pauseAfter := pauseSec
+				if hasNext && nextRole == seg.SpeakerRole {
+					pauseAfter = 0
+				}
+				current.speechItems = append(current.speechItems, speechItem{
+					clipIndex:     clipIdx,
+					speakerRole:   seg.SpeakerRole,
+					pauseAfterSec: pauseAfter,
+				})
+				current.durationMs += int(clips[clipIdx].DurationSec*1000) + int(pauseAfter*1000)
 				clipIdx++
 			}
-			current.durationMs += int(pauseSec * 1000)
 
 		case model.SegmentTypePause:
 			if seg.DurationSec > 0 {
@@ -280,8 +305,8 @@ func newRun() runBuilder {
 }
 
 // buildRun constructs the filter_complex entries for a single run and returns the output label.
-func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, pauseSec float64, runIdx int) string {
-	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, pauseSec, runIdx)
+func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
+	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, runIdx)
 	currentLabel := speechLabel
 
 	// Single pass over bgmIntervals to determine hasBGM, hasDucking, and firstDuckRatio.
@@ -378,9 +403,10 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 }
 
 // buildSpeechConcat generates filter entries for the speech timeline of a run.
-// Items can be clip references or explicit pauses; default pauseSec is inserted between consecutive clips.
-func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int, pauseSec float64, runIdx int) string {
-	// Find the last clip's position (reverse scan) to know where to stop adding inter-clip pauses.
+// Items can be clip references or explicit pauses; item.pauseAfterSec determines the silence
+// inserted after each clip (0 = continuation with same speaker, >0 = default pause duration).
+func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int, runIdx int) string {
+	// Find the last clip's position (reverse scan) to skip the trailing pause after the final clip.
 	lastClipPos := -1
 	for i := len(items) - 1; i >= 0; i-- {
 		if items[i].clipIndex >= 0 {
@@ -394,9 +420,9 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 	for i, item := range items {
 		if item.clipIndex >= 0 {
 			parts = append(parts, fmt.Sprintf("[%d:a]", clipInputIdx[item.clipIndex]))
-			if i != lastClipPos {
+			if i != lastClipPos && item.pauseAfterSec > 0 {
 				label := fmt.Sprintf("[run%d_p%d]", runIdx, silenceIdx)
-				b.addSilence(pauseSec, label)
+				b.addSilence(item.pauseAfterSec, label)
 				parts = append(parts, label)
 				silenceIdx++
 			}
