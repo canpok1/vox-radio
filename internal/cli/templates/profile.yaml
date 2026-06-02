@@ -65,19 +65,23 @@ corners:
 #       file: assets/jingle/opening.mp3
 #       fade_in: 0.5
 #       fade_out: 0.5
+#       # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
 #       description: "番組冒頭で流すオープニングジングル"  # 省略可
 #     ending:
 #       file: assets/jingle/ending.mp3
 #       fade_in: 0.5
 #       fade_out: 1.0
+#       # trim_silence: false  # 省略時は true
 #   se:
 #     chime:
 #       file: assets/se/chime.wav
 #       volume: 0.8
+#       # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
 #       description: "話題の切り替わりに鳴らす明るいチャイム音"  # 省略可
 #     transition:
 #       file: assets/se/transition.wav
 #       volume: 0.8
+#       # trim_silence: false  # 省略時は true
 #   bgm:
 #     talk_bgm:
 #       file: assets/bgm/talk.mp3

@@ -1109,3 +1109,145 @@ func TestBuildFFmpegArgs_BGMNoLoop_NoStreamLoop(t *testing.T) {
 		}
 	}
 }
+
+// TestBuildFFmpegArgs_JingleSilenceRemoveDefault verifies that silenceremove is applied
+// to a jingle when TrimSilence is nil (default = true).
+func TestBuildFFmpegArgs_JingleSilenceRemoveDefault(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeJingle, AssetName: "op"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"op": {File: "/assets/op.wav", FadeIn: 0.3},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("filter_complex missing silenceremove for jingle with default TrimSilence: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_JingleSilenceRemoveDisabled verifies that silenceremove is NOT applied
+// when TrimSilence is explicitly false.
+func TestBuildFFmpegArgs_JingleSilenceRemoveDisabled(t *testing.T) {
+	f := false
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeJingle, AssetName: "op"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"op": {File: "/assets/op.wav", FadeIn: 0.3, TrimSilence: &f},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("filter_complex must not contain silenceremove when TrimSilence=false: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SESilenceRemoveDefault verifies that silenceremove is applied
+// to a SE when TrimSilence is nil (default = true).
+func TestBuildFFmpegArgs_SESilenceRemoveDefault(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("filter_complex missing silenceremove for SE with default TrimSilence: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SESilenceRemoveDisabled verifies that silenceremove is NOT applied
+// when SE TrimSilence is explicitly false.
+func TestBuildFFmpegArgs_SESilenceRemoveDisabled(t *testing.T) {
+	f := false
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, TrimSilence: &f},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("filter_complex must not contain silenceremove when SE TrimSilence=false: %s", args.FilterComplex)
+	}
+}

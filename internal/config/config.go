@@ -35,13 +35,29 @@ type JingleEntry struct {
 	File        string  `yaml:"file"`
 	FadeIn      float64 `yaml:"fade_in"`
 	FadeOut     float64 `yaml:"fade_out"`
+	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
 	Description string  `yaml:"description,omitempty"`
 }
+
+// EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
+func (e JingleEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
 
 type SEEntry struct {
 	File        string  `yaml:"file"`
 	Volume      float64 `yaml:"volume"`
+	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
 	Description string  `yaml:"description,omitempty"`
+}
+
+// EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
+func (e SEEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
+
+// effectiveTrimSilence returns true when v is nil (default) or points to true.
+func effectiveTrimSilence(v *bool) bool {
+	if v == nil {
+		return true
+	}
+	return *v
 }
 
 type BGMEntry struct {
