@@ -77,13 +77,19 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
+	seDurations, err := a.collectSEDurations(script)
+	if err != nil {
+		return nil, err
+	}
+
 	bctx := BuildContext{
-		Script:   script,
-		Clips:    clips,
-		ClipsDir: clipsDir,
-		Assets:   a.AssetsConfig,
-		PauseSec: defaultPauseSec,
-		OutPath:  outPath,
+		Script:      script,
+		Clips:       clips,
+		ClipsDir:    clipsDir,
+		Assets:      a.AssetsConfig,
+		PauseSec:    defaultPauseSec,
+		OutPath:     outPath,
+		SEDurations: seDurations,
 	}
 
 	ffArgs, err := BuildFFmpegArgs(bctx)
@@ -118,6 +124,30 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 	logger.Info(fmt.Sprintf("完了 (duration=%.1fs, %.2fMB, %.1fs)", dur, float64(size)/(1024*1024), time.Since(start).Seconds()))
 
 	return &Result{DurationSec: dur, Bytes: size}, nil
+}
+
+// collectSEDurations fetches duration (via getDuration) for each unique SE asset
+// that appears in the script and is defined in AssetsConfig.SE.
+func (a *Assembler) collectSEDurations(script model.Script) (map[string]float64, error) {
+	seen := make(map[string]struct{})
+	for _, seg := range script.Segments {
+		if seg.Type == model.SegmentTypeSE && seg.AssetName != "" {
+			seen[seg.AssetName] = struct{}{}
+		}
+	}
+	durations := make(map[string]float64)
+	for name := range seen {
+		entry, ok := a.AssetsConfig.SE[name]
+		if !ok {
+			continue
+		}
+		dur, err := a.getDuration(entry.File)
+		if err != nil {
+			return nil, fmt.Errorf("get SE duration for %q: %w", name, err)
+		}
+		durations[name] = dur
+	}
+	return durations, nil
 }
 
 // buildCmdArgs converts FFmpegArgs into a flat argument slice for exec.Command.

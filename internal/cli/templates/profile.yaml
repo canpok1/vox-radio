@@ -77,11 +77,13 @@ corners:
 #       file: assets/se/chime.wav
 #       volume: 0.8
 #       # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
+#       # overlay: true  # 省略時は false（SE が鳴り終わってから次のセリフを再生）。セリフに重ねたい場合のみ true
 #       description: "話題の切り替わりに鳴らす明るいチャイム音"  # 省略可
 #     transition:
 #       file: assets/se/transition.wav
 #       volume: 0.8
 #       # trim_silence: false  # 省略時は true
+#       # overlay: true  # 省略時は false（順次再生）
 #   bgm:
 #     talk_bgm:
 #       file: assets/bgm/talk.mp3

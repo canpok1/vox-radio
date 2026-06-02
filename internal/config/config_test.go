@@ -832,3 +832,20 @@ func TestSEEntry_EffectiveTrimSilence(t *testing.T) {
 		}
 	}
 }
+
+func TestSEEntry_EffectiveOverlay(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, false},
+		{boolPtr(false), false},
+		{boolPtr(true), true},
+	}
+	for _, c := range cases {
+		e := config.SEEntry{Overlay: c.ptr}
+		if got := e.EffectiveOverlay(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
+	}
+}
