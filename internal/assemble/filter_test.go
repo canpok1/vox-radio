@@ -1049,11 +1049,11 @@ func TestBuildFFmpegArgs_BGMStopThenPlay_BothIntervalsInOutput(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// speech1(2s) + pauseSec(0.5s) = 2500ms → BGM stop
-	// speech2(3s) + pauseSec(0.5s) = 3500ms → BGM restart at 2500+3500=6000ms
-	// 2nd interval adelay should be 6000ms
-	if !strings.Contains(args.FilterComplex, "adelay=6000|6000") {
-		t.Errorf("2nd BGM interval should have adelay=6000 (started after speech1+pause+speech2+pause), filter: %s", args.FilterComplex)
+	// All three speeches are same speaker (host), so no inter-clip pauses (continuation).
+	// speech1(2s) → speech2(3s): BGM stop at 2000ms, BGM restart at 2000+3000=5000ms.
+	// 2nd interval adelay should be 5000ms.
+	if !strings.Contains(args.FilterComplex, "adelay=5000|5000") {
+		t.Errorf("2nd BGM interval should have adelay=5000 (same-speaker continuation, no pauses), filter: %s", args.FilterComplex)
 	}
 
 	// The filter that merges the two BGM raw intervals (bgm0_raw + bgm1_raw) must use
@@ -1212,6 +1212,152 @@ func TestBuildFFmpegArgs_SESilenceRemoveDefault(t *testing.T) {
 	}
 	if !strings.Contains(args.FilterComplex, "silenceremove") {
 		t.Errorf("filter_complex missing silenceremove for SE with default TrimSilence: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SameSpeakerContinuation_NoSilence verifies that consecutive clips
+// from the same speaker are joined without silence between them.
+func TestBuildFFmpegArgs_SameSpeakerContinuation_NoSilence(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.3,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Same-speaker consecutive clips must NOT have anullsrc silence between them.
+	if strings.Contains(args.FilterComplex, "anullsrc") {
+		t.Errorf("same-speaker continuation must not insert silence, filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_DifferentSpeaker_HasDefaultPause verifies that clips from different
+// speakers have the default pauseSec silence inserted between them.
+func TestBuildFFmpegArgs_DifferentSpeaker_HasDefaultPause(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.3,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(args.FilterComplex, "anullsrc") {
+		t.Errorf("different-speaker clips must insert silence, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "atrim=duration=0.300") {
+		t.Errorf("different-speaker pause must be 0.300s, filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_ExplicitPause_BreaksContinuation verifies that an explicit pause segment
+// between same-speaker clips is NOT treated as continuation (silence is still inserted).
+func TestBuildFFmpegArgs_ExplicitPause_BreaksContinuation(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypePause, DurationSec: 1.0},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.3,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Explicit pause breaks continuation: both defaultPauseSec and explicit pause must appear.
+	if !strings.Contains(args.FilterComplex, "atrim=duration=1.000") {
+		t.Errorf("explicit pause duration 1.000s must appear, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "atrim=duration=0.300") {
+		t.Errorf("default pause 0.300s must appear (explicit pause breaks continuation), filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SameSpeakerContinuation_SEOffsetConsistent verifies that when two
+// same-speaker clips are a continuation (no silence between them), the SE offset reflects
+// the actual timeline (durationMs does not include the omitted pause).
+func TestBuildFFmpegArgs_SameSpeakerContinuation_SEOffsetConsistent(t *testing.T) {
+	// clip0(host,2s) → SE → clip1(host,3s): continuation, no inter-clip pause.
+	// SE offset = clip0.duration = 2000ms (NOT 2000 + pauseSec).
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "B"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 1.0},
+			},
+		},
+		PauseSec: 0.3,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// SE offset must be 2000ms: clip0 duration only, no pause (same-speaker continuation).
+	if !strings.Contains(args.FilterComplex, "adelay=2000|2000") {
+		t.Errorf("SE offset must be 2000ms (no pause for same-speaker continuation), filter: %s", args.FilterComplex)
 	}
 }
 
