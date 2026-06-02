@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/canpok1/vox-radio/internal/cache"
+	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -56,7 +57,7 @@ func Run(opts Options) (int, error) {
 	}
 
 	publicDir := cfg.EffectivePublicDir()
-	if err := os.MkdirAll(publicDir, 0o755); err != nil {
+	if err := fileio.EnsureDir(publicDir); err != nil {
 		return 0, fmt.Errorf("create public dir: %w", err)
 	}
 

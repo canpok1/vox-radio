@@ -10,18 +10,16 @@ import (
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/feed"
 	"github.com/canpok1/vox-radio/internal/model"
+	"gopkg.in/yaml.v3"
 )
 
 func writeDistributionYAML(t *testing.T, path string, cfg model.DistributionConfig) {
 	t.Helper()
-	// Use simple YAML marshaling approach
-	content := "program_id: " + cfg.ProgramID + "\n" +
-		"feed:\n" +
-		"  language: " + cfg.Feed.Language + "\n" +
-		"  audio_url_template: \"" + cfg.Feed.AudioURLTemplate + "\"\n" +
-		"output:\n" +
-		"  public: " + cfg.Output.Public + "\n"
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal distribution yaml: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("write distribution yaml: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package feed
 import (
 	"encoding/xml"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,10 +91,10 @@ func BuildFeed(cfg model.DistributionConfig, entries []cache.Entry) (string, err
 		item := rssItem{
 			Title:          itemTitle(e),
 			Description:    e.Summary,
-			GUID:           rssGUID{IsPermaLink: "false", Value: fmt.Sprintf("ep-%d", e.EpisodeNumber)},
+			GUID:           rssGUID{IsPermaLink: "false", Value: "ep-" + strconv.Itoa(e.EpisodeNumber)},
 			PubDate:        pubDate(e.Datetime),
 			Enclosure:      rssEnclosure{URL: url, Length: e.Bytes, Type: "audio/mpeg"},
-			ItunesDuration: fmt.Sprintf("%d", e.DurationSec),
+			ItunesDuration: strconv.Itoa(e.DurationSec),
 		}
 		if cfg.Feed.Credit != "" {
 			item.ItunesAuthor = cfg.Feed.Credit
@@ -126,11 +127,8 @@ func BuildFeed(cfg model.DistributionConfig, entries []cache.Entry) (string, err
 }
 
 func audioURL(tmpl string, episodeNumber int, audioFile string) string {
-	r := strings.NewReplacer(
-		"{episode_number}", fmt.Sprintf("%d", episodeNumber),
-		"{audio_file}", audioFile,
-	)
-	return r.Replace(tmpl)
+	s := strings.ReplaceAll(tmpl, "{episode_number}", strconv.Itoa(episodeNumber))
+	return strings.ReplaceAll(s, "{audio_file}", audioFile)
 }
 
 func itemTitle(e cache.Entry) string {
