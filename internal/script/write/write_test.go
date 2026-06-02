@@ -3,6 +3,7 @@ package write_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -510,5 +511,43 @@ func TestLLMWriter_SetEpisodeNumber_Zero_InjectsUnknown(t *testing.T) {
 	prompt := mc.captured[0].Messages[0].Content
 	if !strings.Contains(prompt, "（不明）") {
 		t.Errorf("prompt should contain （不明） when episode number is 0, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_PromptContainsVarietyInstruction(t *testing.T) {
+	templateBytes, err := os.ReadFile("../../cli/prompts/write.md")
+	if err != nil {
+		t.Fatalf("failed to read write.md: %v", err)
+	}
+
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, string(templateBytes), 0, nil)
+	w.SetPastEpisodes([]cache.Entry{
+		{
+			ProgramID: "tech-daily",
+			Title:     "過去エピソード1",
+			Datetime:  "2024-01-01T10:00:00Z",
+			Summary:   "先週の要約",
+			Corners:   []cache.CornerEntry{{Title: "コーナー1", Summary: "コーナー概要"}},
+		},
+	})
+
+	_, err = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "意図せず似た切り口・ネタ・オチを繰り返さないこと") {
+		t.Errorf("prompt should contain unintentional repetition avoidance instruction, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "反復を自覚したセリフ") {
+		t.Errorf("prompt should contain intentional repetition instruction, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "オチ・リアクションのパターンをワンパターンにせず") {
+		t.Errorf("prompt should contain reaction variety instruction, got: %s", prompt)
 	}
 }
