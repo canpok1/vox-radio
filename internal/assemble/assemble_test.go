@@ -331,3 +331,89 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 		}
 	}
 }
+
+// TestAssembler_Run_SE_DurationFetched verifies that Assembler.Run calls getDuration
+// for each unique sequential SE asset that appears in the script.
+func TestAssembler_Run_SE_DurationFetched(t *testing.T) {
+	durationCalls := make(map[string]int)
+	a := &Assembler{
+		AssetsConfig: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8},
+			},
+		},
+		Program:   config.ProgramConfig{},
+		runFFmpeg: func(_ context.Context, _ []string, _ io.Writer) error { return nil },
+		getDuration: func(path string) (float64, error) {
+			durationCalls[path]++
+			return 1.5, nil
+		},
+		getFileSize: func(_ string) (int64, error) { return 512, nil },
+		logger:      slog.Default(),
+	}
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, Text: "A"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"}, // duplicate: only one getDuration call
+			{Type: model.SegmentTypeSpeech, Text: "B"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			{Index: 1, File: "clip_001.wav", DurationSec: 2.0},
+		},
+	}
+
+	dir := t.TempDir()
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// getDuration should be called once for chime.wav (SE) and once for out.mp3 (result duration).
+	if durationCalls["/assets/chime.wav"] != 1 {
+		t.Errorf("getDuration for chime.wav: got %d calls, want 1", durationCalls["/assets/chime.wav"])
+	}
+}
+
+// TestAssembler_Run_SE_DurationError returns error when getDuration fails for a sequential SE.
+func TestAssembler_Run_SE_DurationError(t *testing.T) {
+	a := &Assembler{
+		AssetsConfig: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8},
+			},
+		},
+		Program:   config.ProgramConfig{},
+		runFFmpeg: func(_ context.Context, _ []string, _ io.Writer) error { return nil },
+		getDuration: func(path string) (float64, error) {
+			if path == "/assets/chime.wav" {
+				return 0, errors.New("ffprobe failed")
+			}
+			return 1.0, nil
+		},
+		getFileSize: func(_ string) (int64, error) { return 512, nil },
+		logger:      slog.Default(),
+	}
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, Text: "hello"},
+			{Type: model.SegmentTypeSE, AssetName: "chime"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+		},
+	}
+
+	dir := t.TempDir()
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	if err == nil {
+		t.Error("expected error when getDuration fails for SE, got nil")
+	}
+}

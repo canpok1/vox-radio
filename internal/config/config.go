@@ -46,11 +46,16 @@ type SEEntry struct {
 	File        string  `yaml:"file"`
 	Volume      float64 `yaml:"volume"`
 	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
+	Overlay     *bool   `yaml:"overlay,omitempty"` // nil=false (sequential); true=overlay on speech track
 	Description string  `yaml:"description,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
 func (e SEEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
+
+// EffectiveOverlay returns true only when Overlay is explicitly true.
+// Default (nil) is false: the SE plays to completion before the next dialogue.
+func (e SEEntry) EffectiveOverlay() bool { return e.Overlay != nil && *e.Overlay }
 
 // effectiveTrimSilence returns true when v is nil (default) or points to true.
 func effectiveTrimSilence(v *bool) bool {

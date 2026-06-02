@@ -318,7 +318,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | セグメント種別 | `type` 値 | 再生方式 | 説明 |
 |---|---|---|---|
 | 音声（ナレーション） | `speech` | serial | メイン音声。複数同時不可 |
-| 効果音 | `se` | overlay | 音声に重ねて再生。複数同時可 |
+| 効果音 | `se` | serial（既定）/ overlay（`overlay: true` 指定時） | 既定は SE が鳴り終わってから次のセリフを再生（順次）。`overlay: true` を設定すると音声に重ねて再生 |
 | BGM | `bgm` | overlay | 音声の裏で再生。排他（停止→切替）。`asset_name` 空 = 停止 |
 | ジングル | `jingle` | serial | 単独再生（音声・BGMと重ならない）。前後に pause が入る |
 
@@ -341,6 +341,8 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 |---|---|---|---|
 | `file` | string | 必須 | 音声ファイルパス |
 | `volume` | float64 | 任意 | 音量倍率。デフォルト: 0（Go ゼロ値） |
+| `trim_silence` | bool | 任意 | 前後の無音を自動除去するかどうか。デフォルト: true |
+| `overlay` | bool | 任意 | `true` = 音声に重ねて再生（従来の overlay 動作）。`false` または省略 = SE が鳴り終わってから次のセリフを再生（順次）。デフォルト: false |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
 ##### `assets.bgm` マップ値

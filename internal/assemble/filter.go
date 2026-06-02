@@ -25,12 +25,13 @@ const (
 // Jingles are placed as SegmentTypeJingle in Script; OP/ED jingles are injected
 // into Script by the Assembler before calling BuildFFmpegArgs.
 type BuildContext struct {
-	Script   model.Script
-	Clips    model.ClipsMeta
-	ClipsDir string
-	Assets   config.AssetsConfig
-	PauseSec float64
-	OutPath  string
+	Script      model.Script
+	Clips       model.ClipsMeta
+	ClipsDir    string
+	Assets      config.AssetsConfig
+	PauseSec    float64
+	OutPath     string
+	SEDurations map[string]float64 // duration in seconds per SE asset name (for sequential SE)
 }
 
 // FFmpegInput holds a single ffmpeg input file with optional pre-input options.
@@ -74,11 +75,21 @@ type seEvent struct {
 	offsetMs  int
 }
 
-// speechItem represents an element in the speech timeline: either a clip or an explicit pause.
+type speechItemKind int
+
+const (
+	speechItemKindClip  speechItemKind = iota
+	speechItemKindPause                // explicit pause segment
+	speechItemKindSeqSE                // sequential SE (plays to completion before next item)
+)
+
+// speechItem represents an element in the speech timeline: a clip, an explicit pause, or a sequential SE.
 type speechItem struct {
-	clipIndex     int     // >= 0 for a clip, -1 for an explicit pause
-	durationSec   float64 // used when clipIndex == -1
-	pauseAfterSec float64 // silence to insert after this clip (0 = continuation, >0 = pause duration)
+	kind          speechItemKind
+	clipIndex     int     // used when kind == speechItemKindClip; >= 0
+	durationSec   float64 // used when kind == speechItemKindPause
+	pauseAfterSec float64 // used when kind == speechItemKindClip: silence after clip
+	seAssetName   string  // used when kind == speechItemKindSeqSE
 }
 
 // bgmInterval represents a BGM active period within a run.
@@ -105,7 +116,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		return nil, fmt.Errorf("no speech clips to assemble")
 	}
 
-	runs, jingleAssets := collectRuns(bctx.Script, bctx.Clips.Clips, bctx.PauseSec)
+	runs, jingleAssets := collectRuns(bctx.Script, bctx.Clips.Clips, bctx.PauseSec, bctx.Assets, bctx.SEDurations)
 
 	b := &filterBuilder{}
 
@@ -190,7 +201,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 
 // hasClips returns true if the speech timeline contains at least one clip item.
 func hasClips(items []speechItem) bool {
-	return slices.ContainsFunc(items, func(it speechItem) bool { return it.clipIndex >= 0 })
+	return slices.ContainsFunc(items, func(it speechItem) bool { return it.kind == speechItemKindClip })
 }
 
 // nextClipSpeakerRole scans segments forward from index from+1 and returns the speaker_role
@@ -210,7 +221,7 @@ func nextClipSpeakerRole(segments []model.ScriptSegment, from int) (string, bool
 
 // collectRuns scans the script and splits it into runs separated by jingle segments.
 // Returns the list of runs and the list of jingle asset names between them.
-func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) ([]runData, []string) {
+func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64, assets config.AssetsConfig, seDurations map[string]float64) ([]runData, []string) {
 	clipIdx := 0
 	var jingles []string
 	var runs []runData
@@ -227,6 +238,7 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) 
 					pauseAfter = 0
 				}
 				current.speechItems = append(current.speechItems, speechItem{
+					kind:          speechItemKindClip,
 					clipIndex:     clipIdx,
 					pauseAfterSec: pauseAfter,
 				})
@@ -236,15 +248,26 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) 
 
 		case model.SegmentTypePause:
 			if seg.DurationSec > 0 {
-				current.speechItems = append(current.speechItems, speechItem{clipIndex: -1, durationSec: seg.DurationSec})
+				current.speechItems = append(current.speechItems, speechItem{kind: speechItemKindPause, durationSec: seg.DurationSec})
 				current.durationMs += int(seg.DurationSec * 1000)
 			}
 
 		case model.SegmentTypeSE:
-			current.seEvents = append(current.seEvents, seEvent{
-				assetName: seg.AssetName,
-				offsetMs:  current.durationMs,
-			})
+			if seEntry, ok := assets.SE[seg.AssetName]; ok && !seEntry.EffectiveOverlay() {
+				// Sequential SE: concatenate into speech timeline and advance durationMs.
+				// trim_silence may reduce actual play length below raw file length; this
+				// causes durationMs to be slightly over-estimated, which is acceptable.
+				current.speechItems = append(current.speechItems, speechItem{
+					kind:        speechItemKindSeqSE,
+					seAssetName: seg.AssetName,
+				})
+				current.durationMs += int(seDurations[seg.AssetName] * 1000)
+			} else {
+				current.seEvents = append(current.seEvents, seEvent{
+					assetName: seg.AssetName,
+					offsetMs:  current.durationMs,
+				})
+			}
 
 		case model.SegmentTypeBGM:
 			// Finalize active BGM interval if any.
@@ -304,7 +327,7 @@ func newRun() runBuilder {
 
 // buildRun constructs the filter_complex entries for a single run and returns the output label.
 func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
-	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, runIdx)
+	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, assets, runIdx)
 	currentLabel := speechLabel
 
 	// Single pass over bgmIntervals to determine hasBGM, hasDucking, and firstDuckRatio.
@@ -401,34 +424,41 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 }
 
 // buildSpeechConcat generates filter entries for the speech timeline of a run.
-// Items can be clip references or explicit pauses; item.pauseAfterSec determines the silence
-// inserted after each clip (0 = continuation with same speaker, >0 = default pause duration).
-func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int, runIdx int) string {
-	// Find the last clip's position (reverse scan) to skip the trailing pause after the final clip.
-	lastClipPos := -1
-	for i := len(items) - 1; i >= 0; i-- {
-		if items[i].clipIndex >= 0 {
-			lastClipPos = i
-			break
-		}
-	}
-
+// Items can be clip references, explicit pauses, or sequential SE.
+// item.pauseAfterSec determines the silence inserted after each clip
+// (0 = continuation with same speaker, >0 = default pause duration).
+// The trailing pause after the last clip is omitted only when the clip is the final item.
+func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
 	parts := make([]string, 0, 2*len(items))
 	silenceIdx := 0
+	seqSEIdx := 0
 	for i, item := range items {
-		if item.clipIndex >= 0 {
+		switch item.kind {
+		case speechItemKindClip:
 			parts = append(parts, fmt.Sprintf("[%d:a]", clipInputIdx[item.clipIndex]))
-			if i != lastClipPos && item.pauseAfterSec > 0 {
+			if i < len(items)-1 && item.pauseAfterSec > 0 {
 				label := fmt.Sprintf("[run%d_p%d]", runIdx, silenceIdx)
 				b.addSilence(item.pauseAfterSec, label)
 				parts = append(parts, label)
 				silenceIdx++
 			}
-		} else {
+		case speechItemKindPause:
 			label := fmt.Sprintf("[run%d_p%d]", runIdx, silenceIdx)
 			b.addSilence(item.durationSec, label)
 			parts = append(parts, label)
 			silenceIdx++
+		case speechItemKindSeqSE:
+			entry, ok := assets.SE[item.seAssetName]
+			if !ok {
+				continue
+			}
+			seIdx := b.addInput(entry.File)
+			seKey := fmt.Sprintf("run%d_seqse%d", runIdx, seqSEIdx)
+			seLabel := applySilenceTrim(b, fmt.Sprintf("[%d:a]", seIdx), seKey, entry.EffectiveTrimSilence())
+			seVolLabel := fmt.Sprintf("[%s_vol]", seKey)
+			b.addFilter(fmt.Sprintf("%svolume=%.2f%s", seLabel, entry.Volume, seVolLabel))
+			parts = append(parts, seVolLabel)
+			seqSEIdx++
 		}
 	}
 

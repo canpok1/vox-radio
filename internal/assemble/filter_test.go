@@ -9,6 +9,8 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+func boolPtr(v bool) *bool { return &v }
+
 // hasStreamLoop reports whether the input with the given path has -stream_loop -1 in its PreOptions.
 func hasStreamLoop(inputs []FFmpegInput, path string) bool {
 	for _, inp := range inputs {
@@ -148,7 +150,7 @@ func TestBuildFFmpegArgs_SESegment(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 0.8},
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
 			},
 		},
 		PauseSec: 0.5,
@@ -848,7 +850,7 @@ func TestBuildFFmpegArgs_SEAfterPause_HasShiftedOffset(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 1.0},
+				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: boolPtr(true)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1343,7 +1345,7 @@ func TestBuildFFmpegArgs_SameSpeakerContinuation_SEOffsetConsistent(t *testing.T
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 1.0},
+				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: boolPtr(true)},
 			},
 		},
 		PauseSec: 0.3,
@@ -1395,5 +1397,104 @@ func TestBuildFFmpegArgs_SESilenceRemoveDisabled(t *testing.T) {
 	}
 	if strings.Contains(args.FilterComplex, "silenceremove") {
 		t.Errorf("filter_complex must not contain silenceremove when SE TrimSilence=false: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SE_SequentialDefault verifies that a SE with no Overlay setting (default=false)
+// is placed sequentially in the concat chain, not overlaid via adelay/amix.
+func TestBuildFFmpegArgs_SE_SequentialDefault(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "main"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8},
+			},
+		},
+		SEDurations: map[string]float64{"chime": 1.5},
+		PauseSec:    0.5,
+		OutPath:     "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Sequential SE must appear in concat (volume filter applied), not as overlay.
+	if strings.Contains(args.FilterComplex, "adelay") {
+		t.Errorf("sequential SE must not use adelay, filter: %s", args.FilterComplex)
+	}
+	if strings.Contains(args.FilterComplex, "amix") {
+		t.Errorf("sequential SE must not use amix, filter: %s", args.FilterComplex)
+	}
+	foundSE := false
+	for _, inp := range args.Inputs {
+		if inp.Path == "/assets/chime.wav" {
+			foundSE = true
+		}
+	}
+	if !foundSE {
+		t.Errorf("sequential SE input /assets/chime.wav not found: %v", args.Inputs)
+	}
+	if !strings.Contains(args.FilterComplex, "concat") {
+		t.Errorf("sequential SE should produce a concat filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset verifies that
+// after a sequential SE, any following overlay SE has its offsetMs shifted by the SE's duration.
+func TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset(t *testing.T) {
+	// durationMs trace:
+	//   clip0(host,2s) + pauseAfter(0.5s, different speaker) = 2500ms
+	//   seq_se(1.5s)                                          = 4000ms
+	//   clip1(guest,3s) + pauseAfter(0.5s, no next speech)   = 7500ms  ← overlay_se fires here
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypeSE, AssetName: "seq_se"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "B"},
+				{Type: model.SegmentTypeSE, AssetName: "overlay_se"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"seq_se":     {File: "/assets/seq.wav", Volume: 1.0},
+				"overlay_se": {File: "/assets/overlay.wav", Volume: 1.0, Overlay: boolPtr(true)},
+			},
+		},
+		SEDurations: map[string]float64{"seq_se": 1.5},
+		PauseSec:    0.5,
+		OutPath:     "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// overlay_se offset = 7500ms (includes clip1's trailing pauseAfter in durationMs)
+	if !strings.Contains(args.FilterComplex, "adelay=7500|7500") {
+		t.Errorf("overlay SE adelay should be 7500ms (after sequential SE duration), filter: %s", args.FilterComplex)
 	}
 }
