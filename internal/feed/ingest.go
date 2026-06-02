@@ -18,17 +18,17 @@ type Options struct {
 }
 
 // Run loads cache and distribution config, generates feed.xml, and writes it to the public directory.
-// Returns the number of items written.
-func Run(opts Options) (int, error) {
+// Returns the output path and the number of items written.
+func Run(opts Options) (string, int, error) {
 	cfg, err := model.LoadDistribution(opts.ConfigPath)
 	if err != nil {
-		return 0, fmt.Errorf("load distribution config: %w", err)
+		return "", 0, fmt.Errorf("load distribution config: %w", err)
 	}
 
 	mgr := cache.New(opts.CachePath)
 	allEntries, err := mgr.Load()
 	if err != nil {
-		return 0, fmt.Errorf("load cache: %w", err)
+		return "", 0, fmt.Errorf("load cache: %w", err)
 	}
 
 	// Filter by program_id
@@ -42,7 +42,7 @@ func Run(opts Options) (int, error) {
 	// Validate: episode_number must be > 0
 	for _, e := range entries {
 		if e.EpisodeNumber <= 0 {
-			return 0, fmt.Errorf("entry has invalid episode_number %d (must be > 0): datetime=%s", e.EpisodeNumber, e.Datetime)
+			return "", 0, fmt.Errorf("entry has invalid episode_number %d (must be > 0): datetime=%s", e.EpisodeNumber, e.Datetime)
 		}
 	}
 
@@ -51,20 +51,20 @@ func Run(opts Options) (int, error) {
 		return entries[i].Datetime < entries[j].Datetime
 	})
 
-	xml, err := BuildFeed(cfg, entries)
+	xmlContent, err := BuildFeed(cfg, entries)
 	if err != nil {
-		return 0, fmt.Errorf("build feed: %w", err)
+		return "", 0, fmt.Errorf("build feed: %w", err)
 	}
 
 	publicDir := cfg.EffectivePublicDir()
 	if err := fileio.EnsureDir(publicDir); err != nil {
-		return 0, fmt.Errorf("create public dir: %w", err)
+		return "", 0, fmt.Errorf("create public dir: %w", err)
 	}
 
 	feedPath := filepath.Join(publicDir, "feed.xml")
-	if err := os.WriteFile(feedPath, []byte(xml), 0o644); err != nil {
-		return 0, fmt.Errorf("write feed.xml: %w", err)
+	if err := os.WriteFile(feedPath, []byte(xmlContent), 0o644); err != nil {
+		return "", 0, fmt.Errorf("write feed.xml: %w", err)
 	}
 
-	return len(entries), nil
+	return feedPath, len(entries), nil
 }

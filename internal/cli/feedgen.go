@@ -22,14 +22,14 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
 例:
   vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --config config/distribution.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			n, err := feed.Run(feed.Options{
+			path, n, err := feed.Run(feed.Options{
 				CachePath:  cachePath,
 				ConfigPath: configPath,
 			})
 			if err != nil {
 				return err
 			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "feed.xml written (%d items)\n", n)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "feed.xml written to %s (%d items)\n", path, n)
 			return nil
 		},
 	}

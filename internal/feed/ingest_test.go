@@ -71,7 +71,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 		Output: model.OutputConfig{Public: publicDir},
 	})
 
-	n, err := feed.Run(feed.Options{
+	_, n, err := feed.Run(feed.Options{
 		CachePath:  cachePath,
 		ConfigPath: configPath,
 	})
@@ -131,7 +131,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 		Output: model.OutputConfig{Public: publicDir},
 	})
 
-	n, err := feed.Run(feed.Options{
+	_, n, err := feed.Run(feed.Options{
 		CachePath:  cachePath,
 		ConfigPath: configPath,
 	})
@@ -171,7 +171,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 		Output: model.OutputConfig{Public: publicDir},
 	})
 
-	_, err := feed.Run(feed.Options{
+	_, _, err := feed.Run(feed.Options{
 		CachePath:  cachePath,
 		ConfigPath: configPath,
 	})
@@ -196,7 +196,7 @@ func TestRun_EmptyCache(t *testing.T) {
 		Output: model.OutputConfig{Public: publicDir},
 	})
 
-	n, err := feed.Run(feed.Options{
+	_, n, err := feed.Run(feed.Options{
 		CachePath:  cachePath,
 		ConfigPath: configPath,
 	})
@@ -234,7 +234,7 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 		Output: model.OutputConfig{Public: publicDir},
 	})
 
-	n, err := feed.Run(feed.Options{
+	_, n, err := feed.Run(feed.Options{
 		CachePath:  cachePath,
 		ConfigPath: configPath,
 	})
