@@ -557,7 +557,8 @@ func TestConversationNote_CharacterIDsEmptyArrayNotNull(t *testing.T) {
 
 func TestProgramSummary_JSONRoundTrip(t *testing.T) {
 	ps := model.ProgramSummary{
-		Summary: "番組全体の要約",
+		Summary:      "番組全体の要約",
+		EpisodeTitle: "今週の面白技術",
 		ConversationNotes: []model.ConversationNote{
 			{Category: "掛け合い", CharacterIDs: []string{"zundamon"}, Note: "ずんだもんが食レポした"},
 		},
@@ -572,6 +573,9 @@ func TestProgramSummary_JSONRoundTrip(t *testing.T) {
 	}
 	if got.Summary != "番組全体の要約" {
 		t.Errorf("Summary: got %q, want %q", got.Summary, "番組全体の要約")
+	}
+	if got.EpisodeTitle != "今週の面白技術" {
+		t.Errorf("EpisodeTitle: got %q, want %q", got.EpisodeTitle, "今週の面白技術")
 	}
 	if len(got.ConversationNotes) != 1 {
 		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))

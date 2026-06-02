@@ -177,6 +177,20 @@ func TestFormatPastEpisodes_EpisodeNumber_IsDisplayed(t *testing.T) {
 	}
 }
 
+func TestFormatPastEpisodes_EpisodeNumberWithoutTitle_IsDisplayed(t *testing.T) {
+	eps := []cache.Entry{
+		{Datetime: "2024-01-01T10:00:00Z", EpisodeNumber: 5, Summary: "概要"},
+	}
+	got := formatPastEpisodes(eps)
+	if !strings.Contains(got, "第5回") {
+		t.Errorf("formatPastEpisodes() should contain '第5回', got:\n%s", got)
+	}
+	// No episode title: heading should be "第5回 <datetime>" without parenthesized title
+	if strings.Contains(got, "第5回（") {
+		t.Errorf("formatPastEpisodes() should NOT contain '第5回（' when no title, got:\n%s", got)
+	}
+}
+
 func TestFormatPastEpisodes_LegacyEntry_NoEpisodeNumberDisplay(t *testing.T) {
 	eps := []cache.Entry{
 		{Datetime: "2024-01-01T10:00:00Z", EpisodeNumber: 0, Summary: "概要"},
