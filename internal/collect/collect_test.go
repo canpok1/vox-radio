@@ -415,3 +415,34 @@ func TestCollector_RunAll_LogsPerCornerProgress(t *testing.T) {
 		t.Errorf("should log per-corner progress (2/2): %q", logs)
 	}
 }
+
+func TestCollector_FetchFullText_ReturnsBody(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	c := collect.New(server.Client())
+	body, err := c.FetchFullText(context.Background(), server.URL+"/article.html")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(body, "最初のパラグラフ") {
+		t.Errorf("body should contain article text, got: %q", body)
+	}
+}
+
+func TestCollector_FetchFullText_ReturnsErrorOnHTTPFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	c := collect.New(server.Client())
+	_, err := c.FetchFullText(context.Background(), server.URL+"/notfound.html")
+	if err == nil {
+		t.Error("expected error for HTTP 404, got nil")
+	}
+}

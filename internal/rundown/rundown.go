@@ -16,15 +16,22 @@ type Rundowner interface {
 	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error)
 }
 
+// ArticleFetcher fetches the full body text of an article by URL.
+type ArticleFetcher interface {
+	FetchFullText(ctx context.Context, url string) (string, error)
+}
+
 // LLMRundowner uses Selector + Summarizer to produce a Rundown.
 type LLMRundowner struct {
 	selector     sel.Selector
 	summarizer   summarize.Summarizer
+	fetcher      ArticleFetcher
 	excludedURLs map[string]struct{}
 }
 
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer) *LLMRundowner {
-	return &LLMRundowner{selector: selector, summarizer: summarizer}
+// NewLLMRundowner creates a LLMRundowner. fetcher may be nil (skips full-text fetch).
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher) *LLMRundowner {
+	return &LLMRundowner{selector: selector, summarizer: summarizer, fetcher: fetcher}
 }
 
 // SetExcludedURLs sets URLs to exclude from candidates before selection.
@@ -81,6 +88,13 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			a, ok := articleByURL[url]
 			if !ok {
 				continue
+			}
+			if r.fetcher != nil {
+				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
+					slog.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+				} else {
+					a.Body = fullText
+				}
 			}
 			sum, err := r.summarizer.Summarize(ctx, a)
 			if err != nil {

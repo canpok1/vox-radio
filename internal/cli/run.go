@@ -68,8 +68,9 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			var cacheMgr *cache.Manager
 			var episodeNumber int
+			collector := collect.New(nil, collect.WithLogger(logger))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rundowner := rundown.NewLLMRundowner(selector, summarizer)
+			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector)
 			if cfg.Cache.Enabled && p.Program.ID != "" {
 				cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
 				cacheMgr = cache.New(cachePath)
@@ -100,7 +101,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			runner := &pipeline.Runner{
 				Profile:           p,
 				Config:            cfg,
-				Collector:         collect.New(nil, collect.WithLogger(logger)),
+				Collector:         collector,
 				Rundowner:         rundowner,
 				Scripter:          scripter,
 				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
