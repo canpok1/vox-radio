@@ -142,8 +142,12 @@ download "$CHECKSUMS_URL" "$TMPDIR_WORK/$CHECKSUMS_NAME"
 
 # ---- sha256 検証 ----
 echo "チェックサムを検証しています..."
-grep "$ASSET_NAME" "$TMPDIR_WORK/$CHECKSUMS_NAME" \
-  | (cd "$TMPDIR_WORK" && $SHA256CMD --check -)
+checksum_line="$(grep "$ASSET_NAME" "$TMPDIR_WORK/$CHECKSUMS_NAME" || true)"
+if [[ -z "$checksum_line" ]]; then
+  echo "ERROR: checksums.txt に $ASSET_NAME のエントリが見つかりません" >&2
+  exit 1
+fi
+echo "$checksum_line" | (cd "$TMPDIR_WORK" && $SHA256CMD --check -)
 echo "チェックサム OK"
 
 # ---- 展開 ----
