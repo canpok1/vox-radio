@@ -78,7 +78,6 @@ type seEvent struct {
 type speechItem struct {
 	clipIndex     int     // >= 0 for a clip, -1 for an explicit pause
 	durationSec   float64 // used when clipIndex == -1
-	speakerRole   string  // speaker role for clip items (empty for pauses)
 	pauseAfterSec float64 // silence to insert after this clip (0 = continuation, >0 = pause duration)
 }
 
@@ -229,7 +228,6 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64) 
 				}
 				current.speechItems = append(current.speechItems, speechItem{
 					clipIndex:     clipIdx,
-					speakerRole:   seg.SpeakerRole,
 					pauseAfterSec: pauseAfter,
 				})
 				current.durationMs += int(clips[clipIdx].DurationSec*1000) + int(pauseAfter*1000)
