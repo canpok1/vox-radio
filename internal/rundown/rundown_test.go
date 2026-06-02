@@ -15,22 +15,50 @@ import (
 // --- mocks ---
 
 type mockSelector struct {
-	result sel.SelectResult
-	err    error
-	called bool
+	result           sel.SelectResult
+	err              error
+	called           bool
+	receivedArticles []model.Article
 }
 
-func (m *mockSelector) Select(_ context.Context, _ config.CornerConfig, _ []model.Article) (sel.SelectResult, error) {
+func (m *mockSelector) Select(_ context.Context, _ config.CornerConfig, articles []model.Article) (sel.SelectResult, error) {
 	m.called = true
+	m.receivedArticles = articles
 	return m.result, m.err
 }
 
 type mockSummarizer struct {
-	byURL map[string]model.Summary
-	err   error
+	byURL          map[string]model.Summary
+	err            error
+	receivedBodies map[string]string
 }
 
+type mockFetcher struct {
+	bodyByURL  map[string]string
+	err        error
+	called     bool
+	fetchedURL string
+}
+
+func (m *mockFetcher) FetchFullText(_ context.Context, url string) (string, error) {
+	m.called = true
+	m.fetchedURL = url
+	if m.err != nil {
+		return "", m.err
+	}
+	if body, ok := m.bodyByURL[url]; ok {
+		return body, nil
+	}
+	return "default full text", nil
+}
+
+var _ rundown.ArticleFetcher = (*mockFetcher)(nil)
+
 func (m *mockSummarizer) Summarize(_ context.Context, a model.Article) (model.Summary, error) {
+	if m.receivedBodies == nil {
+		m.receivedBodies = make(map[string]string)
+	}
+	m.receivedBodies[a.URL] = a.Body
 	if m.err != nil {
 		return model.Summary{}, m.err
 	}
@@ -57,7 +85,7 @@ func article(url string) model.Article {
 
 func TestLLMRundowner_Run_EmptyArticles_SkipsSelection(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "flow"}}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{})
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -104,7 +132,7 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 			},
 		},
 	}
-	rd := rundown.NewLLMRundowner(ms, msum)
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -153,7 +181,7 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 
 func TestLLMRundowner_Run_SelectorError(t *testing.T) {
 	ms := &mockSelector{err: errors.New("LLM error")}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{})
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -171,7 +199,7 @@ func TestLLMRundowner_Run_SelectorError(t *testing.T) {
 func TestLLMRundowner_Run_SummarizerError(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "f"}}
 	msum := &mockSummarizer{err: errors.New("sum error")}
-	rd := rundown.NewLLMRundowner(ms, msum)
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -190,7 +218,7 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 	ms := &mockSelector{
 		result: sel.SelectResult{SelectedURLs: []string{"u1"}, Flow: "flow"},
 	}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{})
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, nil)
 
 	cornerTitles := []string{"オープニング", "テック", "エンディング"}
 	var cornerArticles []model.CornerArticles
@@ -221,7 +249,7 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 }
 
 func TestLLMRundowner_Run_ArticlesNotNilForEmptyCorner(t *testing.T) {
-	rd := rundown.NewLLMRundowner(&mockSelector{}, &mockSummarizer{})
+	rd := rundown.NewLLMRundowner(&mockSelector{}, &mockSummarizer{}, nil, nil)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -236,5 +264,194 @@ func TestLLMRundowner_Run_ArticlesNotNilForEmptyCorner(t *testing.T) {
 	}
 	if got.Corners[0].Articles == nil {
 		t.Error("Articles must not be nil (JSON should marshal as [] not null)")
+	}
+}
+
+func TestLLMRundowner_Run_ExcludedURLsFilteredBeforeSelect(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/2"}, Flow: "flow"},
+	}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1"})
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "除外記事", Body: "body"},
+					{URL: "https://example.com/2", Title: "対象記事", Body: "body"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(ms.receivedArticles) != 1 {
+		t.Fatalf("selector should receive 1 article after exclusion, got %d", len(ms.receivedArticles))
+	}
+	if ms.receivedArticles[0].URL != "https://example.com/2" {
+		t.Errorf("selector should receive non-excluded article URL, got %q", ms.receivedArticles[0].URL)
+	}
+}
+
+func TestLLMRundowner_Run_AllArticlesExcluded_EmptyCorner(t *testing.T) {
+	ms := &mockSelector{}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1", "https://example.com/2"})
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "除外1", Body: "body"},
+					{URL: "https://example.com/2", Title: "除外2", Body: "body"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	got, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ms.called {
+		t.Error("selector should not be called when all articles are excluded")
+	}
+	if len(got.Corners) != 1 {
+		t.Fatalf("should have 1 corner, got %d", len(got.Corners))
+	}
+	if len(got.Corners[0].Articles) != 0 {
+		t.Errorf("corner should have no articles when all excluded, got %d", len(got.Corners[0].Articles))
+	}
+}
+
+func TestLLMRundowner_Run_FetcherSuccess_BodyReplaced(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
+	}
+	msum := &mockSummarizer{}
+	mf := &mockFetcher{
+		bodyByURL: map[string]string{
+			"https://example.com/1": "全文テキスト",
+		},
+	}
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "スニペット"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mf.called {
+		t.Error("fetcher should have been called")
+	}
+	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "全文テキスト" {
+		t.Errorf("summarizer should receive full text body, got %q", body)
+	}
+}
+
+func TestLLMRundowner_Run_FetcherFailure_FallbackToFeedBody(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
+	}
+	msum := &mockSummarizer{}
+	mf := &mockFetcher{err: errors.New("connection refused")}
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "フィードスニペット"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("should not return error on fetch failure (fallback to feed body): %v", err)
+	}
+	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードスニペット" {
+		t.Errorf("summarizer should receive feed body as fallback, got %q", body)
+	}
+}
+
+func TestLLMRundowner_Run_FetcherNil_SkipsFetch(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
+	}
+	msum := &mockSummarizer{}
+	rd := rundown.NewLLMRundowner(ms, msum, nil, nil)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "フィードボディ"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードボディ" {
+		t.Errorf("summarizer should receive original feed body when fetcher is nil, got %q", body)
+	}
+}
+
+func TestLLMRundowner_Run_FetcherEmptyBody_FallbackToFeedBody(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/1"}, Flow: "flow"},
+	}
+	msum := &mockSummarizer{}
+	mf := &mockFetcher{
+		bodyByURL: map[string]string{
+			"https://example.com/1": "",
+		},
+	}
+	rd := rundown.NewLLMRundowner(ms, msum, mf, nil)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "記事1", Body: "フィードスニペット"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードスニペット" {
+		t.Errorf("summarizer should receive feed body when full text is empty, got %q", body)
 	}
 }
