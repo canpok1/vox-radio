@@ -35,6 +35,10 @@ type Entry struct {
 	EpisodeTitle      string                   `json:"episode_title,omitempty"`
 	Title             string                   `json:"title"`
 	Summary           string                   `json:"summary"`
+	Description       string                   `json:"description,omitempty"`
+	AudioFile         string                   `json:"audio_file,omitempty"`
+	Bytes             int64                    `json:"bytes,omitempty"`
+	DurationSec       int                      `json:"duration_sec,omitempty"`
 	Corners           []CornerEntry            `json:"corners"`
 	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
 }
@@ -84,14 +88,14 @@ func (m *Manager) Load() ([]Entry, error) {
 	return entries, nil
 }
 
-// Append loads existing entries, adds the new entry, prunes if needed, and writes back.
+// Append loads existing entries, adds the new entry, compacts if needed, and writes back.
 func (m *Manager) Append(entry Entry, maxEntries int, retentionDays int) error {
 	entries, err := m.Load()
 	if err != nil {
 		return err
 	}
 	entries = append(entries, entry)
-	entries = prune(entries, maxEntries, retentionDays)
+	entries = Compact(entries, maxEntries, retentionDays)
 	return m.write(entries)
 }
 
@@ -114,22 +118,39 @@ func (m *Manager) write(entries []Entry) error {
 	return nil
 }
 
-// prune removes entries that are too old or exceed the max count, keeping the newest.
-func prune(entries []Entry, maxEntries int, retentionDays int) []Entry {
+// Compact keeps all entries but empties heavy fields (Corners, ConversationNotes) for entries
+// outside the detailed window (most recent maxEntries entries that are within retentionDays).
+func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
-	filtered := make([]Entry, 0, len(entries))
-	for _, e := range entries {
+	// Find indices of entries within retention window
+	recentIndices := make([]int, 0, len(entries))
+	for i, e := range entries {
 		t, err := time.Parse(time.RFC3339, e.Datetime)
 		if err != nil || !t.Before(cutoff) {
-			filtered = append(filtered, e)
+			recentIndices = append(recentIndices, i)
 		}
 	}
 
-	if len(filtered) > maxEntries {
-		filtered = filtered[len(filtered)-maxEntries:]
+	// Among recent entries, the last maxEntries form the detailed window
+	detailedStart := 0
+	if len(recentIndices) > maxEntries {
+		detailedStart = len(recentIndices) - maxEntries
 	}
-	return filtered
+	detailed := make(map[int]bool, len(recentIndices)-detailedStart)
+	for _, idx := range recentIndices[detailedStart:] {
+		detailed[idx] = true
+	}
+
+	result := make([]Entry, len(entries))
+	for i, e := range entries {
+		if !detailed[i] {
+			e.Corners = make([]CornerEntry, 0)
+			e.ConversationNotes = make([]model.ConversationNote, 0)
+		}
+		result[i] = e
+	}
+	return result
 }
 
 // Recent returns the last n entries (most recent).
@@ -143,9 +164,10 @@ func Recent(entries []Entry, n int) []Entry {
 	return entries[len(entries)-n:]
 }
 
-// BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, and rundown.
+// BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, rundown, and media info.
 // Rundown data (summary, points) is merged into the manifest's article references by URL.
-func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown) Entry {
+// bytes and durationSec are from mediainfo (0 if not available).
+func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int) Entry {
 	rdArticleByURL := make(map[string]model.RundownArticle)
 	for _, c := range rd.Corners {
 		for _, a := range c.Articles {
@@ -188,6 +210,10 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		EpisodeTitle:      m.EpisodeTitle,
 		Title:             m.Title,
 		Summary:           m.Summary,
+		Description:       m.Description,
+		AudioFile:         m.AudioFile,
+		Bytes:             bytes,
+		DurationSec:       durationSec,
 		Corners:           corners,
 		ConversationNotes: notes,
 	}
