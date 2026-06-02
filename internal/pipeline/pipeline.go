@@ -117,39 +117,50 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
+	logger := r.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	generatedAt := opts.GeneratedAt
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
 	}
 
 	var programSummary model.ProgramSummary
-	if r.ProgramSummarizer != nil {
-		programSummary, err = r.ProgramSummarizer.Summarize(ctx, scr)
-		if err != nil {
-			return fmt.Errorf("summarize program: %w", err)
-		}
-	}
-
 	var cornerSummaries map[string]model.CornerSummary
-	if r.CornerSummarizer != nil {
-		var scriptLines model.ScriptLines
-		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
-			return fmt.Errorf("read script lines for corner summarization: %w", err)
-		}
-		cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
-		for _, cl := range scriptLines.Corners {
-			cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl)
+	if r.ProgramSummarizer != nil || r.CornerSummarizer != nil {
+		summaryLogger := logger.With("step", "summary")
+		summaryLogger.Info("開始")
+		summaryStart := time.Now()
+
+		if r.ProgramSummarizer != nil {
+			summaryLogger.Info("番組全体を要約中")
+			programSummary, err = r.ProgramSummarizer.Summarize(ctx, scr)
 			if err != nil {
-				return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
+				return fmt.Errorf("summarize program: %w", err)
 			}
-			cornerSummaries[cl.Title] = cs
 		}
+
+		if r.CornerSummarizer != nil {
+			var scriptLines model.ScriptLines
+			if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
+				return fmt.Errorf("read script lines for corner summarization: %w", err)
+			}
+			cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
+			for i, cl := range scriptLines.Corners {
+				summaryLogger.Info(fmt.Sprintf("コーナー「%s」を要約中 (%d/%d)", cl.Title, i+1, len(scriptLines.Corners)))
+				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl)
+				if err != nil {
+					return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
+				}
+				cornerSummaries[cl.Title] = cs
+			}
+		}
+
+		summaryLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(summaryStart).Seconds()))
 	}
 
-	logger := r.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
 	manifestLogger := logger.With("step", "manifest")
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
