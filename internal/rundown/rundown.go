@@ -21,23 +21,43 @@ type ArticleFetcher interface {
 	FetchFullText(ctx context.Context, url string) (string, error)
 }
 
+// Option configures an LLMRundowner.
+type Option func(*LLMRundowner)
+
+// WithLogger sets the logger used for log output.
+func WithLogger(l *slog.Logger) Option {
+	return func(r *LLMRundowner) { r.logger = l }
+}
+
 // LLMRundowner uses Selector + Summarizer to produce a Rundown.
 type LLMRundowner struct {
 	selector     sel.Selector
 	summarizer   summarize.Summarizer
 	fetcher      ArticleFetcher
 	excludedURLs map[string]struct{}
+	logger       *slog.Logger
 }
 
 // NewLLMRundowner creates a LLMRundowner.
 // fetcher may be nil (skips full-text fetch).
 // excludedURLs is the set of article URLs to exclude before selection (nil = no exclusion).
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher, excludedURLs []string) *LLMRundowner {
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fetcher ArticleFetcher, excludedURLs []string, opts ...Option) *LLMRundowner {
 	excluded := make(map[string]struct{}, len(excludedURLs))
 	for _, u := range excludedURLs {
 		excluded[u] = struct{}{}
 	}
-	return &LLMRundowner{selector: selector, summarizer: summarizer, fetcher: fetcher, excludedURLs: excluded}
+	r := &LLMRundowner{
+		selector:     selector,
+		summarizer:   summarizer,
+		fetcher:      fetcher,
+		excludedURLs: excluded,
+		logger:       slog.Default(),
+	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	r.logger = r.logger.With("step", "rundown")
+	return r
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error) {
@@ -54,7 +74,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			}
 		}
 		if n := len(cornerArticles) - len(filtered); n > 0 {
-			slog.Info("excluded past articles", "corner", corner.Title, "count", n)
+			r.logger.Info("excluded past articles", "corner", corner.Title, "count", n)
 		}
 		cornerArticles = filtered
 
@@ -86,9 +106,9 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			}
 			if r.fetcher != nil {
 				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
-					slog.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+					r.logger.Warn("full text fetch failed, using feed body", "url", url, "err", err)
 				} else if fullText == "" {
-					slog.Warn("full text fetch returned empty body, using feed body", "url", url)
+					r.logger.Warn("full text fetch returned empty body, using feed body", "url", url)
 				} else {
 					a.Body = fullText
 				}

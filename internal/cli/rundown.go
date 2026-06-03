@@ -33,7 +33,6 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return fmt.Errorf("setup logger: %w", err)
 			}
 			defer func() { _ = logFile.Close() }()
-			_ = logger
 
 			cfg, p, err := loadConfigAndSpec(specPath)
 			if err != nil {
@@ -54,7 +53,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rd := rundown.NewLLMRundowner(selector, summarizer, nil, nil)
+			rd := rundown.NewLLMRundowner(selector, summarizer, nil, nil, rundown.WithLogger(logger))
 
 			result, err := rd.Run(context.Background(), p.Corners, articles)
 			if err != nil {

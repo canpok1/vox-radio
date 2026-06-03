@@ -87,7 +87,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 
 			collector := collect.New(nil, collect.WithLogger(logger))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector, excludedURLs)
+			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector, excludedURLs, rundown.WithLogger(logger))
 
 			scripter := script.NewLLMScriptGenerator(
 				writer,
