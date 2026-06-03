@@ -18,7 +18,7 @@ func TestRootHelp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	for _, sub := range []string{"init", "episodegen", "config", "profile", "feedgen"} {
+	for _, sub := range []string{"init", "episodegen", "config", "feedgen"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("root help missing subcommand %q", sub)
 		}
@@ -96,9 +96,9 @@ func TestScriptMissingOut(t *testing.T) {
 	}
 }
 
-func TestProfileRequired(t *testing.T) {
-	// --profile はデフォルト値を持たず、各サブコマンドで必須であること。
-	// assemble は assets を任意で読み込むため --profile は optional（意図的に対象外）。
+func TestSpecRequired(t *testing.T) {
+	// --spec はデフォルト値を持たず、各サブコマンドで必須であること。
+	// assemble は assets を任意で読み込むため --spec は optional（意図的に対象外）。
 	tests := []struct {
 		name string
 		args []string
@@ -117,10 +117,10 @@ func TestProfileRequired(t *testing.T) {
 			cmd.SetArgs(tt.args)
 			err := cmd.Execute()
 			if err == nil {
-				t.Fatalf("expected error when --profile is missing for %q", tt.name)
+				t.Fatalf("expected error when --spec is missing for %q", tt.name)
 			}
-			if !strings.Contains(err.Error(), "profile") || !strings.Contains(err.Error(), "not set") {
-				t.Errorf("%s: error should report required --profile flag, got: %v", tt.name, err)
+			if !strings.Contains(err.Error(), "spec") || !strings.Contains(err.Error(), "not set") {
+				t.Errorf("%s: error should report required --spec flag, got: %v", tt.name, err)
 			}
 		})
 	}
@@ -157,7 +157,7 @@ func TestRootVersionFlag(t *testing.T) {
 
 func TestSubcommandHelp(t *testing.T) {
 	// トップレベルのサブコマンド
-	for _, sub := range []string{"init", "config", "profile"} {
+	for _, sub := range []string{"init", "config"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			buf := &bytes.Buffer{}

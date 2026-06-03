@@ -8,7 +8,7 @@ type AssetCatalogEntry struct {
 }
 
 // AssetCatalog holds the available SE asset entries for the LLM.
-// BGM and Jingle are now configured per-corner in the profile and are not passed to the LLM.
+// BGM and Jingle are now configured per-corner in the episode spec and are not passed to the LLM.
 type AssetCatalog struct {
 	SE []AssetCatalogEntry `json:"se"`
 }

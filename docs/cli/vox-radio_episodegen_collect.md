@@ -11,7 +11,7 @@ source フィールドのないコーナーはスキップされます。
 
 例:
   vox-radio episodegen collect --out work/articles.json
-  vox-radio episodegen collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
+  vox-radio episodegen collect --out work/articles.json --spec examples/tech.yaml
 
 ```
 vox-radio episodegen collect [flags]
@@ -20,9 +20,9 @@ vox-radio episodegen collect [flags]
 ### Options
 
 ```
-  -h, --help             help for collect
-      --out string       articles.json の出力先パス（必須）
-      --profile string   プロファイル YAML ファイルのパス（必須）
+  -h, --help          help for collect
+      --out string    articles.json の出力先パス（必須）
+      --spec string   エピソード仕様 YAML ファイルのパス（必須）
 ```
 
 ### SEE ALSO

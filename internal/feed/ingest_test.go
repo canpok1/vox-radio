@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func writeFeedgenYAML(t *testing.T, path string, cfg model.FeedgenConfig) {
+func writeFeedSpecYAML(t *testing.T, path string, cfg model.FeedSpec) {
 	t.Helper()
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -63,7 +63,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, configPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -123,7 +123,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, configPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -163,7 +163,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, configPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -188,7 +188,7 @@ func TestRun_EmptyCache(t *testing.T) {
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, configPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -226,7 +226,7 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, configPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",

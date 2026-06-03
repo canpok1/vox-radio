@@ -10,7 +10,7 @@ import (
 )
 
 func newCollectCmd() *cobra.Command {
-	var profilePath string
+	var specPath string
 	var out string
 
 	cmd := &cobra.Command{
@@ -23,7 +23,7 @@ source フィールドのないコーナーはスキップされます。
 
 例:
   vox-radio episodegen collect --out work/articles.json
-  vox-radio episodegen collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
+  vox-radio episodegen collect --out work/articles.json --spec examples/tech.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("collect", "")
 			if err != nil {
@@ -31,9 +31,9 @@ source フィールドのないコーナーはスキップされます。
 			}
 			defer func() { _ = logFile.Close() }()
 
-			p, err := config.LoadProfile(profilePath)
+			p, err := config.LoadEpisodeSpec(specPath)
 			if err != nil {
-				return fmt.Errorf("load profile: %w", err)
+				return fmt.Errorf("load spec: %w", err)
 			}
 
 			c := collect.New(nil, collect.WithLogger(logger))
@@ -55,7 +55,7 @@ source フィールドのないコーナーはスキップされます。
 		},
 	}
 
-	registerProfileFlag(cmd, &profilePath)
+	registerSpecFlag(cmd, &specPath)
 	cmd.Flags().StringVar(&out, "out", "", "articles.json の出力先パス（必須）")
 	_ = cmd.MarkFlagRequired("out")
 

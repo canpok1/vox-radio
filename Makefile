@@ -1,7 +1,7 @@
 BINARY_NAME=vox-radio
 VERSION ?= dev
 LDFLAGS=-X github.com/canpok1/vox-radio/internal/cli.version=$(VERSION)
-PROFILE ?= sample-profiles/tech_profile.yaml
+PROFILE ?= examples/tech.yaml
 OUT_DIR ?= output/$(shell date +%Y%m%d%H%M%S)
 
 setup:
@@ -31,13 +31,13 @@ docs:
 	go run ./tools/gendocs
 
 run-sample: build
-	./$(BINARY_NAME) episodegen --profile "$(PROFILE)" --out-dir "$(OUT_DIR)"
+	./$(BINARY_NAME) episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)"
 
 check-samples: build
 	./$(BINARY_NAME) config check vox-radio.yaml
 	./$(BINARY_NAME) config check internal/cli/templates/vox-radio.yaml
-	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" profile check profile.yaml
-	for f in sample-profiles/*.yaml; do ./$(BINARY_NAME) profile check "$$f"; done
+	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" episodegen check episode-spec.yaml
+	for f in examples/*.yaml; do ./$(BINARY_NAME) episodegen check "$$f"; done
 
 release-check:
 	goreleaser check

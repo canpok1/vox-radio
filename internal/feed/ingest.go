@@ -20,7 +20,7 @@ type Options struct {
 // Run loads cache and feedgen config, generates feed.xml, and writes it to the public directory.
 // Returns the output path and the number of items written.
 func Run(opts Options) (string, int, error) {
-	cfg, err := model.LoadFeedgen(opts.ConfigPath)
+	cfg, err := model.LoadFeedSpec(opts.ConfigPath)
 	if err != nil {
 		return "", 0, fmt.Errorf("load feedgen config: %w", err)
 	}

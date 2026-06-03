@@ -131,7 +131,7 @@ func defaultStubs() stubs {
 
 func newRunner(s stubs) *pipeline.Runner {
 	r := &pipeline.Runner{
-		Profile:   &config.Profile{},
+		Spec:      &config.EpisodeSpec{},
 		Collector: s.col,
 		Rundowner: s.rnd,
 		Scripter:  s.scr,
@@ -422,7 +422,7 @@ func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
 	})
 
 	r := newRunner(s)
-	r.Profile = &config.Profile{
+	r.Spec = &config.EpisodeSpec{
 		Corners: []config.CornerConfig{{Title: "テストコーナー"}},
 	}
 

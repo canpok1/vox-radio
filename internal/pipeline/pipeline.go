@@ -57,7 +57,7 @@ type Options struct {
 
 // Runner orchestrates the full collect→rundown→script→synth→assemble→manifest pipeline.
 type Runner struct {
-	Profile           *config.Profile
+	Spec              *config.EpisodeSpec
 	Config            *config.Config
 	Collector         Collector
 	Rundowner         Rundowner
@@ -77,7 +77,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("create output dirs: %w", err)
 	}
 
-	articles, err := r.Collector.RunAll(ctx, r.Profile.Corners)
+	articles, err := r.Collector.RunAll(ctx, r.Spec.Corners)
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
 	}
@@ -85,7 +85,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	rundown, err := r.Rundowner.Run(ctx, r.Profile.Corners, articles)
+	rundown, err := r.Rundowner.Run(ctx, r.Spec.Corners, articles)
 	if err != nil {
 		return fmt.Errorf("rundown: %w", err)
 	}
@@ -98,7 +98,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		chars = r.Config.Characters
 	}
 
-	scr, err := r.Scripter.Generate(ctx, r.Profile.Program, rundown, r.Profile.Corners, chars)
+	scr, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
@@ -152,7 +152,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 			cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
 			for i, cl := range scriptLines.Corners {
 				summaryLogger.Info(fmt.Sprintf("コーナー「%s」を要約中 (%d/%d)", cl.Title, i+1, len(scriptLines.Corners)))
-				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl, r.Profile.CornerSummaryLength(cl.Title))
+				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl, r.Spec.CornerSummaryLength(cl.Title))
 				if err != nil {
 					return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
 				}
@@ -167,7 +167,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	manifestLogger.Info("開始")
 	manifestStart := time.Now()
 
-	m := manifest.Build(r.Profile.Program, r.Profile.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes, opts.EpisodeNumber, programSummary.EpisodeTitle)
+	m := manifest.Build(r.Spec.Program, r.Spec.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes, opts.EpisodeNumber, programSummary.EpisodeTitle)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}

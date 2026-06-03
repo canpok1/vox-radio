@@ -13,12 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// registerProfileFlag registers the required --profile flag on cmd, binding it
-// to profilePath. Used by every command that loads a profile (assemble is the
-// exception: its --profile is optional because assets can be skipped).
-func registerProfileFlag(cmd *cobra.Command, profilePath *string) {
-	cmd.Flags().StringVar(profilePath, "profile", "", "プロファイル YAML ファイルのパス（必須）")
-	_ = cmd.MarkFlagRequired("profile")
+// registerSpecFlag registers the required --spec flag on cmd, binding it
+// to specPath. Used by every command that loads an episode spec (assemble is the
+// exception: its --spec is optional because assets can be skipped).
+func registerSpecFlag(cmd *cobra.Command, specPath *string) {
+	cmd.Flags().StringVar(specPath, "spec", "", "エピソード仕様 YAML ファイルのパス（必須）")
+	_ = cmd.MarkFlagRequired("spec")
 }
 
 func writeJSON(path string, v any) error {
@@ -78,20 +78,20 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
-func loadConfigAndProfile(profilePath string) (*config.Config, *config.Profile, error) {
+func loadConfigAndSpec(specPath string) (*config.Config, *config.EpisodeSpec, error) {
 	cfg, err := config.LoadConfig("vox-radio.yaml")
 	if err != nil {
 		return nil, nil, fmt.Errorf("load config: %w", err)
 	}
-	p, err := config.LoadProfile(profilePath)
+	p, err := config.LoadEpisodeSpec(specPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("load profile: %w", err)
+		return nil, nil, fmt.Errorf("load spec: %w", err)
 	}
-	if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
-		return nil, nil, fmt.Errorf("profile validation: %w", err)
+	if err := config.ValidateEpisodeSpecCast(p, cfg.Characters); err != nil {
+		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
-	if err := config.ValidateProfileAssets(p); err != nil {
-		return nil, nil, fmt.Errorf("profile validation: %w", err)
+	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
+		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	return cfg, p, nil
 }

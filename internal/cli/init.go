@@ -15,7 +15,7 @@ func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
 		Short: "カレントディレクトリにテンプレート設定ファイルを生成する",
-		Long: `vox-radio.yaml（共通設定）・profile.yaml（プログラムプロファイル）・feedgen.yaml（フィード生成設定）を
+		Long: `vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）を
 カレントディレクトリに生成します。
 
 既存ファイルは上書きを防ぐため個別にスキップされます。
@@ -24,7 +24,7 @@ func newInitCmd() *cobra.Command {
 生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
 次のコマンドでパイプラインを実行してください:
 
-  vox-radio episodegen --profile profile.yaml`,
+  vox-radio episodegen --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			entries, err := templatesFS.ReadDir("templates")
 			if err != nil {
