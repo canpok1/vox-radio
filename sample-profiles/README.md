@@ -21,7 +21,7 @@ sample-profiles/
 
 ```bash
 # 技術ニュース用プロファイルで実行
-vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
+vox-radio episodegen collect --out work/articles.json --profile sample-profiles/tech_profile.yaml
 ```
 
 ## 新しいジャンルの追加

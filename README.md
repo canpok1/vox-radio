@@ -105,13 +105,13 @@ collect → rundown → script → synth → assemble → manifest
 | コマンド | 概要 |
 |----------|------|
 | `init` | カレントディレクトリに `vox-radio.yaml`・`profile.yaml`・`feedgen.yaml` のテンプレートを生成する（初回セットアップ用） |
-| `collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
-| `rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
-| `script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
-| `synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
-| `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
-| `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
-| `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
+| `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
+| `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
+| `episodegen rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
+| `episodegen script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
+| `episodegen synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
+| `episodegen assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
+| `episodegen manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `feedgen` | キャッシュ（`.jsonl`）と `feedgen.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
 | `profile check` | プロファイル YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
@@ -126,7 +126,7 @@ vox-radio init
 
 # 生成されたファイルを編集（LLM APIキー・番組設定を記入）
 # その後、パイプラインを実行
-vox-radio run --profile profile.yaml
+vox-radio episodegen --profile profile.yaml
 ```
 
 既存ファイルは上書きされません（ファイルごとに独立してスキップ判定します）。
@@ -168,21 +168,21 @@ characters:
 
 ```bash
 # 記事を収集（--profile は必須）
-vox-radio collect --out work/intermediate/01_articles.json --profile sample-profiles/tech_profile.yaml
+vox-radio episodegen collect --out work/intermediate/01_articles.json --profile sample-profiles/tech_profile.yaml
 
 # 番組設計図（rundown）を生成
-vox-radio rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json \
+vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json \
     --profile sample-profiles/tech_profile.yaml
 
 # 台本を生成
-vox-radio script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json \
+vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json \
     --profile sample-profiles/tech_profile.yaml
 
 # 音声合成（設定不要）
-vox-radio synth --in work/intermediate/04_script.json --out-dir work/clips
+vox-radio episodegen synth --in work/intermediate/04_script.json --out-dir work/clips
 
 # 音声結合
-vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --out work/episode.mp3 \
+vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work/clips --out work/episode.mp3 \
     --profile sample-profiles/tech_profile.yaml
 ```
 

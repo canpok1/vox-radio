@@ -13,7 +13,7 @@ vox-radio.yaml（共通設定）・profile.yaml（プログラムプロファイ
 生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
 次のコマンドでパイプラインを実行してください:
 
-  vox-radio run --profile profile.yaml
+  vox-radio episodegen --profile profile.yaml
 
 ```
 vox-radio init [flags]

@@ -24,7 +24,7 @@ func newInitCmd() *cobra.Command {
 生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
 次のコマンドでパイプラインを実行してください:
 
-  vox-radio run --profile profile.yaml`,
+  vox-radio episodegen --profile profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			entries, err := templatesFS.ReadDir("templates")
 			if err != nil {

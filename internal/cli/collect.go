@@ -22,8 +22,8 @@ func newCollectCmd() *cobra.Command {
 source フィールドのないコーナーはスキップされます。
 
 例:
-  vox-radio collect --out work/articles.json
-  vox-radio collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
+  vox-radio episodegen collect --out work/articles.json
+  vox-radio episodegen collect --out work/articles.json --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("collect", "")
 			if err != nil {
