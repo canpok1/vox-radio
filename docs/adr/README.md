@@ -35,3 +35,4 @@
 | [0027](0027-move-katakana-conversion-from-write-to-direct.md) | カタカナ化（読み変換）を write から direct へ移し、summary 入力を write 出力に変更する | 採用 | 2026-06-02 |
 | [0028](0028-nest-pipeline-steps-under-episodegen.md) | パイプライン各ステップを episodegen サブコマンド配下へ再編する（run のリネーム） | 採用 | 2026-06-03 |
 | [0029](0029-separate-asset-config-from-profile.md) | アセット設定のプロファイルからの分離 | 採用 | 2026-06-03 |
+| [0030](0030-rename-profile-and-feedgen-config-to-spec.md) | 設定ファイルを episode-spec / feed-spec に統一し「プロファイル」概念を廃止する | 採用 | 2026-06-03 |

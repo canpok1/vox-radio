@@ -4,7 +4,7 @@
 
 ### Synopsis
 
-vox-radio.yaml（共通設定）・profile.yaml（プログラムプロファイル）・feedgen.yaml（フィード生成設定）を
+vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）を
 カレントディレクトリに生成します。
 
 既存ファイルは上書きを防ぐため個別にスキップされます。
@@ -13,7 +13,7 @@ vox-radio.yaml（共通設定）・profile.yaml（プログラムプロファイ
 生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
 次のコマンドでパイプラインを実行してください:
 
-  vox-radio episodegen --profile profile.yaml
+  vox-radio episodegen --spec episode-spec.yaml
 
 ```
 vox-radio init [flags]

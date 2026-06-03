@@ -74,7 +74,7 @@ vox-radio --version
 
 ### 動作確認用サンプル実行
 
-`sample-profiles/tech_profile.yaml` を使ってパイプライン全体を試すには `make run-sample` を実行します。
+`examples/tech.yaml` を使ってパイプライン全体を試すには `make run-sample` を実行します。
 
 ```bash
 make run-sample
@@ -86,7 +86,7 @@ make run-sample
 
 ```bash
 # 別のプロファイルを使う
-make run-sample PROFILE=sample-profiles/other_profile.yaml
+make run-sample PROFILE=examples/other.yaml
 
 # 出力先を指定する
 make run-sample OUT_DIR=output/test
@@ -104,7 +104,7 @@ collect → rundown → script → synth → assemble → manifest
 
 | コマンド | 概要 |
 |----------|------|
-| `init` | カレントディレクトリに `vox-radio.yaml`・`profile.yaml`・`feedgen.yaml` のテンプレートを生成する（初回セットアップ用） |
+| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml` のテンプレートを生成する（初回セットアップ用） |
 | `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
 | `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
 | `episodegen rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
@@ -112,13 +112,13 @@ collect → rundown → script → synth → assemble → manifest
 | `episodegen synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |
 | `episodegen assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
 | `episodegen manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
-| `feedgen` | キャッシュ（`.jsonl`）と `feedgen.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
+| `feedgen` | キャッシュ（`.jsonl`）と `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
-| `profile check` | プロファイル YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
+| `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
 
 ### 設定ファイルの作成
 
-`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`profile.yaml`（プロファイル）・`feedgen.yaml`（フィード生成設定）のテンプレートが生成されます。
+`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`episode-spec.yaml`（エピソード仕様）・`feed-spec.yaml`（フィード生成設定）のテンプレートが生成されます。
 
 ```bash
 # テンプレートを生成
@@ -126,7 +126,7 @@ vox-radio init
 
 # 生成されたファイルを編集（LLM APIキー・番組設定を記入）
 # その後、パイプラインを実行
-vox-radio episodegen --profile profile.yaml
+vox-radio episodegen --spec episode-spec.yaml
 ```
 
 既存ファイルは上書きされません（ファイルごとに独立してスキップ判定します）。
@@ -138,7 +138,7 @@ vox-radio episodegen --profile profile.yaml
 | 種別 | ファイル | 内容 |
 |------|---------|------|
 | 共通設定 (config) | `vox-radio.yaml`（カレントディレクトリ、自動読込） | LLM / VOICEVOX URL / キャラカタログ |
-| ジャンル別設定 (profile) | `profile.yaml` または `sample-profiles/<genre>_profile.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
+| エピソード仕様 (spec) | `episode-spec.yaml` または `examples/<genre>.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
 
 `vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
 
@@ -162,28 +162,28 @@ characters:
 
 台本生成（`script` コマンド）では、LLM がセリフの感情に応じてスタイルを選択します。`synth` コマンドは行ごとの `style` フィールドを読み取り、指定されたスタイルの `speaker_id` で合成します。`style` が未指定または不正な場合は `default_style` にフォールバックします。
 
-プロファイルのサンプルは `sample-profiles/` ディレクトリに用意しています。`sample-profiles/tech_profile.yaml`（技術ニュース用）を、共通アセット（`sample-profiles/assets/`）とあわせて配置しています。これらをコピー・編集して利用してください。詳細は [sample-profiles/README.md](sample-profiles/README.md) を参照してください。
+エピソード仕様のサンプルは `examples/` ディレクトリに用意しています。`examples/tech.yaml`（技術ニュース用）を、共通アセット（`examples/assets/`）とあわせて配置しています。これらをコピー・編集して利用してください。詳細は [examples/README.md](examples/README.md) を参照してください。
 
 ### 実行例
 
 ```bash
-# 記事を収集（--profile は必須）
-vox-radio episodegen collect --out work/intermediate/01_articles.json --profile sample-profiles/tech_profile.yaml
+# 記事を収集（--spec は必須）
+vox-radio episodegen collect --out work/intermediate/01_articles.json --spec examples/tech.yaml
 
 # 番組設計図（rundown）を生成
 vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json \
-    --profile sample-profiles/tech_profile.yaml
+    --spec examples/tech.yaml
 
 # 台本を生成
 vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json \
-    --profile sample-profiles/tech_profile.yaml
+    --spec examples/tech.yaml
 
 # 音声合成（設定不要）
 vox-radio episodegen synth --in work/intermediate/04_script.json --out-dir work/clips
 
 # 音声結合
 vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work/clips --out work/episode.mp3 \
-    --profile sample-profiles/tech_profile.yaml
+    --spec examples/tech.yaml
 ```
 
 ### 詳細リファレンス
@@ -284,9 +284,9 @@ vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work
 
 ---
 
-### profile.yaml（プロファイル）
+### episode-spec.yaml（エピソード仕様）
 
-`--profile` フラグで指定するジャンル別設定ファイルです。`vox-radio init` で生成されるテンプレートは `profile.yaml` という名前です。詳細は [sample-profiles/README.md](sample-profiles/README.md) も参照してください。
+`--spec` フラグで指定するジャンル別設定ファイルです。`vox-radio init` で生成されるテンプレートは `episode-spec.yaml` という名前です。詳細は [examples/README.md](examples/README.md) も参照してください。
 
 #### `program` セクション
 

@@ -63,28 +63,28 @@ func TestLoadConfig_MissingFile(t *testing.T) {
 	}
 }
 
-func TestLoadProfile(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
+func TestLoadEpisodeSpec(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
 
 	t.Run("Program", func(t *testing.T) {
-		if profile.Program.Title == "" {
+		if spec.Program.Title == "" {
 			t.Error("Program.Title must not be empty")
 		}
 	})
 
 	t.Run("CornerAssets", func(t *testing.T) {
-		if len(profile.Corners) == 0 {
+		if len(spec.Corners) == 0 {
 			t.Fatal("Corners must not be empty")
 		}
-		corner0 := profile.Corners[0]
+		corner0 := spec.Corners[0]
 		if corner0.StartJingle == "" {
 			t.Error("Corners[0].StartJingle must not be empty")
 		}
-		if len(profile.Corners) > 1 {
-			corner1 := profile.Corners[1]
+		if len(spec.Corners) > 1 {
+			corner1 := spec.Corners[1]
 			if corner1.EndJingle == "" {
 				t.Error("Corners[1].EndJingle must not be empty")
 			}
@@ -95,10 +95,10 @@ func TestLoadProfile(t *testing.T) {
 	})
 
 	t.Run("Corners", func(t *testing.T) {
-		if len(profile.Corners) == 0 {
+		if len(spec.Corners) == 0 {
 			t.Error("Corners must not be empty")
 		}
-		c := profile.Corners[0]
+		c := spec.Corners[0]
 		if c.Title == "" {
 			t.Error("Corners[0].Title must not be empty")
 		}
@@ -115,9 +115,9 @@ func TestLoadProfile(t *testing.T) {
 
 	t.Run("CornerSource", func(t *testing.T) {
 		var sourceCorner *config.CornerConfig
-		for i := range profile.Corners {
-			if profile.Corners[i].Source != nil {
-				sourceCorner = &profile.Corners[i]
+		for i := range spec.Corners {
+			if spec.Corners[i].Source != nil {
+				sourceCorner = &spec.Corners[i]
 				break
 			}
 		}
@@ -136,13 +136,13 @@ func TestLoadProfile(t *testing.T) {
 	})
 
 	t.Run("Assets", func(t *testing.T) {
-		if len(profile.Assets.Jingle) == 0 {
+		if len(spec.Assets.Jingle) == 0 {
 			t.Error("Assets.Jingle must not be empty")
 		}
-		if len(profile.Assets.SE) == 0 {
+		if len(spec.Assets.SE) == 0 {
 			t.Error("Assets.SE must not be empty")
 		}
-		if len(profile.Assets.BGM) == 0 {
+		if len(spec.Assets.BGM) == 0 {
 			t.Error("Assets.BGM must not be empty")
 		}
 	})
@@ -150,7 +150,7 @@ func TestLoadProfile(t *testing.T) {
 	t.Run("Assets_PathResolution", func(t *testing.T) {
 		base := "testdata"
 
-		jingle, ok := profile.Assets.Jingle["opening"]
+		jingle, ok := spec.Assets.Jingle["opening"]
 		if !ok {
 			t.Fatal("Assets.Jingle[\"opening\"] not found")
 		}
@@ -158,7 +158,7 @@ func TestLoadProfile(t *testing.T) {
 			t.Errorf("Jingle[\"opening\"].File: expected %q, got %q", want, jingle.File)
 		}
 
-		se, ok := profile.Assets.SE["chime"]
+		se, ok := spec.Assets.SE["chime"]
 		if !ok {
 			t.Fatal("Assets.SE[\"chime\"] not found")
 		}
@@ -166,7 +166,7 @@ func TestLoadProfile(t *testing.T) {
 			t.Errorf("SE[\"chime\"].File: expected %q, got %q", want, se.File)
 		}
 
-		bgm, ok := profile.Assets.BGM["talk_bgm"]
+		bgm, ok := spec.Assets.BGM["talk_bgm"]
 		if !ok {
 			t.Fatal("Assets.BGM[\"talk_bgm\"] not found")
 		}
@@ -176,38 +176,38 @@ func TestLoadProfile(t *testing.T) {
 	})
 }
 
-func TestLoadProfile_AbsolutePaths(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile_abs.yaml")
+func TestLoadEpisodeSpec_AbsolutePaths(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_abs.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
 
-	for name, entry := range profile.Assets.Jingle {
+	for name, entry := range spec.Assets.Jingle {
 		if !filepath.IsAbs(entry.File) {
 			t.Errorf("Jingle[%q].File should remain absolute, got %q", name, entry.File)
 		}
 	}
-	for name, entry := range profile.Assets.SE {
+	for name, entry := range spec.Assets.SE {
 		if !filepath.IsAbs(entry.File) {
 			t.Errorf("SE[%q].File should remain absolute, got %q", name, entry.File)
 		}
 	}
-	for name, entry := range profile.Assets.BGM {
+	for name, entry := range spec.Assets.BGM {
 		if !filepath.IsAbs(entry.File) {
 			t.Errorf("BGM[%q].File should remain absolute, got %q", name, entry.File)
 		}
 	}
 }
 
-func TestLoadProfile_MissingFile(t *testing.T) {
-	_, err := config.LoadProfile("testdata/nonexistent.yaml")
+func TestLoadEpisodeSpec_MissingFile(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/nonexistent.yaml")
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
 }
 
-func TestValidateProfileAssets_Valid(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecAssets_Valid(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "C1", StartJingle: "opening", EndJingle: "ending", BGM: "talk_bgm"},
 		},
@@ -221,13 +221,13 @@ func TestValidateProfileAssets_Valid(t *testing.T) {
 			},
 		},
 	}
-	if err := config.ValidateProfileAssets(p); err != nil {
+	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestValidateProfileAssets_UnknownStartJingle(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecAssets_UnknownStartJingle(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "C1", StartJingle: "nonexistent"},
 		},
@@ -236,13 +236,13 @@ func TestValidateProfileAssets_UnknownStartJingle(t *testing.T) {
 			BGM:    map[string]config.BGMEntry{},
 		},
 	}
-	if err := config.ValidateProfileAssets(p); err == nil {
+	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
 		t.Error("expected error for unknown start_jingle key")
 	}
 }
 
-func TestValidateProfileAssets_UnknownEndJingle(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecAssets_UnknownEndJingle(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "C1", EndJingle: "nonexistent"},
 		},
@@ -251,13 +251,13 @@ func TestValidateProfileAssets_UnknownEndJingle(t *testing.T) {
 			BGM:    map[string]config.BGMEntry{},
 		},
 	}
-	if err := config.ValidateProfileAssets(p); err == nil {
+	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
 		t.Error("expected error for unknown end_jingle key")
 	}
 }
 
-func TestValidateProfileAssets_UnknownBGM(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecAssets_UnknownBGM(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "C1", BGM: "nonexistent"},
 		},
@@ -266,13 +266,13 @@ func TestValidateProfileAssets_UnknownBGM(t *testing.T) {
 			BGM:    map[string]config.BGMEntry{},
 		},
 	}
-	if err := config.ValidateProfileAssets(p); err == nil {
+	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
 		t.Error("expected error for unknown bgm key")
 	}
 }
 
-func TestValidateProfileAssets_EmptyFields_NoError(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecAssets_EmptyFields_NoError(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "C1"},
 		},
@@ -281,7 +281,7 @@ func TestValidateProfileAssets_EmptyFields_NoError(t *testing.T) {
 			BGM:    map[string]config.BGMEntry{},
 		},
 	}
-	if err := config.ValidateProfileAssets(p); err != nil {
+	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
 		t.Errorf("unexpected error for empty fields: %v", err)
 	}
 }
@@ -328,8 +328,8 @@ func TestCornerConfig_EffectiveSummaryLength(t *testing.T) {
 	}
 }
 
-func TestProfile_CornerSummaryLength(t *testing.T) {
-	p := &config.Profile{
+func TestEpisodeSpec_CornerSummaryLength(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "テックニュース", SummaryLength: 150},
 			{Title: "AI特集", SummaryLength: 0},
@@ -355,13 +355,13 @@ func TestProfile_CornerSummaryLength(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_ValidateProfileAssetsIntegration(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
+func TestLoadEpisodeSpec_ValidateEpisodeSpecAssetsIntegration(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
-	if err := config.ValidateProfileAssets(profile); err != nil {
-		t.Errorf("ValidateProfileAssets failed on testdata profile: %v", err)
+	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
+		t.Errorf("ValidateEpisodeSpecAssets failed on testdata spec: %v", err)
 	}
 }
 
@@ -457,16 +457,16 @@ func TestLoadConfig_LLM_MinRequestIntervalMS(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_CornerDirection(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
+func TestLoadEpisodeSpec_CornerDirection(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
 
 	var directionCorner *config.CornerConfig
-	for i := range profile.Corners {
-		if profile.Corners[i].Direction != "" {
-			directionCorner = &profile.Corners[i]
+	for i := range spec.Corners {
+		if spec.Corners[i].Direction != "" {
+			directionCorner = &spec.Corners[i]
 			break
 		}
 	}
@@ -478,8 +478,8 @@ func TestLoadProfile_CornerDirection(t *testing.T) {
 	}
 }
 
-func TestValidateProfileCast_Valid(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecCast_Valid(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
 		},
@@ -487,13 +487,13 @@ func TestValidateProfileCast_Valid(t *testing.T) {
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん"},
 	}
-	if err := config.ValidateProfileCast(p, chars); err != nil {
+	if err := config.ValidateEpisodeSpecCast(p, chars); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestValidateProfileCast_UnknownCharacter(t *testing.T) {
-	p := &config.Profile{
+func TestValidateEpisodeSpecCast_UnknownCharacter(t *testing.T) {
+	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{
 			{Title: "opening", Cast: map[string]string{"unknown_char": "司会"}},
 		},
@@ -501,7 +501,7 @@ func TestValidateProfileCast_UnknownCharacter(t *testing.T) {
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん"},
 	}
-	if err := config.ValidateProfileCast(p, chars); err == nil {
+	if err := config.ValidateEpisodeSpecCast(p, chars); err == nil {
 		t.Error("expected error for unknown character in cast")
 	}
 }
@@ -703,23 +703,23 @@ func TestCacheConfig_EffectiveLLMContextEntries_Custom(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_ProgramID(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile_with_id.yaml")
+func TestLoadEpisodeSpec_ProgramID(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_with_id.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
-	if profile.Program.ID != "test-program" {
-		t.Errorf("Program.ID: got %q, want %q", profile.Program.ID, "test-program")
+	if spec.Program.ID != "test-program" {
+		t.Errorf("Program.ID: got %q, want %q", spec.Program.ID, "test-program")
 	}
 }
 
-func TestLoadProfile_ProgramIDEmpty_NoError(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
+func TestLoadEpisodeSpec_ProgramIDEmpty_NoError(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
-	if profile.Program.ID != "" {
-		t.Errorf("Program.ID: expected empty, got %q", profile.Program.ID)
+	if spec.Program.ID != "" {
+		t.Errorf("Program.ID: expected empty, got %q", spec.Program.ID)
 	}
 }
 
@@ -744,24 +744,24 @@ func TestLoadConfig_UnknownKey_NoError(t *testing.T) {
 	}
 }
 
-func TestLoadProfileStrict_UnknownKeyErrors(t *testing.T) {
-	_, err := config.LoadProfileStrict("testdata/profile_unknown_key.yaml")
+func TestLoadEpisodeSpecStrict_UnknownKeyErrors(t *testing.T) {
+	_, err := config.LoadEpisodeSpecStrict("testdata/episode_spec_unknown_key.yaml")
 	if err == nil {
 		t.Error("expected error for unknown key in strict mode")
 	}
 }
 
-func TestLoadProfileStrict_ValidYAML_Success(t *testing.T) {
-	_, err := config.LoadProfileStrict("testdata/profile.yaml")
+func TestLoadEpisodeSpecStrict_ValidYAML_Success(t *testing.T) {
+	_, err := config.LoadEpisodeSpecStrict("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Errorf("unexpected error for valid profile in strict mode: %v", err)
+		t.Errorf("unexpected error for valid spec in strict mode: %v", err)
 	}
 }
 
-func TestLoadProfile_UnknownKey_NoError(t *testing.T) {
-	_, err := config.LoadProfile("testdata/profile_unknown_key.yaml")
+func TestLoadEpisodeSpec_UnknownKey_NoError(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec_unknown_key.yaml")
 	if err != nil {
-		t.Errorf("LoadProfile should not error on unknown key (non-strict): %v", err)
+		t.Errorf("LoadEpisodeSpec should not error on unknown key (non-strict): %v", err)
 	}
 }
 
@@ -775,13 +775,13 @@ func TestLoadConfig_Cache_DefaultsToDisabled(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_AssetsDescription(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile.yaml")
+func TestLoadEpisodeSpec_AssetsDescription(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
 
-	se, ok := profile.Assets.SE["chime"]
+	se, ok := spec.Assets.SE["chime"]
 	if !ok {
 		t.Fatal("Assets.SE[\"chime\"] not found")
 	}
@@ -789,7 +789,7 @@ func TestLoadProfile_AssetsDescription(t *testing.T) {
 		t.Error("SE[\"chime\"].Description must not be empty (testdata should include description)")
 	}
 
-	bgm, ok := profile.Assets.BGM["talk_bgm"]
+	bgm, ok := spec.Assets.BGM["talk_bgm"]
 	if !ok {
 		t.Fatal("Assets.BGM[\"talk_bgm\"] not found")
 	}
@@ -797,7 +797,7 @@ func TestLoadProfile_AssetsDescription(t *testing.T) {
 		t.Error("BGM[\"talk_bgm\"].Description must not be empty (testdata should include description)")
 	}
 
-	jingle, ok := profile.Assets.Jingle["opening"]
+	jingle, ok := spec.Assets.Jingle["opening"]
 	if !ok {
 		t.Fatal("Assets.Jingle[\"opening\"] not found")
 	}
@@ -866,13 +866,13 @@ func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_AssetsFiles_MultipleFileMerge(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile_multi_assets.yaml")
+func TestLoadEpisodeSpec_AssetsFiles_MultipleFileMerge(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_multi_assets.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
 	// opening should be overridden by second file (assets_override.yaml)
-	jingle, ok := profile.Assets.Jingle["opening"]
+	jingle, ok := spec.Assets.Jingle["opening"]
 	if !ok {
 		t.Fatal("Assets.Jingle[\"opening\"] not found")
 	}
@@ -881,17 +881,17 @@ func TestLoadProfile_AssetsFiles_MultipleFileMerge(t *testing.T) {
 		t.Errorf("Jingle[\"opening\"].File: expected %q (from override), got %q", want, jingle.File)
 	}
 	// ending should come from first file (assets.yaml)
-	if _, ok := profile.Assets.Jingle["ending"]; !ok {
+	if _, ok := spec.Assets.Jingle["ending"]; !ok {
 		t.Error("Assets.Jingle[\"ending\"] should come from first assets file")
 	}
 }
 
-func TestLoadProfile_AssetsFiles_PathRelativeToAssetFile(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile_subdir_assets.yaml")
+func TestLoadEpisodeSpec_AssetsFiles_PathRelativeToAssetFile(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_subdir_assets.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile failed: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
-	jingle, ok := profile.Assets.Jingle["opening"]
+	jingle, ok := spec.Assets.Jingle["opening"]
 	if !ok {
 		t.Fatal("Assets.Jingle[\"opening\"] not found")
 	}
@@ -902,27 +902,27 @@ func TestLoadProfile_AssetsFiles_PathRelativeToAssetFile(t *testing.T) {
 	}
 }
 
-func TestLoadProfile_AssetsFiles_Empty_NoError(t *testing.T) {
-	profile, err := config.LoadProfile("testdata/profile_no_assets.yaml")
+func TestLoadEpisodeSpec_AssetsFiles_Empty_NoError(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_no_assets.yaml")
 	if err != nil {
-		t.Fatalf("LoadProfile should not error when assets_files is empty: %v", err)
+		t.Fatalf("LoadEpisodeSpec should not error when assets_files is empty: %v", err)
 	}
-	if len(profile.Assets.Jingle) != 0 || len(profile.Assets.SE) != 0 || len(profile.Assets.BGM) != 0 {
+	if len(spec.Assets.Jingle) != 0 || len(spec.Assets.SE) != 0 || len(spec.Assets.BGM) != 0 {
 		t.Error("Assets should be empty when assets_files is not specified")
 	}
 }
 
-func TestLoadProfile_AssetsFiles_MissingFile_Error(t *testing.T) {
-	_, err := config.LoadProfile("testdata/profile_missing_assets_file.yaml")
+func TestLoadEpisodeSpec_AssetsFiles_MissingFile_Error(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec_missing_assets_file.yaml")
 	if err == nil {
 		t.Error("expected error when assets_files references non-existent file")
 	}
 }
 
-func TestLoadProfileStrict_LegacyAssets_Error(t *testing.T) {
-	_, err := config.LoadProfileStrict("testdata/profile_with_legacy_assets.yaml")
+func TestLoadEpisodeSpecStrict_LegacyAssets_Error(t *testing.T) {
+	_, err := config.LoadEpisodeSpecStrict("testdata/episode_spec_with_legacy_assets.yaml")
 	if err == nil {
-		t.Error("expected error when profile has old-style assets: in strict mode")
+		t.Error("expected error when spec has old-style assets: in strict mode")
 	}
 }
 

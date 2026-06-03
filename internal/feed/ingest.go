@@ -13,16 +13,16 @@ import (
 
 // Options holds input parameters for feed generation.
 type Options struct {
-	CachePath  string
-	ConfigPath string
+	CachePath string
+	SpecPath  string
 }
 
-// Run loads cache and feedgen config, generates feed.xml, and writes it to the public directory.
+// Run loads cache and feed spec, generates feed.xml, and writes it to the public directory.
 // Returns the output path and the number of items written.
 func Run(opts Options) (string, int, error) {
-	cfg, err := model.LoadFeedgen(opts.ConfigPath)
+	cfg, err := model.LoadFeedSpec(opts.SpecPath)
 	if err != nil {
-		return "", 0, fmt.Errorf("load feedgen config: %w", err)
+		return "", 0, fmt.Errorf("load feed spec: %w", err)
 	}
 
 	mgr := cache.New(opts.CachePath)

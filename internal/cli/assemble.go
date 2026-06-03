@@ -17,7 +17,7 @@ func newAssembleCmd() *cobra.Command {
 	var in string
 	var clipsDir string
 	var out string
-	var profilePath string
+	var specPath string
 
 	cmd := &cobra.Command{
 		Use:   "assemble",
@@ -27,7 +27,7 @@ ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終�
 
 例:
   vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile sample-profiles/tech_profile.yaml`,
+  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3 --spec examples/tech.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("assemble", "")
 			if err != nil {
@@ -55,10 +55,10 @@ ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終�
 
 			var assetsConfig config.AssetsConfig
 			var program config.ProgramConfig
-			if profilePath != "" {
-				p, err := config.LoadProfile(profilePath)
+			if specPath != "" {
+				p, err := config.LoadEpisodeSpec(specPath)
 				if err != nil {
-					return fmt.Errorf("load profile: %w", err)
+					return fmt.Errorf("load spec: %w", err)
 				}
 				assetsConfig = p.Assets
 				program = p.Program
@@ -78,7 +78,7 @@ ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終�
 	cmd.Flags().StringVar(&in, "in", "", "script.json の入力パス（必須）")
 	cmd.Flags().StringVar(&clipsDir, "clips", "", "clips.json と WAV ファイルを含むディレクトリ（必須）")
 	cmd.Flags().StringVar(&out, "out", "", "MP3 の出力先パス（必須）")
-	cmd.Flags().StringVar(&profilePath, "profile", "", "アセット設定を含むプロファイル YAML ファイルのパス（任意）")
+	cmd.Flags().StringVar(&specPath, "spec", "", "アセット設定を含むエピソード仕様 YAML ファイルのパス（任意）")
 	_ = cmd.MarkFlagRequired("in")
 	_ = cmd.MarkFlagRequired("clips")
 	_ = cmd.MarkFlagRequired("out")

@@ -9,7 +9,7 @@ import (
 
 const DefaultPublicDir = "public"
 
-// FeedConfig holds RSS feed metadata for feedgen.yaml.
+// FeedConfig holds RSS feed metadata for feed-spec.yaml.
 type FeedConfig struct {
 	Language         string `yaml:"language"`
 	Author           string `yaml:"author"`
@@ -22,35 +22,35 @@ type FeedConfig struct {
 	Credit           string `yaml:"credit"`
 }
 
-// OutputConfig holds output settings for feedgen.yaml.
+// OutputConfig holds output settings for feed-spec.yaml.
 type OutputConfig struct {
 	Public string `yaml:"public"`
 }
 
-// FeedgenConfig is the top-level structure for feedgen.yaml.
-type FeedgenConfig struct {
+// FeedSpec is the top-level structure for feed-spec.yaml.
+type FeedSpec struct {
 	ProgramID string       `yaml:"program_id"`
 	Feed      FeedConfig   `yaml:"feed"`
 	Output    OutputConfig `yaml:"output"`
 }
 
 // EffectivePublicDir returns the configured public directory or DefaultPublicDir if not set.
-func (c FeedgenConfig) EffectivePublicDir() string {
+func (c FeedSpec) EffectivePublicDir() string {
 	if c.Output.Public == "" {
 		return DefaultPublicDir
 	}
 	return c.Output.Public
 }
 
-// LoadFeedgen reads and parses a feedgen.yaml file.
-func LoadFeedgen(path string) (FeedgenConfig, error) {
+// LoadFeedSpec reads and parses a feed-spec.yaml file.
+func LoadFeedSpec(path string) (FeedSpec, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return FeedgenConfig{}, fmt.Errorf("read feedgen config: %w", err)
+		return FeedSpec{}, fmt.Errorf("read feed spec: %w", err)
 	}
-	var cfg FeedgenConfig
+	var cfg FeedSpec
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return FeedgenConfig{}, fmt.Errorf("parse feedgen config: %w", err)
+		return FeedSpec{}, fmt.Errorf("parse feed spec: %w", err)
 	}
 	return cfg, nil
 }

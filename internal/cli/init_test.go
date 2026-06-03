@@ -41,14 +41,14 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
 	}
 }
 
-func TestInitCmd_ConfigExists_ProfileGenerated(t *testing.T) {
+func TestInitCmd_ConfigExists_EpisodeSpecGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
 	if err := os.WriteFile(filepath.Join(dir, "vox-radio.yaml"), existingContent, 0644); err != nil {
@@ -62,46 +62,46 @@ func TestInitCmd_ConfigExists_ProfileGenerated(t *testing.T) {
 	if string(data) != string(existingContent) {
 		t.Error("vox-radio.yaml should not be overwritten")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "profile.yaml")); os.IsNotExist(err) {
-		t.Error("profile.yaml was not generated")
+	if _, err := os.Stat(filepath.Join(dir, "episode-spec.yaml")); os.IsNotExist(err) {
+		t.Error("episode-spec.yaml was not generated")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "feedgen.yaml")); os.IsNotExist(err) {
-		t.Error("feedgen.yaml was not generated")
+	if _, err := os.Stat(filepath.Join(dir, "feed-spec.yaml")); os.IsNotExist(err) {
+		t.Error("feed-spec.yaml was not generated")
 	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for vox-radio.yaml, got: %s", out)
 	}
 }
 
-func TestInitCmd_ProfileExists_ConfigGenerated(t *testing.T) {
+func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "profile.yaml"), existingContent, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "episode-spec.yaml"), existingContent, 0644); err != nil {
 		t.Fatal(err)
 	}
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	data, _ := os.ReadFile(filepath.Join(dir, "profile.yaml"))
+	data, _ := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
 	if string(data) != string(existingContent) {
-		t.Error("profile.yaml should not be overwritten")
+		t.Error("episode-spec.yaml should not be overwritten")
 	}
 	if _, err := os.Stat(filepath.Join(dir, "vox-radio.yaml")); os.IsNotExist(err) {
 		t.Error("vox-radio.yaml was not generated")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "feedgen.yaml")); os.IsNotExist(err) {
-		t.Error("feedgen.yaml was not generated")
+	if _, err := os.Stat(filepath.Join(dir, "feed-spec.yaml")); os.IsNotExist(err) {
+		t.Error("feed-spec.yaml was not generated")
 	}
 	if !strings.Contains(out, "skip") {
-		t.Errorf("expected skip message for profile.yaml, got: %s", out)
+		t.Errorf("expected skip message for episode-spec.yaml, got: %s", out)
 	}
 }
 
 func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	allFiles := []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"}
+	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml"}
 	for _, name := range allFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), existingContent, 0644); err != nil {
 			t.Fatal(err)
@@ -119,22 +119,22 @@ func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	}
 }
 
-func TestInitCmd_FeedgenExists_Skipped(t *testing.T) {
+func TestInitCmd_FeedSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "feedgen.yaml"), existingContent, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "feed-spec.yaml"), existingContent, 0644); err != nil {
 		t.Fatal(err)
 	}
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	data, _ := os.ReadFile(filepath.Join(dir, "feedgen.yaml"))
+	data, _ := os.ReadFile(filepath.Join(dir, "feed-spec.yaml"))
 	if string(data) != string(existingContent) {
-		t.Error("feedgen.yaml should not be overwritten")
+		t.Error("feed-spec.yaml should not be overwritten")
 	}
 	if !strings.Contains(out, "skip") {
-		t.Errorf("expected skip message for feedgen.yaml, got: %s", out)
+		t.Errorf("expected skip message for feed-spec.yaml, got: %s", out)
 	}
 }
 
@@ -148,15 +148,15 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig failed on generated template: %v", err)
 	}
-	profile, err := config.LoadProfile(filepath.Join(dir, "profile.yaml"))
+	spec, err := config.LoadEpisodeSpec(filepath.Join(dir, "episode-spec.yaml"))
 	if err != nil {
-		t.Fatalf("LoadProfile failed on generated template: %v", err)
+		t.Fatalf("LoadEpisodeSpec failed on generated template: %v", err)
 	}
-	if _, err := model.LoadFeedgen(filepath.Join(dir, "feedgen.yaml")); err != nil {
-		t.Fatalf("LoadFeedgen failed on generated template: %v", err)
+	if _, err := model.LoadFeedSpec(filepath.Join(dir, "feed-spec.yaml")); err != nil {
+		t.Fatalf("LoadFeedSpec failed on generated template: %v", err)
 	}
-	if err := config.ValidateProfileCast(profile, cfg.Characters); err != nil {
-		t.Fatalf("ValidateProfileCast failed: %v", err)
+	if err := config.ValidateEpisodeSpecCast(spec, cfg.Characters); err != nil {
+		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
 	}
 
 	// cache フィールドのアサート

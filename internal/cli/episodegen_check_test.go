@@ -10,12 +10,12 @@ import (
 	"github.com/canpok1/vox-radio/internal/cli"
 )
 
-func profileTestdataPath(rel string) string {
+func episodeSpecTestdataPath(rel string) string {
 	return filepath.Join(cliTestSrcDir, "..", "config", "testdata", rel)
 }
 
-// setupProfileCheckDir creates a temp dir with vox-radio.yaml and changes cwd to it.
-func setupProfileCheckDir(t *testing.T, configSrc string) {
+// setupEpisodegenCheckDir creates a temp dir with vox-radio.yaml and changes cwd to it.
+func setupEpisodegenCheckDir(t *testing.T, configSrc string) {
 	t.Helper()
 	dir := chdirTemp(t)
 
@@ -28,13 +28,13 @@ func setupProfileCheckDir(t *testing.T, configSrc string) {
 	}
 }
 
-func TestProfileCheck_ValidProfile_Success(t *testing.T) {
-	setupProfileCheckDir(t, profileTestdataPath("config.yaml"))
+func TestEpisodegenCheck_ValidSpec_Success(t *testing.T) {
+	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
 
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
 	cmd.SetOut(buf)
-	cmd.SetArgs([]string{"profile", "check", profileTestdataPath("profile.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec.yaml")})
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -44,23 +44,23 @@ func TestProfileCheck_ValidProfile_Success(t *testing.T) {
 	}
 }
 
-func TestProfileCheck_UnknownKey_Error(t *testing.T) {
-	setupProfileCheckDir(t, profileTestdataPath("config.yaml"))
+func TestEpisodegenCheck_UnknownKey_Error(t *testing.T) {
+	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"profile", "check", profileTestdataPath("profile_unknown_key.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec_unknown_key.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown key in strict mode")
 	}
 }
 
-func TestProfileCheck_UnknownCast_Error(t *testing.T) {
-	setupProfileCheckDir(t, profileTestdataPath("config.yaml"))
+func TestEpisodegenCheck_UnknownCast_Error(t *testing.T) {
+	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
 
-	// create a profile with an unknown cast character
+	// create a spec with an unknown cast character
 	dir := t.TempDir()
-	profileContent := []byte(`program:
+	specContent := []byte(`program:
   title: "テスト"
   description: "テスト"
 
@@ -76,35 +76,35 @@ assets:
   se: {}
   bgm: {}
 `)
-	profilePath := filepath.Join(dir, "profile_bad_cast.yaml")
-	if err := os.WriteFile(profilePath, profileContent, 0600); err != nil {
+	specPath := filepath.Join(dir, "episode_spec_bad_cast.yaml")
+	if err := os.WriteFile(specPath, specContent, 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"profile", "check", profilePath})
+	cmd.SetArgs([]string{"episodegen", "check", specPath})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown cast character")
 	}
 }
 
-func TestProfileCheck_MissingConfig_Error(t *testing.T) {
+func TestEpisodegenCheck_MissingConfig_Error(t *testing.T) {
 	chdirTemp(t) // no vox-radio.yaml in cwd
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"profile", "check", profileTestdataPath("profile.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error when vox-radio.yaml is missing in cwd")
 	}
 }
 
-func TestProfileCheck_MissingProfileArg_Error(t *testing.T) {
+func TestEpisodegenCheck_MissingSpecArg_Error(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"profile", "check"})
+	cmd.SetArgs([]string{"episodegen", "check"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Error("expected error when profile path argument is missing")
+		t.Error("expected error when episode spec path argument is missing")
 	}
 }

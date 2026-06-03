@@ -59,7 +59,7 @@ func TestBuild(t *testing.T) {
 		}
 	})
 
-	t.Run("corners in profile order", func(t *testing.T) {
+	t.Run("corners in spec order", func(t *testing.T) {
 		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
 		if len(got.Corners) != len(corners) {
 			t.Fatalf("len(Corners) = %d, want %d", len(got.Corners), len(corners))

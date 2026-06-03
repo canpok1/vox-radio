@@ -245,21 +245,21 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 	}
 }
 
-// TestAssembler_Run_RealYAMLKeys verifies that asset keys from the actual YAML profile
+// TestAssembler_Run_RealYAMLKeys verifies that asset keys from the actual YAML spec
 // are correctly wired through to the ffmpeg command, preventing silent disable recurrence.
 // This is the integration test that catches the bug described in Issue #98
 // where YAML keys ("opening"/"ending") didn't match the code's expected keys ("op"/"ed").
 func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
-	// Load the testdata profile to get real YAML asset keys.
-	profile, err := config.LoadProfile("../../internal/config/testdata/profile.yaml")
+	// Load the testdata spec to get real YAML asset keys.
+	spec, err := config.LoadEpisodeSpec("../../internal/config/testdata/episode_spec.yaml")
 	if err != nil {
-		t.Fatalf("load profile: %v", err)
+		t.Fatalf("load episode spec: %v", err)
 	}
 
 	var capturedArgs []string
 	a := &Assembler{
-		AssetsConfig: profile.Assets,
-		Program:      profile.Program,
+		AssetsConfig: spec.Assets,
+		Program:      spec.Program,
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
 			capturedArgs = args
 			return nil
@@ -272,7 +272,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	// Build a script that already contains jingle segments (as produced by script.Generate).
 	// Collect opening/ending jingle keys from corners (replacing program-level config).
 	var openingKey, endingKey string
-	for _, corner := range profile.Corners {
+	for _, corner := range spec.Corners {
 		if openingKey == "" && corner.StartJingle != "" {
 			openingKey = corner.StartJingle
 		}
@@ -281,7 +281,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 		}
 	}
 	if openingKey == "" || endingKey == "" {
-		t.Skip("profile has no opening/ending jingle configured in corners")
+		t.Skip("spec has no opening/ending jingle configured in corners")
 	}
 
 	script := model.Script{
@@ -305,7 +305,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 
 	// Verify that the opening jingle file appears in the ffmpeg arguments.
 	// If the YAML key doesn't match what the code looks up, the jingle would be silently skipped.
-	if openingEntry, ok := profile.Assets.Jingle[openingKey]; ok {
+	if openingEntry, ok := spec.Assets.Jingle[openingKey]; ok {
 		foundOpening := false
 		for _, arg := range capturedArgs {
 			if arg == openingEntry.File {
@@ -318,7 +318,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 		}
 	}
 
-	if endingEntry, ok := profile.Assets.Jingle[endingKey]; ok {
+	if endingEntry, ok := spec.Assets.Jingle[endingKey]; ok {
 		foundEnding := false
 		for _, arg := range capturedArgs {
 			if arg == endingEntry.File {

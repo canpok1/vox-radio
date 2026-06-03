@@ -13,14 +13,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func writeFeedgenYAML(t *testing.T, path string, cfg model.FeedgenConfig) {
+func writeFeedSpecYAML(t *testing.T, path string, cfg model.FeedSpec) {
 	t.Helper()
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		t.Fatalf("marshal feedgen yaml: %v", err)
+		t.Fatalf("marshal feed spec yaml: %v", err)
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write feedgen yaml: %v", err)
+		t.Fatalf("write feed spec yaml: %v", err)
 	}
 }
 
@@ -45,7 +45,7 @@ func writeCacheJSONL(t *testing.T, path string, entries []cache.Entry) {
 func TestRun_GeneratesFeedXML(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "feedgen.yaml")
+	specPath := filepath.Join(dir, "feed-spec.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -63,7 +63,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, specPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -72,8 +72,8 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  specPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -100,7 +100,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 func TestRun_FiltersByProgramID(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "feedgen.yaml")
+	specPath := filepath.Join(dir, "feed-spec.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -123,7 +123,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, specPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -132,8 +132,8 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  specPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -148,7 +148,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "feedgen.yaml")
+	specPath := filepath.Join(dir, "feed-spec.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -163,7 +163,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, specPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -172,8 +172,8 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	})
 
 	_, _, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  specPath,
 	})
 	if err == nil {
 		t.Error("Run: expected error for episode_number=0, got nil")
@@ -183,12 +183,12 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 func TestRun_EmptyCache(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "feedgen.yaml")
+	specPath := filepath.Join(dir, "feed-spec.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, specPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -197,8 +197,8 @@ func TestRun_EmptyCache(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  specPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for empty cache: %v", err)
@@ -211,7 +211,7 @@ func TestRun_EmptyCache(t *testing.T) {
 func TestRun_ProgramIDMismatch(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "feedgen.yaml")
+	specPath := filepath.Join(dir, "feed-spec.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -226,7 +226,7 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
+	writeFeedSpecYAML(t, specPath, model.FeedSpec{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -235,8 +235,8 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  specPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for program_id mismatch: %v", err)

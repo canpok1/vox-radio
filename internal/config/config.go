@@ -380,11 +380,11 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 }
 
-// Profile holds genre-specific settings (program, corners, assets).
-// It is loaded from sample-profiles/<genre>_profile.yaml.
+// EpisodeSpec holds episode-specific settings (program, corners, assets).
+// It is loaded from episode-spec.yaml.
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
 // Assets are loaded from the files listed in AssetsFiles and merged into Assets.
-type Profile struct {
+type EpisodeSpec struct {
 	Program     ProgramConfig  `yaml:"program"`
 	Corners     []CornerConfig `yaml:"corners"`
 	AssetsFiles []string       `yaml:"assets_files"`
@@ -393,7 +393,7 @@ type Profile struct {
 
 // CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
 // Falls back to DefaultCornerSummaryLength when the corner is not found or summary_length is unset.
-func (p *Profile) CornerSummaryLength(title string) int {
+func (p *EpisodeSpec) CornerSummaryLength(title string) int {
 	for _, c := range p.Corners {
 		if c.Title == title {
 			return c.EffectiveSummaryLength()
@@ -487,20 +487,20 @@ func validateVoicevoxPresets(p *VoicevoxPresets) error {
 	return nil
 }
 
-// LoadProfile loads genre-specific settings from the given YAML file path.
-// Relative asset file paths are resolved relative to the profile file's directory.
-func LoadProfile(path string) (*Profile, error) {
-	return loadProfileWith(path, false)
+// LoadEpisodeSpec loads episode-specific settings from the given YAML file path.
+// Relative asset file paths are resolved relative to the spec file's directory.
+func LoadEpisodeSpec(path string) (*EpisodeSpec, error) {
+	return loadEpisodeSpecWith(path, false)
 }
 
-func loadProfileWith(path string, strict bool) (*Profile, error) {
-	p := &Profile{}
+func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
+	p := &EpisodeSpec{}
 	if err := decodeYAML(path, p, strict); err != nil {
 		return nil, err
 	}
-	profileDir := filepath.Dir(path)
+	specDir := filepath.Dir(path)
 	for _, assetsPath := range p.AssetsFiles {
-		absPath := resolveFile(profileDir, assetsPath)
+		absPath := resolveFile(specDir, assetsPath)
 		assets, err := loadAssetsFile(absPath)
 		if err != nil {
 			return nil, err
@@ -540,8 +540,8 @@ func mergeAssets(dst, src *AssetsConfig) {
 	}
 }
 
-// ValidateProfileCast checks that every character ID in corners[].cast exists in chars.
-func ValidateProfileCast(p *Profile, chars map[string]CharacterConfig) error {
+// ValidateEpisodeSpecCast checks that every character ID in corners[].cast exists in chars.
+func ValidateEpisodeSpecCast(p *EpisodeSpec, chars map[string]CharacterConfig) error {
 	for _, corner := range p.Corners {
 		for charID := range corner.Cast {
 			if _, ok := chars[charID]; !ok {
@@ -552,8 +552,8 @@ func ValidateProfileCast(p *Profile, chars map[string]CharacterConfig) error {
 	return nil
 }
 
-// ValidateProfileAssets checks that corner-level jingle/bgm keys reference existing assets.
-func ValidateProfileAssets(p *Profile) error {
+// ValidateEpisodeSpecAssets checks that corner-level jingle/bgm keys reference existing assets.
+func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
 	for _, corner := range p.Corners {
 		if corner.StartJingle != "" {
 			if _, ok := p.Assets.Jingle[corner.StartJingle]; !ok {
@@ -602,11 +602,11 @@ func LoadConfigStrict(path string) (*Config, error) {
 	return loadConfigWith(path, true)
 }
 
-// LoadProfileStrict loads genre-specific settings from the given YAML file path with strict parsing.
+// LoadEpisodeSpecStrict loads episode-specific settings from the given YAML file path with strict parsing.
 // Unknown keys in the YAML will cause an error (detects typos).
-// Relative asset file paths are resolved relative to the profile file's directory.
-func LoadProfileStrict(path string) (*Profile, error) {
-	return loadProfileWith(path, true)
+// Relative asset file paths are resolved relative to the spec file's directory.
+func LoadEpisodeSpecStrict(path string) (*EpisodeSpec, error) {
+	return loadEpisodeSpecWith(path, true)
 }
 
 func decodeYAML(path string, dest any, strict bool) error {

@@ -7,24 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newProfileCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "profile",
-		Short: "プロファイルファイルを操作するサブコマンド群",
-		Long: `番組プロファイル YAML に関連するサブコマンドを提供します。
-
-現在利用可能なサブコマンド:
-  check  プロファイルファイルの内容を検証します`,
-	}
-	cmd.AddCommand(newProfileCheckCmd())
-	return cmd
-}
-
-func newProfileCheckCmd() *cobra.Command {
+func newEpisodegenCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check <path>",
-		Short: "プロファイルファイルを strict モードでフル検証する",
-		Long: `指定したプロファイルファイルを strict モードでパースし、以下を検証します:
+		Short: "エピソード仕様ファイルを strict モードでフル検証する",
+		Long: `指定したエピソード仕様ファイルを strict モードでパースし、以下を検証します:
 
   (a) strict パース: 未知キー（typo）をエラー化
   (b) アセット参照: corners[].start_jingle / end_jingle / bgm が assets に存在するか
@@ -36,12 +23,12 @@ func newProfileCheckCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
-			p, err := config.LoadProfileStrict(path)
+			p, err := config.LoadEpisodeSpecStrict(path)
 			if err != nil {
 				return err
 			}
 
-			if err := config.ValidateProfileAssets(p); err != nil {
+			if err := config.ValidateEpisodeSpecAssets(p); err != nil {
 				return err
 			}
 
@@ -50,7 +37,7 @@ func newProfileCheckCmd() *cobra.Command {
 				return fmt.Errorf("load vox-radio.yaml for cast validation: %w", err)
 			}
 
-			if err := config.ValidateProfileCast(p, cfg.Characters); err != nil {
+			if err := config.ValidateEpisodeSpecCast(p, cfg.Characters); err != nil {
 				return err
 			}
 
