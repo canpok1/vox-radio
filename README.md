@@ -329,9 +329,23 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `url` | string | 必須 | フィードの URL |
 | `max_items` | int | 任意 | 取得する最大記事数。デフォルト: 0（Go ゼロ値、実質無制限） |
 
-#### `assets` セクション
+#### `assets_files` フィールド
 
-`assets` はジングル・SE・BGM の音声素材を設定します。バイナリ素材は別途用意してください。ファイルパスはプロファイルファイルのディレクトリからの相対パスで解決されます。
+`assets_files` はアセット設定ファイル（ジングル・SE・BGM を定義した YAML）のパスリストです。バイナリ素材は別途用意してください。
+
+- `assets_files` の各パスは**プロファイルファイルのディレクトリ**を基準に解決されます
+- アセット設定ファイル内の `file:` 相対パスは**そのアセット設定ファイルのディレクトリ**を基準に解決されます（アセット設定ファイルと音声素材をひとまとめに配布できます）
+- 複数ファイルを指定した場合は後勝ちでマージされます（共通アセット集＋番組固有アセットの組み合わせが可能）
+- `assets_files` を省略した場合はアセットが空となります（アセット不要なプロファイルで許容）
+
+```yaml
+# プロファイルファイルからの参照
+assets_files:
+  - assets/assets.yaml          # 共通アセット集
+  - assets/my-assets.yaml       # 番組固有アセット（後勝ちでマージ）
+```
+
+アセット設定ファイルのトップレベルには `jingle:` / `se:` / `bgm:` を記述します。
 
 音声アセットは `script.json` のセグメント型として統一的に表現されます。各セグメントは `type` フィールドで種別を指定し、`asset_name` フィールドで対応するマップのキーを参照します。
 
@@ -344,7 +358,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 
 ジングルはラン境界として機能します: 台本がジングルで区切られ、各ラン内の SE/BGM はそのランにのみ適用されます（ジングルをまたいで継続しません）。
 
-##### `assets.jingle` マップ値
+##### アセット設定ファイル: `jingle` マップ値
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
@@ -355,7 +369,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 
 ジングルはコーナー毎に `corners[].start_jingle` / `corners[].end_jingle` で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングルセグメントが含まれます。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
 
-##### `assets.se` マップ値
+##### アセット設定ファイル: `se` マップ値
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
@@ -365,7 +379,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `overlay` | bool | 任意 | `true` = 音声に重ねて再生（従来の overlay 動作）。`false` または省略 = SE が鳴り終わってから次のセリフを再生（順次）。デフォルト: false |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
-##### `assets.bgm` マップ値
+##### アセット設定ファイル: `bgm` マップ値
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
