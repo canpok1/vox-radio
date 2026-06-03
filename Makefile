@@ -31,7 +31,7 @@ docs:
 	go run ./tools/gendocs
 
 run-sample: build
-	./$(BINARY_NAME) run --profile "$(PROFILE)" --out-dir "$(OUT_DIR)"
+	./$(BINARY_NAME) episodegen --profile "$(PROFILE)" --out-dir "$(OUT_DIR)"
 
 check-samples: build
 	./$(BINARY_NAME) config check vox-radio.yaml

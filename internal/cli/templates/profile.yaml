@@ -1,6 +1,6 @@
 # profile.yaml - プロファイル設定ファイル
 # このファイルを編集して番組の構成・コーナー・音声素材のパスを設定してください。
-# vox-radio run --profile profile.yaml で実行できます。
+# vox-radio episodegen --profile profile.yaml で実行できます。
 
 # 番組全体の設定
 program:

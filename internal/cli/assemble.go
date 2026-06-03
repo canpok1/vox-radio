@@ -26,8 +26,8 @@ func newAssembleCmd() *cobra.Command {
 ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終的な MP3 エピソードを生成します。
 
 例:
-  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile sample-profiles/tech_profile.yaml`,
+  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3
+  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3 --profile sample-profiles/tech_profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("assemble", "")
 			if err != nil {
