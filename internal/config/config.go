@@ -78,7 +78,7 @@ type BGMEntry struct {
 	Description string   `yaml:"description,omitempty"`
 }
 
-// effectiveFadeSec resolves a *float64 fade setting: nil → defaultVal, negative → 0.
+// effectiveFadeSec resolves a *float64 fade setting: nil → DefaultBGMFadeSec, negative → 0.
 func effectiveFadeSec(v *float64) float64 {
 	if v == nil {
 		return DefaultBGMFadeSec
