@@ -2,6 +2,7 @@ package assemble
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -372,6 +373,31 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 
 	// BGM intervals overlay.
 	if hasBGM {
+		// Pre-compute crossfade parameters for adjacent BGM pairs.
+		// crossfadeExtSec[i] = seconds to extend interval i (due to following crossfade with i+1).
+		// crossfadeFadeInSec[i] = fade-in duration override for interval i (due to preceding crossfade from i-1).
+		crossfadeExtSec := make([]float64, len(run.bgmIntervals))
+		crossfadeFadeInSec := make([]float64, len(run.bgmIntervals))
+		for i := 0; i < len(run.bgmIntervals)-1; i++ {
+			curr := run.bgmIntervals[i]
+			next := run.bgmIntervals[i+1]
+			currEntry, currOk := assets.BGM[curr.assetName]
+			nextEntry, nextOk := assets.BGM[next.assetName]
+			if !currOk || !nextOk {
+				continue
+			}
+			currEndMs := curr.endMs
+			if currEndMs < 0 {
+				currEndMs = run.durationMs
+			}
+			if next.startMs == currEndMs {
+				// Adjacent BGM pair: apply crossfade.
+				overlapSec := math.Min(currEntry.EffectiveFadeOut(), nextEntry.EffectiveFadeIn())
+				crossfadeExtSec[i] = overlapSec
+				crossfadeFadeInSec[i+1] = overlapSec
+			}
+		}
+
 		bgmParts := make([]string, 0, len(run.bgmIntervals))
 		for i, interval := range run.bgmIntervals {
 			entry, ok := assets.BGM[interval.assetName]
@@ -389,9 +415,35 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			if endMs < 0 {
 				endMs = run.durationMs
 			}
-			durationSec := float64(endMs-interval.startMs) / 1000.0
-			b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f,adelay=%d|%d%s",
-				bgmIdx, entry.Volume, durationSec, interval.startMs, interval.startMs, intervalLabel))
+			durationSec := float64(endMs-interval.startMs)/1000.0 + crossfadeExtSec[i]
+
+			// Determine fade-in/out durations.
+			fadeIn := crossfadeFadeInSec[i]
+			if fadeIn == 0 {
+				fadeIn = entry.EffectiveFadeIn()
+			}
+			fadeOut := crossfadeExtSec[i]
+			if fadeOut == 0 {
+				fadeOut = entry.EffectiveFadeOut()
+			}
+			// Clamp to half duration to prevent overlapping fades.
+			half := durationSec / 2
+			if fadeIn > half {
+				fadeIn = half
+			}
+			if fadeOut > half {
+				fadeOut = half
+			}
+
+			filterStr := fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f", bgmIdx, entry.Volume, durationSec)
+			if fadeIn > 0 {
+				filterStr += fmt.Sprintf(",afade=t=in:d=%.3f", fadeIn)
+			}
+			if fadeOut > 0 {
+				filterStr += fmt.Sprintf(",areverse,afade=t=in:d=%.3f,areverse", fadeOut)
+			}
+			filterStr += fmt.Sprintf(",adelay=%d|%d%s", interval.startMs, interval.startMs, intervalLabel)
+			b.addFilter(filterStr)
 			bgmParts = append(bgmParts, intervalLabel)
 		}
 

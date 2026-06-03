@@ -51,4 +51,6 @@ assets:
       volume: 0.3
       duck_ratio: 8
       loop: true
+      # fade_in: 1.0   # フェードイン秒数（省略時デフォルト 1.0 秒）
+      # fade_out: 1.0  # フェードアウト秒数（省略時デフォルト 1.0 秒）。0 指定でフェードなし
       description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"

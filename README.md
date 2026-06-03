@@ -371,6 +371,10 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `volume` | float64 | 任意 | 音量倍率。デフォルト: 0（Go ゼロ値） |
 | `duck_ratio` | float64 | 任意 | セリフ再生中の音量低減比率（サイドチェインコンプ）。デフォルト: 0 |
 | `loop` | bool | 任意 | ループ再生するかどうか。デフォルト: false |
+| `fade_in` | float64 | 任意 | BGM 開始時のフェードイン秒数。省略時は 1.0 秒。`0` を指定するとフェードなし |
+| `fade_out` | float64 | 任意 | BGM 終了時のフェードアウト秒数。省略時は 1.0 秒。`0` を指定するとフェードなし |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
 BGM の開始・停止は台本の `bgm` セグメントで制御します。`asset_name` にキー名を指定するとその BGM を開始し、空文字列を指定すると停止します。
+
+同一ラン内で BGM が別の BGM に切り替わる場合、前の BGM がフェードアウトしつつ次の BGM がフェードインするクロスフェードが自動で適用されます（重なり幅 = `min(prevFadeOut, nextFadeIn)`）。ジングル境界または BGM 明示停止時も `fade_out` 秒でフェードアウトします。

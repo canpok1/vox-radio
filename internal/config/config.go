@@ -65,12 +65,41 @@ func effectiveTrimSilence(v *bool) bool {
 	return *v
 }
 
+// DefaultBGMFadeSec is the default fade-in/out duration (seconds) for BGM when not explicitly specified.
+const DefaultBGMFadeSec = 1.0
+
 type BGMEntry struct {
-	File        string  `yaml:"file"`
-	Volume      float64 `yaml:"volume"`
-	DuckRatio   float64 `yaml:"duck_ratio"`
-	Loop        bool    `yaml:"loop"`
-	Description string  `yaml:"description,omitempty"`
+	File        string   `yaml:"file"`
+	Volume      float64  `yaml:"volume"`
+	DuckRatio   float64  `yaml:"duck_ratio"`
+	Loop        bool     `yaml:"loop"`
+	FadeIn      *float64 `yaml:"fade_in,omitempty"`
+	FadeOut     *float64 `yaml:"fade_out,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+}
+
+// EffectiveFadeIn returns the fade-in duration in seconds.
+// nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
+func (e BGMEntry) EffectiveFadeIn() float64 {
+	if e.FadeIn == nil {
+		return DefaultBGMFadeSec
+	}
+	if *e.FadeIn < 0 {
+		return 0
+	}
+	return *e.FadeIn
+}
+
+// EffectiveFadeOut returns the fade-out duration in seconds.
+// nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
+func (e BGMEntry) EffectiveFadeOut() float64 {
+	if e.FadeOut == nil {
+		return DefaultBGMFadeSec
+	}
+	if *e.FadeOut < 0 {
+		return 0
+	}
+	return *e.FadeOut
 }
 
 type AssetsConfig struct {
