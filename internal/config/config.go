@@ -526,14 +526,22 @@ func LoadAssetsFileStrict(path string) (AssetsConfig, error) {
 	return loadAssetsFile(path, true)
 }
 
+// validateFileField checks that file is non-empty and exists on disk.
+func validateFileField(category, name, file string) error {
+	if file == "" {
+		return fmt.Errorf("%s[%q].file: must not be empty", category, name)
+	}
+	if _, err := os.Stat(file); err != nil {
+		return fmt.Errorf("%s[%q].file: %w", category, name, err)
+	}
+	return nil
+}
+
 // ValidateAssetsConfig checks that all referenced files exist and that field values are in valid ranges.
 func ValidateAssetsConfig(assets *AssetsConfig) error {
 	for name, entry := range assets.Jingle {
-		if entry.File == "" {
-			return fmt.Errorf("jingle[%q].file: must not be empty", name)
-		}
-		if _, err := os.Stat(entry.File); err != nil {
-			return fmt.Errorf("jingle[%q].file: %w", name, err)
+		if err := validateFileField("jingle", name, entry.File); err != nil {
+			return err
 		}
 		if entry.FadeIn < 0 {
 			return fmt.Errorf("jingle[%q].fade_in: must be >= 0, got %v", name, entry.FadeIn)
@@ -543,22 +551,16 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		}
 	}
 	for name, entry := range assets.SE {
-		if entry.File == "" {
-			return fmt.Errorf("se[%q].file: must not be empty", name)
-		}
-		if _, err := os.Stat(entry.File); err != nil {
-			return fmt.Errorf("se[%q].file: %w", name, err)
+		if err := validateFileField("se", name, entry.File); err != nil {
+			return err
 		}
 		if entry.Volume < 0 {
 			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
 		}
 	}
 	for name, entry := range assets.BGM {
-		if entry.File == "" {
-			return fmt.Errorf("bgm[%q].file: must not be empty", name)
-		}
-		if _, err := os.Stat(entry.File); err != nil {
-			return fmt.Errorf("bgm[%q].file: %w", name, err)
+		if err := validateFileField("bgm", name, entry.File); err != nil {
+			return err
 		}
 		if entry.Volume < 0 {
 			return fmt.Errorf("bgm[%q].volume: must be >= 0, got %v", name, entry.Volume)

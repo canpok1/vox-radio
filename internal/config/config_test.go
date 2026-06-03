@@ -1114,116 +1114,66 @@ func TestValidateAssetsConfig_EmptyFileField_Error(t *testing.T) {
 	}
 }
 
-func TestValidateAssetsConfig_JingleFadeInNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "j.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	assets := &config.AssetsConfig{
-		Jingle: map[string]config.JingleEntry{
-			"j": {File: f, FadeIn: -1.0, FadeOut: 0},
+func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
+	neg1 := -1.0
+	neg05 := -0.5
+	cases := []struct {
+		name   string
+		assets func(f string) *config.AssetsConfig
+	}{
+		{
+			name: "jingle fade_in negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, FadeIn: -1.0, FadeOut: 0}}}
+			},
+		},
+		{
+			name: "jingle fade_out negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, FadeIn: 0, FadeOut: -0.5}}}
+			},
+		},
+		{
+			name: "se volume negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{SE: map[string]config.SEEntry{"chime": {File: f, Volume: -0.1}}}
+			},
+		},
+		{
+			name: "bgm volume negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: -1, DuckRatio: 8}}}
+			},
+		},
+		{
+			name: "bgm duck_ratio less than 1",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 0}}}
+			},
+		},
+		{
+			name: "bgm fade_in negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeIn: &neg1}}}
+			},
+		},
+		{
+			name: "bgm fade_out negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeOut: &neg05}}}
+			},
 		},
 	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative fade_in, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_JingleFadeOutNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "j.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	assets := &config.AssetsConfig{
-		Jingle: map[string]config.JingleEntry{
-			"j": {File: f, FadeIn: 0, FadeOut: -0.5},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative fade_out, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_SEVolumeNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "s.wav")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	assets := &config.AssetsConfig{
-		SE: map[string]config.SEEntry{
-			"chime": {File: f, Volume: -0.1},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative volume, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_BGMVolumeNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "b.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	assets := &config.AssetsConfig{
-		BGM: map[string]config.BGMEntry{
-			"bgm": {File: f, Volume: -1, DuckRatio: 8},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative bgm volume, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_BGMDuckRatioLessThanOne_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "b.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	assets := &config.AssetsConfig{
-		BGM: map[string]config.BGMEntry{
-			"bgm": {File: f, Volume: 0.3, DuckRatio: 0},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for duck_ratio < 1, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_BGMFadeInNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "b.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	neg := -1.0
-	assets := &config.AssetsConfig{
-		BGM: map[string]config.BGMEntry{
-			"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeIn: &neg},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative bgm fade_in, got nil")
-	}
-}
-
-func TestValidateAssetsConfig_BGMFadeOutNegative_Error(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "b.mp3")
-	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	neg := -0.5
-	assets := &config.AssetsConfig{
-		BGM: map[string]config.BGMEntry{
-			"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeOut: &neg},
-		},
-	}
-	if err := config.ValidateAssetsConfig(assets); err == nil {
-		t.Error("expected error for negative bgm fade_out, got nil")
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dir := t.TempDir()
+			f := filepath.Join(dir, "stub.mp3")
+			if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+				t.Fatalf("setup: %v", err)
+			}
+			if err := config.ValidateAssetsConfig(c.assets(f)); err == nil {
+				t.Errorf("expected error for %q, got nil", c.name)
+			}
+		})
 	}
 }
