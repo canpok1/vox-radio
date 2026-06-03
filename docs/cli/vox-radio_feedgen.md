@@ -27,4 +27,5 @@ vox-radio feedgen [flags]
 ### SEE ALSO
 
 * [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
+* [vox-radio feedgen check](vox-radio_feedgen_check.md)	 - feed-spec.yaml を strict モードでフル検証する
 
