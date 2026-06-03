@@ -1,0 +1,10 @@
+program_id: test-program
+feed:
+  language: ja
+  author: Test Author
+  email: test@example.com
+  site_url: https://example.com/
+  audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
+  unknown_field: value
+output:
+  public: public
