@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -1018,6 +1019,153 @@ func TestBGMEntry_EffectiveFadeOut(t *testing.T) {
 			e := config.BGMEntry{FadeOut: c.ptr}
 			if got := e.EffectiveFadeOut(); got != c.want {
 				t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+			}
+		})
+	}
+}
+
+// --- LoadAssetsFileStrict ---
+
+func TestLoadAssetsFileStrict_ValidYAML_Success(t *testing.T) {
+	_, err := config.LoadAssetsFileStrict("testdata/assets.yaml")
+	if err != nil {
+		t.Errorf("unexpected error for valid assets.yaml: %v", err)
+	}
+}
+
+func TestLoadAssetsFileStrict_UnknownKeyErrors(t *testing.T) {
+	_, err := config.LoadAssetsFileStrict("testdata/assets_typo.yaml")
+	if err == nil {
+		t.Error("expected error for unknown key in strict mode, got nil")
+	}
+}
+
+// --- LoadEpisodeSpecStrict: strict propagation to assets ---
+
+func TestLoadEpisodeSpecStrict_AssetsTypo_Error(t *testing.T) {
+	_, err := config.LoadEpisodeSpecStrict("testdata/episode_spec_with_typo_assets.yaml")
+	if err == nil {
+		t.Error("expected error when assets_files contains typo and strict mode is on, got nil")
+	}
+}
+
+func TestLoadEpisodeSpec_AssetsTypo_NoError(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec_with_typo_assets.yaml")
+	if err != nil {
+		t.Errorf("LoadEpisodeSpec (non-strict) should not error on assets typo: %v", err)
+	}
+}
+
+// --- ValidateAssetsConfig ---
+
+func TestValidateAssetsConfig_Valid_Success(t *testing.T) {
+	dir := t.TempDir()
+	jingleFile := filepath.Join(dir, "opening.mp3")
+	seFile := filepath.Join(dir, "chime.wav")
+	bgmFile := filepath.Join(dir, "talk.mp3")
+	for _, f := range []string{jingleFile, seFile, bgmFile} {
+		if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+	}
+
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"opening": {File: jingleFile, FadeIn: 0.5, FadeOut: 0.5},
+		},
+		SE: map[string]config.SEEntry{
+			"chime": {File: seFile, Volume: 0.8},
+		},
+		BGM: map[string]config.BGMEntry{
+			"talk": {File: bgmFile, Volume: 0.3, DuckRatio: 8},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err != nil {
+		t.Errorf("unexpected error for valid assets: %v", err)
+	}
+}
+
+func TestValidateAssetsConfig_FileMissing_Error(t *testing.T) {
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"opening": {File: "/nonexistent/opening.mp3", FadeIn: 0, FadeOut: 0},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for missing file, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_EmptyFileField_Error(t *testing.T) {
+	assets := &config.AssetsConfig{
+		SE: map[string]config.SEEntry{
+			"chime": {File: "", Volume: 0.8},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for empty file field, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
+	neg1 := -1.0
+	neg05 := -0.5
+	cases := []struct {
+		name   string
+		assets func(f string) *config.AssetsConfig
+	}{
+		{
+			name: "jingle fade_in negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, FadeIn: -1.0, FadeOut: 0}}}
+			},
+		},
+		{
+			name: "jingle fade_out negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, FadeIn: 0, FadeOut: -0.5}}}
+			},
+		},
+		{
+			name: "se volume negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{SE: map[string]config.SEEntry{"chime": {File: f, Volume: -0.1}}}
+			},
+		},
+		{
+			name: "bgm volume negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: -1, DuckRatio: 8}}}
+			},
+		},
+		{
+			name: "bgm duck_ratio less than 1",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 0}}}
+			},
+		},
+		{
+			name: "bgm fade_in negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeIn: &neg1}}}
+			},
+		},
+		{
+			name: "bgm fade_out negative",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeOut: &neg05}}}
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dir := t.TempDir()
+			f := filepath.Join(dir, "stub.mp3")
+			if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+				t.Fatalf("setup: %v", err)
+			}
+			if err := config.ValidateAssetsConfig(c.assets(f)); err == nil {
+				t.Errorf("expected error for %q, got nil", c.name)
 			}
 		})
 	}

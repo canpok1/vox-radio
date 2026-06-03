@@ -116,6 +116,7 @@ collect → rundown → script → synth → assemble → manifest
 | `feedgen check` | `feed-spec.yaml` を strict モードでパースし、必須フィールド・URL/email 形式・プレースホルダを検証する。意味検証エラーは全件まとめて報告する |
 | `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
 | `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
+| `assets check` | アセット設定 YAML（`assets.yaml`）を strict モードでパースし、typo・参照ファイル欠落・不正値（volume/fade/duck_ratio）をエラーとして報告する |
 
 ### 設定ファイルの作成
 

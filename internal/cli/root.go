@@ -26,6 +26,7 @@ func NewRootCmd() *cobra.Command {
 		newEpisodegenCmd(),
 		newConfigCmd(),
 		newFeedgenCmd(),
+		newAssetsCmd(),
 	)
 
 	return root

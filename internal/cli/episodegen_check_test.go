@@ -108,3 +108,14 @@ func TestEpisodegenCheck_MissingSpecArg_Error(t *testing.T) {
 		t.Error("expected error when episode spec path argument is missing")
 	}
 }
+
+func TestEpisodegenCheck_AssetsTypo_Error(t *testing.T) {
+	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec_with_typo_assets.yaml")})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error when assets_files contains typo in strict mode, got nil")
+	}
+}
