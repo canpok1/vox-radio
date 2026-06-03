@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -521,27 +522,21 @@ func loadAssetsFile(path string) (AssetsConfig, error) {
 func mergeAssets(dst, src *AssetsConfig) {
 	if src.Jingle != nil {
 		if dst.Jingle == nil {
-			dst.Jingle = make(map[string]JingleEntry)
+			dst.Jingle = make(map[string]JingleEntry, len(src.Jingle))
 		}
-		for k, v := range src.Jingle {
-			dst.Jingle[k] = v
-		}
+		maps.Copy(dst.Jingle, src.Jingle)
 	}
 	if src.SE != nil {
 		if dst.SE == nil {
-			dst.SE = make(map[string]SEEntry)
+			dst.SE = make(map[string]SEEntry, len(src.SE))
 		}
-		for k, v := range src.SE {
-			dst.SE[k] = v
-		}
+		maps.Copy(dst.SE, src.SE)
 	}
 	if src.BGM != nil {
 		if dst.BGM == nil {
-			dst.BGM = make(map[string]BGMEntry)
+			dst.BGM = make(map[string]BGMEntry, len(src.BGM))
 		}
-		for k, v := range src.BGM {
-			dst.BGM[k] = v
-		}
+		maps.Copy(dst.BGM, src.BGM)
 	}
 }
 
