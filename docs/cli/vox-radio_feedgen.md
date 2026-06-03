@@ -4,13 +4,13 @@
 
 ### Synopsis
 
-cache ファイルと distribution.yaml から RSS 2.0 + iTunes フィード（feed.xml）を生成します。
+cache ファイルと feedgen.yaml から RSS 2.0 + iTunes フィード（feed.xml）を生成します。
 
 cache はエピソード状態の正データです。manifest や mp3 は必要ありません。
-生成された feed.xml は distribution.yaml の output.public ディレクトリに書き出されます。
+生成された feed.xml は feedgen.yaml の output.public ディレクトリに書き出されます。
 
 例:
-  vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --config config/distribution.yaml
+  vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --config config/feedgen.yaml
 
 ```
 vox-radio feedgen [flags]
@@ -20,7 +20,7 @@ vox-radio feedgen [flags]
 
 ```
       --cache string    キャッシュ JSONL ファイルのパス（必須）
-      --config string   distribution.yaml ファイルのパス（必須）
+      --config string   feedgen.yaml ファイルのパス（必須）
   -h, --help            help for feedgen
 ```
 

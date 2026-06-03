@@ -13,14 +13,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func writeDistributionYAML(t *testing.T, path string, cfg model.DistributionConfig) {
+func writeFeedgenYAML(t *testing.T, path string, cfg model.FeedgenConfig) {
 	t.Helper()
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		t.Fatalf("marshal distribution yaml: %v", err)
+		t.Fatalf("marshal feedgen yaml: %v", err)
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write distribution yaml: %v", err)
+		t.Fatalf("write feedgen yaml: %v", err)
 	}
 }
 
@@ -45,7 +45,7 @@ func writeCacheJSONL(t *testing.T, path string, entries []cache.Entry) {
 func TestRun_GeneratesFeedXML(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "distribution.yaml")
+	configPath := filepath.Join(dir, "feedgen.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -63,7 +63,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeDistributionYAML(t, configPath, model.DistributionConfig{
+	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -100,7 +100,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 func TestRun_FiltersByProgramID(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "distribution.yaml")
+	configPath := filepath.Join(dir, "feedgen.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -123,7 +123,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeDistributionYAML(t, configPath, model.DistributionConfig{
+	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -148,7 +148,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "distribution.yaml")
+	configPath := filepath.Join(dir, "feedgen.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -163,7 +163,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeDistributionYAML(t, configPath, model.DistributionConfig{
+	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -183,12 +183,12 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 func TestRun_EmptyCache(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "distribution.yaml")
+	configPath := filepath.Join(dir, "feedgen.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	writeDistributionYAML(t, configPath, model.DistributionConfig{
+	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
@@ -211,7 +211,7 @@ func TestRun_EmptyCache(t *testing.T) {
 func TestRun_ProgramIDMismatch(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
-	configPath := filepath.Join(dir, "distribution.yaml")
+	configPath := filepath.Join(dir, "feedgen.yaml")
 	publicDir := filepath.Join(dir, "public")
 
 	entries := []cache.Entry{
@@ -226,7 +226,7 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeDistributionYAML(t, configPath, model.DistributionConfig{
+	writeFeedgenYAML(t, configPath, model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",

@@ -12,7 +12,7 @@ import (
 )
 
 func TestBuildFeed_GoldenOutput(t *testing.T) {
-	cfg := model.DistributionConfig{
+	cfg := model.FeedgenConfig{
 		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			Language:         "ja",
@@ -82,7 +82,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 }
 
 func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
-	cfg := model.DistributionConfig{
+	cfg := model.FeedgenConfig{
 		ProgramID: "radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://host.example/ep-{episode_number}/{audio_file}",
@@ -113,7 +113,7 @@ func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
 }
 
 func TestBuildFeed_GUID(t *testing.T) {
-	cfg := model.DistributionConfig{
+	cfg := model.FeedgenConfig{
 		ProgramID: "radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://host.example/ep-{episode_number}/{audio_file}",
@@ -143,7 +143,7 @@ func TestBuildFeed_GUID(t *testing.T) {
 }
 
 func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
-	cfg := model.DistributionConfig{
+	cfg := model.FeedgenConfig{
 		ProgramID: "radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
@@ -189,7 +189,7 @@ func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
 }
 
 func TestBuildFeed_EmptyEntries(t *testing.T) {
-	cfg := model.DistributionConfig{
+	cfg := model.FeedgenConfig{
 		ProgramID: "radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",

@@ -1,0 +1,35 @@
+# feedgen.yaml - 配信フィード（RSS）生成設定
+# vox-radio feedgen --cache (cacheファイルのパス) --config feedgen.yaml で
+# RSS 2.0 + iTunes フィード（feed.xml）を生成します。
+# feed.xml は output.public ディレクトリに書き出されます。
+
+# 番組ID（feedgen が cache から対象エピソードを絞り込むキー。
+# profile.yaml の program.id と一致させること）
+program_id: "my-radio"
+
+# RSS / iTunes チャンネルのメタデータ
+feed:
+  # 言語コード（RSS channel language）
+  language: "ja"
+  # 配信者名（itunes:author）
+  author: "あなたの名前"
+  # 連絡先メールアドレス（itunes:email）
+  email: "you@example.com"
+  # iTunes カテゴリ（不要な場合は空文字でタグ省略）
+  category: "Technology"
+  # 露骨な表現の有無（itunes:explicit）
+  explicit: false
+  # カバー画像URL（itunes:image。不要な場合は空文字でタグ省略）
+  cover_image_url: "https://example.com/cover.jpg"
+  # 番組サイトURL（RSS channel link）
+  site_url: "https://example.com"
+  # 各エピソード音声ファイルのURLテンプレート。
+  # {episode_number} と {audio_file} が cache の値で置換されます。
+  audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
+  # クレジット表記（各 item の itunes:author。不要な場合は空文字で省略）
+  credit: ""
+
+# 出力設定
+output:
+  # feed.xml を書き出すディレクトリ（省略時は "public"）
+  public: "public"

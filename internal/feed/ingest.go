@@ -17,12 +17,12 @@ type Options struct {
 	ConfigPath string
 }
 
-// Run loads cache and distribution config, generates feed.xml, and writes it to the public directory.
+// Run loads cache and feedgen config, generates feed.xml, and writes it to the public directory.
 // Returns the output path and the number of items written.
 func Run(opts Options) (string, int, error) {
-	cfg, err := model.LoadDistribution(opts.ConfigPath)
+	cfg, err := model.LoadFeedgen(opts.ConfigPath)
 	if err != nil {
-		return "", 0, fmt.Errorf("load distribution config: %w", err)
+		return "", 0, fmt.Errorf("load feedgen config: %w", err)
 	}
 
 	mgr := cache.New(opts.CachePath)
