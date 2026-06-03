@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -38,7 +39,8 @@ type cornerSummaryResponse struct {
 }
 
 // SummarizeCorner generates a summary and points for a single corner from its script lines.
-func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines) (model.CornerSummary, error) {
+// summaryLength specifies the target character count for the summary.
+func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error) {
 	lines := make([]string, 0, len(corner.Lines))
 	for _, l := range corner.Lines {
 		if l.Text != "" {
@@ -54,6 +56,7 @@ func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.
 	prompt := strings.NewReplacer(
 		"{{corner_title}}", corner.Title,
 		"{{script_lines}}", string(linesJSON),
+		"{{summary_length}}", strconv.Itoa(summaryLength),
 	).Replace(s.promptTemplate)
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{

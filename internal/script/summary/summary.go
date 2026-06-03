@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -43,11 +44,12 @@ type LLMProgramSummarizer struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
+	summaryLength  int
 }
 
 // NewLLMProgramSummarizer creates a new LLMProgramSummarizer.
-func NewLLMProgramSummarizer(client llm.Client, promptTemplate string, temperature float64) *LLMProgramSummarizer {
-	return &LLMProgramSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature}
+func NewLLMProgramSummarizer(client llm.Client, promptTemplate string, temperature float64, summaryLength int) *LLMProgramSummarizer {
+	return &LLMProgramSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature, summaryLength: summaryLength}
 }
 
 type speechEntry struct {
@@ -72,7 +74,10 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.Script
 		return model.ProgramSummary{}, fmt.Errorf("marshal script lines: %w", err)
 	}
 
-	prompt := strings.NewReplacer("{{script_lines}}", string(linesJSON)).Replace(s.promptTemplate)
+	prompt := strings.NewReplacer(
+		"{{script_lines}}", string(linesJSON),
+		"{{summary_length}}", strconv.Itoa(s.summaryLength),
+	).Replace(s.promptTemplate)
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},

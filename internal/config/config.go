@@ -161,6 +161,12 @@ func (c LLMConfig) EffectiveMinRequestIntervalMS() int {
 	return *c.MinRequestIntervalMS
 }
 
+// DefaultProgramSummaryLength is the default summary length (chars) for program-wide summaries.
+const DefaultProgramSummaryLength = 200
+
+// DefaultCornerSummaryLength is the default summary length (chars) for per-corner summaries.
+const DefaultCornerSummaryLength = 100
+
 // DefaultCacheMaxEntries is the default maximum number of episodes to keep in the cache.
 const DefaultCacheMaxEntries = 100
 
@@ -204,9 +210,18 @@ func (c CacheConfig) EffectiveLLMContextEntries() int {
 
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
-	ID          string `yaml:"id,omitempty"`
-	Title       string `yaml:"title"`
-	Description string `yaml:"description"`
+	ID            string `yaml:"id,omitempty"`
+	Title         string `yaml:"title"`
+	Description   string `yaml:"description"`
+	SummaryLength int    `yaml:"summary_length,omitempty"`
+}
+
+// EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.
+func (p ProgramConfig) EffectiveSummaryLength() int {
+	if p.SummaryLength <= 0 {
+		return DefaultProgramSummaryLength
+	}
+	return p.SummaryLength
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
@@ -222,12 +237,21 @@ type CornerConfig struct {
 	Direction     string            `yaml:"direction,omitempty"`
 	Cast          map[string]string `yaml:"cast"`
 	LengthSec     int               `yaml:"length_sec"`
+	SummaryLength int               `yaml:"summary_length,omitempty"`
 	Source        *SourceConfig     `yaml:"source,omitempty"`
 	StartJingle   string            `yaml:"start_jingle,omitempty"`
 	EndJingle     string            `yaml:"end_jingle,omitempty"`
 	BGM           string            `yaml:"bgm,omitempty"`
 	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
 	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
+}
+
+// EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultCornerSummaryLength.
+func (c CornerConfig) EffectiveSummaryLength() int {
+	if c.SummaryLength <= 0 {
+		return DefaultCornerSummaryLength
+	}
+	return c.SummaryLength
 }
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.
@@ -362,6 +386,17 @@ type Profile struct {
 	Program ProgramConfig  `yaml:"program"`
 	Corners []CornerConfig `yaml:"corners"`
 	Assets  AssetsConfig   `yaml:"assets"`
+}
+
+// CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
+// Falls back to DefaultCornerSummaryLength when the corner is not found or summary_length is unset.
+func (p *Profile) CornerSummaryLength(title string) int {
+	for _, c := range p.Corners {
+		if c.Title == title {
+			return c.EffectiveSummaryLength()
+		}
+	}
+	return DefaultCornerSummaryLength
 }
 
 // LoadConfig loads common settings from the given YAML file path.

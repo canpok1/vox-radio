@@ -74,11 +74,13 @@ assets:
 
 - `program`: 番組コンテンツ生成に必要な設定（title/description/segment_pause_sec/length_sec のみ。配信専用フィールドは配信リポジトリ側で管理）
   - `length_sec`: 番組全体の目標再生時間（秒）
+  - `summary_length`（省略可）: 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字
 - `corners`: 固定コーナーのリスト（旧 `show` を再設計）
   - `cast`: キャラID→役割指示のマップ（`vox-radio.yaml` の `characters` のキーを参照）
   - `content`（省略可）: コーナーの内容説明。台本生成（write）LLM への指示に使用される。演出指示は含めないこと
   - `direction`（省略可）: コーナーの演出説明（ジングル・SE・BGMの挿入タイミングなど）。演出生成（direct）LLM のみに渡される。台本生成 LLM へは渡されないため、キャラクターがセリフとして口走ることがない
   - `length_sec`: コーナーの目標再生時間（秒）。台本生成時に文字数係数（≈7文字/秒）で換算される
+  - `summary_length`（省略可）: コーナーサマリーの目安文字数。未指定時はデフォルト 100 文字
   - `source`（省略可）: コーナーのデータソース。省略したコーナーは収集をスキップ
     - `feeds`: RSS フィードのリスト（`url` / `max_items`）
     - `articles`: 個別記事 URL のリスト
