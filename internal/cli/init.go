@@ -1,21 +1,15 @@
 package cli
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-//go:embed templates/vox-radio.yaml
-var configTemplate []byte
-
-//go:embed templates/profile.yaml
-var profileTemplate []byte
-
-//go:embed templates/feedgen.yaml
-var feedgenTemplate []byte
+//go:embed templates/*.yaml
+var templatesFS embed.FS
 
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
@@ -32,13 +26,20 @@ func newInitCmd() *cobra.Command {
 
   vox-radio run --profile profile.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := generateFile(cmd, "vox-radio.yaml", configTemplate); err != nil {
-				return err
+			entries, err := templatesFS.ReadDir("templates")
+			if err != nil {
+				return fmt.Errorf("read templates: %w", err)
 			}
-			if err := generateFile(cmd, "profile.yaml", profileTemplate); err != nil {
-				return err
+			for _, e := range entries {
+				content, err := templatesFS.ReadFile("templates/" + e.Name())
+				if err != nil {
+					return fmt.Errorf("read template %s: %w", e.Name(), err)
+				}
+				if err := generateFile(cmd, e.Name(), content); err != nil {
+					return err
+				}
 			}
-			return generateFile(cmd, "feedgen.yaml", feedgenTemplate)
+			return nil
 		},
 	}
 }

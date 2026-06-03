@@ -95,7 +95,8 @@ func TestInitCmd_ProfileExists_ConfigGenerated(t *testing.T) {
 func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
+	allFiles := []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"}
+	for _, name := range allFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), existingContent, 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -104,7 +105,7 @@ func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
+	for _, name := range allFiles {
 		data, _ := os.ReadFile(filepath.Join(dir, name))
 		if string(data) != string(existingContent) {
 			t.Errorf("%s should not be overwritten", name)
