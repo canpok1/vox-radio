@@ -78,29 +78,24 @@ type BGMEntry struct {
 	Description string   `yaml:"description,omitempty"`
 }
 
-// EffectiveFadeIn returns the fade-in duration in seconds.
-// nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
-func (e BGMEntry) EffectiveFadeIn() float64 {
-	if e.FadeIn == nil {
+// effectiveFadeSec resolves a *float64 fade setting: nil → defaultVal, negative → 0.
+func effectiveFadeSec(v *float64) float64 {
+	if v == nil {
 		return DefaultBGMFadeSec
 	}
-	if *e.FadeIn < 0 {
+	if *v < 0 {
 		return 0
 	}
-	return *e.FadeIn
+	return *v
 }
+
+// EffectiveFadeIn returns the fade-in duration in seconds.
+// nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
+func (e BGMEntry) EffectiveFadeIn() float64 { return effectiveFadeSec(e.FadeIn) }
 
 // EffectiveFadeOut returns the fade-out duration in seconds.
 // nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
-func (e BGMEntry) EffectiveFadeOut() float64 {
-	if e.FadeOut == nil {
-		return DefaultBGMFadeSec
-	}
-	if *e.FadeOut < 0 {
-		return 0
-	}
-	return *e.FadeOut
-}
+func (e BGMEntry) EffectiveFadeOut() float64 { return effectiveFadeSec(e.FadeOut) }
 
 type AssetsConfig struct {
 	Jingle map[string]JingleEntry `yaml:"jingle"`

@@ -148,7 +148,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		}
 		idx := b.addInput(entry.File)
 		label := buildJingleFadeIn(b, idx, entry)
-		label = applyFadeOut(b, label, idx, entry)
+		label = applyFadeOut(b, label, fmt.Sprintf("jingle%d", idx), entry.FadeOut)
 		jingleLabels[i] = label
 	}
 
@@ -435,15 +435,12 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 				fadeOut = half
 			}
 
-			filterStr := fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f", bgmIdx, entry.Volume, durationSec)
-			if fadeIn > 0 {
-				filterStr += fmt.Sprintf(",afade=t=in:d=%.3f", fadeIn)
-			}
-			if fadeOut > 0 {
-				filterStr += fmt.Sprintf(",areverse,afade=t=in:d=%.3f,areverse", fadeOut)
-			}
-			filterStr += fmt.Sprintf(",adelay=%d|%d%s", interval.startMs, interval.startMs, intervalLabel)
-			b.addFilter(filterStr)
+			key := fmt.Sprintf("run%d_bgm%d", runIdx, i)
+			trimLabel := fmt.Sprintf("[%s_trim]", key)
+			b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f%s", bgmIdx, entry.Volume, durationSec, trimLabel))
+			label := applyFadeIn(b, trimLabel, key, fadeIn)
+			label = applyFadeOut(b, label, key, fadeOut)
+			b.addFilter(fmt.Sprintf("%sadelay=%d|%d%s", label, interval.startMs, interval.startMs, intervalLabel))
 			bgmParts = append(bgmParts, intervalLabel)
 		}
 
@@ -539,28 +536,29 @@ func applySilenceTrim(b *filterBuilder, currentLabel string, key string, enabled
 
 // buildJingleFadeIn applies silence trim then fade-in to a jingle input and returns the resulting label.
 func buildJingleFadeIn(b *filterBuilder, idx int, entry config.JingleEntry) string {
-	label := applySilenceTrim(b, fmt.Sprintf("[%d:a]", idx), fmt.Sprintf("jingle%d", idx), entry.EffectiveTrimSilence())
-	return applyFadeIn(b, label, idx, entry.FadeIn)
+	key := fmt.Sprintf("jingle%d", idx)
+	label := applySilenceTrim(b, fmt.Sprintf("[%d:a]", idx), key, entry.EffectiveTrimSilence())
+	return applyFadeIn(b, label, key, entry.FadeIn)
 }
 
-// applyFadeOut applies fade-out to the current label and returns the resulting label.
-// Returns currentLabel unchanged when entry.FadeOut <= 0.
-func applyFadeOut(b *filterBuilder, currentLabel string, idx int, entry config.JingleEntry) string {
-	if entry.FadeOut <= 0 {
+// applyFadeOut applies fade-out (areverse/afade/areverse) to currentLabel and returns the resulting label.
+// key is used to name the intermediate output label. Returns currentLabel unchanged when fadeSec <= 0.
+func applyFadeOut(b *filterBuilder, currentLabel string, key string, fadeSec float64) string {
+	if fadeSec <= 0 {
 		return currentLabel
 	}
-	fadedLabel := fmt.Sprintf("[jingle%d_fo]", idx)
-	b.addFilter(fmt.Sprintf("%sareverse,afade=t=in:d=%.3f,areverse%s", currentLabel, entry.FadeOut, fadedLabel))
+	fadedLabel := fmt.Sprintf("[%s_fo]", key)
+	b.addFilter(fmt.Sprintf("%sareverse,afade=t=in:d=%.3f,areverse%s", currentLabel, fadeSec, fadedLabel))
 	return fadedLabel
 }
 
 // applyFadeIn applies an afade=t=in filter to currentLabel and returns the output label.
-// Returns currentLabel unchanged when fadeSec <= 0.
-func applyFadeIn(b *filterBuilder, currentLabel string, idx int, fadeSec float64) string {
+// key is used to name the intermediate output label. Returns currentLabel unchanged when fadeSec <= 0.
+func applyFadeIn(b *filterBuilder, currentLabel string, key string, fadeSec float64) string {
 	if fadeSec <= 0 {
 		return currentLabel
 	}
-	outLabel := fmt.Sprintf("[jingle%d_fi]", idx)
+	outLabel := fmt.Sprintf("[%s_fi]", key)
 	b.addFilter(fmt.Sprintf("%safade=t=in:d=%.3f%s", currentLabel, fadeSec, outLabel))
 	return outLabel
 }
