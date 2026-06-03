@@ -32,7 +32,7 @@ func newScriptCmd() *cobra.Command {
 02_rundown.json から 04_script.json を生成します。
 
 vox-radio.yaml はカレントディレクトリから自動読み込みされます。
-コーナー定義はプロファイルから取得します。
+コーナー定義はエピソード仕様から取得します。
 
 --step で単一ステージのみ実行できます:
   write      コーナーごとに台詞を書きます（03_lines.json を出力）

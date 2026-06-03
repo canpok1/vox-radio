@@ -1,10 +1,10 @@
-# feedgen.yaml - 配信フィード（RSS）生成設定
-# vox-radio feedgen --cache (cacheファイルのパス) --config feedgen.yaml で
+# feed-spec.yaml - 配信フィード（RSS）生成設定
+# vox-radio feedgen --cache (cacheファイルのパス) --spec feed-spec.yaml で
 # RSS 2.0 + iTunes フィード（feed.xml）を生成します。
 # feed.xml は output.public ディレクトリに書き出されます。
 
 # 番組ID（feedgen が cache から対象エピソードを絞り込むキー。
-# profile.yaml の program.id と一致させること）
+# episode-spec.yaml の program.id と一致させること）
 program_id: "my-radio"
 
 # RSS / iTunes チャンネルのメタデータ

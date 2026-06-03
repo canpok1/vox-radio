@@ -72,8 +72,8 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  configPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -132,8 +132,8 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  configPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -172,8 +172,8 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	})
 
 	_, _, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  configPath,
 	})
 	if err == nil {
 		t.Error("Run: expected error for episode_number=0, got nil")
@@ -197,8 +197,8 @@ func TestRun_EmptyCache(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  configPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for empty cache: %v", err)
@@ -235,8 +235,8 @@ func TestRun_ProgramIDMismatch(t *testing.T) {
 	})
 
 	_, n, err := feed.Run(feed.Options{
-		CachePath:  cachePath,
-		ConfigPath: configPath,
+		CachePath: cachePath,
+		SpecPath:  configPath,
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for program_id mismatch: %v", err)

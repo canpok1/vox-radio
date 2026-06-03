@@ -23,8 +23,8 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
   vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --spec config/feed-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, n, err := feed.Run(feed.Options{
-				CachePath:  cachePath,
-				ConfigPath: specPath,
+				CachePath: cachePath,
+				SpecPath:  specPath,
 			})
 			if err != nil {
 				return err

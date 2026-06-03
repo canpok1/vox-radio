@@ -23,7 +23,7 @@ func newRundownCmd() *cobra.Command {
 02_rundown.json を生成します。
 
 vox-radio.yaml はカレントディレクトリから自動読み込みされます。
-コーナー定義はプロファイルから取得します。
+コーナー定義はエピソード仕様から取得します。
 
 例:
   vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json --spec examples/tech.yaml`,
