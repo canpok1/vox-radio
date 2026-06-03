@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/canpok1/vox-radio/internal/feed"
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -39,5 +40,42 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
 	_ = cmd.MarkFlagRequired("cache")
 	_ = cmd.MarkFlagRequired("spec")
 
+	cmd.AddCommand(newFeedgenCheckCmd())
+
 	return cmd
+}
+
+func newFeedgenCheckCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check <path>",
+		Short: "feed-spec.yaml を strict モードでフル検証する",
+		Long: `指定した feed-spec.yaml を strict モードでパースし、以下を検証します:
+
+  (a) strict パース: 未知キー（typo）をエラー化
+  (b) 必須フィールド: program_id / feed.language / feed.author / feed.email /
+      feed.site_url / feed.audio_url_template の存在チェック
+  (c) URL / email 形式: 各フィールドの値が正しい形式かチェック
+  (d) プレースホルダ: audio_url_template に {episode_number} と {audio_file} が含まれるかチェック
+
+意味検証エラー (b)(c)(d) は全件収集してまとめて報告します。
+
+成功時は標準出力に OK メッセージを出力し、ゼロで終了します。
+失敗時は非ゼロで終了します（CI での自動検知に使用できます）。`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := args[0]
+
+			spec, err := model.LoadFeedSpecStrict(path)
+			if err != nil {
+				return err
+			}
+
+			if err := model.ValidateFeedSpec(spec); err != nil {
+				return err
+			}
+
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "OK: %s\n", path)
+			return nil
+		},
+	}
 }

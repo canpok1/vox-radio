@@ -207,4 +207,36 @@ func TestSubcommandHelp(t *testing.T) {
 			}
 		})
 	}
+
+	// feedgen 本体
+	t.Run("feedgen", func(t *testing.T) {
+		cmd := cli.NewRootCmd()
+		buf := &bytes.Buffer{}
+		cmd.SetOut(buf)
+		cmd.SetArgs([]string{"feedgen", "--help"})
+		err := cmd.Execute()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "--") {
+			t.Errorf("feedgen help should contain flag descriptions")
+		}
+		// check サブコマンドが列挙されること
+		if !strings.Contains(out, "\n  check ") {
+			t.Errorf("feedgen help should list check subcommand")
+		}
+	})
+
+	// feedgen check サブコマンド
+	t.Run("feedgen/check", func(t *testing.T) {
+		cmd := cli.NewRootCmd()
+		buf := &bytes.Buffer{}
+		cmd.SetOut(buf)
+		cmd.SetArgs([]string{"feedgen", "check", "--help"})
+		err := cmd.Execute()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
