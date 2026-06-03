@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -1020,5 +1021,209 @@ func TestBGMEntry_EffectiveFadeOut(t *testing.T) {
 				t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
 			}
 		})
+	}
+}
+
+// --- LoadAssetsFileStrict ---
+
+func TestLoadAssetsFileStrict_ValidYAML_Success(t *testing.T) {
+	_, err := config.LoadAssetsFileStrict("testdata/assets.yaml")
+	if err != nil {
+		t.Errorf("unexpected error for valid assets.yaml: %v", err)
+	}
+}
+
+func TestLoadAssetsFileStrict_UnknownKeyErrors(t *testing.T) {
+	_, err := config.LoadAssetsFileStrict("testdata/assets_typo.yaml")
+	if err == nil {
+		t.Error("expected error for unknown key in strict mode, got nil")
+	}
+}
+
+func TestLoadAssetsFileStrict_UnknownKey_NonStrict_NoError(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
+	if err != nil {
+		t.Errorf("LoadEpisodeSpec should not error on assets with unknown key: %v", err)
+	}
+}
+
+// --- LoadEpisodeSpecStrict: strict propagation to assets ---
+
+func TestLoadEpisodeSpecStrict_AssetsTypo_Error(t *testing.T) {
+	_, err := config.LoadEpisodeSpecStrict("testdata/episode_spec_with_typo_assets.yaml")
+	if err == nil {
+		t.Error("expected error when assets_files contains typo and strict mode is on, got nil")
+	}
+}
+
+func TestLoadEpisodeSpec_AssetsTypo_NoError(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec_with_typo_assets.yaml")
+	if err != nil {
+		t.Errorf("LoadEpisodeSpec (non-strict) should not error on assets typo: %v", err)
+	}
+}
+
+// --- ValidateAssetsConfig ---
+
+func TestValidateAssetsConfig_Valid_Success(t *testing.T) {
+	dir := t.TempDir()
+	jingleFile := filepath.Join(dir, "opening.mp3")
+	seFile := filepath.Join(dir, "chime.wav")
+	bgmFile := filepath.Join(dir, "talk.mp3")
+	for _, f := range []string{jingleFile, seFile, bgmFile} {
+		if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+	}
+
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"opening": {File: jingleFile, FadeIn: 0.5, FadeOut: 0.5},
+		},
+		SE: map[string]config.SEEntry{
+			"chime": {File: seFile, Volume: 0.8},
+		},
+		BGM: map[string]config.BGMEntry{
+			"talk": {File: bgmFile, Volume: 0.3, DuckRatio: 8},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err != nil {
+		t.Errorf("unexpected error for valid assets: %v", err)
+	}
+}
+
+func TestValidateAssetsConfig_FileMissing_Error(t *testing.T) {
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"opening": {File: "/nonexistent/opening.mp3", FadeIn: 0, FadeOut: 0},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for missing file, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_EmptyFileField_Error(t *testing.T) {
+	assets := &config.AssetsConfig{
+		SE: map[string]config.SEEntry{
+			"chime": {File: "", Volume: 0.8},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for empty file field, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_JingleFadeInNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "j.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"j": {File: f, FadeIn: -1.0, FadeOut: 0},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative fade_in, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_JingleFadeOutNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "j.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	assets := &config.AssetsConfig{
+		Jingle: map[string]config.JingleEntry{
+			"j": {File: f, FadeIn: 0, FadeOut: -0.5},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative fade_out, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_SEVolumeNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "s.wav")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	assets := &config.AssetsConfig{
+		SE: map[string]config.SEEntry{
+			"chime": {File: f, Volume: -0.1},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative volume, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_BGMVolumeNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "b.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	assets := &config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: f, Volume: -1, DuckRatio: 8},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative bgm volume, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_BGMDuckRatioLessThanOne_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "b.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	assets := &config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: f, Volume: 0.3, DuckRatio: 0},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for duck_ratio < 1, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_BGMFadeInNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "b.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	neg := -1.0
+	assets := &config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeIn: &neg},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative bgm fade_in, got nil")
+	}
+}
+
+func TestValidateAssetsConfig_BGMFadeOutNegative_Error(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "b.mp3")
+	if err := os.WriteFile(f, []byte{}, 0600); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	neg := -0.5
+	assets := &config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: f, Volume: 0.3, DuckRatio: 8, FadeOut: &neg},
+		},
+	}
+	if err := config.ValidateAssetsConfig(assets); err == nil {
+		t.Error("expected error for negative bgm fade_out, got nil")
 	}
 }

@@ -1,0 +1,13 @@
+program:
+  title: "テスト"
+  description: "typoアセット参照テスト用"
+
+corners:
+  - title: "コーナー1"
+    content: "内容"
+    cast:
+      zundamon: "進行"
+    length_sec: 60
+
+assets_files:
+  - assets_typo.yaml

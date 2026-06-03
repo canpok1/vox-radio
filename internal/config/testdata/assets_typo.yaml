@@ -1,0 +1,15 @@
+jingle:
+  opening:
+    file: assets/jingle/opening.mp3
+    fade_in: 0.5
+    fade_out: 0.5
+se:
+  chime:
+    file: assets/se/chime.wav
+    volumee: 0.8
+bgm:
+  talk_bgm:
+    file: assets/bgm/talk.mp3
+    volume: 0.3
+    duck_ratio: 8
+    loop: true

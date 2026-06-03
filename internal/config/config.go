@@ -501,7 +501,7 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 	specDir := filepath.Dir(path)
 	for _, assetsPath := range p.AssetsFiles {
 		absPath := resolveFile(specDir, assetsPath)
-		assets, err := loadAssetsFile(absPath)
+		assets, err := loadAssetsFile(absPath, strict)
 		if err != nil {
 			return nil, err
 		}
@@ -510,13 +510,70 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 	return p, nil
 }
 
-func loadAssetsFile(path string) (AssetsConfig, error) {
+func loadAssetsFile(path string, strict bool) (AssetsConfig, error) {
 	var assets AssetsConfig
-	if err := decodeYAML(path, &assets, false); err != nil {
+	if err := decodeYAML(path, &assets, strict); err != nil {
 		return AssetsConfig{}, fmt.Errorf("loading asset file %q: %w", path, err)
 	}
 	resolveAssetPaths(filepath.Dir(path), &assets)
 	return assets, nil
+}
+
+// LoadAssetsFileStrict loads an assets configuration file with strict parsing.
+// Unknown keys in the YAML will cause an error (detects typos).
+// Relative file paths are resolved relative to the assets file's directory.
+func LoadAssetsFileStrict(path string) (AssetsConfig, error) {
+	return loadAssetsFile(path, true)
+}
+
+// ValidateAssetsConfig checks that all referenced files exist and that field values are in valid ranges.
+func ValidateAssetsConfig(assets *AssetsConfig) error {
+	for name, entry := range assets.Jingle {
+		if entry.File == "" {
+			return fmt.Errorf("jingle[%q].file: must not be empty", name)
+		}
+		if _, err := os.Stat(entry.File); err != nil {
+			return fmt.Errorf("jingle[%q].file: %w", name, err)
+		}
+		if entry.FadeIn < 0 {
+			return fmt.Errorf("jingle[%q].fade_in: must be >= 0, got %v", name, entry.FadeIn)
+		}
+		if entry.FadeOut < 0 {
+			return fmt.Errorf("jingle[%q].fade_out: must be >= 0, got %v", name, entry.FadeOut)
+		}
+	}
+	for name, entry := range assets.SE {
+		if entry.File == "" {
+			return fmt.Errorf("se[%q].file: must not be empty", name)
+		}
+		if _, err := os.Stat(entry.File); err != nil {
+			return fmt.Errorf("se[%q].file: %w", name, err)
+		}
+		if entry.Volume < 0 {
+			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
+		}
+	}
+	for name, entry := range assets.BGM {
+		if entry.File == "" {
+			return fmt.Errorf("bgm[%q].file: must not be empty", name)
+		}
+		if _, err := os.Stat(entry.File); err != nil {
+			return fmt.Errorf("bgm[%q].file: %w", name, err)
+		}
+		if entry.Volume < 0 {
+			return fmt.Errorf("bgm[%q].volume: must be >= 0, got %v", name, entry.Volume)
+		}
+		if entry.DuckRatio < 1 {
+			return fmt.Errorf("bgm[%q].duck_ratio: must be >= 1, got %v", name, entry.DuckRatio)
+		}
+		if entry.FadeIn != nil && *entry.FadeIn < 0 {
+			return fmt.Errorf("bgm[%q].fade_in: must be >= 0, got %v", name, *entry.FadeIn)
+		}
+		if entry.FadeOut != nil && *entry.FadeOut < 0 {
+			return fmt.Errorf("bgm[%q].fade_out: must be >= 0, got %v", name, *entry.FadeOut)
+		}
+	}
+	return nil
 }
 
 func mergeAssets(dst, src *AssetsConfig) {
