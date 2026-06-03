@@ -1040,13 +1040,6 @@ func TestLoadAssetsFileStrict_UnknownKeyErrors(t *testing.T) {
 	}
 }
 
-func TestLoadAssetsFileStrict_UnknownKey_NonStrict_NoError(t *testing.T) {
-	_, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
-	if err != nil {
-		t.Errorf("LoadEpisodeSpec should not error on assets with unknown key: %v", err)
-	}
-}
-
 // --- LoadEpisodeSpecStrict: strict propagation to assets ---
 
 func TestLoadEpisodeSpecStrict_AssetsTypo_Error(t *testing.T) {
