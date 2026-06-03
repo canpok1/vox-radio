@@ -112,26 +112,23 @@ func ValidateFeedSpec(spec FeedSpec) error {
 		}
 	}
 	if spec.Feed.AudioURLTemplate != "" {
-		// Replace placeholders before URL validation
+		// (c) URL format: replace placeholders before validating
 		expanded := strings.ReplaceAll(spec.Feed.AudioURLTemplate, "{episode_number}", "1")
 		expanded = strings.ReplaceAll(expanded, "{audio_file}", "ep.mp3")
 		if err := validateAbsoluteURL(expanded); err != nil {
 			errs = append(errs, fmt.Errorf("feed.audio_url_template %w", err))
 		}
-	}
-	if spec.Feed.CoverImageURL != "" {
-		if err := validateAbsoluteURL(spec.Feed.CoverImageURL); err != nil {
-			errs = append(errs, fmt.Errorf("feed.cover_image_url %w", err))
-		}
-	}
-
-	// (d) placeholder checks for audio_url_template
-	if spec.Feed.AudioURLTemplate != "" {
+		// (d) placeholder presence
 		if !strings.Contains(spec.Feed.AudioURLTemplate, "{episode_number}") {
 			errs = append(errs, errors.New("feed.audio_url_template must contain {episode_number}"))
 		}
 		if !strings.Contains(spec.Feed.AudioURLTemplate, "{audio_file}") {
 			errs = append(errs, errors.New("feed.audio_url_template must contain {audio_file}"))
+		}
+	}
+	if spec.Feed.CoverImageURL != "" {
+		if err := validateAbsoluteURL(spec.Feed.CoverImageURL); err != nil {
+			errs = append(errs, fmt.Errorf("feed.cover_image_url %w", err))
 		}
 	}
 
