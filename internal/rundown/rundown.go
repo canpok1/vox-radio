@@ -56,11 +56,11 @@ func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, fet
 	for _, opt := range opts {
 		opt(r)
 	}
+	r.logger = r.logger.With("step", "rundown")
 	return r
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error) {
-	logger := r.logger.With("step", "rundown")
 	articleMap := articles.CornerMap()
 	rundownCorners := make([]model.RundownCorner, 0, len(corners))
 
@@ -74,7 +74,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			}
 		}
 		if n := len(cornerArticles) - len(filtered); n > 0 {
-			logger.Info("excluded past articles", "corner", corner.Title, "count", n)
+			r.logger.Info("excluded past articles", "corner", corner.Title, "count", n)
 		}
 		cornerArticles = filtered
 
@@ -106,9 +106,9 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			}
 			if r.fetcher != nil {
 				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
-					logger.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+					r.logger.Warn("full text fetch failed, using feed body", "url", url, "err", err)
 				} else if fullText == "" {
-					logger.Warn("full text fetch returned empty body, using feed body", "url", url)
+					r.logger.Warn("full text fetch returned empty body, using feed body", "url", url)
 				} else {
 					a.Body = fullText
 				}
