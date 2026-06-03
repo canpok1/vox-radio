@@ -1498,3 +1498,224 @@ func TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset(t *testing
 		t.Errorf("overlay SE adelay should be 7500ms (after sequential SE duration), filter: %s", args.FilterComplex)
 	}
 }
+
+func float64Ptr(v float64) *float64 { return &v }
+
+// TestBuildFFmpegArgs_BGMFadeInOut_A1 verifies that a BGM interval with explicit FadeIn/FadeOut
+// gets afade filters applied before adelay.
+func TestBuildFFmpegArgs_BGMFadeInOut_A1(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 5.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0.5), FadeOut: float64Ptr(0.5)},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Fade-in filter must appear.
+	if !strings.Contains(args.FilterComplex, "afade=t=in:d=0.500") {
+		t.Errorf("filter_complex missing afade fade-in for BGM: %s", args.FilterComplex)
+	}
+	// Fade-out filter (areverse trick) must appear.
+	if !strings.Contains(args.FilterComplex, "areverse,afade=t=in:d=0.500,areverse") {
+		t.Errorf("filter_complex missing areverse fade-out for BGM: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMFadeDefault_A5 verifies that a BGM with no FadeIn/FadeOut fields
+// defaults to 1.0 second fade-in and fade-out.
+func TestBuildFFmpegArgs_BGMFadeDefault_A5(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 10.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Default 1.0-second fade-in must appear.
+	if !strings.Contains(args.FilterComplex, "afade=t=in:d=1.000") {
+		t.Errorf("filter_complex missing default 1.0s fade-in for BGM: %s", args.FilterComplex)
+	}
+	// Default 1.0-second fade-out (areverse trick) must appear.
+	if !strings.Contains(args.FilterComplex, "areverse,afade=t=in:d=1.000,areverse") {
+		t.Errorf("filter_complex missing default 1.0s fade-out for BGM: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMFadeDisabled_A5 verifies that explicit FadeIn=0 / FadeOut=0
+// produces no afade filters for that BGM.
+func TestBuildFFmpegArgs_BGMFadeDisabled_A5(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 5.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0), FadeOut: float64Ptr(0)},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// No afade filter should appear for this BGM.
+	if strings.Contains(args.FilterComplex, "afade") {
+		t.Errorf("filter_complex must not contain afade when FadeIn=FadeOut=0: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMCrossfade_A2 verifies that adjacent BGM intervals produce a crossfade:
+// the first interval is extended and both intervals get afade filters.
+func TestBuildFFmpegArgs_BGMCrossfade_A2(t *testing.T) {
+	// Script: BGM(a) starts, speech1(5s), BGM(b) switches (adjacent to end of a), speech2(5s)
+	// BGM a: [0, 5500ms] (5s clip + 0.5s pauseSec), BGM b: [5500ms, end]
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "bgm_a"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm a"},
+				{Type: model.SegmentTypeBGM, AssetName: "bgm_b"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "with bgm b"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 5.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 5.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"bgm_a": {File: "/assets/bgm_a.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0.5), FadeOut: float64Ptr(1.0)},
+				"bgm_b": {File: "/assets/bgm_b.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(1.0), FadeOut: float64Ptr(0.5)},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Both BGM inputs must be present.
+	foundA, foundB := false, false
+	for _, inp := range args.Inputs {
+		if inp.Path == "/assets/bgm_a.mp3" {
+			foundA = true
+		}
+		if inp.Path == "/assets/bgm_b.mp3" {
+			foundB = true
+		}
+	}
+	if !foundA {
+		t.Errorf("bgm_a not in inputs: %v", args.Inputs)
+	}
+	if !foundB {
+		t.Errorf("bgm_b not in inputs: %v", args.Inputs)
+	}
+
+	// afade must appear for both intervals (fade-in of A, fade-out of A, fade-in of B, fade-out of B).
+	afadeCount := strings.Count(args.FilterComplex, "afade=t=in")
+	if afadeCount < 3 {
+		// At minimum: fade-in of A (0.5s), fade-out of A into crossfade (1.0s), fade-in of B (1.0s), fade-out of B (0.5s) = 4
+		// But with areverse trick, each fade-out has one afade call.
+		t.Errorf("expected at least 3 afade filters for crossfade (got %d): %s", afadeCount, args.FilterComplex)
+	}
+
+	// The first BGM interval (bgm_a) must be EXTENDED: atrim duration > 5.5s (original BGM a duration)
+	// overlapSec = min(FadeOut_A=1.0, FadeIn_B=1.0) = 1.0
+	// extended atrim = 5.5 + 1.0 = 6.5s → atrim=duration=6.500
+	if !strings.Contains(args.FilterComplex, "atrim=duration=6.500") {
+		t.Errorf("bgm_a should be extended for crossfade (atrim=duration=6.500): %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMShortClamp_A4 verifies that a very short BGM interval (shorter than
+// FadeIn+FadeOut) does not break the filter generation.
+func TestBuildFFmpegArgs_BGMShortClamp_A4(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "short"},
+				{Type: model.SegmentTypeBGM, AssetName: ""},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 0.8},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				// FadeIn=1.0 and FadeOut=1.0 both exceed half the BGM interval duration
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(1.0), FadeOut: float64Ptr(1.0)},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	// Should not error (filter is generated without breaking).
+	_, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Errorf("unexpected error for short BGM with large fade: %v", err)
+	}
+}

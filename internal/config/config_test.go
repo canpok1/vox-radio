@@ -849,3 +849,47 @@ func TestSEEntry_EffectiveOverlay(t *testing.T) {
 		}
 	}
 }
+
+func float64Ptr(v float64) *float64 { return &v }
+
+func TestBGMEntry_EffectiveFadeIn(t *testing.T) {
+	cases := []struct {
+		name string
+		ptr  *float64
+		want float64
+	}{
+		{"nil defaults to DefaultBGMFadeSec", nil, config.DefaultBGMFadeSec},
+		{"zero disables fade-in", float64Ptr(0.0), 0.0},
+		{"positive value used as-is", float64Ptr(2.0), 2.0},
+		{"negative clamped to zero", float64Ptr(-1.0), 0.0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := config.BGMEntry{FadeIn: c.ptr}
+			if got := e.EffectiveFadeIn(); got != c.want {
+				t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+			}
+		})
+	}
+}
+
+func TestBGMEntry_EffectiveFadeOut(t *testing.T) {
+	cases := []struct {
+		name string
+		ptr  *float64
+		want float64
+	}{
+		{"nil defaults to DefaultBGMFadeSec", nil, config.DefaultBGMFadeSec},
+		{"zero disables fade-out", float64Ptr(0.0), 0.0},
+		{"positive value used as-is", float64Ptr(2.0), 2.0},
+		{"negative clamped to zero", float64Ptr(-1.0), 0.0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := config.BGMEntry{FadeOut: c.ptr}
+			if got := e.EffectiveFadeOut(); got != c.want {
+				t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+			}
+		})
+	}
+}
