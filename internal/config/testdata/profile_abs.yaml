@@ -1,7 +1,2 @@
-assets:
-  jingle:
-    opening: { file: /absolute/path/to/opening.mp3, fade_in: 0.5, fade_out: 0.5 }
-  se:
-    chime: { file: /absolute/path/to/chime.wav, volume: 0.8 }
-  bgm:
-    talk_bgm: { file: /absolute/path/to/talk.mp3, volume: 0.3, duck_ratio: 8, loop: true }
+assets_files:
+  - assets_abs.yaml

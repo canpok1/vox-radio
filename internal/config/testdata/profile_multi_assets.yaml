@@ -1,0 +1,7 @@
+program:
+  title: "マルチアセットテスト"
+  description: "テスト用"
+
+assets_files:
+  - assets.yaml
+  - assets_override.yaml

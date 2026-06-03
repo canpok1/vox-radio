@@ -1,0 +1,6 @@
+program:
+  title: "サブディレクトリアセットテスト"
+  description: "テスト用"
+
+assets_files:
+  - subdir/assets_subdir.yaml

@@ -1,0 +1,6 @@
+program:
+  title: "存在しないアセットファイルテスト"
+  description: "テスト用"
+
+assets_files:
+  - nonexistent_assets.yaml

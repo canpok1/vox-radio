@@ -3,6 +3,7 @@ jingle:
     file: assets/jingle/opening.mp3
     fade_in: 0.5
     fade_out: 0.5
+    description: "番組冒頭で流すオープニングジングル"
   ending:
     file: assets/jingle/ending.mp3
     fade_in: 0.5
@@ -11,6 +12,7 @@ se:
   chime:
     file: assets/se/chime.wav
     volume: 0.8
+    description: "話題の切り替わりに鳴らす明るいチャイム音"
   transition:
     file: assets/se/transition.wav
     volume: 0.8
@@ -20,3 +22,4 @@ bgm:
     volume: 0.3
     duck_ratio: 8
     loop: true
+    description: "雑談向けの落ち着いたBGM"
