@@ -1,0 +1,5 @@
+jingle:
+  opening:
+    file: jingle/opening.mp3
+    fade_in: 0.5
+    fade_out: 0.5

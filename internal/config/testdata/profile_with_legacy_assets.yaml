@@ -1,0 +1,7 @@
+program:
+  title: "旧形式アセットテスト"
+  description: "テスト用"
+
+assets:
+  jingle:
+    opening: { file: opening.mp3, fade_in: 0.5, fade_out: 0.5 }

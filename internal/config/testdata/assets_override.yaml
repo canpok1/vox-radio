@@ -1,0 +1,5 @@
+jingle:
+  opening:
+    file: assets/jingle/opening_v2.mp3
+    fade_in: 1.0
+    fade_out: 1.0

@@ -33,24 +33,7 @@ corners:
       metan: "MC。相棒。ツッコミ担当。"
     length_sec: 30
 
-assets:
-  jingle:
-    opening:
-      file: assets/jingle/private-time-1.mp3
-      fade_in: 0.5
-      fade_out: 0.5
-      description: "番組冒頭で流すオープニングジングル"
-  se:
-    accent_low:
-      file: assets/se/accent-low.mp3
-      volume: 0.8
-      description: "話題の切り替わりや新コーナー導入時に使うアクセント音"
-  bgm:
-    coffee_break:
-      file: assets/bgm/coffee_break_long.mp3
-      volume: 0.3
-      duck_ratio: 8
-      loop: true
-      # fade_in: 1.0   # フェードイン秒数（省略時デフォルト 1.0 秒）
-      # fade_out: 1.0  # フェードアウト秒数（省略時デフォルト 1.0 秒）。0 指定でフェードなし
-      description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"
+# アセット設定ファイルのパス（このプロファイルファイルからの相対パス）
+# アセット設定ファイル内のfileパスはアセット設定ファイルのディレクトリを基準に解決される
+assets_files:
+  - assets/assets.yaml

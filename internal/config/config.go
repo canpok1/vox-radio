@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -382,10 +383,12 @@ type Config struct {
 // Profile holds genre-specific settings (program, corners, assets).
 // It is loaded from sample-profiles/<genre>_profile.yaml.
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
+// Assets are loaded from the files listed in AssetsFiles and merged into Assets.
 type Profile struct {
-	Program ProgramConfig  `yaml:"program"`
-	Corners []CornerConfig `yaml:"corners"`
-	Assets  AssetsConfig   `yaml:"assets"`
+	Program     ProgramConfig  `yaml:"program"`
+	Corners     []CornerConfig `yaml:"corners"`
+	AssetsFiles []string       `yaml:"assets_files"`
+	Assets      AssetsConfig   `yaml:"-"`
 }
 
 // CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
@@ -495,8 +498,46 @@ func loadProfileWith(path string, strict bool) (*Profile, error) {
 	if err := decodeYAML(path, p, strict); err != nil {
 		return nil, err
 	}
-	resolveAssetPaths(filepath.Dir(path), &p.Assets)
+	profileDir := filepath.Dir(path)
+	for _, assetsPath := range p.AssetsFiles {
+		absPath := resolveFile(profileDir, assetsPath)
+		assets, err := loadAssetsFile(absPath)
+		if err != nil {
+			return nil, err
+		}
+		mergeAssets(&p.Assets, &assets)
+	}
 	return p, nil
+}
+
+func loadAssetsFile(path string) (AssetsConfig, error) {
+	var assets AssetsConfig
+	if err := decodeYAML(path, &assets, false); err != nil {
+		return AssetsConfig{}, fmt.Errorf("loading asset file %q: %w", path, err)
+	}
+	resolveAssetPaths(filepath.Dir(path), &assets)
+	return assets, nil
+}
+
+func mergeAssets(dst, src *AssetsConfig) {
+	if src.Jingle != nil {
+		if dst.Jingle == nil {
+			dst.Jingle = make(map[string]JingleEntry, len(src.Jingle))
+		}
+		maps.Copy(dst.Jingle, src.Jingle)
+	}
+	if src.SE != nil {
+		if dst.SE == nil {
+			dst.SE = make(map[string]SEEntry, len(src.SE))
+		}
+		maps.Copy(dst.SE, src.SE)
+	}
+	if src.BGM != nil {
+		if dst.BGM == nil {
+			dst.BGM = make(map[string]BGMEntry, len(src.BGM))
+		}
+		maps.Copy(dst.BGM, src.BGM)
+	}
 }
 
 // ValidateProfileCast checks that every character ID in corners[].cast exists in chars.

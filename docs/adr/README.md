@@ -34,3 +34,4 @@
 | [0026](0026-feed-generation-as-vox-radio-subcommand.md) | feed 生成ツールを vox-radio の feedgen サブコマンドとして集約する（ADR-0012 の修正） | 採用 | 2026-06-02 |
 | [0027](0027-move-katakana-conversion-from-write-to-direct.md) | カタカナ化（読み変換）を write から direct へ移し、summary 入力を write 出力に変更する | 採用 | 2026-06-02 |
 | [0028](0028-nest-pipeline-steps-under-episodegen.md) | パイプライン各ステップを episodegen サブコマンド配下へ再編する（run のリネーム） | 採用 | 2026-06-03 |
+| [0029](0029-separate-asset-config-from-profile.md) | アセット設定のプロファイルからの分離 | 採用 | 2026-06-03 |

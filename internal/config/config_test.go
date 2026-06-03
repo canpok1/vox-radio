@@ -866,6 +866,66 @@ func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
 	}
 }
 
+func TestLoadProfile_AssetsFiles_MultipleFileMerge(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile_multi_assets.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	// opening should be overridden by second file (assets_override.yaml)
+	jingle, ok := profile.Assets.Jingle["opening"]
+	if !ok {
+		t.Fatal("Assets.Jingle[\"opening\"] not found")
+	}
+	want := filepath.Join("testdata", "assets", "jingle", "opening_v2.mp3")
+	if jingle.File != want {
+		t.Errorf("Jingle[\"opening\"].File: expected %q (from override), got %q", want, jingle.File)
+	}
+	// ending should come from first file (assets.yaml)
+	if _, ok := profile.Assets.Jingle["ending"]; !ok {
+		t.Error("Assets.Jingle[\"ending\"] should come from first assets file")
+	}
+}
+
+func TestLoadProfile_AssetsFiles_PathRelativeToAssetFile(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile_subdir_assets.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile failed: %v", err)
+	}
+	jingle, ok := profile.Assets.Jingle["opening"]
+	if !ok {
+		t.Fatal("Assets.Jingle[\"opening\"] not found")
+	}
+	// path resolved relative to subdir/, not testdata/
+	want := filepath.Join("testdata", "subdir", "jingle", "opening.mp3")
+	if jingle.File != want {
+		t.Errorf("Jingle[\"opening\"].File: expected %q, got %q", want, jingle.File)
+	}
+}
+
+func TestLoadProfile_AssetsFiles_Empty_NoError(t *testing.T) {
+	profile, err := config.LoadProfile("testdata/profile_no_assets.yaml")
+	if err != nil {
+		t.Fatalf("LoadProfile should not error when assets_files is empty: %v", err)
+	}
+	if len(profile.Assets.Jingle) != 0 || len(profile.Assets.SE) != 0 || len(profile.Assets.BGM) != 0 {
+		t.Error("Assets should be empty when assets_files is not specified")
+	}
+}
+
+func TestLoadProfile_AssetsFiles_MissingFile_Error(t *testing.T) {
+	_, err := config.LoadProfile("testdata/profile_missing_assets_file.yaml")
+	if err == nil {
+		t.Error("expected error when assets_files references non-existent file")
+	}
+}
+
+func TestLoadProfileStrict_LegacyAssets_Error(t *testing.T) {
+	_, err := config.LoadProfileStrict("testdata/profile_with_legacy_assets.yaml")
+	if err == nil {
+		t.Error("expected error when profile has old-style assets: in strict mode")
+	}
+}
+
 func boolPtr(v bool) *bool { return &v }
 
 func TestJingleEntry_EffectiveTrimSilence(t *testing.T) {
