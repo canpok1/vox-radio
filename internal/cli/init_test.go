@@ -8,6 +8,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cli"
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/model"
 )
 
 func chdirTemp(t *testing.T) string {
@@ -34,17 +35,16 @@ func runInitCmd(t *testing.T) (string, error) {
 	return buf.String(), err
 }
 
-func TestInitCmd_BothGenerated(t *testing.T) {
+func TestInitCmd_AllGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	_, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "vox-radio.yaml")); os.IsNotExist(err) {
-		t.Error("vox-radio.yaml was not generated")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "profile.yaml")); os.IsNotExist(err) {
-		t.Error("profile.yaml was not generated")
+	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
 	}
 }
 
@@ -92,10 +92,10 @@ func TestInitCmd_ProfileExists_ConfigGenerated(t *testing.T) {
 	}
 }
 
-func TestInitCmd_BothExist_NothingGenerated(t *testing.T) {
+func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	for _, name := range []string{"vox-radio.yaml", "profile.yaml"} {
+	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
 		if err := os.WriteFile(filepath.Join(dir, name), existingContent, 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -104,11 +104,30 @@ func TestInitCmd_BothExist_NothingGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "profile.yaml"} {
+	for _, name := range []string{"vox-radio.yaml", "profile.yaml", "feedgen.yaml"} {
 		data, _ := os.ReadFile(filepath.Join(dir, name))
 		if string(data) != string(existingContent) {
 			t.Errorf("%s should not be overwritten", name)
 		}
+	}
+}
+
+func TestInitCmd_FeedgenExists_Skipped(t *testing.T) {
+	dir := chdirTemp(t)
+	existingContent := []byte("# existing")
+	if err := os.WriteFile(filepath.Join(dir, "feedgen.yaml"), existingContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runInitCmd(t)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "feedgen.yaml"))
+	if string(data) != string(existingContent) {
+		t.Error("feedgen.yaml should not be overwritten")
+	}
+	if !strings.Contains(out, "skip") {
+		t.Errorf("expected skip message for feedgen.yaml, got: %s", out)
 	}
 }
 
@@ -125,6 +144,9 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	profile, err := config.LoadProfile(filepath.Join(dir, "profile.yaml"))
 	if err != nil {
 		t.Fatalf("LoadProfile failed on generated template: %v", err)
+	}
+	if _, err := model.LoadFeedgen(filepath.Join(dir, "feedgen.yaml")); err != nil {
+		t.Fatalf("LoadFeedgen failed on generated template: %v", err)
 	}
 	if err := config.ValidateProfileCast(profile, cfg.Characters); err != nil {
 		t.Fatalf("ValidateProfileCast failed: %v", err)

@@ -8,9 +8,9 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-func TestLoadDistribution_ValidYAML(t *testing.T) {
+func TestLoadFeedgen_ValidYAML(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "distribution.yaml")
+	path := filepath.Join(dir, "feedgen.yaml")
 	content := `
 program_id: zundamon-tech-radio
 feed:
@@ -30,9 +30,9 @@ output:
 		t.Fatalf("write yaml: %v", err)
 	}
 
-	cfg, err := model.LoadDistribution(path)
+	cfg, err := model.LoadFeedgen(path)
 	if err != nil {
-		t.Fatalf("LoadDistribution: unexpected error: %v", err)
+		t.Fatalf("LoadFeedgen: unexpected error: %v", err)
 	}
 
 	if cfg.ProgramID != "zundamon-tech-radio" {
@@ -71,23 +71,23 @@ output:
 	}
 }
 
-func TestLoadDistribution_FileNotExist(t *testing.T) {
-	_, err := model.LoadDistribution("/nonexistent/path/distribution.yaml")
+func TestLoadFeedgen_FileNotExist(t *testing.T) {
+	_, err := model.LoadFeedgen("/nonexistent/path/feedgen.yaml")
 	if err == nil {
-		t.Error("LoadDistribution: expected error for nonexistent file, got nil")
+		t.Error("LoadFeedgen: expected error for nonexistent file, got nil")
 	}
 }
 
-func TestDistributionConfig_EffectivePublicDir_Default(t *testing.T) {
-	cfg := model.DistributionConfig{}
+func TestFeedgenConfig_EffectivePublicDir_Default(t *testing.T) {
+	cfg := model.FeedgenConfig{}
 	got := cfg.EffectivePublicDir()
 	if got != model.DefaultPublicDir {
 		t.Errorf("EffectivePublicDir(): got %q, want %q", got, model.DefaultPublicDir)
 	}
 }
 
-func TestDistributionConfig_EffectivePublicDir_Custom(t *testing.T) {
-	cfg := model.DistributionConfig{
+func TestFeedgenConfig_EffectivePublicDir_Custom(t *testing.T) {
+	cfg := model.FeedgenConfig{
 		Output: model.OutputConfig{Public: "dist/public"},
 	}
 	got := cfg.EffectivePublicDir()

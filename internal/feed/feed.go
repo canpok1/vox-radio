@@ -62,7 +62,7 @@ type rssEnclosure struct {
 
 // BuildFeed generates a podcast RSS 2.0 + iTunes feed XML from cache entries.
 // Channel title/description come from the latest entry. Items are ordered newest first.
-func BuildFeed(cfg model.DistributionConfig, entries []cache.Entry) (string, error) {
+func BuildFeed(cfg model.FeedgenConfig, entries []cache.Entry) (string, error) {
 	var channelTitle, channelDescription string
 	if len(entries) > 0 {
 		latest := entries[len(entries)-1]

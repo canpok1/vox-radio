@@ -14,15 +14,18 @@ var configTemplate []byte
 //go:embed templates/profile.yaml
 var profileTemplate []byte
 
+//go:embed templates/feedgen.yaml
+var feedgenTemplate []byte
+
 func newInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
 		Short: "カレントディレクトリにテンプレート設定ファイルを生成する",
-		Long: `vox-radio.yaml（共通設定）と profile.yaml（プログラムプロファイル）を
+		Long: `vox-radio.yaml（共通設定）・profile.yaml（プログラムプロファイル）・feedgen.yaml（フィード生成設定）を
 カレントディレクトリに生成します。
 
 既存ファイルは上書きを防ぐため個別にスキップされます。
-両ファイルがすでに存在する場合は何も生成されません。
+すべてのファイルがすでに存在する場合は何も生成されません。
 
 生成後は LLM API キー・番組内容・音声アセットパスを設定ファイルに記入し、
 次のコマンドでパイプラインを実行してください:
@@ -32,7 +35,10 @@ func newInitCmd() *cobra.Command {
 			if err := generateFile(cmd, "vox-radio.yaml", configTemplate); err != nil {
 				return err
 			}
-			return generateFile(cmd, "profile.yaml", profileTemplate)
+			if err := generateFile(cmd, "profile.yaml", profileTemplate); err != nil {
+				return err
+			}
+			return generateFile(cmd, "feedgen.yaml", feedgenTemplate)
 		},
 	}
 }

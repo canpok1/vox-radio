@@ -104,7 +104,7 @@ collect → rundown → script → synth → assemble → manifest
 
 | コマンド | 概要 |
 |----------|------|
-| `init` | カレントディレクトリに `vox-radio.yaml` と `profile.yaml` のテンプレートを生成する（初回セットアップ用） |
+| `init` | カレントディレクトリに `vox-radio.yaml`・`profile.yaml`・`feedgen.yaml` のテンプレートを生成する（初回セットアップ用） |
 | `collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
 | `rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
 | `script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
@@ -112,13 +112,13 @@ collect → rundown → script → synth → assemble → manifest
 | `assemble` | 音声クリップとイントロ・アウトロを ffmpeg で結合し MP3 エピソードを生成する |
 | `manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `run` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行する |
-| `feedgen` | キャッシュ（`.jsonl`）と `distribution.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
+| `feedgen` | キャッシュ（`.jsonl`）と `feedgen.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
 | `profile check` | プロファイル YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
 
 ### 設定ファイルの作成
 
-`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）と `profile.yaml`（プロファイル）のテンプレートが生成されます。
+`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`profile.yaml`（プロファイル）・`feedgen.yaml`（フィード生成設定）のテンプレートが生成されます。
 
 ```bash
 # テンプレートを生成
