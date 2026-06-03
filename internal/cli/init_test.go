@@ -65,6 +65,9 @@ func TestInitCmd_ConfigExists_ProfileGenerated(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "profile.yaml")); os.IsNotExist(err) {
 		t.Error("profile.yaml was not generated")
 	}
+	if _, err := os.Stat(filepath.Join(dir, "feedgen.yaml")); os.IsNotExist(err) {
+		t.Error("feedgen.yaml was not generated")
+	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for vox-radio.yaml, got: %s", out)
 	}
@@ -86,6 +89,9 @@ func TestInitCmd_ProfileExists_ConfigGenerated(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "vox-radio.yaml")); os.IsNotExist(err) {
 		t.Error("vox-radio.yaml was not generated")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "feedgen.yaml")); os.IsNotExist(err) {
+		t.Error("feedgen.yaml was not generated")
 	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for profile.yaml, got: %s", out)
