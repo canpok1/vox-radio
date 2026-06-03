@@ -25,7 +25,7 @@ func TestLLMCornerSummarizer_SummarizeCorner_ReturnsSummaryAndPoints(t *testing.
 		},
 	}
 
-	got, err := s.SummarizeCorner(context.Background(), corner)
+	got, err := s.SummarizeCorner(context.Background(), corner, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestLLMCornerSummarizer_SummarizeCorner_PromptContainsCornerTitleAndLines(t
 		},
 	}
 
-	_, _ = s.SummarizeCorner(context.Background(), corner)
+	_, _ = s.SummarizeCorner(context.Background(), corner, 100)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -78,7 +78,7 @@ func TestLLMCornerSummarizer_SummarizeCorner_EmptyLinesReturnsEmptyResult(t *tes
 		Lines: []model.Line{},
 	}
 
-	got, err := s.SummarizeCorner(context.Background(), corner)
+	got, err := s.SummarizeCorner(context.Background(), corner, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestLLMCornerSummarizer_SummarizeCorner_PointsNeverNil(t *testing.T) {
 		Lines: []model.Line{{Text: "テスト"}},
 	}
 
-	got, err := s.SummarizeCorner(context.Background(), corner)
+	got, err := s.SummarizeCorner(context.Background(), corner, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -119,8 +119,33 @@ func TestLLMCornerSummarizer_SummarizeCorner_LLMError(t *testing.T) {
 		Lines: []model.Line{{Text: "テスト"}},
 	}
 
-	_, err := s.SummarizeCorner(context.Background(), corner)
+	_, err := s.SummarizeCorner(context.Background(), corner, 100)
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestLLMCornerSummarizer_SummarizeCorner_PromptContainsSummaryLength(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","points":[]}`),
+	}
+	s := summary.NewLLMCornerSummarizer(mc, "{{corner_title}} {{summary_length}}文字程度", 0)
+
+	corner := model.CornerLines{
+		Title: "テックニュース",
+		Lines: []model.Line{{Text: "テスト"}},
+	}
+
+	_, _ = s.SummarizeCorner(context.Background(), corner, 120)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "120") {
+		t.Errorf("prompt should contain summary_length=120, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "{{summary_length}}") {
+		t.Errorf("prompt should not contain unexpanded placeholder, got: %s", prompt)
 	}
 }

@@ -294,6 +294,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 |---|---|---|---|
 | `title` | string | 任意 | 番組タイトル |
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用） |
+| `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
 
 #### `corners` セクション
 
@@ -306,6 +307,7 @@ vox-radio assemble --in work/intermediate/04_script.json --clips work/clips --ou
 | `direction` | string | 任意 | コーナーの演出説明（演出生成 LLM への指示に使用。SE の挿入タイミングなど）。台本生成 LLM へは渡されない |
 | `cast` | map[string]string | 任意 | キャラID → 役割説明のマップ（キーは `vox-radio.yaml` の `characters` のキーと一致させること） |
 | `length_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に文字数（≈7文字/秒）へ換算される |
+| `summary_length` | int | 任意 | コーナーサマリーの目安文字数。未指定時はデフォルト 100 文字 |
 | `source` | SourceConfig | 任意 | データソース（省略するとこのコーナーの収集はスキップ） |
 | `start_jingle` | string | 任意 | コーナー開始ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の前に確定的に挿入される |
 | `end_jingle` | string | 任意 | コーナー終了ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の後に確定的に挿入される |

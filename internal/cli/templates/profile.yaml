@@ -10,6 +10,8 @@ program:
   title: "番組タイトル"
   # 番組の説明（LLM への指示に使用）
   description: "番組の説明"
+  # 番組全体サマリーの目安文字数（任意。未指定時はデフォルト 200 文字）
+  # summary_length: 200
 
 # コーナー定義（番組を構成する各コーナーを順番に記述）
 corners:
@@ -24,6 +26,8 @@ corners:
       zundamon: "元気に挨拶する進行役"
     # このコーナーの目標時間（秒）
     length_sec: 30
+    # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
+    # summary_length: 100
     # コーナー開始ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
     # start_jingle: opening
     # コーナー開始前の無音時間（秒）。0 または省略時は挿入しない。
@@ -37,6 +41,8 @@ corners:
       zundamon: "進行役"
       metan: "解説役"
     length_sec: 180
+    # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
+    # summary_length: 100
     # コーナー中BGM（assets.bgm のキー名。不要な場合は行ごと削除）
     # bgm: talk_bgm
     # ソース設定（RSSフィードや記事URLからコンテンツを収集する場合に設定）
@@ -52,6 +58,8 @@ corners:
     cast:
       zundamon: "進行役"
     length_sec: 30
+    # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
+    # summary_length: 100
     # コーナー終了ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
     # end_jingle: ending
 

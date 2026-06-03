@@ -286,6 +286,75 @@ func TestValidateProfileAssets_EmptyFields_NoError(t *testing.T) {
 	}
 }
 
+func TestProgramConfig_EffectiveSummaryLength(t *testing.T) {
+	tests := []struct {
+		name          string
+		summaryLength int
+		want          int
+	}{
+		{name: "unset returns default", summaryLength: 0, want: config.DefaultProgramSummaryLength},
+		{name: "explicit value returned", summaryLength: 300, want: 300},
+		{name: "minimum value 1", summaryLength: 1, want: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := config.ProgramConfig{SummaryLength: tt.summaryLength}
+			got := p.EffectiveSummaryLength()
+			if got != tt.want {
+				t.Errorf("EffectiveSummaryLength() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCornerConfig_EffectiveSummaryLength(t *testing.T) {
+	tests := []struct {
+		name          string
+		summaryLength int
+		want          int
+	}{
+		{name: "unset returns default", summaryLength: 0, want: config.DefaultCornerSummaryLength},
+		{name: "explicit value returned", summaryLength: 200, want: 200},
+		{name: "minimum value 1", summaryLength: 1, want: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{SummaryLength: tt.summaryLength}
+			got := c.EffectiveSummaryLength()
+			if got != tt.want {
+				t.Errorf("EffectiveSummaryLength() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProfile_CornerSummaryLength(t *testing.T) {
+	p := &config.Profile{
+		Corners: []config.CornerConfig{
+			{Title: "テックニュース", SummaryLength: 150},
+			{Title: "AI特集", SummaryLength: 0},
+		},
+	}
+
+	tests := []struct {
+		name  string
+		title string
+		want  int
+	}{
+		{name: "known corner with explicit length", title: "テックニュース", want: 150},
+		{name: "known corner with unset length falls back to default", title: "AI特集", want: config.DefaultCornerSummaryLength},
+		{name: "unknown corner falls back to default", title: "存在しないコーナー", want: config.DefaultCornerSummaryLength},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := p.CornerSummaryLength(tt.title)
+			if got != tt.want {
+				t.Errorf("CornerSummaryLength(%q) = %d, want %d", tt.title, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoadProfile_ValidateProfileAssetsIntegration(t *testing.T) {
 	profile, err := config.LoadProfile("testdata/profile.yaml")
 	if err != nil {

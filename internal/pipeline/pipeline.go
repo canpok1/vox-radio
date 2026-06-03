@@ -20,7 +20,7 @@ type ProgramSummarizer interface {
 
 // CornerSummarizer generates a summary for a single corner from its script lines.
 type CornerSummarizer interface {
-	SummarizeCorner(ctx context.Context, corner model.CornerLines) (model.CornerSummary, error)
+	SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error)
 }
 
 // Collector gathers articles per corner from configured sources.
@@ -152,7 +152,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 			cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
 			for i, cl := range scriptLines.Corners {
 				summaryLogger.Info(fmt.Sprintf("コーナー「%s」を要約中 (%d/%d)", cl.Title, i+1, len(scriptLines.Corners)))
-				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl)
+				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl, r.Profile.CornerSummaryLength(cl.Title))
 				if err != nil {
 					return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
 				}

@@ -26,7 +26,7 @@ func TestLLMProgramSummarizer_Summarize_ReturnsSummaryText(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"技術ニュースとAIの最新動向を紹介しました。","conversation_notes":[]}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -55,7 +55,7 @@ func TestLLMProgramSummarizer_Summarize_ReturnsConversationNotes(t *testing.T) {
 			]
 		}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -88,7 +88,7 @@ func TestLLMProgramSummarizer_Summarize_NilConversationNotesNormalized(t *testin
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"要約","conversation_notes":null}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -117,7 +117,7 @@ func TestLLMProgramSummarizer_Summarize_NilCharacterIDsNormalized(t *testing.T) 
 			]
 		}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -141,7 +141,7 @@ func TestLLMProgramSummarizer_Summarize_PromptContainsSpeakerAndText(t *testing.
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "台本: {{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -176,7 +176,7 @@ func TestLLMProgramSummarizer_Summarize_ExcludesSESegments(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	// SE はそもそも ScriptLines に存在しないため、SE フィールドが含まれないことを確認
 	lines := model.ScriptLines{
@@ -200,7 +200,7 @@ func TestLLMProgramSummarizer_Summarize_ReturnsEpisodeTitle(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"summary":"要約","episode_title":"今週の面白技術","conversation_notes":[]}`),
 	}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -219,7 +219,7 @@ func TestLLMProgramSummarizer_Summarize_ReturnsEpisodeTitle(t *testing.T) {
 
 func TestLLMProgramSummarizer_Summarize_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0)
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200)
 
 	lines := model.ScriptLines{
 		Corners: []model.CornerLines{
@@ -230,5 +230,31 @@ func TestLLMProgramSummarizer_Summarize_LLMError(t *testing.T) {
 	_, err := s.Summarize(context.Background(), lines)
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestLLMProgramSummarizer_Summarize_PromptContainsSummaryLength(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "文字数: {{summary_length}}文字程度", 0, 250)
+
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
+		},
+	}
+
+	_, _ = s.Summarize(context.Background(), lines)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "250") {
+		t.Errorf("prompt should contain summary_length=250, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "{{summary_length}}") {
+		t.Errorf("prompt should not contain unexpanded placeholder, got: %s", prompt)
 	}
 }

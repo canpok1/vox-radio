@@ -102,7 +102,7 @@ type stubCornerSummarizer struct {
 	called bool
 }
 
-func (s *stubCornerSummarizer) SummarizeCorner(_ context.Context, _ model.CornerLines) (model.CornerSummary, error) {
+func (s *stubCornerSummarizer) SummarizeCorner(_ context.Context, _ model.CornerLines, _ int) (model.CornerSummary, error) {
 	s.called = true
 	return s.result, s.err
 }
