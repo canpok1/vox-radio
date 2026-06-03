@@ -1,11 +1,15 @@
 package rundown_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/rundown"
 	sel "github.com/canpok1/vox-radio/internal/rundown/select"
@@ -420,6 +424,46 @@ func TestLLMRundowner_Run_FetcherNil_SkipsFetch(t *testing.T) {
 	}
 	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードボディ" {
 		t.Errorf("summarizer should receive original feed body when fetcher is nil, got %q", body)
+	}
+}
+
+func TestLLMRundowner_WithLogger_ExcludedArticlesLogFormat(t *testing.T) {
+	var buf bytes.Buffer
+	handler := logging.NewTextHandler(&buf, slog.LevelInfo)
+	logger := slog.New(handler)
+
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedURLs: []string{"https://example.com/2"}, Flow: "flow"},
+	}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1"}, rundown.WithLogger(logger))
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "今日のテックニュース",
+				Articles: []model.Article{
+					{URL: "https://example.com/1", Title: "除外記事", Body: "body"},
+					{URL: "https://example.com/2", Title: "対象記事", Body: "body"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("今日のテックニュース")}
+
+	_, err := rd.Run(context.Background(), corners, articles)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := buf.String()
+	if !strings.Contains(got, "rundown: excluded past articles") {
+		t.Errorf("log output should contain 'rundown: excluded past articles', got: %q", got)
+	}
+	if !strings.Contains(got, "corner=今日のテックニュース") {
+		t.Errorf("log output should contain 'corner=今日のテックニュース', got: %q", got)
+	}
+	if !strings.Contains(got, "count=1") {
+		t.Errorf("log output should contain 'count=1', got: %q", got)
 	}
 }
 
