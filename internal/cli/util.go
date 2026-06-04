@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/guest"
 	"github.com/canpok1/vox-radio/internal/logging"
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/spf13/cobra"
 )
@@ -79,6 +83,31 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
+// selectGuests selects guests for the given episode number and warns when guests are configured
+// but the episode number is unknown.
+func selectGuests(guests map[string]config.GuestConfig, episodeNumber int, logger *slog.Logger) []model.RundownGuest {
+	selected := guest.Select(guests, episodeNumber)
+	if len(guests) > 0 && episodeNumber == 0 {
+		logger.Warn("ゲストが設定されていますが回番号が不明なため、ゲストは出演しません")
+	}
+	return selected
+}
+
+// resolveEpisodeNumber returns the next episode number from cache.
+// Returns 0 if cache is disabled, programID is empty, or cache fails to load.
+func resolveEpisodeNumber(cfg *config.Config, programID string) int {
+	if !cfg.Cache.Enabled || programID == "" {
+		return 0
+	}
+	cachePath := filepath.Join(".vox-radio", "cache", programID+".jsonl")
+	mgr := cache.New(cachePath)
+	entries, err := mgr.Load()
+	if err != nil {
+		return 0
+	}
+	return cache.NextEpisodeNumber(entries)
+}
+
 func loadConfigAndSpec(specPath string) (*config.Config, *config.EpisodeSpec, error) {
 	cfg, err := config.LoadConfig("vox-radio.yaml")
 	if err != nil {
@@ -92,6 +121,9 @@ func loadConfigAndSpec(specPath string) (*config.Config, *config.EpisodeSpec, er
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
+		return nil, nil, fmt.Errorf("spec validation: %w", err)
+	}
+	if err := config.ValidateEpisodeSpecGuests(p, cfg.Characters); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	return cfg, p, nil

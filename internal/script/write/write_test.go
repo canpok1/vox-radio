@@ -551,3 +551,42 @@ func TestLLMWriter_Write_PromptContainsVarietyInstruction(t *testing.T) {
 		t.Errorf("prompt should contain reaction variety instruction, got: %s", prompt)
 	}
 }
+
+func TestLLMWriter_SetGuests_InjectedIntoPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{guest_info}}", 0, nil)
+
+	w.SetGuests([]model.RundownGuest{
+		{CharacterID: "guest_char", Role: "古参リスナー出身の常連ゲスト"},
+	})
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "guest_char") {
+		t.Errorf("prompt should contain guest character ID, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "古参リスナー出身の常連ゲスト") {
+		t.Errorf("prompt should contain guest role, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_NoGuests_InformsLLM(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{guest_info}}", 0, nil)
+	// SetGuests を呼ばない（デフォルトはゲストなし）
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	prompt := mc.captured[0].Messages[0].Content
+	// ゲストなし回であることを LLM に伝えること
+	if !strings.Contains(prompt, "ゲストのいない通常回") {
+		t.Errorf("prompt should inform LLM of no-guest episode, got: %s", prompt)
+	}
+}

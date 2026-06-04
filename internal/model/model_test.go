@@ -641,6 +641,44 @@ func TestCornerLines_AssetFields_MarshaledAndUnmarshaled(t *testing.T) {
 	}
 }
 
+func TestRundown_Guests_EmptySliceNotNull(t *testing.T) {
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{{Title: "op", Flow: "test", Articles: []model.RundownArticle{}}},
+		Guests:  make([]model.RundownGuest, 0),
+	}
+	data, err := json.Marshal(rd)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if !strings.Contains(string(data), `"guests":[]`) {
+		t.Errorf("expected guests to be [] (not null), got: %s", string(data))
+	}
+}
+
+func TestRundown_Guests_RoundTrip(t *testing.T) {
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{},
+		Guests: []model.RundownGuest{
+			{CharacterID: "metan", Role: "解説"},
+			{CharacterID: "zundamon", Role: "ゲスト"},
+		},
+	}
+	data, err := json.Marshal(rd)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var rd2 model.Rundown
+	if err := json.Unmarshal(data, &rd2); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(rd2.Guests) != 2 {
+		t.Fatalf("expected 2 guests, got %d", len(rd2.Guests))
+	}
+	if rd2.Guests[0].CharacterID != "metan" || rd2.Guests[1].CharacterID != "zundamon" {
+		t.Errorf("unexpected guests order: %+v", rd2.Guests)
+	}
+}
+
 func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 	cl := model.CornerLines{
 		Title: "C1",

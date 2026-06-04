@@ -59,6 +59,7 @@ type LLMWriter struct {
 	config         *config.Config
 	pastEpisodes   []cache.Entry
 	episodeNumber  int
+	guests         []model.RundownGuest
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
@@ -75,6 +76,11 @@ func (w *LLMWriter) SetPastEpisodes(eps []cache.Entry) {
 // 0 means unknown (will be rendered as "（不明）").
 func (w *LLMWriter) SetEpisodeNumber(n int) {
 	w.episodeNumber = n
+}
+
+// SetGuests configures the confirmed guests to inject into the script generation prompt.
+func (w *LLMWriter) SetGuests(guests []model.RundownGuest) {
+	w.guests = guests
 }
 
 func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
@@ -114,6 +120,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	castInfo := buildCastInfo(corner.Cast, chars)
 	presetInfo := buildPresetInfo(presets)
 
+	guestInfoStr := formatGuestInfo(w.guests)
 	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
 
 	episodeNumberStr := "（不明）"
@@ -146,6 +153,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{past_episodes}}", pastEpisodesStr,
 		"{{previous_corners}}", previousCornersStr,
 		"{{episode_number}}", episodeNumberStr,
+		"{{guest_info}}", guestInfoStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)
@@ -244,6 +252,23 @@ func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConf
 			ch.DefaultStyle,
 		)
 	}
+	return sb.String()
+}
+
+// formatGuestInfo formats confirmed guests for the prompt.
+func formatGuestInfo(guests []model.RundownGuest) string {
+	if len(guests) == 0 {
+		return "（なし）この回はゲストのいない通常回です。ゲストの存在に一切触れないでください。"
+	}
+	var sb strings.Builder
+	sb.WriteString("この回は以下のゲストが番組を通して（最初から最後まで）出演します:\n")
+	for _, g := range guests {
+		fmt.Fprintf(&sb, "- %s（役割: %s）\n", g.CharacterID, g.Role)
+	}
+	sb.WriteString("\nゲスト演出ルール:\n")
+	sb.WriteString("- 最初のコーナーでゲストを自然に紹介・登場させる。\n")
+	sb.WriteString("- 中間のコーナーではゲストが継続して同席している前提で会話する（途中で急に登場・退場させない）。\n")
+	sb.WriteString("- 最後のコーナーでゲストを見送る。\n")
 	return sb.String()
 }
 

@@ -85,6 +85,9 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				writer.SetEpisodeNumber(episodeNumber)
 			}
 
+			selectedGuests := selectGuests(p.Guests, episodeNumber, logger)
+			writer.SetGuests(selectedGuests)
+
 			collector := collect.New(nil, collect.WithLogger(logger))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector, excludedURLs, rundown.WithLogger(logger))
@@ -118,6 +121,7 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			if err := runner.Run(context.Background(), pipeline.Options{
 				OutDir:        outDir,
 				EpisodeNumber: episodeNumber,
+				Guests:        selectedGuests,
 			}); err != nil {
 				return err
 			}

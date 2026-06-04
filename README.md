@@ -331,6 +331,32 @@ vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work
 | `url` | string | 必須 | フィードの URL |
 | `max_items` | int | 任意 | 取得する最大記事数。デフォルト: 0（Go ゼロ値、実質無制限） |
 
+#### `guests` セクション（省略可）
+
+`guests` はゲスト出演者の設定をキャラID（`vox-radio.yaml` の `characters` のキー）をキーとするマップで定義します。指定した条件に合致した回だけゲストが出演し、その回はオープニングからエンディングまで全コーナーにゲストが通しで出演します。
+
+```yaml
+guests:
+  zunko:                             # キー = characters に定義済みのキャラID
+    role: 古参リスナー出身の常連ゲスト  # 全コーナーの cast にマージされる役割説明
+    condition:
+      episodes: [3, 10, 20]          # 第3回・第10回・第20回に登場（明示リスト）
+  metan:
+    role: 業界に詳しい解説ゲスト
+    condition:
+      every: 5                       # 5, 10, 15, … の回に登場（定期出演）
+```
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `role` | string | 任意 | 全コーナーの cast にマージされるゲストの役割説明 |
+| `condition.episodes` | []int | 任意 | 出演する回番号の明示リスト（各値は 1 以上） |
+| `condition.every` | int | 任意 | 周期的な出演（N の倍数回に出演。1 以上） |
+
+- `condition.episodes` と `condition.every` の両方を指定した場合は **論理和**（どちらかに合致すれば出演）
+- `condition.episodes` と `condition.every` のどちらも未設定の場合はバリデーションエラー
+- キャッシュが無効または `program.id` が未設定で回番号が不明な場合、ゲストは出演しません（警告ログが出力されます）
+
 #### `assets_files` フィールド
 
 `assets_files` はアセット設定ファイル（ジングル・SE・BGM を定義した YAML）のパスリストです。バイナリ素材は別途用意してください。

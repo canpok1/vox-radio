@@ -60,6 +60,9 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 				return fmt.Errorf("rundown: %w", err)
 			}
 
+			episodeNumber := resolveEpisodeNumber(cfg, p.Program.ID)
+			result.Guests = selectGuests(p.Guests, episodeNumber, logger)
+
 			if err := writeJSON(out, result); err != nil {
 				return err
 			}
