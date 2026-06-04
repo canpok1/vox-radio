@@ -427,18 +427,15 @@ func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig)
 			return fmt.Errorf("guests[%q]: unknown character %q", charID, charID)
 		}
 		cond := g.Condition
-		hasEpisodes := false
 		for _, e := range cond.Episodes {
 			if e < 1 {
 				return fmt.Errorf("guests[%q].condition.episodes: value %d must be >= 1", charID, e)
 			}
-			hasEpisodes = true
 		}
 		if cond.Every < 0 {
 			return fmt.Errorf("guests[%q].condition.every: value %d must be >= 1", charID, cond.Every)
 		}
-		hasEvery := cond.Every > 0
-		if !hasEpisodes && !hasEvery {
+		if len(cond.Episodes) == 0 && cond.Every == 0 {
 			return fmt.Errorf("guests[%q].condition: at least one of episodes or every must be set", charID)
 		}
 	}

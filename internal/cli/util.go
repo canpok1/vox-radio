@@ -10,7 +10,9 @@ import (
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/guest"
 	"github.com/canpok1/vox-radio/internal/logging"
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 	"github.com/spf13/cobra"
 )
@@ -79,6 +81,16 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	}
 
 	return llm.NewClient(llmCfg)
+}
+
+// selectGuests selects guests for the given episode number and warns when guests are configured
+// but the episode number is unknown.
+func selectGuests(guests map[string]config.GuestConfig, episodeNumber int, logger *slog.Logger) []model.RundownGuest {
+	selected := guest.Select(guests, episodeNumber)
+	if len(guests) > 0 && episodeNumber == 0 {
+		logger.Warn("ゲストが設定されていますが回番号が不明なため、ゲストは出演しません")
+	}
+	return selected
 }
 
 // resolveEpisodeNumber returns the next episode number from cache.

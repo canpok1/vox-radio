@@ -1,7 +1,8 @@
 package guest
 
 import (
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -16,11 +17,7 @@ func Select(guests map[string]config.GuestConfig, episodeNumber int) []model.Run
 		return result
 	}
 
-	ids := make([]string, 0, len(guests))
-	for id := range guests {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
+	ids := slices.Sorted(maps.Keys(guests))
 
 	for _, id := range ids {
 		g := guests[id]

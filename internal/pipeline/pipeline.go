@@ -91,11 +91,10 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("rundown: %w", err)
 	}
 	// Guests を設定（nil の場合は空スライスで初期化して JSON で null を防ぐ）
-	if opts.Guests != nil {
-		rundown.Guests = opts.Guests
-	} else {
-		rundown.Guests = make([]model.RundownGuest, 0)
+	if opts.Guests == nil {
+		opts.Guests = make([]model.RundownGuest, 0)
 	}
+	rundown.Guests = opts.Guests
 	if err := fileio.WriteJSON(fileio.RundownPath(outDir), rundown); err != nil {
 		return err
 	}
