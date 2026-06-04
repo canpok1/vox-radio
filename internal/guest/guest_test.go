@@ -150,3 +150,35 @@ func TestSelect_Not(t *testing.T) {
 		}
 	}
 }
+
+func TestSelect_Offset_ThreePersonRotation(t *testing.T) {
+	guests := map[string]config.GuestConfig{
+		"alice": {Role: "ゲストA", Condition: config.EpisodeCondition{Every: 3, Offset: 1}}, // 1,4,7,...
+		"bob":   {Role: "ゲストB", Condition: config.EpisodeCondition{Every: 3, Offset: 2}}, // 2,5,8,...
+		"carol": {Role: "ゲストC", Condition: config.EpisodeCondition{Every: 3, Offset: 0}}, // 3,6,9,...
+	}
+
+	tests := []struct {
+		episodeNumber int
+		wantID        string
+	}{
+		{episodeNumber: 1, wantID: "alice"},
+		{episodeNumber: 2, wantID: "bob"},
+		{episodeNumber: 3, wantID: "carol"},
+		{episodeNumber: 4, wantID: "alice"},
+		{episodeNumber: 5, wantID: "bob"},
+		{episodeNumber: 6, wantID: "carol"},
+		{episodeNumber: 7, wantID: "alice"},
+	}
+
+	for _, tt := range tests {
+		result := guest.Select(guests, tt.episodeNumber)
+		if len(result) != 1 {
+			t.Errorf("episode %d: got %d guests, want 1; result: %v", tt.episodeNumber, len(result), result)
+			continue
+		}
+		if result[0].CharacterID != tt.wantID {
+			t.Errorf("episode %d: got guest %q, want %q", tt.episodeNumber, result[0].CharacterID, tt.wantID)
+		}
+	}
+}

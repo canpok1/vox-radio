@@ -386,6 +386,7 @@ type Config struct {
 type EpisodeCondition struct {
 	Episodes []int             `yaml:"episodes,omitempty"` // この回番号で採用（明示リスト）
 	Every    int               `yaml:"every,omitempty"`    // N の倍数回で採用（0 で無効）
+	Offset   int               `yaml:"offset,omitempty"`   // every との剰余。未指定=0 で倍数回（episodeNumber%Every==Offset で採用）
 	Not      *EpisodeCondition `yaml:"not,omitempty"`      // この条件に合致する回は除外（補集合）
 }
 
@@ -402,7 +403,7 @@ func (c EpisodeCondition) Matches(episodeNumber int) bool {
 		return true
 	}
 	return slices.Contains(c.Episodes, episodeNumber) ||
-		(c.Every > 0 && episodeNumber%c.Every == 0)
+		(c.Every > 0 && episodeNumber%c.Every == c.Offset)
 }
 
 // GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
@@ -433,6 +434,15 @@ func validateEpisodeCondition(cond EpisodeCondition, prefix string) error {
 	}
 	if cond.Every < 0 {
 		return fmt.Errorf("%s.every: value %d must be >= 1", prefix, cond.Every)
+	}
+	if cond.Offset < 0 {
+		return fmt.Errorf("%s.offset: value %d must be >= 0", prefix, cond.Offset)
+	}
+	if cond.Offset > 0 && cond.Every == 0 {
+		return fmt.Errorf("%s.offset: requires every to be set", prefix)
+	}
+	if cond.Every > 0 && cond.Offset >= cond.Every {
+		return fmt.Errorf("%s.offset: value %d must be < every (%d)", prefix, cond.Offset, cond.Every)
 	}
 	if len(cond.Episodes) == 0 && cond.Every == 0 && cond.Not == nil {
 		return fmt.Errorf("%s: at least one of episodes, every, or not must be set", prefix)

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -291,6 +292,40 @@ func TestValidateEpisodeSpecCorners_Error(t *testing.T) {
 			p := &EpisodeSpec{Corners: tt.corners}
 			if err := ValidateEpisodeSpecCorners(p); err == nil {
 				t.Errorf("expected error for %q, got nil", tt.name)
+			}
+		})
+	}
+}
+
+func TestResolveCornersForEpisode_Offset_ThreeRotation(t *testing.T) {
+	corners := []CornerConfig{
+		{Title: "コーナーA", LengthSec: 60, Condition: &EpisodeCondition{Every: 3, Offset: 1}}, // 1,4,7,...
+		{Title: "コーナーB", LengthSec: 60, Condition: &EpisodeCondition{Every: 3, Offset: 2}}, // 2,5,8,...
+		{Title: "コーナーC", LengthSec: 60, Condition: &EpisodeCondition{Every: 3, Offset: 0}}, // 3,6,9,...
+	}
+
+	tests := []struct {
+		episodeNumber int
+		wantTitle     string
+	}{
+		{episodeNumber: 1, wantTitle: "コーナーA"},
+		{episodeNumber: 2, wantTitle: "コーナーB"},
+		{episodeNumber: 3, wantTitle: "コーナーC"},
+		{episodeNumber: 4, wantTitle: "コーナーA"},
+		{episodeNumber: 5, wantTitle: "コーナーB"},
+		{episodeNumber: 6, wantTitle: "コーナーC"},
+		{episodeNumber: 7, wantTitle: "コーナーA"},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("episode%d", tt.episodeNumber), func(t *testing.T) {
+			got := ResolveCornersForEpisode(corners, tt.episodeNumber)
+			if len(got) != 1 {
+				t.Fatalf("episode %d: got %d corners, want 1; titles: %v",
+					tt.episodeNumber, len(got), cornerTitles(got))
+			}
+			if got[0].Title != tt.wantTitle {
+				t.Errorf("episode %d: got %q, want %q", tt.episodeNumber, got[0].Title, tt.wantTitle)
 			}
 		})
 	}

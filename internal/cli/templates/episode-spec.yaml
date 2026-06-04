@@ -64,6 +64,11 @@ corners:
     #   # condition:
     #   #   not:
     #   #     every: 2         # 奇数回に採用（偶数でない回すべて）
+    # --- N者ローテーション（every + offset）---
+    # every: 3 + offset: 0/1/2 の3条件で全回を均等に分担できる
+    # コーナーA: condition: { every: 3, offset: 1 }  # 1,4,7,…
+    # コーナーB: condition: { every: 3, offset: 2 }  # 2,5,8,…
+    # コーナーC: condition: { every: 3, offset: 0 }  # 3,6,9,…
 
   - title: "エンディング"
     content: "まとめと締め"
