@@ -72,6 +72,63 @@ func TestResolveCornersForEpisode(t *testing.T) {
 	}
 }
 
+func TestResolveCornersForEpisode_Not(t *testing.T) {
+	condEvery5 := CornerConfig{
+		Title:     "5回に1回",
+		LengthSec: 60,
+		Condition: &EpisodeCondition{Every: 5},
+	}
+	condNotEvery5 := CornerConfig{
+		Title:     "5の倍数でない回",
+		LengthSec: 60,
+		Condition: &EpisodeCondition{Not: &EpisodeCondition{Every: 5}},
+	}
+	corners := []CornerConfig{condEvery5, condNotEvery5}
+
+	tests := []struct {
+		name          string
+		episodeNumber int
+		wantTitles    []string
+	}{
+		{
+			name:          "5の倍数回: every:5 のみ採用",
+			episodeNumber: 5,
+			wantTitles:    []string{"5回に1回"},
+		},
+		{
+			name:          "5の倍数でない回: not:{every:5} のみ採用",
+			episodeNumber: 7,
+			wantTitles:    []string{"5の倍数でない回"},
+		},
+		{
+			name:          "10回: every:5 のみ採用",
+			episodeNumber: 10,
+			wantTitles:    []string{"5回に1回"},
+		},
+		{
+			name:          "1回: not:{every:5} のみ採用",
+			episodeNumber: 1,
+			wantTitles:    []string{"5の倍数でない回"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ResolveCornersForEpisode(corners, tt.episodeNumber)
+			if len(got) != len(tt.wantTitles) {
+				t.Fatalf("ResolveCornersForEpisode(_, %d) len = %d, want %d; got titles: %v",
+					tt.episodeNumber, len(got), len(tt.wantTitles), cornerTitles(got))
+			}
+			for i, c := range got {
+				if c.Title != tt.wantTitles[i] {
+					t.Errorf("ResolveCornersForEpisode(_, %d)[%d].Title = %q, want %q",
+						tt.episodeNumber, i, c.Title, tt.wantTitles[i])
+				}
+			}
+		})
+	}
+}
+
 func TestResolveCornersForEpisode_PreservesOrder(t *testing.T) {
 	corners := []CornerConfig{
 		{Title: "A", LengthSec: 10, Condition: &EpisodeCondition{Episodes: []int{1}}},
@@ -161,6 +218,18 @@ func TestValidateEpisodeSpecCorners_Valid(t *testing.T) {
 				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{1}, Every: 3}},
 			},
 		},
+		{
+			name: "not のみ指定",
+			corners: []CornerConfig{
+				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{Every: 5}}},
+			},
+		},
+		{
+			name: "every + not 指定",
+			corners: []CornerConfig{
+				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Every: 2, Not: &EpisodeCondition{Episodes: []int{6}}}},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -186,9 +255,15 @@ func TestValidateEpisodeSpecCorners_Error(t *testing.T) {
 			},
 		},
 		{
-			name: "conditionがあるがepisodesもeveryも未設定（永久不採用）",
+			name: "conditionがあるがepisodesもeveryもnotも未設定",
 			corners: []CornerConfig{
 				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{}},
+			},
+		},
+		{
+			name: "not の中身が空",
+			corners: []CornerConfig{
+				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{}}},
 			},
 		},
 		{
