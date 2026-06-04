@@ -33,23 +33,19 @@ type SlackChannelConfig struct {
 
 // EffectiveMessageTemplate returns the configured template, falling back to defaults per field.
 func (c SlackChannelConfig) EffectiveMessageTemplate() MessageTemplate {
-	tmpl := c.Message
-	if tmpl.Header == "" {
-		tmpl.Header = defaultHeaderTemplate
+	or := func(s, def string) string {
+		if s != "" {
+			return s
+		}
+		return def
 	}
-	if tmpl.Fallback == "" {
-		tmpl.Fallback = defaultFallbackTemplate
+	return MessageTemplate{
+		Header:   or(c.Message.Header, defaultHeaderTemplate),
+		Fallback: or(c.Message.Fallback, defaultFallbackTemplate),
+		Summary:  or(c.Message.Summary, defaultSummaryTemplate),
+		Corner:   or(c.Message.Corner, defaultCornerTemplate),
+		Article:  or(c.Message.Article, defaultArticleTemplate),
 	}
-	if tmpl.Summary == "" {
-		tmpl.Summary = defaultSummaryTemplate
-	}
-	if tmpl.Corner == "" {
-		tmpl.Corner = defaultCornerTemplate
-	}
-	if tmpl.Article == "" {
-		tmpl.Article = defaultArticleTemplate
-	}
-	return tmpl
 }
 
 // SlackSpec is the top-level structure for slack-spec.yaml.

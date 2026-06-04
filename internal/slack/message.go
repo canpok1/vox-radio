@@ -1,7 +1,7 @@
 package slack
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 
 	slackgo "github.com/slack-go/slack"
@@ -111,7 +111,7 @@ func buildArticlesText(articles []model.ArticleRef, articleTmpl string) string {
 // replacePlaceholders replaces {placeholder} tokens with manifest field values.
 func replacePlaceholders(s string, manifest model.Manifest) string {
 	s = strings.ReplaceAll(s, "{title}", manifest.Title)
-	s = strings.ReplaceAll(s, "{episode_number}", fmt.Sprintf("%d", manifest.EpisodeNumber))
+	s = strings.ReplaceAll(s, "{episode_number}", strconv.Itoa(manifest.EpisodeNumber))
 	s = strings.ReplaceAll(s, "{episode_title}", manifest.EpisodeTitle)
 	s = strings.ReplaceAll(s, "{description}", manifest.Description)
 	s = strings.ReplaceAll(s, "{summary}", manifest.Summary)
@@ -120,17 +120,8 @@ func replacePlaceholders(s string, manifest model.Manifest) string {
 	return s
 }
 
-// removeEpisodeSegment removes the 第N回 portion from a header string.
-// It handles patterns like " 第0回" or "第0回" adjacent to other text.
+// removeEpisodeSegment removes the 第0回 portion from a header string.
+// TrimSpace is applied by the caller (BuildHeader).
 func removeEpisodeSegment(s string) string {
-	// remove patterns like " 第0回" or "第0回 "
-	patterns := []string{
-		" 第0回",
-		"第0回 ",
-		"第0回",
-	}
-	for _, p := range patterns {
-		s = strings.ReplaceAll(s, p, "")
-	}
-	return strings.TrimSpace(s)
+	return strings.ReplaceAll(s, "第0回", "")
 }
