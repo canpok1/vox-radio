@@ -397,16 +397,12 @@ func (c EpisodeCondition) Matches(episodeNumber int) bool {
 	if c.Not != nil && c.Not.Matches(episodeNumber) {
 		return false
 	}
+	// 肯定条件が両方未指定 → 全回が対象（not 単独で補集合を表現できるようにする）
 	if len(c.Episodes) == 0 && c.Every == 0 {
 		return true
 	}
-	if slices.Contains(c.Episodes, episodeNumber) {
-		return true
-	}
-	if c.Every > 0 && episodeNumber%c.Every == 0 {
-		return true
-	}
-	return false
+	return slices.Contains(c.Episodes, episodeNumber) ||
+		(c.Every > 0 && episodeNumber%c.Every == 0)
 }
 
 // GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
