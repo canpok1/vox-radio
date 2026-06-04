@@ -41,10 +41,8 @@ source フィールドのないコーナーはスキップされます。
 			}
 
 			// 回番号を持たないため全コーナーを superset として収集する（rundown 側で絞る）
-			allCorners := config.ResolveCornersForEpisode(p.Corners, 0)
-
 			c := collect.New(nil, collect.WithLogger(logger))
-			articles, err := c.RunAll(context.Background(), allCorners)
+			articles, err := c.RunAll(context.Background(), p.Corners)
 			if err != nil {
 				return err
 			}

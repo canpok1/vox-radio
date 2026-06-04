@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
@@ -106,17 +107,8 @@ func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([
 // resolveCorners は回番号で採用コーナーを絞り込む。
 // 回番号不明（0）の場合は全コーナーを採用し、条件付きコーナーが存在するときは警告を出す。
 func resolveCorners(corners []config.CornerConfig, episodeNumber int, logger *slog.Logger) []config.CornerConfig {
-	if episodeNumber == 0 {
-		hasConditioned := false
-		for _, c := range corners {
-			if c.Condition != nil {
-				hasConditioned = true
-				break
-			}
-		}
-		if hasConditioned {
-			logger.Warn("回番号が不明なため、条件付きコーナーを含む全コーナーを採用します")
-		}
+	if episodeNumber == 0 && slices.ContainsFunc(corners, func(c config.CornerConfig) bool { return c.Condition != nil }) {
+		logger.Warn("回番号が不明なため、条件付きコーナーを含む全コーナーを採用します")
 	}
 	return config.ResolveCornersForEpisode(corners, episodeNumber)
 }

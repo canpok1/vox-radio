@@ -33,31 +33,3 @@ func ResolveCornersByTitles(corners []CornerConfig, titles []string) ([]CornerCo
 	}
 	return result, nil
 }
-
-// ValidateEpisodeSpecCorners は corners の出現条件を検証する（キャラ不要・spec 内部整合のみ）。
-func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
-	seen := make(map[string]bool, len(p.Corners))
-	for i, c := range p.Corners {
-		if seen[c.Title] {
-			return fmt.Errorf("corners[%d]: title %q is duplicated", i, c.Title)
-		}
-		seen[c.Title] = true
-
-		if c.Condition == nil {
-			continue
-		}
-		cond := c.Condition
-		for _, e := range cond.Episodes {
-			if e < 1 {
-				return fmt.Errorf("corners[%d].condition.episodes: value %d must be >= 1", i, e)
-			}
-		}
-		if cond.Every < 0 {
-			return fmt.Errorf("corners[%d].condition.every: value %d must be >= 1", i, cond.Every)
-		}
-		if len(cond.Episodes) == 0 && cond.Every == 0 {
-			return fmt.Errorf("corners[%d].condition: at least one of episodes or every must be set", i)
-		}
-	}
-	return nil
-}
