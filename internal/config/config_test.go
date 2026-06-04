@@ -539,12 +539,100 @@ func TestEpisodeCondition_Matches(t *testing.T) {
 		{name: "every+not: 倍数でない → false", cond: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}, episodeNumber: 3, want: false},
 		// 肯定条件なし（not 単独）で episodeNumber <= 0 は false
 		{name: "not 単独で episodeNumber=0 は false", cond: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}, episodeNumber: 0, want: false},
+		// offset（剰余）
+		{name: "every+offset: 余り1に合致", cond: config.EpisodeCondition{Every: 3, Offset: 1}, episodeNumber: 1, want: true},
+		{name: "every+offset: 余り1に合致(4回目)", cond: config.EpisodeCondition{Every: 3, Offset: 1}, episodeNumber: 4, want: true},
+		{name: "every+offset: 余り1に合致(7回目)", cond: config.EpisodeCondition{Every: 3, Offset: 1}, episodeNumber: 7, want: true},
+		{name: "every+offset: 余り2に合致", cond: config.EpisodeCondition{Every: 3, Offset: 2}, episodeNumber: 2, want: true},
+		{name: "every+offset: 余り0に合致（offset=0 は従来の倍数回）", cond: config.EpisodeCondition{Every: 3, Offset: 0}, episodeNumber: 3, want: true},
+		{name: "every+offset: 合致しない（余り不一致）", cond: config.EpisodeCondition{Every: 3, Offset: 1}, episodeNumber: 3, want: false},
+		{name: "offset未指定（0）は every の倍数回（後方互換）", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 10, want: true},
+		{name: "offset未指定（0）で倍数でない回は false（後方互換）", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 7, want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.cond.Matches(tt.episodeNumber)
 			if got != tt.want {
 				t.Errorf("EpisodeCondition%+v.Matches(%d) = %v, want %v", tt.cond, tt.episodeNumber, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateEpisodeCondition_Offset(t *testing.T) {
+	tests := []struct {
+		name    string
+		guests  map[string]config.GuestConfig
+		wantErr bool
+	}{
+		{
+			name: "every+offset 有効（3者ローテ offset=0）",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 0}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "every+offset 有効（3者ローテ offset=1）",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 1}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "every+offset 有効（3者ローテ offset=2）",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 2}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "offset が負数",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: -1}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "offset > 0 かつ every == 0",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Offset: 1}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "offset >= every",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 3}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "not 内の offset が負数",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: -1}}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "not 内の offset >= every",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: 3}}},
+			},
+			wantErr: true,
+		},
+	}
+	chars := map[string]config.CharacterConfig{
+		"zundamon": {Name: "ずんだもん"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &config.EpisodeSpec{Guests: tt.guests}
+			err := config.ValidateEpisodeSpecGuests(p, chars)
+			if tt.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			} else if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}

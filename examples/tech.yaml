@@ -73,6 +73,25 @@ corners:
 #     condition:
 #       not:
 #         every: 5              # 5の倍数以外の回（zunkoがいない回）に登場
+#
+# --- 3者ローテーションの例 (every + offset) ---
+# every: 3 + offset: 0/1/2 の3条件で全回を均等に分担できる
+# guests:
+#   alice:
+#     role: ゲストA
+#     condition:
+#       every: 3
+#       offset: 1   # 1,4,7,… 回に登場
+#   bob:
+#     role: ゲストB
+#     condition:
+#       every: 3
+#       offset: 2   # 2,5,8,… 回に登場
+#   carol:
+#     role: ゲストC
+#     condition:
+#       every: 3
+#       offset: 0   # 3,6,9,… 回に登場（offset省略時と同じ動作）
 
 # アセット設定ファイルのパス（このプロファイルファイルからの相対パス）
 # アセット設定ファイル内のfileパスはアセット設定ファイルのディレクトリを基準に解決される
