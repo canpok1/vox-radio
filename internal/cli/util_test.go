@@ -192,3 +192,23 @@ func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
 		t.Error("expected error for unknown title, got nil")
 	}
 }
+
+func TestConfigPath_Default(t *testing.T) {
+	root := NewRootCmd()
+	got := configPath(root)
+	if got != DefaultConfigPath {
+		t.Errorf("configPath(root) = %q, want %q", got, DefaultConfigPath)
+	}
+}
+
+func TestConfigPath_CustomValue(t *testing.T) {
+	root := NewRootCmd()
+	if err := root.ParseFlags([]string{"--config", "/custom/vox-radio.yaml"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	got := configPath(root)
+	want := "/custom/vox-radio.yaml"
+	if got != want {
+		t.Errorf("configPath(root) = %q, want %q", got, want)
+	}
+}

@@ -114,8 +114,8 @@ collect → rundown → script → synth → assemble → manifest
 | `episodegen manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `feedgen` | キャッシュ（`.jsonl`）と `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `feedgen check` | `feed-spec.yaml` を strict モードでパースし、必須フィールド・URL/email 形式・プレースホルダを検証する。意味検証エラーは全件まとめて報告する |
-| `config check` | `vox-radio.yaml`（共通設定）を strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する |
-| `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照（cwd の `vox-radio.yaml` を使用）の整合性を検証する |
+| `config check` | 共通設定ファイルを strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する（パスは `--config` で指定、省略時は `vox-radio.yaml`） |
+| `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照の整合性を検証する（共通設定は `--config` で指定、省略時は `vox-radio.yaml`） |
 | `assets check` | アセット設定 YAML（`assets.yaml`）を strict モードでパースし、typo・参照ファイル欠落・不正値（volume/fade/duck_ratio）をエラーとして報告する |
 
 ### 設定ファイルの作成
@@ -139,10 +139,18 @@ vox-radio episodegen --spec episode-spec.yaml
 
 | 種別 | ファイル | 内容 |
 |------|---------|------|
-| 共通設定 (config) | `vox-radio.yaml`（カレントディレクトリ、自動読込） | LLM / VOICEVOX URL / キャラカタログ |
+| 共通設定 (config) | `vox-radio.yaml`（デフォルト。`--config` フラグで別パス指定可） | LLM / VOICEVOX URL / キャラカタログ |
 | エピソード仕様 (spec) | `episode-spec.yaml` または `examples/<genre>.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
 
-`vox-radio.yaml` はカレントディレクトリから自動的に読み込まれます（`--config` フラグは不要）。
+`vox-radio.yaml` はデフォルトでカレントディレクトリから読み込まれます。別ディレクトリの設定ファイルを使う場合は `--config` フラグでパスを指定します。
+
+```bash
+# カレントディレクトリの vox-radio.yaml を使う（デフォルト）
+vox-radio episodegen --spec episode-spec.yaml
+
+# 別パスの設定ファイルを指定する
+vox-radio --config /path/to/my-station/vox-radio.yaml episodegen --spec episode-spec.yaml
+```
 
 #### キャラカタログとスタイル選択
 
@@ -199,7 +207,7 @@ vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work
 
 ### vox-radio.yaml（共通設定）
 
-`vox-radio.yaml` はカレントディレクトリから自動読み込みされます。フィールド定義は `internal/config/config.go` の構造体が正です。
+`vox-radio.yaml` はデフォルトでカレントディレクトリから読み込まれます。`--config` フラグで別パスを指定できます。フィールド定義は `internal/config/config.go` の構造体が正です。
 
 #### `llm` セクション
 

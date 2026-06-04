@@ -24,6 +24,12 @@ vox-radio feedgen [flags]
       --spec string    feed-spec.yaml ファイルのパス（必須）
 ```
 
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+```
+
 ### SEE ALSO
 
 * [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール

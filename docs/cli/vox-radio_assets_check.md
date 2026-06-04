@@ -23,6 +23,12 @@ vox-radio assets check <path> [flags]
   -h, --help   help for check
 ```
 
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+```
+
 ### SEE ALSO
 
 * [vox-radio assets](vox-radio_assets.md)	 - アセット設定ファイルを管理するコマンド群

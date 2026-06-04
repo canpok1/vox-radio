@@ -21,6 +21,8 @@ func NewRootCmd() *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 
+	root.PersistentFlags().String("config", DefaultConfigPath, "共通設定 YAML ファイル（vox-radio.yaml）のパス")
+
 	root.AddCommand(
 		newInitCmd(),
 		newEpisodegenCmd(),

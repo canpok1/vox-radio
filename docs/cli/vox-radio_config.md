@@ -5,6 +5,7 @@
 ### Synopsis
 
 vox-radio.yaml（共通設定）に関連するサブコマンドを提供します。
+設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 
 現在利用可能なサブコマンド:
   check  設定ファイルの内容を検証します
@@ -13,6 +14,12 @@ vox-radio.yaml（共通設定）に関連するサブコマンドを提供しま
 
 ```
   -h, --help   help for config
+```
+
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
 ```
 
 ### SEE ALSO

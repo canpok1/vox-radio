@@ -7,7 +7,7 @@ LLM を使って rundown から台本を生成する
 多段階 LLM パイプライン（write → direct）を実行し、
 02_rundown.json から 04_script.json を生成します。
 
-vox-radio.yaml はカレントディレクトリから自動読み込みされます。
+共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 コーナー定義はエピソード仕様から取得します。
 
 --step で単一ステージのみ実行できます:
@@ -31,6 +31,12 @@ vox-radio episodegen script [flags]
       --out string    04_script.json の出力先パス（必須）
       --spec string   エピソード仕様 YAML ファイルのパス（必須）
       --step string   単一ステップを実行する: write|direct
+```
+
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
 ```
 
 ### SEE ALSO

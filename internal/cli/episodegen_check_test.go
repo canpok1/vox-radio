@@ -119,3 +119,22 @@ func TestEpisodegenCheck_AssetsTypo_Error(t *testing.T) {
 		t.Error("expected error when assets_files contains typo in strict mode, got nil")
 	}
 }
+
+func TestEpisodegenCheck_ConfigFlag_DifferentDir(t *testing.T) {
+	chdirTemp(t) // cwd に vox-radio.yaml がない状態でも --config で別ディレクトリを指定できる
+
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"episodegen", "check",
+		"--config", episodeSpecTestdataPath("config.yaml"),
+		episodeSpecTestdataPath("episode_spec.yaml"),
+	})
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error with --config: %v", err)
+	}
+	if !strings.Contains(buf.String(), "OK") {
+		t.Errorf("expected OK in output, got: %s", buf.String())
+	}
+}

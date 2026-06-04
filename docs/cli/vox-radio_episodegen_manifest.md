@@ -10,8 +10,9 @@
 マニフェストは別の配信サービスが RSS フィードを生成する際に使用することを想定しており、
 フルパイプラインを再実行せずに済みます。
 
---lines を指定すると、vox-radio.yaml の LLM 設定を使って
+--lines を指定すると、共通設定ファイルの LLM 設定を使って
 LLM が 03_lines.json（元表記のセリフ）から番組要約・会話メモ・コーナー単位要約を生成してマニフェストに追加します。
+共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 会話メモはキャラの近況・掛け合い・感想・ハプニング・継続ネタなど
 rundown（記事の事実）に含まれない会話情報を幅広く記録します。
 
@@ -33,6 +34,12 @@ vox-radio episodegen manifest [flags]
       --out string       manifest.json の出力先パス（必須）
       --rundown string   02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
       --spec string      エピソード仕様 YAML ファイルのパス（必須）
+```
+
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
 ```
 
 ### SEE ALSO

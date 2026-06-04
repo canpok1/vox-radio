@@ -25,6 +25,12 @@ vox-radio episodegen assemble [flags]
       --spec string    アセット設定を含むエピソード仕様 YAML ファイルのパス（任意）
 ```
 
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+```
+
 ### SEE ALSO
 
 * [vox-radio episodegen](vox-radio_episodegen.md)	 - ポッドキャスト制作パイプラインをすべて実行する

@@ -27,6 +27,12 @@ vox-radio feedgen check <path> [flags]
   -h, --help   help for check
 ```
 
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+```
+
 ### SEE ALSO
 
 * [vox-radio feedgen](vox-radio_feedgen.md)	 - キャッシュから RSS フィード（feed.xml）を生成する
