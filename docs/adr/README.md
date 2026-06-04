@@ -39,3 +39,4 @@
 | [0031](0031-guest-appearance-by-episode-number-condition.md) | ゲスト出演を回番号条件で制御し、出演確定結果を rundown に永続化する | 採用 | 2026-06-04 |
 | [0032](0032-corner-rotation-by-episode-number-condition.md) | コーナーの回ごと組み替えを回番号条件で制御し、採用結果を rundown に乗せる | 採用 | 2026-06-04 |
 | [0033](0033-negation-condition-for-episode-condition.md) | 出現条件 EpisodeCondition に否定（補集合）条件 not を追加する | 採用 | 2026-06-04 |
+| [0034](0034-rotation-offset-for-episode-condition.md) | 出現条件 EpisodeCondition に剰余（offset）を追加しN者ローテーションを可能にする | 採用 | 2026-06-04 |
