@@ -507,7 +507,7 @@ func TestValidateEpisodeSpecCast_UnknownCharacter(t *testing.T) {
 	}
 }
 
-func TestGuestCondition_Matches(t *testing.T) {
+func TestEpisodeCondition_Matches(t *testing.T) {
 	tests := []struct {
 		name          string
 		cond          config.EpisodeCondition
@@ -534,7 +534,7 @@ func TestGuestCondition_Matches(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.cond.Matches(tt.episodeNumber)
 			if got != tt.want {
-				t.Errorf("GuestCondition%+v.Matches(%d) = %v, want %v", tt.cond, tt.episodeNumber, got, tt.want)
+				t.Errorf("EpisodeCondition%+v.Matches(%d) = %v, want %v", tt.cond, tt.episodeNumber, got, tt.want)
 			}
 		})
 	}
