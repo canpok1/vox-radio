@@ -80,6 +80,30 @@ corners:
     # コーナー終了ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
     # end_jingle: ending
 
+# ゲスト設定（省略可。回番号条件に合致した回だけ、全コーナーに通しで出演）
+# キーは vox-radio.yaml の characters のキーと一致させること
+# guests:
+#   zunko:
+#     role: 古参リスナー出身の常連ゲスト   # 全コーナーの cast にマージされる役割
+#     condition:
+#       episodes: [3, 10, 20]            # 第3・10・20回に出演（明示リスト）
+#   metan:
+#     role: 業界に詳しい解説ゲスト
+#     condition:
+#       every: 5                         # 5,10,15,… 回に出演（周期）
+#   # --- N者ローテーション（every + offset で複数ゲストを均等分担）---
+#   # every: 3 + offset: 0/1/2 の3条件で全回を均等に分担できる
+#   # guest_a: { role: ゲストA, condition: { every: 3, offset: 1 } }  # 1,4,7,…
+#   # guest_b: { role: ゲストB, condition: { every: 3, offset: 2 } }  # 2,5,8,…
+#   # guest_c: { role: ゲストC, condition: { every: 3, offset: 0 } }  # 3,6,9,…
+#   # not 条件で特定回を除外することも可能
+#   # guest_d:
+#   #   role: 不定期ゲスト
+#   #   condition:
+#   #     every: 2
+#   #     not:
+#   #       every: 10                    # 10の倍数回を除く偶数回に出演
+
 # アセット設定ファイルの参照（ジングル・SE・BGM）
 # バイナリ素材ファイルは別途用意してください。
 # アセット設定ファイルのパスはこのエピソード仕様ファイルからの相対パスで解決されます。
