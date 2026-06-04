@@ -337,19 +337,29 @@ corners:
     cast: { zundamon: "MC" }
     length_sec: 30
 
-  - title: "リスナー投稿コーナー"
-    content: "投稿を紹介して語り合う"
-    cast: { zundamon: "進行", metan: "ツッコミ" }
+  - title: "月いちスペシャル"
+    content: "5回に1回だけやるスペシャル企画"
+    cast: { zundamon: "MC", metan: "MC" }
     length_sec: 120
     condition:
-      every: 2                  # 偶数回（2,4,6,…）に採用
+      every: 5                  # 5の倍数回（5,10,15,…）に採用
+
+  - title: "通常トーク"
+    content: "月いちスペシャルを行わない回の通常コーナー"
+    cast: { zundamon: "MC", metan: "MC" }
+    length_sec: 120
+    condition:
+      not:
+        every: 5               # 5の倍数でない回（1,2,3,4,6,…）に採用
 
   - title: "今週の一冊"
     content: "おすすめの本を紹介"
     cast: { zundamon: "ボケ", metan: "解説" }
     length_sec: 120
     condition:
-      episodes: [1, 5, 9]       # 第1・5・9回に採用
+      every: 2                  # 偶数回に採用
+      not:
+        episodes: [6]           # ただし第6回は除く（2,4,8,10,…）
 
   - title: "エンディング"        # condition なし → 毎回必須
     content: "締めの挨拶"
@@ -361,9 +371,12 @@ corners:
 |---|---|---|---|
 | `condition.episodes` | []int | 任意 | 採用する回番号の明示リスト（各値は 1 以上） |
 | `condition.every` | int | 任意 | 周期的な採用（N の倍数回に採用。1 以上） |
+| `condition.not` | EpisodeCondition | 任意 | この条件に合致する回を除外（補集合） |
 
 - `condition.episodes` と `condition.every` の両方を指定した場合は **論理和**（どちらかに合致すれば採用）
-- `condition.episodes` と `condition.every` のどちらも未設定の場合はバリデーションエラー
+- `condition.not` に合致する回は除外される。`not` 単独指定（`episodes`/`every` を省略）すると「合致しない回すべて」を表現できる
+- 肯定条件（`episodes`/`every`）を省略すると「常に真」として扱われ、`not` 単独で補集合を表現できる
+- `condition.episodes`・`condition.every`・`condition.not` のいずれも未設定の場合、および `not` の中身が空の場合はバリデーションエラー
 - キャッシュが無効または `program.id` が未設定で回番号が不明な場合、条件付きコーナーを含む全コーナーが採用されます（警告ログが出力されます）
 - 採用されたコーナーは元の `corners` 配列の順序を維持したまま台本に出力されます
 
@@ -395,6 +408,11 @@ guests:
     role: 業界に詳しい解説ゲスト
     condition:
       every: 5                       # 5, 10, 15, … の回に登場（定期出演）
+  sora:
+    role: フリーランスエンジニア
+    condition:
+      not:
+        every: 5                     # 5の倍数以外の回に登場（metan がいない回すべて）
 ```
 
 | フィールド | 型 | 必須/任意 | 説明 |
@@ -402,9 +420,12 @@ guests:
 | `role` | string | 任意 | 全コーナーの cast にマージされるゲストの役割説明 |
 | `condition.episodes` | []int | 任意 | 出演する回番号の明示リスト（各値は 1 以上） |
 | `condition.every` | int | 任意 | 周期的な出演（N の倍数回に出演。1 以上） |
+| `condition.not` | EpisodeCondition | 任意 | この条件に合致する回を除外（補集合） |
 
 - `condition.episodes` と `condition.every` の両方を指定した場合は **論理和**（どちらかに合致すれば出演）
-- `condition.episodes` と `condition.every` のどちらも未設定の場合はバリデーションエラー
+- `condition.not` に合致する回は除外される。`not` 単独指定（`episodes`/`every` を省略）すると「合致しない回すべて」を表現できる
+- 肯定条件（`episodes`/`every`）を省略すると「常に真」として扱われ、`not` 単独で補集合を表現できる
+- `condition.episodes`・`condition.every`・`condition.not` のいずれも未設定の場合はバリデーションエラー
 - キャッシュが無効または `program.id` が未設定で回番号が不明な場合、ゲストは出演しません（警告ログが出力されます）
 
 #### `assets_files` フィールド
