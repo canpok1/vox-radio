@@ -424,7 +424,7 @@ type EpisodeSpec struct {
 func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig) error {
 	for charID, g := range p.Guests {
 		if _, ok := chars[charID]; !ok {
-			return fmt.Errorf("guests[%q]: unknown character %q", charID, charID)
+			return fmt.Errorf("guests[%q]: character not found in characters catalog", charID)
 		}
 		cond := g.Condition
 		for _, e := range cond.Episodes {
