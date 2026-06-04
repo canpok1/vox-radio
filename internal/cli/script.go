@@ -94,13 +94,18 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	if in == "" {
 		return fmt.Errorf("--in is required for full pipeline")
 	}
-	rundown, err := readJSON[model.Rundown](in)
+	rd, err := readJSON[model.Rundown](in)
 	if err != nil {
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
+	corners, err := resolveCornersByRundown(p.Corners, rd)
+	if err != nil {
+		return fmt.Errorf("resolve corners: %w", err)
+	}
+
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	w.SetGuests(rundown.Guests)
+	w.SetGuests(rd.Guests)
 
 	gen := script.NewLLMScriptGenerator(
 		w,
@@ -110,7 +115,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		script.WithLogger(logger),
 	)
 
-	scr, err := gen.Generate(ctx, p.Program, rundown, p.Corners, cfg.Characters)
+	scr, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -122,16 +127,21 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	if in == "" {
 		return fmt.Errorf("--in is required for write step")
 	}
-	rundown, err := readJSON[model.Rundown](in)
+	rd, err := readJSON[model.Rundown](in)
 	if err != nil {
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	cornerMap := rundown.CornerMap()
-	appliedCorners := script.ApplyGuests(p.Corners, rundown.Guests)
+	corners, err := resolveCornersByRundown(p.Corners, rd)
+	if err != nil {
+		return fmt.Errorf("resolve corners: %w", err)
+	}
+
+	cornerMap := rd.CornerMap()
+	appliedCorners := script.ApplyGuests(corners, rd.Guests)
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	w.SetGuests(rundown.Guests)
+	w.SetGuests(rd.Guests)
 	allCornerLines, err := script.WriteAll(ctx, w, p.Program, appliedCorners, cornerMap, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("write corners: %w", err)

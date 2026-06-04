@@ -36,8 +36,15 @@ source フィールドのないコーナーはスキップされます。
 				return fmt.Errorf("load spec: %w", err)
 			}
 
+			if err := config.ValidateEpisodeSpecCorners(p); err != nil {
+				return fmt.Errorf("spec validation: %w", err)
+			}
+
+			// 回番号を持たないため全コーナーを superset として収集する（rundown 側で絞る）
+			allCorners := config.ResolveCornersForEpisode(p.Corners, 0)
+
 			c := collect.New(nil, collect.WithLogger(logger))
-			articles, err := c.RunAll(context.Background(), p.Corners)
+			articles, err := c.RunAll(context.Background(), allCorners)
 			if err != nil {
 				return err
 			}

@@ -88,6 +88,8 @@ vox-radio.yaml はカレントディレクトリから自動読み込みされ�
 			selectedGuests := selectGuests(p.Guests, episodeNumber, logger)
 			writer.SetGuests(selectedGuests)
 
+			p.Corners = resolveCorners(p.Corners, episodeNumber, logger)
+
 			collector := collect.New(nil, collect.WithLogger(logger))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector, excludedURLs, rundown.WithLogger(logger))

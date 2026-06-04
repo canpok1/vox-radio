@@ -25,6 +25,28 @@ corners:
           max_items: 5
         - url: https://qiita.com/popular-items/feed
           max_items: 5
+  - title: "リスナー Q&A"
+    content: "リスナーからの質問や投稿を紹介して語り合う。"
+    cast:
+      zundamon: "MC。元気に読み上げる進行役。ボケ担当。"
+      metan: "MC。ずんだもんに突っ込む。ツッコミ担当。"
+    length_sec: 120
+    condition:
+      every: 2                  # 偶数回（2,4,6,…）に採用
+
+  - title: "今週のピックアップ記事"
+    content: "編集部おすすめのテック記事を1本深掘りして紹介。"
+    cast:
+      zundamon: "MC。ボケ担当。記事を読んだことがない設定。"
+      metan: "MC。解説役。ツッコミ担当。"
+    length_sec: 120
+    source:
+      feeds:
+        - url: https://zenn.dev/feed
+          max_items: 3
+    condition:
+      episodes: [1, 3, 5, 7, 9]  # 奇数回に採用
+
   - title: "エンディング"
     content: "次回も聴いて欲しいという宣伝をする。"
     direction: "エンディングでまとめる。"

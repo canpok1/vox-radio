@@ -46,6 +46,10 @@ func newEpisodegenCheckCmd() *cobra.Command {
 				return err
 			}
 
+			if err := config.ValidateEpisodeSpecCorners(p); err != nil {
+				return err
+			}
+
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "OK: %s\n", path)
 			return nil
 		},

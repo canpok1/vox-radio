@@ -510,25 +510,25 @@ func TestValidateEpisodeSpecCast_UnknownCharacter(t *testing.T) {
 func TestGuestCondition_Matches(t *testing.T) {
 	tests := []struct {
 		name          string
-		cond          config.GuestCondition
+		cond          config.EpisodeCondition
 		episodeNumber int
 		want          bool
 	}{
 		// episodes（明示リスト）
-		{name: "episodes: 合致する回番号", cond: config.GuestCondition{Episodes: []int{3, 10}}, episodeNumber: 3, want: true},
-		{name: "episodes: 合致しない回番号", cond: config.GuestCondition{Episodes: []int{3, 10}}, episodeNumber: 5, want: false},
-		{name: "episodes: 空リスト", cond: config.GuestCondition{Episodes: []int{}}, episodeNumber: 1, want: false},
+		{name: "episodes: 合致する回番号", cond: config.EpisodeCondition{Episodes: []int{3, 10}}, episodeNumber: 3, want: true},
+		{name: "episodes: 合致しない回番号", cond: config.EpisodeCondition{Episodes: []int{3, 10}}, episodeNumber: 5, want: false},
+		{name: "episodes: 空リスト", cond: config.EpisodeCondition{Episodes: []int{}}, episodeNumber: 1, want: false},
 		// every（周期）
-		{name: "every: 倍数回に合致", cond: config.GuestCondition{Every: 5}, episodeNumber: 10, want: true},
-		{name: "every: 倍数でない回は合致しない", cond: config.GuestCondition{Every: 5}, episodeNumber: 7, want: false},
-		{name: "every: 0 は無効", cond: config.GuestCondition{Every: 0}, episodeNumber: 5, want: false},
+		{name: "every: 倍数回に合致", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 10, want: true},
+		{name: "every: 倍数でない回は合致しない", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 7, want: false},
+		{name: "every: 0 は無効", cond: config.EpisodeCondition{Every: 0}, episodeNumber: 5, want: false},
 		// 論理和（両方指定）
-		{name: "episodes+every: どちらかに合致すれば true", cond: config.GuestCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 5, want: true},
-		{name: "episodes+every: episodes のみ合致", cond: config.GuestCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 3, want: true},
-		{name: "episodes+every: どちらにも合致しない", cond: config.GuestCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 2, want: false},
+		{name: "episodes+every: どちらかに合致すれば true", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 5, want: true},
+		{name: "episodes+every: episodes のみ合致", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 3, want: true},
+		{name: "episodes+every: どちらにも合致しない", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 2, want: false},
 		// 回番号不明（0 以下）
-		{name: "episodeNumber=0 は false", cond: config.GuestCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 0, want: false},
-		{name: "episodeNumber<0 は false", cond: config.GuestCondition{Episodes: []int{1}}, episodeNumber: -1, want: false},
+		{name: "episodeNumber=0 は false", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 0, want: false},
+		{name: "episodeNumber<0 は false", cond: config.EpisodeCondition{Episodes: []int{1}}, episodeNumber: -1, want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -552,19 +552,19 @@ func TestValidateEpisodeSpecGuests_Valid(t *testing.T) {
 		{
 			name: "episodes のみ指定",
 			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{3, 10}}},
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3, 10}}},
 			},
 		},
 		{
 			name: "every のみ指定",
 			guests: map[string]config.GuestConfig{
-				"metan": {Role: "解説ゲスト", Condition: config.GuestCondition{Every: 5}},
+				"metan": {Role: "解説ゲスト", Condition: config.EpisodeCondition{Every: 5}},
 			},
 		},
 		{
 			name: "両方指定",
 			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{3}, Every: 5}},
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}, Every: 5}},
 			},
 		},
 		{
@@ -593,25 +593,25 @@ func TestValidateEpisodeSpecGuests_Error(t *testing.T) {
 		{
 			name: "存在しないキャラID",
 			guests: map[string]config.GuestConfig{
-				"unknown_char": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{3}}},
+				"unknown_char": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}}},
 			},
 		},
 		{
 			name: "condition が空（episodes も every も未設定）",
 			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{}},
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{}},
 			},
 		},
 		{
 			name: "episodes の値が 0",
 			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{0}}},
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{0}}},
 			},
 		},
 		{
 			name: "every が負数",
 			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Every: -1}},
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: -1}},
 			},
 		},
 	}

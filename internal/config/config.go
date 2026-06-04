@@ -246,6 +246,7 @@ type CornerConfig struct {
 	BGM           string            `yaml:"bgm,omitempty"`
 	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
 	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
+	Condition     *EpisodeCondition `yaml:"condition,omitempty"` // 出現条件（nil なら毎回出る固定コーナー）
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultCornerSummaryLength.
@@ -381,14 +382,15 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 }
 
-// GuestCondition は出現条件。将来 probability 等を後方互換で追加可能。
-type GuestCondition struct {
-	Episodes []int `yaml:"episodes,omitempty"` // この回番号で出演（明示リスト）
-	Every    int   `yaml:"every,omitempty"`    // N の倍数回で出演（0 で無効）
+// EpisodeCondition は回番号ベースの出現条件。将来 probability 等を後方互換で追加可能。
+// コーナーとゲストで共有する。
+type EpisodeCondition struct {
+	Episodes []int `yaml:"episodes,omitempty"` // この回番号で採用（明示リスト）
+	Every    int   `yaml:"every,omitempty"`    // N の倍数回で採用（0 で無効）
 }
 
 // Matches は episodeNumber が条件に合致するか判定する（論理和）。
-func (c GuestCondition) Matches(episodeNumber int) bool {
+func (c EpisodeCondition) Matches(episodeNumber int) bool {
 	if episodeNumber <= 0 {
 		return false
 	}
@@ -403,8 +405,8 @@ func (c GuestCondition) Matches(episodeNumber int) bool {
 
 // GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
 type GuestConfig struct {
-	Role      string         `yaml:"role"`
-	Condition GuestCondition `yaml:"condition"`
+	Role      string           `yaml:"role"`
+	Condition EpisodeCondition `yaml:"condition"`
 }
 
 // EpisodeSpec holds episode-specific settings (program, corners, assets).
