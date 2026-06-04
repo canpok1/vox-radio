@@ -29,6 +29,7 @@ func NewRootCmd() *cobra.Command {
 		newConfigCmd(),
 		newFeedgenCmd(),
 		newAssetsCmd(),
+		newSlackpostCmd(),
 	)
 
 	return root

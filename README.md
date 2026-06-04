@@ -114,13 +114,15 @@ collect → rundown → script → synth → assemble → manifest
 | `episodegen manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `feedgen` | キャッシュ（`.jsonl`）と `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `feedgen check` | `feed-spec.yaml` を strict モードでパースし、必須フィールド・URL/email 形式・プレースホルダを検証する。意味検証エラーは全件まとめて報告する |
+| `slackpost` | `manifest.json` と `slack-spec.yaml` を入力に、mp3 を Slack へアップロードして配信する（Slack 配信版）。親メッセージ（mp3 + 初期コメント）とスレッド返信（要約 + コーナー）の 2 段構成 |
+| `slackpost check` | `slack-spec.yaml` を strict モードでパースし、必須フィールド（`slack.channel`）を検証する |
 | `config check` | 共通設定ファイルを strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する（パスは `--config` で指定、省略時は `vox-radio.yaml`） |
 | `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照の整合性を検証する（共通設定は `--config` で指定、省略時は `vox-radio.yaml`） |
 | `assets check` | アセット設定 YAML（`assets.yaml`）を strict モードでパースし、typo・参照ファイル欠落・不正値（volume/fade/duck_ratio）をエラーとして報告する |
 
 ### 設定ファイルの作成
 
-`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`episode-spec.yaml`（エピソード仕様）・`feed-spec.yaml`（フィード生成設定）のテンプレートが生成されます。
+`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`episode-spec.yaml`（エピソード仕様）・`feed-spec.yaml`（フィード生成設定）・`slack-spec.yaml`（Slack 投稿設定）のテンプレートが生成されます。
 
 ```bash
 # テンプレートを生成
@@ -543,3 +545,60 @@ BGM の開始・停止は台本の `bgm` セグメントで制御します。`as
 | `output.public` | string | 任意 | `feed.xml` を書き出すディレクトリ。デフォルト: `public` |
 
 必須フィールドの欠落・URL/email 形式・`audio_url_template` のプレースホルダ（`{episode_number}` / `{audio_file}`）は `vox-radio feedgen check` で検証されます。意味検証エラーは全件まとめて報告されます。
+
+### slack-spec.yaml（Slack 投稿設定）
+
+`slack-spec.yaml` は `vox-radio slackpost` / `vox-radio slackpost check` が使用する Slack 投稿設定ファイルです。`vox-radio init` で生成されるテンプレートを元に編集してください。
+
+#### 必要な Slack スコープ
+
+| スコープ | 用途 |
+|---------|------|
+| `chat:write` | スレッド返信の投稿 |
+| `files:write` | mp3 ファイルのアップロード |
+
+#### Bot トークンの設定
+
+Bot トークン（`xoxb-...`）は共通設定 `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数名から読み込まれます。
+
+```yaml
+# vox-radio.yaml
+slack:
+  bot_token_env: SLACK_BOT_TOKEN   # 環境変数名を指定
+```
+
+```bash
+# 環境変数を設定してから実行
+export SLACK_BOT_TOKEN=xoxb-your-token-here
+vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml
+```
+
+#### slack-spec.yaml フィールド一覧
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `program_id` | string | 任意 | 番組 ID（ログ・将来の突合用） |
+| `slack.channel` | string | 必須 | 投稿先チャンネル ID（`C` で始まる Slack のチャンネル ID） |
+| `slack.message.header` | string | 任意 | 親メッセージ（mp3 アップロード時の初期コメント）のテンプレート |
+| `slack.message.fallback` | string | 任意 | スレッド返信の通知用プレーンテキストのテンプレート |
+| `slack.message.summary` | string | 任意 | スレッド返信の要約 Section テンプレート（空のとき省略） |
+| `slack.message.corner` | string | 任意 | コーナー Section テンプレート |
+| `slack.message.article` | string | 任意 | 記事 1 件のテンプレート |
+
+`message.*` を省略した場合はコード側のデフォルトテンプレートが適用されます。
+
+#### 利用可能なプレースホルダ
+
+| スコープ | プレースホルダ | manifest フィールド |
+|---------|----------------|---------------------|
+| 全体（header/summary/fallback） | `{title}` `{episode_number}` `{episode_title}` `{description}` `{summary}` `{datetime}` `{audio_file}` | `Manifest` の各 json タグ |
+| コーナー（`corner`） | `{corner_title}` `{corner_summary}` `{articles}` | `ManifestCorner.Title` / `.Summary` / 記事展開 |
+| 記事（`article`） | `{title}` `{url}` | `ArticleRef.Title` / `.URL` |
+
+#### 投稿フロー
+
+1. `vox-radio.yaml` から Bot トークンを環境変数で取得
+2. `manifest.json` を読み込み、mp3 パスを自動解決（manifest と同じディレクトリ + `audio_file`）
+3. `slack-spec.yaml` を読み込み・検証
+4. mp3 を Slack へアップロード（親メッセージ = mp3 + 初期コメント）
+5. 要約・コーナーをスレッドに返信（要約・コーナーが両方空の場合はスレッド投稿をスキップ）

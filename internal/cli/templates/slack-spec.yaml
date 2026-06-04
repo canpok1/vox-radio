@@ -1,0 +1,40 @@
+# slack-spec.yaml - Slack 投稿設定
+# vox-radio slackpost --manifest (manifest.jsonのパス) --spec slack-spec.yaml で
+# mp3 を Slack へアップロードし、要約・コーナーをスレッドに投稿します。
+# Bot トークンは共通設定の slack.bot_token_env で指定した環境変数から取得します。
+
+# 番組ID（任意。ログや将来の突合用）
+program_id: "my-radio"
+
+# Slack 投稿設定
+slack:
+  # 投稿先チャンネルID（必須。"C"で始まる Slack のチャンネルID）
+  channel: "C0123456789"
+
+  # メッセージテンプレート（省略時はコード組込みのデフォルトテンプレートが適用される）
+  # 利用可能なプレースホルダ:
+  #   {title}           番組タイトル
+  #   {episode_number}  回番号（0のとき "第N回" セグメントを除去）
+  #   {episode_title}   エピソードサブタイトル（空のとき「」を除去）
+  #   {description}     番組説明
+  #   {summary}         要約
+  #   {datetime}        配信日時
+  #   {audio_file}      音声ファイル名
+  # コーナー内追加プレースホルダ:
+  #   {corner_title}    コーナータイトル
+  #   {corner_summary}  コーナー要約
+  #   {articles}        記事リスト（article テンプレートを各記事に適用して改行連結）
+  # 記事内プレースホルダ:
+  #   {title}           記事タイトル
+  #   {url}             記事URL
+  message:
+    # 親メッセージ（mp3アップロード時の初期コメント）
+    header: "🎙️ {title} 第{episode_number}回「{episode_title}」"
+    # スレッド返信の通知用プレーンテキスト
+    fallback: "{title} 第{episode_number}回 を配信しました"
+    # スレッド返信の要約 Section（空のとき省略）
+    summary: "*今回のまとめ*\n{summary}"
+    # コーナー Section テンプレート（{articles} は article テンプレートを展開して連結）
+    corner: "*{corner_title}*\n{corner_summary}\n{articles}"
+    # 記事1件のテンプレート
+    article: " • <{url}|{title}>"

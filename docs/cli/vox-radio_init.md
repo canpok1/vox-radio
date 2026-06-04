@@ -4,7 +4,7 @@
 
 ### Synopsis
 
-vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）を
+vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）・slack-spec.yaml（Slack 投稿設定）を
 カレントディレクトリに生成します。
 
 既存ファイルは上書きを防ぐため個別にスキップされます。

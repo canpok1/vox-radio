@@ -41,7 +41,7 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml"} {
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
@@ -101,7 +101,7 @@ func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml"}
+	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml"}
 	for _, name := range allFiles {
 		if err := os.WriteFile(filepath.Join(dir, name), existingContent, 0644); err != nil {
 			t.Fatal(err)
@@ -155,6 +155,16 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if _, err := model.LoadFeedSpec(filepath.Join(dir, "feed-spec.yaml")); err != nil {
 		t.Fatalf("LoadFeedSpec failed on generated template: %v", err)
 	}
+	slackSpec, err := model.LoadSlackSpec(filepath.Join(dir, "slack-spec.yaml"))
+	if err != nil {
+		t.Fatalf("LoadSlackSpec failed on generated template: %v", err)
+	}
+	if slackSpec.Slack.Channel == "" {
+		t.Error("slack-spec.yaml template should have a channel value")
+	}
+	if cfg.Slack.BotTokenEnv == "" {
+		t.Error("vox-radio.yaml template should have slack.bot_token_env set")
+	}
 	if err := config.ValidateEpisodeSpecCast(spec, cfg.Characters); err != nil {
 		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
 	}
@@ -186,5 +196,24 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	}
 	if v, ok := presets.ResolveSpeed("標準"); !ok || v != 1.0 {
 		t.Errorf("presets.Speed[標準] = %v (ok=%v), want 1.0", v, ok)
+	}
+}
+
+func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
+	dir := chdirTemp(t)
+	existingContent := []byte("# existing")
+	if err := os.WriteFile(filepath.Join(dir, "slack-spec.yaml"), existingContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runInitCmd(t)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "slack-spec.yaml"))
+	if string(data) != string(existingContent) {
+		t.Error("slack-spec.yaml should not be overwritten")
+	}
+	if !strings.Contains(out, "skip") {
+		t.Errorf("expected skip message for slack-spec.yaml, got: %s", out)
 	}
 }
