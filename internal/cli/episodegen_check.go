@@ -16,6 +16,7 @@ func newEpisodegenCheckCmd() *cobra.Command {
   (a) strict パース: 未知キー（typo）をエラー化
   (b) アセット参照: corners[].start_jingle / end_jingle / bgm が assets に存在するか
   (c) キャラ参照: corners[].cast のキャラ ID がカレントディレクトリの vox-radio.yaml に存在するか
+  (d) ゲスト参照: guests のキャラ ID が vox-radio.yaml に存在するか、condition が正しいか
 
 成功時は標準出力に OK メッセージを出力し、ゼロで終了します。
 失敗時は非ゼロで終了します（CI での自動検知に使用できます）。`,
@@ -38,6 +39,10 @@ func newEpisodegenCheckCmd() *cobra.Command {
 			}
 
 			if err := config.ValidateEpisodeSpecCast(p, cfg.Characters); err != nil {
+				return err
+			}
+
+			if err := config.ValidateEpisodeSpecGuests(p, cfg.Characters); err != nil {
 				return err
 			}
 

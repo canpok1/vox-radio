@@ -519,6 +519,48 @@ func TestRunner_Run_NoSummaryLogWhenSummarizersNil(t *testing.T) {
 	}
 }
 
+func TestRunner_Run_GuestsWrittenToRundown(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	guests := []model.RundownGuest{
+		{CharacterID: "metan", Role: "解説ゲスト"},
+	}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir, Guests: guests}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// rundown.json に Guests が書き込まれていること
+	var rd model.Rundown
+	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+		t.Fatalf("read rundown: %v", err)
+	}
+	if len(rd.Guests) != 1 || rd.Guests[0].CharacterID != "metan" {
+		t.Errorf("unexpected guests in rundown: %+v", rd.Guests)
+	}
+}
+
+func TestRunner_Run_NoGuestsRundownHasEmptySlice(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var rd model.Rundown
+	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+		t.Fatalf("read rundown: %v", err)
+	}
+	// Guests が nil でなく空スライスであること（JSON で null になるのを防ぐ）
+	if rd.Guests == nil {
+		t.Error("rundown.Guests should be non-nil empty slice, not nil")
+	}
+	if len(rd.Guests) != 0 {
+		t.Errorf("expected 0 guests, got %d", len(rd.Guests))
+	}
+}
+
 func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
