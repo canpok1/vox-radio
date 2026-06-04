@@ -36,3 +36,4 @@
 | [0028](0028-nest-pipeline-steps-under-episodegen.md) | パイプライン各ステップを episodegen サブコマンド配下へ再編する（run のリネーム） | 採用 | 2026-06-03 |
 | [0029](0029-separate-asset-config-from-profile.md) | アセット設定のプロファイルからの分離 | 採用 | 2026-06-03 |
 | [0030](0030-rename-profile-and-feedgen-config-to-spec.md) | 設定ファイルを episode-spec / feed-spec に統一し「プロファイル」概念を廃止する | 採用 | 2026-06-03 |
+| [0031](0031-guest-appearance-by-episode-number-condition.md) | ゲスト出演を回番号条件で制御し、出演確定結果を rundown に永続化する | 採用 | 2026-06-04 |
