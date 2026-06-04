@@ -517,11 +517,11 @@ func TestEpisodeCondition_Matches(t *testing.T) {
 		// episodes（明示リスト）
 		{name: "episodes: 合致する回番号", cond: config.EpisodeCondition{Episodes: []int{3, 10}}, episodeNumber: 3, want: true},
 		{name: "episodes: 合致しない回番号", cond: config.EpisodeCondition{Episodes: []int{3, 10}}, episodeNumber: 5, want: false},
-		{name: "episodes: 空リスト", cond: config.EpisodeCondition{Episodes: []int{}}, episodeNumber: 1, want: false},
+		{name: "episodes: 空リスト（肯定条件なし→常に真）", cond: config.EpisodeCondition{Episodes: []int{}}, episodeNumber: 1, want: true},
 		// every（周期）
 		{name: "every: 倍数回に合致", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 10, want: true},
 		{name: "every: 倍数でない回は合致しない", cond: config.EpisodeCondition{Every: 5}, episodeNumber: 7, want: false},
-		{name: "every: 0 は無効", cond: config.EpisodeCondition{Every: 0}, episodeNumber: 5, want: false},
+		{name: "every: 0 は未指定（肯定条件なし→常に真）", cond: config.EpisodeCondition{Every: 0}, episodeNumber: 5, want: true},
 		// 論理和（両方指定）
 		{name: "episodes+every: どちらかに合致すれば true", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 5, want: true},
 		{name: "episodes+every: episodes のみ合致", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 3, want: true},
@@ -529,6 +529,16 @@ func TestEpisodeCondition_Matches(t *testing.T) {
 		// 回番号不明（0 以下）
 		{name: "episodeNumber=0 は false", cond: config.EpisodeCondition{Episodes: []int{3}, Every: 5}, episodeNumber: 0, want: false},
 		{name: "episodeNumber<0 は false", cond: config.EpisodeCondition{Episodes: []int{1}}, episodeNumber: -1, want: false},
+		// not（否定）
+		{name: "not: 否定条件に合致する回は false", cond: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}, episodeNumber: 5, want: false},
+		{name: "not: 否定条件に合致しない回は true（肯定条件なし→常に真）", cond: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}, episodeNumber: 7, want: true},
+		{name: "not: 肯定条件なしで否定に合致しない回は true", cond: config.EpisodeCondition{Not: &config.EpisodeCondition{Episodes: []int{3}}}, episodeNumber: 1, want: true},
+		// every + not（組み合わせ）
+		{name: "every+not: 倍数かつ not に非合致 → true", cond: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}, episodeNumber: 4, want: true},
+		{name: "every+not: 倍数だが not に合致 → false", cond: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}, episodeNumber: 6, want: false},
+		{name: "every+not: 倍数でない → false", cond: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}, episodeNumber: 3, want: false},
+		// 肯定条件なし（not 単独）で episodeNumber <= 0 は false
+		{name: "not 単独で episodeNumber=0 は false", cond: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}, episodeNumber: 0, want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -571,6 +581,18 @@ func TestValidateEpisodeSpecGuests_Valid(t *testing.T) {
 			name:   "guests が空（省略時）",
 			guests: nil,
 		},
+		{
+			name: "not のみ指定",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}},
+			},
+		},
+		{
+			name: "episodes + not 指定",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -597,9 +619,15 @@ func TestValidateEpisodeSpecGuests_Error(t *testing.T) {
 			},
 		},
 		{
-			name: "condition が空（episodes も every も未設定）",
+			name: "condition が空（episodes も every も not も未設定）",
 			guests: map[string]config.GuestConfig{
 				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{}},
+			},
+		},
+		{
+			name: "not の中身が空（episodes も every も not も未設定）",
+			guests: map[string]config.GuestConfig{
+				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{}}},
 			},
 		},
 		{

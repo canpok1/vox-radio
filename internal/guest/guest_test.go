@@ -113,3 +113,40 @@ func TestSelect_RoleIsPreserved(t *testing.T) {
 		t.Errorf("got %+v, want %+v", result[0], want)
 	}
 }
+
+func TestSelect_Not(t *testing.T) {
+	guests := map[string]config.GuestConfig{
+		"metan":    {Role: "定期ゲスト", Condition: config.EpisodeCondition{Every: 5}},
+		"zundamon": {Role: "補集合ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}},
+	}
+
+	tests := []struct {
+		episodeNumber int
+		wantIDs       []string
+	}{
+		{episodeNumber: 5, wantIDs: []string{"metan"}},
+		{episodeNumber: 7, wantIDs: []string{"zundamon"}},
+		{episodeNumber: 10, wantIDs: []string{"metan"}},
+		{episodeNumber: 1, wantIDs: []string{"zundamon"}},
+	}
+
+	for _, tt := range tests {
+		result := guest.Select(guests, tt.episodeNumber)
+		if len(result) != len(tt.wantIDs) {
+			t.Errorf("episode %d: got %d guests, want %d", tt.episodeNumber, len(result), len(tt.wantIDs))
+			continue
+		}
+		for _, id := range tt.wantIDs {
+			found := false
+			for _, g := range result {
+				if g.CharacterID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("episode %d: guest %q not found in result %v", tt.episodeNumber, id, result)
+			}
+		}
+	}
+}

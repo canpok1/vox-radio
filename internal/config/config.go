@@ -382,25 +382,27 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 }
 
-// EpisodeCondition は回番号ベースの出現条件。将来 probability 等を後方互換で追加可能。
-// コーナーとゲストで共有する。
+// EpisodeCondition は回番号ベースの出現条件。コーナーとゲストで共有する。
 type EpisodeCondition struct {
-	Episodes []int `yaml:"episodes,omitempty"` // この回番号で採用（明示リスト）
-	Every    int   `yaml:"every,omitempty"`    // N の倍数回で採用（0 で無効）
+	Episodes []int             `yaml:"episodes,omitempty"` // この回番号で採用（明示リスト）
+	Every    int               `yaml:"every,omitempty"`    // N の倍数回で採用（0 で無効）
+	Not      *EpisodeCondition `yaml:"not,omitempty"`      // この条件に合致する回は除外（補集合）
 }
 
-// Matches は episodeNumber が条件に合致するか判定する（論理和）。
+// Matches は episodeNumber が条件に合致するか判定する。
 func (c EpisodeCondition) Matches(episodeNumber int) bool {
 	if episodeNumber <= 0 {
 		return false
 	}
-	if slices.Contains(c.Episodes, episodeNumber) {
+	if c.Not != nil && c.Not.Matches(episodeNumber) {
+		return false
+	}
+	// 肯定条件が両方未指定 → 全回が対象（not 単独で補集合を表現できるようにする）
+	if len(c.Episodes) == 0 && c.Every == 0 {
 		return true
 	}
-	if c.Every > 0 && episodeNumber%c.Every == 0 {
-		return true
-	}
-	return false
+	return slices.Contains(c.Episodes, episodeNumber) ||
+		(c.Every > 0 && episodeNumber%c.Every == 0)
 }
 
 // GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
@@ -432,8 +434,13 @@ func validateEpisodeCondition(cond EpisodeCondition, prefix string) error {
 	if cond.Every < 0 {
 		return fmt.Errorf("%s.every: value %d must be >= 1", prefix, cond.Every)
 	}
-	if len(cond.Episodes) == 0 && cond.Every == 0 {
-		return fmt.Errorf("%s: at least one of episodes or every must be set", prefix)
+	if len(cond.Episodes) == 0 && cond.Every == 0 && cond.Not == nil {
+		return fmt.Errorf("%s: at least one of episodes, every, or not must be set", prefix)
+	}
+	if cond.Not != nil {
+		if err := validateEpisodeCondition(*cond.Not, prefix+".not"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
