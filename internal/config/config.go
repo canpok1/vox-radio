@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 )
@@ -380,15 +381,68 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 }
 
+// GuestCondition は出現条件。将来 probability 等を後方互換で追加可能。
+type GuestCondition struct {
+	Episodes []int `yaml:"episodes,omitempty"` // この回番号で出演（明示リスト）
+	Every    int   `yaml:"every,omitempty"`    // N の倍数回で出演（0 で無効）
+}
+
+// Matches は episodeNumber が条件に合致するか判定する（論理和）。
+func (c GuestCondition) Matches(episodeNumber int) bool {
+	if episodeNumber <= 0 {
+		return false
+	}
+	if slices.Contains(c.Episodes, episodeNumber) {
+		return true
+	}
+	if c.Every > 0 && episodeNumber%c.Every == 0 {
+		return true
+	}
+	return false
+}
+
+// GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
+type GuestConfig struct {
+	Role      string         `yaml:"role"`
+	Condition GuestCondition `yaml:"condition"`
+}
+
 // EpisodeSpec holds episode-specific settings (program, corners, assets).
 // It is loaded from episode-spec.yaml.
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
 // Assets are loaded from the files listed in AssetsFiles and merged into Assets.
 type EpisodeSpec struct {
-	Program     ProgramConfig  `yaml:"program"`
-	Corners     []CornerConfig `yaml:"corners"`
-	AssetsFiles []string       `yaml:"assets_files"`
-	Assets      AssetsConfig   `yaml:"-"`
+	Program     ProgramConfig          `yaml:"program"`
+	Corners     []CornerConfig         `yaml:"corners"`
+	Guests      map[string]GuestConfig `yaml:"guests,omitempty"`
+	AssetsFiles []string               `yaml:"assets_files"`
+	Assets      AssetsConfig           `yaml:"-"`
+}
+
+// ValidateEpisodeSpecGuests checks that every guest character ID exists in chars,
+// and that each guest's condition has at least one of episodes or every set.
+func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig) error {
+	for charID, g := range p.Guests {
+		if _, ok := chars[charID]; !ok {
+			return fmt.Errorf("guests[%q]: unknown character %q", charID, charID)
+		}
+		cond := g.Condition
+		hasEpisodes := false
+		for _, e := range cond.Episodes {
+			if e < 1 {
+				return fmt.Errorf("guests[%q].condition.episodes: value %d must be >= 1", charID, e)
+			}
+			hasEpisodes = true
+		}
+		if cond.Every < 0 {
+			return fmt.Errorf("guests[%q].condition.every: value %d must be >= 1", charID, cond.Every)
+		}
+		hasEvery := cond.Every > 0
+		if !hasEpisodes && !hasEvery {
+			return fmt.Errorf("guests[%q].condition: at least one of episodes or every must be set", charID)
+		}
+	}
+	return nil
 }
 
 // CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
