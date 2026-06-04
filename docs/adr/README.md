@@ -40,3 +40,4 @@
 | [0032](0032-corner-rotation-by-episode-number-condition.md) | コーナーの回ごと組み替えを回番号条件で制御し、採用結果を rundown に乗せる | 採用 | 2026-06-04 |
 | [0033](0033-negation-condition-for-episode-condition.md) | 出現条件 EpisodeCondition に否定（補集合）条件 not を追加する | 採用 | 2026-06-04 |
 | [0034](0034-rotation-offset-for-episode-condition.md) | 出現条件 EpisodeCondition に剰余（offset）を追加しN者ローテーションを可能にする | 採用 | 2026-06-04 |
+| [0035](0035-slack-episode-posting-subcommand.md) | Slack へエピソードを投稿する slackpost サブコマンドを追加する（ADR-0005 の方針転換） | 採用 | 2026-06-04 |
