@@ -23,10 +23,12 @@ type mockWriter struct {
 	callCount        int
 	responses        [][]model.Line
 	receivedPrevious [][]model.CornerLines
+	receivedCorners  []config.CornerConfig
 }
 
-func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, _ config.CornerConfig, _ []config.CornerConfig, previousCorners []model.CornerLines, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
+func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner config.CornerConfig, _ []config.CornerConfig, previousCorners []model.CornerLines, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
 	m.receivedPrevious = append(m.receivedPrevious, previousCorners)
+	m.receivedCorners = append(m.receivedCorners, corner)
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -498,5 +500,129 @@ func TestWriteAll_Error(t *testing.T) {
 	_, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, cornerMap, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestGenerate_AppliesGuestsToCornerCast(t *testing.T) {
+	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
+	md := &mockDirector{}
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
+
+	rundown := model.Rundown{
+		Corners: []model.RundownCorner{{Title: "AIコーナー", Flow: "フロー"}},
+		Guests: []model.RundownGuest{
+			{CharacterID: "guest_char", Role: "スペシャルゲスト"},
+		},
+	}
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// writer に渡されたコーナーのキャストにゲストが含まれること
+	if len(mw.receivedCorners) == 0 {
+		t.Fatal("writer was not called")
+	}
+	role, ok := mw.receivedCorners[0].Cast["guest_char"]
+	if !ok {
+		t.Error("guest_char not found in corner cast passed to writer")
+	}
+	if role != "スペシャルゲスト" {
+		t.Errorf("guest_char role = %q, want %q", role, "スペシャルゲスト")
+	}
+}
+
+func TestGenerate_NoGuestsDoesNotChangeCast(t *testing.T) {
+	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
+	md := &mockDirector{}
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
+
+	rundown := model.Rundown{
+		Corners: []model.RundownCorner{{Title: "AIコーナー", Flow: "フロー"}},
+		Guests:  []model.RundownGuest{},
+	}
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+
+	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mw.receivedCorners) == 0 {
+		t.Fatal("writer was not called")
+	}
+	if _, ok := mw.receivedCorners[0].Cast["guest_char"]; ok {
+		t.Error("guest_char should not be in cast when no guests")
+	}
+}
+
+func TestApplyGuests_NoGuests(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
+	}
+	result := script.ApplyGuests(corners, nil)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 corner, got %d", len(result))
+	}
+	if len(result[0].Cast) != 1 {
+		t.Errorf("expected cast unchanged, got %v", result[0].Cast)
+	}
+}
+
+func TestApplyGuests_AddsGuestsToCast(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
+		{Title: "main", Cast: map[string]string{"metan": "コメンテーター"}},
+	}
+	guests := []model.RundownGuest{
+		{CharacterID: "guest_char", Role: "古参リスナー"},
+	}
+	result := script.ApplyGuests(corners, guests)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 corners, got %d", len(result))
+	}
+	// 全コーナーにゲストが追加されていること
+	for _, c := range result {
+		role, ok := c.Cast["guest_char"]
+		if !ok {
+			t.Errorf("corner %q: guest_char not in cast", c.Title)
+		}
+		if role != "古参リスナー" {
+			t.Errorf("corner %q: guest_char role = %q, want %q", c.Title, role, "古参リスナー")
+		}
+	}
+}
+
+func TestApplyGuests_DoesNotMutateOriginalCast(t *testing.T) {
+	original := map[string]string{"zundamon": "司会"}
+	corners := []config.CornerConfig{
+		{Title: "opening", Cast: original},
+	}
+	guests := []model.RundownGuest{
+		{CharacterID: "guest_char", Role: "ゲスト"},
+	}
+	script.ApplyGuests(corners, guests)
+	// 元のマップは変更されていないこと
+	if _, ok := original["guest_char"]; ok {
+		t.Error("original cast was mutated by ApplyGuests")
+	}
+}
+
+func TestApplyGuests_EmptyGuestsReturnsCopy(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "opening", Cast: map[string]string{"host": "司会"}},
+	}
+	result := script.ApplyGuests(corners, []model.RundownGuest{})
+	if len(result) != 1 {
+		t.Fatalf("expected 1 corner, got %d", len(result))
+	}
+	if result[0].Cast["host"] != "司会" {
+		t.Errorf("cast not preserved: %v", result[0].Cast)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,14 +64,15 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	start := time.Now()
 
 	cornerMap := rundown.CornerMap()
+	appliedCorners := ApplyGuests(corners, rundown.Guests)
 
 	g.logger.With("step", "script/write").Info("開始")
-	cornerLines, err := WriteAll(ctx, g.writer, program, corners, cornerMap, chars)
+	cornerLines, err := WriteAll(ctx, g.writer, program, appliedCorners, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, err
 	}
-	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, cornerMap, chars)
-	scriptLines := BuildScriptLines(corners, cornerLines)
+	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, appliedCorners, cornerMap, chars)
+	scriptLines := BuildScriptLines(appliedCorners, cornerLines)
 	if err := g.saveIntermediate(fileio.FileLines, model.ScriptLines{Corners: scriptLines}); err != nil {
 		return model.Script{}, err
 	}
@@ -172,6 +174,22 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 		return fmt.Errorf("write %s: %w", filename, err)
 	}
 	return nil
+}
+
+// ApplyGuests は全コーナーの cast に確定ゲストをマージした新しいコーナー列を返す。
+// 元の corner.Cast は破壊せずコピーする。guests が空ならコピーのみ。
+func ApplyGuests(corners []config.CornerConfig, guests []model.RundownGuest) []config.CornerConfig {
+	result := make([]config.CornerConfig, len(corners))
+	for i, c := range corners {
+		newCast := make(map[string]string, len(c.Cast)+len(guests))
+		maps.Copy(newCast, c.Cast)
+		for _, g := range guests {
+			newCast[g.CharacterID] = g.Role
+		}
+		c.Cast = newCast
+		result[i] = c
+	}
+	return result
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
