@@ -1,6 +1,7 @@
 package slack_test
 
 import (
+	"strings"
 	"testing"
 
 	slackgo "github.com/slack-go/slack"
@@ -68,7 +69,7 @@ func TestBuildHeader_EmptyEpisodeTitle_RemovesEmptyQuotes(t *testing.T) {
 	if header == "" {
 		t.Error("BuildHeader must not be empty")
 	}
-	if contains(header, "「」") {
+	if strings.Contains(header, "「」") {
 		t.Errorf("BuildHeader should not contain empty quotes 「」, got %q", header)
 	}
 }
@@ -80,10 +81,10 @@ func TestBuildHeader_EpisodeNumberZero_RemovesEpisodeSegment(t *testing.T) {
 
 	header := slack.BuildHeader(manifest, tmpl)
 
-	if contains(header, "第0回") {
+	if strings.Contains(header, "第0回") {
 		t.Errorf("BuildHeader should not contain 第0回, got %q", header)
 	}
-	if contains(header, "第") {
+	if strings.Contains(header, "第") {
 		t.Errorf("BuildHeader should not contain episode segment when EpisodeNumber is 0, got %q", header)
 	}
 }
@@ -217,17 +218,4 @@ func TestBuildAudioTitle_WithoutEpisodeTitle(t *testing.T) {
 	if title != manifest.Title {
 		t.Errorf("BuildAudioTitle = %q, want title %q", title, manifest.Title)
 	}
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(s) > 0 && containsHelper(s, sub))
-}
-
-func containsHelper(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
