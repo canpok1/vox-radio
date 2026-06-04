@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/model"
 )
 
 func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache.Entry) {
@@ -114,5 +116,79 @@ func TestSetupLogger_DefaultLogDir(t *testing.T) {
 	wantPrefix := filepath.Join(tmpDir, ".vox-radio", "logs")
 	if !strings.HasPrefix(logPath, wantPrefix) {
 		t.Errorf("log file path %q does not start with %q", logPath, wantPrefix)
+	}
+}
+
+func TestResolveCorners_WithEpisodeNumber(t *testing.T) {
+	cond := &config.EpisodeCondition{Episodes: []int{2, 4}}
+	corners := []config.CornerConfig{
+		{Title: "固定", LengthSec: 30},
+		{Title: "条件付き", LengthSec: 60, Condition: cond},
+	}
+	logger := slog.Default()
+
+	got := resolveCorners(corners, 2, logger)
+	if len(got) != 2 {
+		t.Errorf("resolveCorners(_, 2) len = %d, want 2", len(got))
+	}
+
+	got = resolveCorners(corners, 3, logger)
+	if len(got) != 1 || got[0].Title != "固定" {
+		t.Errorf("resolveCorners(_, 3) = %v, want [固定]", got)
+	}
+}
+
+func TestResolveCorners_UnknownEpisodeReturnsAll(t *testing.T) {
+	cond := &config.EpisodeCondition{Every: 2}
+	corners := []config.CornerConfig{
+		{Title: "固定", LengthSec: 30},
+		{Title: "条件付き", LengthSec: 60, Condition: cond},
+	}
+	logger := slog.Default()
+
+	got := resolveCorners(corners, 0, logger)
+	if len(got) != 2 {
+		t.Errorf("resolveCorners(_, 0) len = %d, want 2 (all corners)", len(got))
+	}
+}
+
+func TestResolveCornersByRundown(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "A", LengthSec: 30},
+		{Title: "B", LengthSec: 60},
+		{Title: "C", LengthSec: 90},
+	}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{
+			{Title: "C"},
+			{Title: "A"},
+		},
+	}
+
+	got, err := resolveCornersByRundown(corners, rd)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d corners, want 2", len(got))
+	}
+	if got[0].Title != "C" || got[1].Title != "A" {
+		t.Errorf("titles = [%s %s], want [C A]", got[0].Title, got[1].Title)
+	}
+}
+
+func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "A", LengthSec: 30},
+	}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{
+			{Title: "X"},
+		},
+	}
+
+	_, err := resolveCornersByRundown(corners, rd)
+	if err == nil {
+		t.Error("expected error for unknown title, got nil")
 	}
 }

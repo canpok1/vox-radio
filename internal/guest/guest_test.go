@@ -17,7 +17,7 @@ func TestSelect_NoGuests(t *testing.T) {
 
 func TestSelect_EpisodeNumberUnknown(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{3}}},
+		"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}}},
 	}
 	result := guest.Select(guests, 0)
 	if len(result) != 0 {
@@ -27,7 +27,7 @@ func TestSelect_EpisodeNumberUnknown(t *testing.T) {
 
 func TestSelect_ExplicitEpisodeList(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"zundamon": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{3, 10}}},
+		"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3, 10}}},
 	}
 	// 合致する回
 	result := guest.Select(guests, 3)
@@ -43,7 +43,7 @@ func TestSelect_ExplicitEpisodeList(t *testing.T) {
 
 func TestSelect_Every(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"metan": {Role: "解説ゲスト", Condition: config.GuestCondition{Every: 5}},
+		"metan": {Role: "解説ゲスト", Condition: config.EpisodeCondition{Every: 5}},
 	}
 	// 合致する回（5の倍数）
 	result := guest.Select(guests, 10)
@@ -59,9 +59,9 @@ func TestSelect_Every(t *testing.T) {
 
 func TestSelect_MultipleGuestsAreSorted(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"zundamon": {Role: "ゲストA", Condition: config.GuestCondition{Episodes: []int{5}}},
-		"metan":    {Role: "ゲストB", Condition: config.GuestCondition{Episodes: []int{5}}},
-		"aaa":      {Role: "ゲストC", Condition: config.GuestCondition{Episodes: []int{5}}},
+		"zundamon": {Role: "ゲストA", Condition: config.EpisodeCondition{Episodes: []int{5}}},
+		"metan":    {Role: "ゲストB", Condition: config.EpisodeCondition{Episodes: []int{5}}},
+		"aaa":      {Role: "ゲストC", Condition: config.EpisodeCondition{Episodes: []int{5}}},
 	}
 	result := guest.Select(guests, 5)
 	if len(result) != 3 {
@@ -78,8 +78,8 @@ func TestSelect_MultipleGuestsAreSorted(t *testing.T) {
 
 func TestSelect_DeterministicOutput(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"b_char": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{1}}},
-		"a_char": {Role: "ゲスト", Condition: config.GuestCondition{Episodes: []int{1}}},
+		"b_char": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{1}}},
+		"a_char": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{1}}},
 	}
 	r1 := guest.Select(guests, 1)
 	r2 := guest.Select(guests, 1)
@@ -102,7 +102,7 @@ func TestSelect_ReturnsEmptySliceNotNil(t *testing.T) {
 
 func TestSelect_RoleIsPreserved(t *testing.T) {
 	guests := map[string]config.GuestConfig{
-		"zundamon": {Role: "古参リスナー出身の常連ゲスト", Condition: config.GuestCondition{Episodes: []int{3}}},
+		"zundamon": {Role: "古参リスナー出身の常連ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}}},
 	}
 	result := guest.Select(guests, 3)
 	if len(result) != 1 {

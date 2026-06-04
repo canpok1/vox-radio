@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
@@ -93,6 +94,25 @@ func selectGuests(guests map[string]config.GuestConfig, episodeNumber int, logge
 	return selected
 }
 
+// resolveCornersByRundown は rundown のコーナータイトル順に spec のコーナーを再構成する。
+// script 系で採用コーナーを再現するために使う（回番号不要・再実行で不変）。
+func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([]config.CornerConfig, error) {
+	titles := make([]string, len(rd.Corners))
+	for i, c := range rd.Corners {
+		titles[i] = c.Title
+	}
+	return config.ResolveCornersByTitles(corners, titles)
+}
+
+// resolveCorners は回番号で採用コーナーを絞り込む。
+// 回番号不明（0）の場合は全コーナーを採用し、条件付きコーナーが存在するときは警告を出す。
+func resolveCorners(corners []config.CornerConfig, episodeNumber int, logger *slog.Logger) []config.CornerConfig {
+	if episodeNumber == 0 && slices.ContainsFunc(corners, func(c config.CornerConfig) bool { return c.Condition != nil }) {
+		logger.Warn("回番号が不明なため、条件付きコーナーを含む全コーナーを採用します")
+	}
+	return config.ResolveCornersForEpisode(corners, episodeNumber)
+}
+
 // resolveEpisodeNumber returns the next episode number from cache.
 // Returns 0 if cache is disabled, programID is empty, or cache fails to load.
 func resolveEpisodeNumber(cfg *config.Config, programID string) int {
@@ -124,6 +144,9 @@ func loadConfigAndSpec(specPath string) (*config.Config, *config.EpisodeSpec, er
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	if err := config.ValidateEpisodeSpecGuests(p, cfg.Characters); err != nil {
+		return nil, nil, fmt.Errorf("spec validation: %w", err)
+	}
+	if err := config.ValidateEpisodeSpecCorners(p); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	return cfg, p, nil

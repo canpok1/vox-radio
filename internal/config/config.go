@@ -246,6 +246,7 @@ type CornerConfig struct {
 	BGM           string            `yaml:"bgm,omitempty"`
 	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
 	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
+	Condition     *EpisodeCondition `yaml:"condition,omitempty"` // 出現条件（nil なら毎回出る固定コーナー）
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultCornerSummaryLength.
@@ -381,14 +382,15 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 }
 
-// GuestCondition は出現条件。将来 probability 等を後方互換で追加可能。
-type GuestCondition struct {
-	Episodes []int `yaml:"episodes,omitempty"` // この回番号で出演（明示リスト）
-	Every    int   `yaml:"every,omitempty"`    // N の倍数回で出演（0 で無効）
+// EpisodeCondition は回番号ベースの出現条件。将来 probability 等を後方互換で追加可能。
+// コーナーとゲストで共有する。
+type EpisodeCondition struct {
+	Episodes []int `yaml:"episodes,omitempty"` // この回番号で採用（明示リスト）
+	Every    int   `yaml:"every,omitempty"`    // N の倍数回で採用（0 で無効）
 }
 
 // Matches は episodeNumber が条件に合致するか判定する（論理和）。
-func (c GuestCondition) Matches(episodeNumber int) bool {
+func (c EpisodeCondition) Matches(episodeNumber int) bool {
 	if episodeNumber <= 0 {
 		return false
 	}
@@ -403,8 +405,8 @@ func (c GuestCondition) Matches(episodeNumber int) bool {
 
 // GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
 type GuestConfig struct {
-	Role      string         `yaml:"role"`
-	Condition GuestCondition `yaml:"condition"`
+	Role      string           `yaml:"role"`
+	Condition EpisodeCondition `yaml:"condition"`
 }
 
 // EpisodeSpec holds episode-specific settings (program, corners, assets).
@@ -419,6 +421,23 @@ type EpisodeSpec struct {
 	Assets      AssetsConfig           `yaml:"-"`
 }
 
+// validateEpisodeCondition は EpisodeCondition の値が有効かを検証する共通ヘルパー。
+// prefix はエラーメッセージの先頭に付加するフィールドパス文字列。
+func validateEpisodeCondition(cond EpisodeCondition, prefix string) error {
+	for _, e := range cond.Episodes {
+		if e < 1 {
+			return fmt.Errorf("%s.episodes: value %d must be >= 1", prefix, e)
+		}
+	}
+	if cond.Every < 0 {
+		return fmt.Errorf("%s.every: value %d must be >= 1", prefix, cond.Every)
+	}
+	if len(cond.Episodes) == 0 && cond.Every == 0 {
+		return fmt.Errorf("%s: at least one of episodes or every must be set", prefix)
+	}
+	return nil
+}
+
 // ValidateEpisodeSpecGuests checks that every guest character ID exists in chars,
 // and that each guest's condition has at least one of episodes or every set.
 func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig) error {
@@ -426,17 +445,25 @@ func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig)
 		if _, ok := chars[charID]; !ok {
 			return fmt.Errorf("guests[%q]: character not found in characters catalog", charID)
 		}
-		cond := g.Condition
-		for _, e := range cond.Episodes {
-			if e < 1 {
-				return fmt.Errorf("guests[%q].condition.episodes: value %d must be >= 1", charID, e)
+		if err := validateEpisodeCondition(g.Condition, fmt.Sprintf("guests[%q].condition", charID)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ValidateEpisodeSpecCorners は corners の出現条件を検証する（キャラ不要・spec 内部整合のみ）。
+func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
+	seen := make(map[string]bool, len(p.Corners))
+	for i, c := range p.Corners {
+		if seen[c.Title] {
+			return fmt.Errorf("corners[%d]: title %q is duplicated", i, c.Title)
+		}
+		seen[c.Title] = true
+		if c.Condition != nil {
+			if err := validateEpisodeCondition(*c.Condition, fmt.Sprintf("corners[%d].condition", i)); err != nil {
+				return err
 			}
-		}
-		if cond.Every < 0 {
-			return fmt.Errorf("guests[%q].condition.every: value %d must be >= 1", charID, cond.Every)
-		}
-		if len(cond.Episodes) == 0 && cond.Every == 0 {
-			return fmt.Errorf("guests[%q].condition: at least one of episodes or every must be set", charID)
 		}
 	}
 	return nil

@@ -316,6 +316,48 @@ vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work
 | `bgm` | string | 任意 | コーナー中 BGM のキー名（`assets.bgm` のキーと一致させること）。コーナー本編を開始/停止セグメントで挟む |
 | `start_pause_sec` | float64 | 任意 | コーナー先頭（`start_jingle` より前）に挿入する無音時間（秒）。0 または省略時は挿入しない |
 | `end_pause_sec` | float64 | 任意 | コーナー末尾（`end_jingle` より後）に挿入する無音時間（秒）。0 または省略時は挿入しない |
+| `condition` | EpisodeCondition | 任意 | コーナーの出現条件（省略すると毎回必ず出る固定コーナー） |
+
+##### `corners[].condition` サブフィールド
+
+`condition` を設定すると、回番号が条件に合致したときのみそのコーナーが採用されます。`condition` を省略したコーナーは毎回必ず採用される固定コーナーとなります。
+
+```yaml
+corners:
+  - title: "オープニング"       # condition なし → 毎回必須
+    content: "挨拶と自己紹介"
+    cast: { zundamon: "MC" }
+    length_sec: 30
+
+  - title: "リスナー投稿コーナー"
+    content: "投稿を紹介して語り合う"
+    cast: { zundamon: "進行", metan: "ツッコミ" }
+    length_sec: 120
+    condition:
+      every: 2                  # 偶数回（2,4,6,…）に採用
+
+  - title: "今週の一冊"
+    content: "おすすめの本を紹介"
+    cast: { zundamon: "ボケ", metan: "解説" }
+    length_sec: 120
+    condition:
+      episodes: [1, 5, 9]       # 第1・5・9回に採用
+
+  - title: "エンディング"        # condition なし → 毎回必須
+    content: "締めの挨拶"
+    cast: { zundamon: "MC" }
+    length_sec: 30
+```
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `condition.episodes` | []int | 任意 | 採用する回番号の明示リスト（各値は 1 以上） |
+| `condition.every` | int | 任意 | 周期的な採用（N の倍数回に採用。1 以上） |
+
+- `condition.episodes` と `condition.every` の両方を指定した場合は **論理和**（どちらかに合致すれば採用）
+- `condition.episodes` と `condition.every` のどちらも未設定の場合はバリデーションエラー
+- キャッシュが無効または `program.id` が未設定で回番号が不明な場合、条件付きコーナーを含む全コーナーが採用されます（警告ログが出力されます）
+- 採用されたコーナーは元の `corners` 配列の順序を維持したまま台本に出力されます
 
 ##### `corners[].source` サブフィールド
 
