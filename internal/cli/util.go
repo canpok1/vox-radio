@@ -18,6 +18,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// DefaultConfigPath is the default path for the shared config file (vox-radio.yaml).
+const DefaultConfigPath = "vox-radio.yaml"
+
+// configPath returns the value of the --config persistent flag, falling back to DefaultConfigPath.
+func configPath(cmd *cobra.Command) string {
+	p, _ := cmd.Flags().GetString("config")
+	if p == "" {
+		return DefaultConfigPath
+	}
+	return p
+}
+
 // registerSpecFlag registers the required --spec flag on cmd, binding it
 // to specPath. Used by episodegen subcommands that load an episode spec (assemble is the
 // exception: its --spec is optional because assets can be skipped).
@@ -128,8 +140,8 @@ func resolveEpisodeNumber(cfg *config.Config, programID string) int {
 	return cache.NextEpisodeNumber(entries)
 }
 
-func loadConfigAndSpec(specPath string) (*config.Config, *config.EpisodeSpec, error) {
-	cfg, err := config.LoadConfig("vox-radio.yaml")
+func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.EpisodeSpec, error) {
+	cfg, err := config.LoadConfig(cfgPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load config: %w", err)
 	}

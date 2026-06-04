@@ -4,20 +4,27 @@
 
 ### Synopsis
 
-指定した設定ファイル（デフォルト: vox-radio.yaml）を strict モードでパースし、
+共通設定ファイルを strict モードでパースし、
 未知のキー（typo）や設定値の不整合をエラーとして報告します。
+設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 
 成功時は標準出力に OK メッセージを出力し、ゼロで終了します。
 失敗時は非ゼロで終了します（CI での自動検知に使用できます）。
 
 ```
-vox-radio config check [path] [flags]
+vox-radio config check [flags]
 ```
 
 ### Options
 
 ```
   -h, --help   help for check
+```
+
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
 ```
 
 ### SEE ALSO

@@ -15,8 +15,10 @@ func newEpisodegenCheckCmd() *cobra.Command {
 
   (a) strict パース: 未知キー（typo）をエラー化
   (b) アセット参照: corners[].start_jingle / end_jingle / bgm が assets に存在するか
-  (c) キャラ参照: corners[].cast のキャラ ID がカレントディレクトリの vox-radio.yaml に存在するか
-  (d) ゲスト参照: guests のキャラ ID が vox-radio.yaml に存在するか、condition が正しいか
+  (c) キャラ参照: corners[].cast のキャラ ID が共通設定ファイルの characters に存在するか
+  (d) ゲスト参照: guests のキャラ ID が共通設定ファイルに存在するか、condition が正しいか
+
+共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 
 成功時は標準出力に OK メッセージを出力し、ゼロで終了します。
 失敗時は非ゼロで終了します（CI での自動検知に使用できます）。`,
@@ -33,9 +35,9 @@ func newEpisodegenCheckCmd() *cobra.Command {
 				return err
 			}
 
-			cfg, err := config.LoadConfig("vox-radio.yaml")
+			cfg, err := config.LoadConfig(configPath(cmd))
 			if err != nil {
-				return fmt.Errorf("load vox-radio.yaml for cast validation: %w", err)
+				return fmt.Errorf("load config for cast validation: %w", err)
 			}
 
 			if err := config.ValidateEpisodeSpecCast(p, cfg.Characters); err != nil {
