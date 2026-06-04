@@ -493,6 +493,7 @@ assets_files:
 | `file` | string | 必須 | 音声ファイルパス |
 | `fade_in` | float64 | 任意 | フェードイン時間（秒）。デフォルト: 0 |
 | `fade_out` | float64 | 任意 | フェードアウト時間（秒）。デフォルト: 0 |
+| `trim_silence` | bool | 任意 | 前後の無音を自動除去するかどうか。デフォルト: true |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
 ジングルはコーナー毎に `corners[].start_jingle` / `corners[].end_jingle` で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングルセグメントが含まれます。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
@@ -522,3 +523,23 @@ assets_files:
 BGM の開始・停止は台本の `bgm` セグメントで制御します。`asset_name` にキー名を指定するとその BGM を開始し、空文字列を指定すると停止します。
 
 同一ラン内で BGM が別の BGM に切り替わる場合、前の BGM がフェードアウトしつつ次の BGM がフェードインするクロスフェードが自動で適用されます（重なり幅 = `min(prevFadeOut, nextFadeIn)`）。ジングル境界または BGM 明示停止時も `fade_out` 秒でフェードアウトします。
+
+### feed-spec.yaml（フィード生成設定）
+
+`feed-spec.yaml` は `vox-radio feedgen` / `vox-radio feedgen check` が使用するフィード生成設定ファイルです。`vox-radio init` で生成されるテンプレートを元に編集してください。
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `program_id` | string | 必須 | feedgen がキャッシュから対象エピソードを絞り込むキー。`episode-spec.yaml` の `program.id` と一致させること |
+| `feed.language` | string | 必須 | 言語コード（RSS channel language）。例: `ja` |
+| `feed.author` | string | 必須 | 配信者名（itunes:author） |
+| `feed.email` | string | 必須 | 連絡先メールアドレス（itunes:email） |
+| `feed.site_url` | string | 必須 | 番組サイト URL（RSS channel link） |
+| `feed.audio_url_template` | string | 必須 | 各エピソード音声ファイルの URL テンプレート。`{episode_number}` と `{audio_file}` が cache の値で置換される |
+| `feed.category` | string | 任意 | iTunes カテゴリ。空文字でタグ省略 |
+| `feed.explicit` | bool | 任意 | 露骨な表現の有無（itunes:explicit）。デフォルト: false |
+| `feed.cover_image_url` | string | 任意 | カバー画像 URL（itunes:image）。空文字でタグ省略 |
+| `feed.credit` | string | 任意 | クレジット表記（各 item の itunes:author）。空文字で省略 |
+| `output.public` | string | 任意 | `feed.xml` を書き出すディレクトリ。デフォルト: `public` |
+
+必須フィールドの欠落・URL/email 形式・`audio_url_template` のプレースホルダ（`{episode_number}` / `{audio_file}`）は `vox-radio feedgen check` で検証されます。意味検証エラーは全件まとめて報告されます。
