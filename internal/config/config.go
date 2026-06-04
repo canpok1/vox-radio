@@ -373,6 +373,11 @@ func (c CharacterConfig) SpeakerID(style string) (int, bool) {
 	return c.DefaultSpeakerID()
 }
 
+// SlackConfig holds Slack integration settings shared across programs.
+type SlackConfig struct {
+	BotTokenEnv string `yaml:"bot_token_env"`
+}
+
 // Config holds genre-independent common settings.
 // It is loaded from vox-radio.yaml at the repository root.
 type Config struct {
@@ -380,6 +385,7 @@ type Config struct {
 	Voicevox   VoicevoxConfig             `yaml:"voicevox"`
 	Characters map[string]CharacterConfig `yaml:"characters"`
 	Cache      CacheConfig                `yaml:"cache"`
+	Slack      SlackConfig                `yaml:"slack"`
 }
 
 // EpisodeCondition は回番号ベースの出現条件。コーナーとゲストで共有する。

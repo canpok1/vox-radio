@@ -1,0 +1,31 @@
+llm:
+  provider: openai
+  temperature: 0.7
+  max_retries: 3
+  steps:
+    summarize: { temperature: 0.2 }
+    plan:      { temperature: 0.4 }
+    write:     { temperature: 0.8 }
+    direct:    { temperature: 0.2 }
+  openai:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    model: gemini-3.1-flash-lite
+
+voicevox:
+  url: http://localhost:50021
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ", "〜なのだ"]
+    personality: ["元気", "明るい", "素直", "前向き"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3
+      あまあま: 1
+      なみだめ: 76
+
+slack:
+  bot_token_env: SLACK_BOT_TOKEN

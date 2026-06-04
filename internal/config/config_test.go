@@ -1101,6 +1101,33 @@ func TestLoadConfig_ValidationError_MissingDifyChatBlock(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_SlackBotTokenEnv(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_with_slack.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Slack.BotTokenEnv != "SLACK_BOT_TOKEN" {
+		t.Errorf("Slack.BotTokenEnv = %q, want %q", cfg.Slack.BotTokenEnv, "SLACK_BOT_TOKEN")
+	}
+}
+
+func TestLoadConfig_SlackAbsent_ZeroValue(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Slack.BotTokenEnv != "" {
+		t.Errorf("Slack.BotTokenEnv should be empty when not set, got %q", cfg.Slack.BotTokenEnv)
+	}
+}
+
+func TestLoadConfigStrict_WithSlack_Success(t *testing.T) {
+	_, err := config.LoadConfigStrict("testdata/config_with_slack.yaml")
+	if err != nil {
+		t.Errorf("unexpected error for config with slack in strict mode: %v", err)
+	}
+}
+
 func TestLoadEpisodeSpec_AssetsFiles_MultipleFileMerge(t *testing.T) {
 	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_multi_assets.yaml")
 	if err != nil {

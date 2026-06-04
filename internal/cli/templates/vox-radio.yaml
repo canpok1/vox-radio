@@ -73,6 +73,13 @@ cache:
   retention_days: 90       # 保持日数（超過した古い行は削除）
   llm_context_entries: 10  # LLM へ渡す直近エピソード件数
 
+# Slack 投稿設定（slackpost コマンドで使用）
+slack:
+  # Bot トークン（xoxb-...）を格納する環境変数名
+  # export SLACK_BOT_TOKEN=xoxb-xxx などで設定すること
+  # 必要なスコープ: chat:write / files:write
+  bot_token_env: SLACK_BOT_TOKEN
+
 # キャラクター設定（VOICEVOX の話者IDと紐付け）
 # キャラクターIDは corners[].cast のキーとして使用します
 characters:
