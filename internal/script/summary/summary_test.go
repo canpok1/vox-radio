@@ -3,6 +3,7 @@ package summary_test
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -256,5 +257,31 @@ func TestLLMProgramSummarizer_Summarize_PromptContainsSummaryLength(t *testing.T
 	}
 	if strings.Contains(prompt, "{{summary_length}}") {
 		t.Errorf("prompt should not contain unexpanded placeholder, got: %s", prompt)
+	}
+}
+
+func TestLLMProgramSummarizer_Summarize_LogsProgressWithWithLogger(t *testing.T) {
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","conversation_notes":[]}`),
+	}
+	s := summary.NewLLMProgramSummarizer(mc, "{{script_lines}}", 0, 200, summary.WithLogger(logger))
+
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "C1", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
+		},
+	}
+
+	_, err := s.Summarize(context.Background(), lines)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "summary/program") {
+		t.Errorf("should log step=summary/program, got: %q", logs)
 	}
 }

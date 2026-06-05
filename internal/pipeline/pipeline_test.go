@@ -3,7 +3,6 @@ package pipeline_test
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -368,26 +367,6 @@ func TestRunner_Run_ProgramSummarizerError(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_LogsManifestStep(t *testing.T) {
-	outDir := t.TempDir()
-	s := defaultStubs()
-
-	var buf strings.Builder
-	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
-	r := newRunner(s)
-	r.Logger = logger
-
-	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	logs := buf.String()
-	if !strings.Contains(logs, "manifest") {
-		t.Errorf("should log manifest step: %q", logs)
-	}
-}
-
 func writeScriptLines(t *testing.T, outDir string, sl model.ScriptLines) {
 	t.Helper()
 	if err := fileio.WriteJSON(fileio.LinesPath(outDir), sl); err != nil {
@@ -470,57 +449,6 @@ func TestRunner_Run_CornerSummarizerError(t *testing.T) {
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from CornerSummarizer, got nil")
-	}
-}
-
-func TestRunner_Run_LogsSummaryStep(t *testing.T) {
-	outDir := t.TempDir()
-	s := defaultStubs()
-	s.sum = &stubProgramSummarizer{summary: "要約テスト"}
-	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "コーナー要約", Points: []string{"p1"}}}
-
-	writeScriptLines(t, outDir, model.ScriptLines{
-		Corners: []model.CornerLines{
-			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
-		},
-	})
-
-	var buf strings.Builder
-	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
-	r := newRunner(s)
-	r.Logger = logger
-
-	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	logs := buf.String()
-	if !strings.Contains(logs, "summary") {
-		t.Errorf("should log summary step: %q", logs)
-	}
-	if !strings.Contains(logs, "要約中") {
-		t.Errorf("should log 要約中: %q", logs)
-	}
-}
-
-func TestRunner_Run_NoSummaryLogWhenSummarizersNil(t *testing.T) {
-	outDir := t.TempDir()
-	s := defaultStubs() // both sum and csum are nil
-
-	var buf strings.Builder
-	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
-	r := newRunner(s)
-	r.Logger = logger
-
-	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	logs := buf.String()
-	if strings.Contains(logs, "summary") {
-		t.Errorf("should not log summary step when summarizers are nil: %q", logs)
 	}
 }
 

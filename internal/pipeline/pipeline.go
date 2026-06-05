@@ -3,7 +3,6 @@ package pipeline
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
@@ -67,7 +66,6 @@ type Runner struct {
 	Assembler         Assembler
 	ProgramSummarizer ProgramSummarizer // optional; if nil, program summary is omitted from manifest
 	CornerSummarizer  CornerSummarizer  // optional; if nil, corner summaries are omitted from manifest
-	Logger            *slog.Logger      // optional; if nil, slog.Default() is used
 	ExcludedURLs      []string          // URLs to exclude from feed collection (past-used articles)
 }
 
@@ -120,11 +118,6 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
-	logger := r.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
-
 	generatedAt := opts.GeneratedAt
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
@@ -133,17 +126,12 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	var programSummary model.ProgramSummary
 	var cornerSummaries map[string]model.CornerSummary
 	if r.ProgramSummarizer != nil || r.CornerSummarizer != nil {
-		summaryLogger := logger.With("step", "summary")
-		summaryLogger.Info("開始")
-		summaryStart := time.Now()
-
 		var scriptLines model.ScriptLines
 		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
 			return fmt.Errorf("read script lines for summarization: %w", err)
 		}
 
 		if r.ProgramSummarizer != nil {
-			summaryLogger.Info("番組全体を要約中")
 			programSummary, err = r.ProgramSummarizer.Summarize(ctx, scriptLines)
 			if err != nil {
 				return fmt.Errorf("summarize program: %w", err)
@@ -152,8 +140,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 
 		if r.CornerSummarizer != nil {
 			cornerSummaries = make(map[string]model.CornerSummary, len(scriptLines.Corners))
-			for i, cl := range scriptLines.Corners {
-				summaryLogger.Info(fmt.Sprintf("コーナー「%s」を要約中 (%d/%d)", cl.Title, i+1, len(scriptLines.Corners)))
+			for _, cl := range scriptLines.Corners {
 				cs, err := r.CornerSummarizer.SummarizeCorner(ctx, cl, r.Spec.CornerSummaryLength(cl.Title))
 				if err != nil {
 					return fmt.Errorf("summarize corner %s: %w", cl.Title, err)
@@ -161,20 +148,12 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 				cornerSummaries[cl.Title] = cs
 			}
 		}
-
-		summaryLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(summaryStart).Seconds()))
 	}
-
-	manifestLogger := logger.With("step", "manifest")
-	manifestLogger.Info("開始")
-	manifestStart := time.Now()
 
 	m := manifest.Build(r.Spec.Program, r.Spec.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes, opts.EpisodeNumber, programSummary.EpisodeTitle)
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
-
-	manifestLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(manifestStart).Seconds()))
 
 	return nil
 }

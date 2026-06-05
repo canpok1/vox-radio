@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
@@ -23,14 +24,24 @@ var cornerSummarySchema = json.RawMessage(`{
 
 // LLMCornerSummarizer generates a corner summary using an LLM.
 type LLMCornerSummarizer struct {
+	summarizerCore
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
 }
 
 // NewLLMCornerSummarizer creates a new LLMCornerSummarizer.
-func NewLLMCornerSummarizer(client llm.Client, promptTemplate string, temperature float64) *LLMCornerSummarizer {
-	return &LLMCornerSummarizer{client: client, promptTemplate: promptTemplate, temperature: temperature}
+func NewLLMCornerSummarizer(client llm.Client, promptTemplate string, temperature float64, opts ...Option) *LLMCornerSummarizer {
+	s := &LLMCornerSummarizer{
+		client:         client,
+		promptTemplate: promptTemplate,
+		temperature:    temperature,
+	}
+	for _, opt := range opts {
+		opt(&s.summarizerCore)
+	}
+	s.initLogger("summary/corner")
+	return s
 }
 
 type cornerSummaryResponse struct {
@@ -41,6 +52,11 @@ type cornerSummaryResponse struct {
 // SummarizeCorner generates a summary and points for a single corner from its script lines.
 // summaryLength specifies the target character count for the summary.
 func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error) {
+	title := corner.Title
+	start := time.Now()
+	s.logger.Info("開始", "corner", title)
+	defer func() { s.logger.Info("完了", "corner", title, "elapsed_s", time.Since(start).Seconds()) }()
+
 	lines := make([]string, 0, len(corner.Lines))
 	for _, l := range corner.Lines {
 		if l.Text != "" {
