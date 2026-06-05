@@ -91,7 +91,7 @@ func Run(opts Options, poster Poster) error {
 
 	if len(blocks) > 0 {
 		if ts == "" {
-			return fmt.Errorf("cannot post thread reply: ts is empty (file_id=%s); audio is already uploaded — re-running will 二重投稿", fileID)
+			return fmt.Errorf("cannot post thread reply: ts is empty (file_id=%s); %s", fileID, doublePostWarning)
 		}
 		replyParams := ReplyParams{
 			Channel:  spec.Slack.Channel,

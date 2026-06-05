@@ -2,12 +2,15 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	slackgo "github.com/slack-go/slack"
 )
+
+const doublePostWarning = "audio is already uploaded — re-running will 二重投稿"
 
 // UploadParams holds parameters for uploading an audio file to Slack.
 type UploadParams struct {
@@ -86,14 +89,11 @@ func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (str
 	pollCtx, cancel := context.WithTimeout(ctx, r.pollTimeout)
 	defer cancel()
 
+	timer := time.NewTimer(r.pollInterval)
+	defer timer.Stop()
+
 	var lastErr error
 	for {
-		select {
-		case <-pollCtx.Done():
-			return "", r.timeoutError(fileID, lastErr)
-		default:
-		}
-
 		fileInfo, _, _, err := r.client.GetFileInfoContext(pollCtx, fileID, 0, 0)
 		if err != nil {
 			lastErr = err
@@ -109,20 +109,18 @@ func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (str
 		select {
 		case <-pollCtx.Done():
 			return "", r.timeoutError(fileID, lastErr)
-		case <-time.After(r.pollInterval):
+		case <-timer.C:
+			timer.Reset(r.pollInterval)
 		}
 	}
 }
 
 func (r *realPoster) timeoutError(fileID string, lastErr error) error {
-	msg := fmt.Sprintf(
-		"timed out waiting for ts (file_id=%s): audio is already uploaded — re-running will 二重投稿",
-		fileID,
-	)
+	msg := fmt.Sprintf("timed out waiting for ts (file_id=%s): %s", fileID, doublePostWarning)
 	if lastErr != nil {
 		return fmt.Errorf("%s: %w", msg, lastErr)
 	}
-	return fmt.Errorf("%s", msg)
+	return errors.New(msg)
 }
 
 func (r *realPoster) PostThreadReply(ctx context.Context, p ReplyParams) error {
