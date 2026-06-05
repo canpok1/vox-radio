@@ -224,3 +224,29 @@ func TestLLMDesigner_DesignFlow_NoArticleCorner_EmptyArticlesInPrompt(t *testing
 		t.Errorf("flow: got %q, want %q", got, "番組全体の導入です")
 	}
 }
+
+func TestLLMDesigner_DesignFlow_AppearanceCountIncludedInProgram(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"flow":"フロー"}`),
+	}
+	d := flow.NewLLMDesigner(mc, "{{program}}", 0)
+
+	corner := config.CornerConfig{Title: "テック"}
+	target := model.RundownCorner{Title: "テック"}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{target},
+		Casts: []model.RundownCast{
+			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+		},
+	}
+
+	_, _ = d.DesignFlow(context.Background(), corner, flow.PositionOpening, target, rd)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "appearance_count") {
+		t.Errorf("program JSON should contain appearance_count field for cast, got: %s", prompt)
+	}
+}

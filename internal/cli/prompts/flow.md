@@ -24,6 +24,8 @@
 
 ## 番組構成全体（全コーナーの title・summary・選別理由・キャスト一覧）
 
+`casts[].appearance_count` は過去の出演エピソード数（今回含まず）。`0` = 今回が初登場。
+
 ```json
 {{program}}
 ```
