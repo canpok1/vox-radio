@@ -79,6 +79,10 @@ func effectiveTrimSilence(v *bool) bool {
 	return *v
 }
 
+// DefaultSilenceTrimThresholdDB is the default amplitude threshold (dB) below which
+// audio is treated as silence when trimming leading/trailing silence from jingle/SE.
+const DefaultSilenceTrimThresholdDB = -50.0
+
 // effectiveTrimSilenceThresholdDB resolves a *float64 threshold: nil → DefaultSilenceTrimThresholdDB.
 func effectiveTrimSilenceThresholdDB(v *float64) float64 {
 	if v == nil {
@@ -86,10 +90,6 @@ func effectiveTrimSilenceThresholdDB(v *float64) float64 {
 	}
 	return *v
 }
-
-// DefaultSilenceTrimThresholdDB is the default amplitude threshold (dB) below which
-// audio is treated as silence when trimming leading/trailing silence from jingle/SE.
-const DefaultSilenceTrimThresholdDB = -50.0
 
 // DefaultBGMFadeSec is the default fade-in/out duration (seconds) for BGM when not explicitly specified.
 const DefaultBGMFadeSec = 1.0
