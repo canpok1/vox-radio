@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"gopkg.in/yaml.v3"
+	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
 // CharsPerSec is the approximate number of characters spoken per second,
@@ -556,7 +556,7 @@ func LoadConfig(path string) (*Config, error) {
 
 func loadConfigWith(path string, strict bool) (*Config, error) {
 	cfg := &Config{}
-	if err := decodeYAML(path, cfg, strict); err != nil {
+	if err := fileio.DecodeYAML(path, cfg, strict); err != nil {
 		return nil, err
 	}
 	if err := validateConfig(cfg); err != nil {
@@ -642,7 +642,7 @@ func LoadEpisodeSpec(path string) (*EpisodeSpec, error) {
 
 func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 	p := &EpisodeSpec{}
-	if err := decodeYAML(path, p, strict); err != nil {
+	if err := fileio.DecodeYAML(path, p, strict); err != nil {
 		return nil, err
 	}
 	specDir := filepath.Dir(path)
@@ -659,7 +659,7 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 
 func loadAssetsFile(path string, strict bool) (AssetsConfig, error) {
 	var assets AssetsConfig
-	if err := decodeYAML(path, &assets, strict); err != nil {
+	if err := fileio.DecodeYAML(path, &assets, strict); err != nil {
 		return AssetsConfig{}, fmt.Errorf("loading asset file %q: %w", path, err)
 	}
 	resolveAssetPaths(filepath.Dir(path), &assets)
@@ -843,17 +843,4 @@ func LoadConfigStrict(path string) (*Config, error) {
 // Relative asset file paths are resolved relative to the spec file's directory.
 func LoadEpisodeSpecStrict(path string) (*EpisodeSpec, error) {
 	return loadEpisodeSpecWith(path, true)
-}
-
-func decodeYAML(path string, dest any, strict bool) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-	dec := yaml.NewDecoder(f)
-	if strict {
-		dec.KnownFields(true)
-	}
-	return dec.Decode(dest)
 }

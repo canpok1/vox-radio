@@ -8,6 +8,72 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
+func TestDecodeYAML(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "test.yaml")
+
+	type payload struct {
+		Name string `yaml:"name"`
+		Age  int    `yaml:"age"`
+	}
+	if err := os.WriteFile(path, []byte("name: ずんだもん\nage: 3\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	var got payload
+	if err := fileio.DecodeYAML(path, &got, false); err != nil {
+		t.Fatalf("DecodeYAML: %v", err)
+	}
+	if got.Name != "ずんだもん" {
+		t.Errorf("Name: got %q, want %q", got.Name, "ずんだもん")
+	}
+	if got.Age != 3 {
+		t.Errorf("Age: got %d, want %d", got.Age, 3)
+	}
+}
+
+func TestDecodeYAML_MissingFile(t *testing.T) {
+	var v any
+	err := fileio.DecodeYAML(filepath.Join(t.TempDir(), "nonexistent.yaml"), &v, false)
+	if err == nil {
+		t.Error("expected error for missing file, got nil")
+	}
+}
+
+func TestDecodeYAML_UnknownField_NonStrict(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "test.yaml")
+
+	type payload struct {
+		Name string `yaml:"name"`
+	}
+	if err := os.WriteFile(path, []byte("name: foo\nunknown_key: bar\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	var got payload
+	if err := fileio.DecodeYAML(path, &got, false); err != nil {
+		t.Errorf("DecodeYAML (non-strict): unexpected error: %v", err)
+	}
+}
+
+func TestDecodeYAML_UnknownField_Strict(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "test.yaml")
+
+	type payload struct {
+		Name string `yaml:"name"`
+	}
+	if err := os.WriteFile(path, []byte("name: foo\nunknown_key: bar\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	var got payload
+	if err := fileio.DecodeYAML(path, &got, true); err == nil {
+		t.Error("DecodeYAML (strict): expected error for unknown field, got nil")
+	}
+}
+
 func TestClipFileName(t *testing.T) {
 	tests := []struct {
 		n    int
