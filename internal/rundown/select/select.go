@@ -13,18 +13,18 @@ import (
 
 var selectSchema = json.RawMessage(`{
   "type": "object",
-  "required": ["selected_urls", "flow"],
+  "required": ["selected_urls", "selection_reason"],
   "properties": {
     "selected_urls": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-    "flow": {"type": "string"}
+    "selection_reason": {"type": "string"}
   },
   "additionalProperties": false
 }`)
 
 // SelectResult holds the output of a selection operation.
 type SelectResult struct {
-	SelectedURLs []string
-	Flow         string
+	SelectedURLs    []string
+	SelectionReason string
 }
 
 // Selector selects articles from candidates and designs the talk flow for a corner.
@@ -46,8 +46,8 @@ type cornerForPrompt struct {
 }
 
 type selectResponse struct {
-	SelectedURLs []string `json:"selected_urls"`
-	Flow         string   `json:"flow"`
+	SelectedURLs    []string `json:"selected_urls"`
+	SelectionReason string   `json:"selection_reason"`
 }
 
 // LLMSelector uses an LLM to select articles and design a talk flow.
@@ -104,5 +104,5 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 	if urls == nil {
 		urls = make([]string, 0)
 	}
-	return SelectResult{SelectedURLs: urls, Flow: resp.Flow}, nil
+	return SelectResult{SelectedURLs: urls, SelectionReason: resp.SelectionReason}, nil
 }
