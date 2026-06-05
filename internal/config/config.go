@@ -52,13 +52,10 @@ func (e JingleEntry) EffectiveTrimSilenceThresholdDB() float64 {
 
 // Validate checks that field values are in valid ranges.
 func (e JingleEntry) Validate() error {
-	if e.FadeIn < 0 {
-		return fmt.Errorf("fade_in: must be >= 0, got %v", e.FadeIn)
+	if err := validateNonNegative("fade_in", e.FadeIn); err != nil {
+		return err
 	}
-	if e.FadeOut < 0 {
-		return fmt.Errorf("fade_out: must be >= 0, got %v", e.FadeOut)
-	}
-	return nil
+	return validateNonNegative("fade_out", e.FadeOut)
 }
 
 type SEEntry struct {
@@ -84,10 +81,7 @@ func (e SEEntry) EffectiveOverlay() bool { return e.Overlay != nil && *e.Overlay
 
 // Validate checks that field values are in valid ranges.
 func (e SEEntry) Validate() error {
-	if e.Volume < 0 {
-		return fmt.Errorf("volume: must be >= 0, got %v", e.Volume)
-	}
-	return nil
+	return validateNonNegative("volume", e.Volume)
 }
 
 // effectiveTrimSilence returns true when v is nil (default) or points to true.
@@ -144,19 +138,16 @@ func (e BGMEntry) EffectiveFadeOut() float64 { return effectiveFadeSec(e.FadeOut
 
 // Validate checks that field values are in valid ranges.
 func (e BGMEntry) Validate() error {
-	if e.Volume < 0 {
-		return fmt.Errorf("volume: must be >= 0, got %v", e.Volume)
+	if err := validateNonNegative("volume", e.Volume); err != nil {
+		return err
 	}
 	if e.DuckRatio < 1 {
 		return fmt.Errorf("duck_ratio: must be >= 1, got %v", e.DuckRatio)
 	}
-	if e.FadeIn != nil && *e.FadeIn < 0 {
-		return fmt.Errorf("fade_in: must be >= 0, got %v", *e.FadeIn)
+	if err := validateOptionalNonNegative("fade_in", e.FadeIn); err != nil {
+		return err
 	}
-	if e.FadeOut != nil && *e.FadeOut < 0 {
-		return fmt.Errorf("fade_out: must be >= 0, got %v", *e.FadeOut)
-	}
-	return nil
+	return validateOptionalNonNegative("fade_out", e.FadeOut)
 }
 
 type AssetsConfig struct {
@@ -707,6 +698,22 @@ func loadAssetsFile(path string, strict bool) (AssetsConfig, error) {
 // Relative file paths are resolved relative to the assets file's directory.
 func LoadAssetsFileStrict(path string) (AssetsConfig, error) {
 	return loadAssetsFile(path, true)
+}
+
+// validateNonNegative returns an error if v < 0.
+func validateNonNegative(field string, v float64) error {
+	if v < 0 {
+		return fmt.Errorf("%s: must be >= 0, got %v", field, v)
+	}
+	return nil
+}
+
+// validateOptionalNonNegative returns an error if v is non-nil and *v < 0.
+func validateOptionalNonNegative(field string, v *float64) error {
+	if v != nil && *v < 0 {
+		return fmt.Errorf("%s: must be >= 0, got %v", field, *v)
+	}
+	return nil
 }
 
 // validateFileField checks that file is non-empty and exists on disk.
