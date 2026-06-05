@@ -1719,3 +1719,113 @@ func TestBuildFFmpegArgs_BGMShortClamp_A4(t *testing.T) {
 		t.Errorf("unexpected error for short BGM with large fade: %v", err)
 	}
 }
+
+// TestBuildFFmpegArgs_JingleSilenceRemoveExplicitThreshold verifies that an explicit
+// trim_silence_threshold is used in the silenceremove filter for jingle.
+func TestBuildFFmpegArgs_JingleSilenceRemoveExplicitThreshold(t *testing.T) {
+	threshold := -40.0
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeJingle, AssetName: "op"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"op": {File: "/assets/op.wav", FadeIn: 0.3, TrimSilenceThreshold: &threshold},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(args.FilterComplex, "start_threshold=-40dB") {
+		t.Errorf("filter_complex missing start_threshold=-40dB for jingle with explicit threshold: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SESilenceRemoveExplicitThreshold verifies that an explicit
+// trim_silence_threshold is used in the silenceremove filter for SE (sequential).
+func TestBuildFFmpegArgs_SESilenceRemoveExplicitThreshold(t *testing.T) {
+	threshold := -40.0
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, TrimSilenceThreshold: &threshold},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(args.FilterComplex, "start_threshold=-40dB") {
+		t.Errorf("filter_complex missing start_threshold=-40dB for SE with explicit threshold: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_SEOverlaySilenceRemoveExplicitThreshold verifies that an explicit
+// trim_silence_threshold is used in the silenceremove filter for SE (overlay).
+func TestBuildFFmpegArgs_SEOverlaySilenceRemoveExplicitThreshold(t *testing.T) {
+	threshold := -40.0
+	overlayTrue := true
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+				{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, TrimSilenceThreshold: &threshold, Overlay: &overlayTrue},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(args.FilterComplex, "start_threshold=-40dB") {
+		t.Errorf("filter_complex missing start_threshold=-40dB for SE overlay with explicit threshold: %s", args.FilterComplex)
+	}
+}

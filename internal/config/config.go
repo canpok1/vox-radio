@@ -34,26 +34,38 @@ type FeedsConfig struct {
 }
 
 type JingleEntry struct {
-	File        string  `yaml:"file"`
-	FadeIn      float64 `yaml:"fade_in"`
-	FadeOut     float64 `yaml:"fade_out"`
-	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
-	Description string  `yaml:"description,omitempty"`
+	File                 string   `yaml:"file"`
+	FadeIn               float64  `yaml:"fade_in"`
+	FadeOut              float64  `yaml:"fade_out"`
+	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`
+	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
+	Description          string   `yaml:"description,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
 func (e JingleEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
 
+// EffectiveTrimSilenceThresholdDB returns the threshold in dB; nil → DefaultSilenceTrimThresholdDB.
+func (e JingleEntry) EffectiveTrimSilenceThresholdDB() float64 {
+	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
+}
+
 type SEEntry struct {
-	File        string  `yaml:"file"`
-	Volume      float64 `yaml:"volume"`
-	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
-	Overlay     *bool   `yaml:"overlay,omitempty"` // nil=false (sequential); true=overlay on speech track
-	Description string  `yaml:"description,omitempty"`
+	File                 string   `yaml:"file"`
+	Volume               float64  `yaml:"volume"`
+	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`
+	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
+	Overlay              *bool    `yaml:"overlay,omitempty"`                // nil=false (sequential); true=overlay on speech track
+	Description          string   `yaml:"description,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
 func (e SEEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
+
+// EffectiveTrimSilenceThresholdDB returns the threshold in dB; nil → DefaultSilenceTrimThresholdDB.
+func (e SEEntry) EffectiveTrimSilenceThresholdDB() float64 {
+	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
+}
 
 // EffectiveOverlay returns true only when Overlay is explicitly true.
 // Default (nil) is false: the SE plays to completion before the next dialogue.
@@ -66,6 +78,18 @@ func effectiveTrimSilence(v *bool) bool {
 	}
 	return *v
 }
+
+// effectiveTrimSilenceThresholdDB resolves a *float64 threshold: nil → DefaultSilenceTrimThresholdDB.
+func effectiveTrimSilenceThresholdDB(v *float64) float64 {
+	if v == nil {
+		return DefaultSilenceTrimThresholdDB
+	}
+	return *v
+}
+
+// DefaultSilenceTrimThresholdDB is the default amplitude threshold (dB) below which
+// audio is treated as silence when trimming leading/trailing silence from jingle/SE.
+const DefaultSilenceTrimThresholdDB = -50.0
 
 // DefaultBGMFadeSec is the default fade-in/out duration (seconds) for BGM when not explicitly specified.
 const DefaultBGMFadeSec = 1.0
@@ -666,6 +690,9 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if entry.FadeOut < 0 {
 			return fmt.Errorf("jingle[%q].fade_out: must be >= 0, got %v", name, entry.FadeOut)
 		}
+		if entry.TrimSilenceThreshold != nil && *entry.TrimSilenceThreshold >= 0 {
+			return fmt.Errorf("jingle[%q].trim_silence_threshold: must be < 0 (dB), got %v", name, *entry.TrimSilenceThreshold)
+		}
 	}
 	for name, entry := range assets.SE {
 		if err := validateFileField("se", name, entry.File); err != nil {
@@ -673,6 +700,9 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		}
 		if entry.Volume < 0 {
 			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
+		}
+		if entry.TrimSilenceThreshold != nil && *entry.TrimSilenceThreshold >= 0 {
+			return fmt.Errorf("se[%q].trim_silence_threshold: must be < 0 (dB), got %v", name, *entry.TrimSilenceThreshold)
 		}
 	}
 	for name, entry := range assets.BGM {

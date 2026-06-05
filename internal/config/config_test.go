@@ -1384,6 +1384,8 @@ func TestValidateAssetsConfig_EmptyFileField_Error(t *testing.T) {
 func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
 	neg1 := -1.0
 	neg05 := -0.5
+	zero := 0.0
+	pos1 := 1.0
 	cases := []struct {
 		name   string
 		assets func(f string) *config.AssetsConfig
@@ -1401,9 +1403,33 @@ func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
 			},
 		},
 		{
+			name: "jingle trim_silence_threshold zero",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, TrimSilenceThreshold: &zero}}}
+			},
+		},
+		{
+			name: "jingle trim_silence_threshold positive",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{Jingle: map[string]config.JingleEntry{"j": {File: f, TrimSilenceThreshold: &pos1}}}
+			},
+		},
+		{
 			name: "se volume negative",
 			assets: func(f string) *config.AssetsConfig {
 				return &config.AssetsConfig{SE: map[string]config.SEEntry{"chime": {File: f, Volume: -0.1}}}
+			},
+		},
+		{
+			name: "se trim_silence_threshold zero",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{SE: map[string]config.SEEntry{"chime": {File: f, Volume: 0.8, TrimSilenceThreshold: &zero}}}
+			},
+		},
+		{
+			name: "se trim_silence_threshold positive",
+			assets: func(f string) *config.AssetsConfig {
+				return &config.AssetsConfig{SE: map[string]config.SEEntry{"chime": {File: f, Volume: 0.8, TrimSilenceThreshold: &pos1}}}
 			},
 		},
 		{
@@ -1440,6 +1466,46 @@ func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
 			}
 			if err := config.ValidateAssetsConfig(c.assets(f)); err == nil {
 				t.Errorf("expected error for %q, got nil", c.name)
+			}
+		})
+	}
+}
+
+func TestJingleEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
+	cases := []struct {
+		name string
+		ptr  *float64
+		want float64
+	}{
+		{"nil uses default", nil, -50.0},
+		{"explicit -40", float64Ptr(-40.0), -40.0},
+		{"explicit -47.5", float64Ptr(-47.5), -47.5},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := config.JingleEntry{TrimSilenceThreshold: c.ptr}
+			if got := e.EffectiveTrimSilenceThresholdDB(); got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSEEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
+	cases := []struct {
+		name string
+		ptr  *float64
+		want float64
+	}{
+		{"nil uses default", nil, -50.0},
+		{"explicit -40", float64Ptr(-40.0), -40.0},
+		{"explicit -47.5", float64Ptr(-47.5), -47.5},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := config.SEEntry{TrimSilenceThreshold: c.ptr}
+			if got := e.EffectiveTrimSilenceThresholdDB(); got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
 			}
 		})
 	}
