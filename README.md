@@ -559,6 +559,10 @@ BGM の開始・停止は台本の `bgm` セグメントで制御します。`as
 |---------|------|
 | `chat:write` | スレッド返信の投稿 |
 | `files:write` | mp3 ファイルのアップロード |
+| `files:read` | アップロード完了確認・親メッセージ ts の取得（`files.info`） |
+
+> **スコープを追加した場合は、ワークスペースへのアプリ再インストールが必要です。**
+> Slack App の管理画面（OAuth & Permissions）でスコープを更新した後、「Install to Workspace」を再実行してください。
 
 #### Bot トークンの設定
 
