@@ -368,30 +368,50 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 	}
 }
 
-func TestBuildScriptLines_TransfersCornerAssets(t *testing.T) {
+func TestBuildScriptLines_TransfersCornerAudio(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "OP", Direction: "dir", StartJingle: "opening", BGM: "bgm1"},
-		{Title: "ED", EndJingle: "ending"},
+		{
+			Title:      "OP",
+			Direction:  "dir",
+			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
+			BGM:        "bgm1",
+		},
+		{
+			Title:    "ED",
+			EndAudio: &config.AudioRef{Type: "se", ID: "chime"},
+		},
 	}
 	lines := [][]model.Line{
 		{{SpeakerRole: "host", Text: "A"}},
 		{{SpeakerRole: "host", Text: "B"}},
 	}
 	got := script.BuildScriptLines(corners, lines)
-	if got[0].StartJingle != "opening" {
-		t.Errorf("Corners[0].StartJingle: got %q, want opening", got[0].StartJingle)
+	if got[0].StartAudio == nil {
+		t.Fatal("Corners[0].StartAudio: got nil, want non-nil")
+	}
+	if got[0].StartAudio.Type != model.SegmentTypeJingle {
+		t.Errorf("Corners[0].StartAudio.Type: got %q, want jingle", got[0].StartAudio.Type)
+	}
+	if got[0].StartAudio.AssetName != "opening" {
+		t.Errorf("Corners[0].StartAudio.AssetName: got %q, want opening", got[0].StartAudio.AssetName)
 	}
 	if got[0].BGM != "bgm1" {
 		t.Errorf("Corners[0].BGM: got %q, want bgm1", got[0].BGM)
 	}
-	if got[0].EndJingle != "" {
-		t.Errorf("Corners[0].EndJingle: got %q, want empty", got[0].EndJingle)
+	if got[0].EndAudio != nil {
+		t.Errorf("Corners[0].EndAudio: got %+v, want nil", got[0].EndAudio)
 	}
-	if got[1].EndJingle != "ending" {
-		t.Errorf("Corners[1].EndJingle: got %q, want ending", got[1].EndJingle)
+	if got[1].EndAudio == nil {
+		t.Fatal("Corners[1].EndAudio: got nil, want non-nil")
 	}
-	if got[1].StartJingle != "" {
-		t.Errorf("Corners[1].StartJingle: got %q, want empty", got[1].StartJingle)
+	if got[1].EndAudio.Type != model.SegmentTypeSE {
+		t.Errorf("Corners[1].EndAudio.Type: got %q, want se", got[1].EndAudio.Type)
+	}
+	if got[1].EndAudio.AssetName != "chime" {
+		t.Errorf("Corners[1].EndAudio.AssetName: got %q, want chime", got[1].EndAudio.AssetName)
+	}
+	if got[1].StartAudio != nil {
+		t.Errorf("Corners[1].StartAudio: got %+v, want nil", got[1].StartAudio)
 	}
 }
 

@@ -61,7 +61,7 @@ var insertionsSchema = json.RawMessage(`{
 }`)
 
 // cornerLLMPayload is the subset of CornerLines sent to the LLM.
-// Asset fields (StartJingle, EndJingle, BGM) are excluded because
+// Asset fields (StartAudio, EndAudio, BGM) are excluded because
 // they are injected deterministically and must not influence SE/pause placement.
 type cornerLLMPayload struct {
 	Title     string       `json:"title"`
@@ -187,13 +187,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			})
 		}
 
-		if corner.StartJingle != "" {
-			segments = append(segments, model.ScriptSegment{
-				Type:      model.SegmentTypeJingle,
-				AssetName: corner.StartJingle,
-			})
-			activeBGM = ""
-		}
+		segments = appendBoundaryAudio(segments, corner.StartAudio, corner.BGM, &activeBGM)
 
 		if corner.BGM != activeBGM {
 			segments = append(segments, model.ScriptSegment{
@@ -232,13 +226,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			}
 		}
 
-		if corner.EndJingle != "" {
-			segments = append(segments, model.ScriptSegment{
-				Type:      model.SegmentTypeJingle,
-				AssetName: corner.EndJingle,
-			})
-			activeBGM = ""
-		}
+		segments = appendBoundaryAudio(segments, corner.EndAudio, "", &activeBGM)
 
 		if corner.EndPauseSec > 0 {
 			segments = append(segments, model.ScriptSegment{
@@ -249,4 +237,35 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 	}
 
 	return model.Script{Segments: segments}
+}
+
+// appendBoundaryAudio emits segments for a corner boundary audio (start or end).
+// For type:jingle, emits a jingle segment and resets activeBGM.
+// For type:se, pre-emits BGM (if cornerBGM is non-empty and differs from activeBGM) then emits SE without resetting activeBGM.
+// Pass cornerBGM="" for end boundaries where BGM pre-emit is not desired.
+func appendBoundaryAudio(segments []model.ScriptSegment, audio *model.CornerAudio, cornerBGM string, activeBGM *string) []model.ScriptSegment {
+	if audio == nil {
+		return segments
+	}
+	switch audio.Type {
+	case model.SegmentTypeJingle:
+		segments = append(segments, model.ScriptSegment{
+			Type:      model.SegmentTypeJingle,
+			AssetName: audio.AssetName,
+		})
+		*activeBGM = ""
+	case model.SegmentTypeSE:
+		if cornerBGM != "" && cornerBGM != *activeBGM {
+			segments = append(segments, model.ScriptSegment{
+				Type:      model.SegmentTypeBGM,
+				AssetName: cornerBGM,
+			})
+			*activeBGM = cornerBGM
+		}
+		segments = append(segments, model.ScriptSegment{
+			Type:      model.SegmentTypeSE,
+			AssetName: audio.AssetName,
+		})
+	}
+	return segments
 }

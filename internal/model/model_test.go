@@ -614,13 +614,13 @@ func TestManifest_ConversationNotesEmptyArrayNotNull(t *testing.T) {
 	}
 }
 
-func TestCornerLines_AssetFields_MarshaledAndUnmarshaled(t *testing.T) {
+func TestCornerLines_AudioFields_MarshaledAndUnmarshaled(t *testing.T) {
 	cl := model.CornerLines{
-		Title:       "C1",
-		StartJingle: "opening",
-		EndJingle:   "ending",
-		BGM:         "talk_bgm",
-		Lines:       []model.Line{{SpeakerRole: "host", Text: "hello"}},
+		Title:      "C1",
+		StartAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "opening"},
+		EndAudio:   &model.CornerAudio{Type: model.SegmentTypeSE, AssetName: "chime"},
+		BGM:        "talk_bgm",
+		Lines:      []model.Line{{SpeakerRole: "host", Text: "hello"}},
 	}
 	data, err := json.Marshal(cl)
 	if err != nil {
@@ -630,11 +630,23 @@ func TestCornerLines_AssetFields_MarshaledAndUnmarshaled(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
-	if got.StartJingle != "opening" {
-		t.Errorf("StartJingle: got %q, want opening", got.StartJingle)
+	if got.StartAudio == nil {
+		t.Fatal("StartAudio: got nil, want non-nil")
 	}
-	if got.EndJingle != "ending" {
-		t.Errorf("EndJingle: got %q, want ending", got.EndJingle)
+	if got.StartAudio.Type != model.SegmentTypeJingle {
+		t.Errorf("StartAudio.Type: got %q, want jingle", got.StartAudio.Type)
+	}
+	if got.StartAudio.AssetName != "opening" {
+		t.Errorf("StartAudio.AssetName: got %q, want opening", got.StartAudio.AssetName)
+	}
+	if got.EndAudio == nil {
+		t.Fatal("EndAudio: got nil, want non-nil")
+	}
+	if got.EndAudio.Type != model.SegmentTypeSE {
+		t.Errorf("EndAudio.Type: got %q, want se", got.EndAudio.Type)
+	}
+	if got.EndAudio.AssetName != "chime" {
+		t.Errorf("EndAudio.AssetName: got %q, want chime", got.EndAudio.AssetName)
 	}
 	if got.BGM != "talk_bgm" {
 		t.Errorf("BGM: got %q, want talk_bgm", got.BGM)
@@ -692,7 +704,7 @@ func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 		t.Fatalf("marshal error: %v", err)
 	}
 	jsonStr := string(data)
-	for _, field := range []string{`"start_jingle"`, `"end_jingle"`, `"bgm"`} {
+	for _, field := range []string{`"start_audio"`, `"end_audio"`, `"bgm"`} {
 		if strings.Contains(jsonStr, field) {
 			t.Errorf("field %q should be omitted when empty, got: %s", field, jsonStr)
 		}

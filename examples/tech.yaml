@@ -55,7 +55,9 @@ corners:
       zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
       metan: "MC。ずんだもんの相棒。ツッコミ担当。"
     length_sec: 30
-    start_jingle: opening  # コーナー開始ジングル
+    start_audio:           # コーナー開始境界音声
+      type: jingle         # jingle（BGM停止後再生）または se（BGMの下で再生）
+      id: opening          # assets の jingle マップのキー
   - title: "今日のテックニュース"
     content: "テック記事を2〜3本、漫才風に噛み砕いて紹介"
     cast:

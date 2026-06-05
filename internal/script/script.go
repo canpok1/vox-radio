@@ -200,7 +200,7 @@ func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
-// Asset fields (StartJingle, EndJingle, BGM) are transferred from CornerConfig
+// Asset fields (StartAudio, EndAudio, BGM) are transferred from CornerConfig
 // so they are available during deterministic segment injection in the direct step.
 func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line) []model.CornerLines {
 	result := make([]model.CornerLines, len(corners))
@@ -209,14 +209,24 @@ func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line)
 			Title:         corner.Title,
 			Direction:     corner.Direction,
 			Lines:         cornerLines[i],
-			StartJingle:   corner.StartJingle,
-			EndJingle:     corner.EndJingle,
+			StartAudio:    audioRefToCornerAudio(corner.StartAudio),
+			EndAudio:      audioRefToCornerAudio(corner.EndAudio),
 			BGM:           corner.BGM,
 			StartPauseSec: corner.StartPauseSec,
 			EndPauseSec:   corner.EndPauseSec,
 		}
 	}
 	return result
+}
+
+func audioRefToCornerAudio(ref *config.AudioRef) *model.CornerAudio {
+	if ref == nil {
+		return nil
+	}
+	return &model.CornerAudio{
+		Type:      model.SegmentType(ref.Type),
+		AssetName: ref.ID,
+	}
 }
 
 func countChars(lines []model.Line) int {

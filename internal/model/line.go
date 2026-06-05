@@ -14,18 +14,24 @@ type Lines struct {
 	Lines []Line `json:"lines"`
 }
 
+// CornerAudio holds a boundary audio reference for a corner (jingle or SE).
+type CornerAudio struct {
+	Type      SegmentType `json:"type"`
+	AssetName string      `json:"asset_name"`
+}
+
 // CornerLines holds the lines and direction for one corner.
-// Asset fields (StartJingle, EndJingle, BGM) and pause fields (StartPauseSec, EndPauseSec)
+// Asset fields (StartAudio, EndAudio, BGM) and pause fields (StartPauseSec, EndPauseSec)
 // are transferred from CornerConfig and persisted in 03_lines.json for deterministic segment injection.
 type CornerLines struct {
-	Title         string  `json:"title"`
-	Direction     string  `json:"direction,omitempty"`
-	Lines         []Line  `json:"lines"`
-	StartJingle   string  `json:"start_jingle,omitempty"`
-	EndJingle     string  `json:"end_jingle,omitempty"`
-	BGM           string  `json:"bgm,omitempty"`
-	StartPauseSec float64 `json:"start_pause_sec,omitempty"`
-	EndPauseSec   float64 `json:"end_pause_sec,omitempty"`
+	Title         string       `json:"title"`
+	Direction     string       `json:"direction,omitempty"`
+	Lines         []Line       `json:"lines"`
+	StartAudio    *CornerAudio `json:"start_audio,omitempty"`
+	EndAudio      *CornerAudio `json:"end_audio,omitempty"`
+	BGM           string       `json:"bgm,omitempty"`
+	StartPauseSec float64      `json:"start_pause_sec,omitempty"`
+	EndPauseSec   float64      `json:"end_pause_sec,omitempty"`
 }
 
 // ScriptLines is the root structure of 03_lines.json.

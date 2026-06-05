@@ -14,7 +14,7 @@ func newEpisodegenCheckCmd() *cobra.Command {
 		Long: `指定したエピソード仕様ファイルを strict モードでパースし、以下を検証します:
 
   (a) strict パース: 未知キー（typo）をエラー化
-  (b) アセット参照: corners[].start_jingle / end_jingle / bgm が assets に存在するか
+  (b) アセット参照: corners[].start_audio / end_audio の type+id と bgm が assets に存在するか
   (c) corners[].cast のキーが casts に宣言済みであるか
   (d) casts のキャラ ID が共通設定ファイルの characters に存在するか、type/condition が正しいか
 
