@@ -86,8 +86,8 @@ func newEpisodegenCmd() *cobra.Command {
 				writer.SetEpisodeNumber(episodeNumber)
 			}
 
-			selectedGuests := selectGuests(p.Guests, episodeNumber, logger)
-			writer.SetGuests(selectedGuests)
+			selectedCasts := selectCasts(p.Casts, episodeNumber, logger)
+			writer.SetCasts(selectedCasts)
 
 			p.Corners = resolveCorners(p.Corners, episodeNumber, logger)
 
@@ -124,7 +124,7 @@ func newEpisodegenCmd() *cobra.Command {
 			if err := runner.Run(context.Background(), pipeline.Options{
 				OutDir:        outDir,
 				EpisodeNumber: episodeNumber,
-				Guests:        selectedGuests,
+				Casts:         selectedCasts,
 			}); err != nil {
 				return err
 			}

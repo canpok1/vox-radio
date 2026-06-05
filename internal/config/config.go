@@ -412,10 +412,18 @@ func (c EpisodeCondition) Matches(episodeNumber int) bool {
 		(c.Every > 0 && episodeNumber%c.Every == c.Offset)
 }
 
-// GuestConfig はゲスト1人分の設定（キャラIDは map のキーで持つため持たない）。
-type GuestConfig struct {
-	Role      string           `yaml:"role"`
-	Condition EpisodeCondition `yaml:"condition"`
+const (
+	// CastTypeRegular は毎回または条件付きで出演するレギュラーキャストを表す。
+	CastTypeRegular = "regular"
+	// CastTypeGuest は条件付きで出演するゲストキャストを表す。
+	CastTypeGuest = "guest"
+)
+
+// CastConfig はキャスト1人分の設定（キャラIDは map のキーで持つため持たない）。
+type CastConfig struct {
+	Type      string            `yaml:"type"`                // "regular" | "guest"
+	Role      string            `yaml:"role"`                // 番組全体での役割
+	Condition *EpisodeCondition `yaml:"condition,omitempty"` // regular: 省略=毎回、guest: 必須
 }
 
 // EpisodeSpec holds episode-specific settings (program, corners, assets).
@@ -423,11 +431,11 @@ type GuestConfig struct {
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
 // Assets are loaded from the files listed in AssetsFiles and merged into Assets.
 type EpisodeSpec struct {
-	Program     ProgramConfig          `yaml:"program"`
-	Corners     []CornerConfig         `yaml:"corners"`
-	Guests      map[string]GuestConfig `yaml:"guests,omitempty"`
-	AssetsFiles []string               `yaml:"assets_files"`
-	Assets      AssetsConfig           `yaml:"-"`
+	Program     ProgramConfig         `yaml:"program"`
+	Corners     []CornerConfig        `yaml:"corners"`
+	Casts       map[string]CastConfig `yaml:"casts,omitempty"` // 出演者名簿（旧 Guests を置換）
+	AssetsFiles []string              `yaml:"assets_files"`
+	Assets      AssetsConfig          `yaml:"-"`
 }
 
 // validateEpisodeCondition は EpisodeCondition の値が有効かを検証する共通ヘルパー。
@@ -461,15 +469,23 @@ func validateEpisodeCondition(cond EpisodeCondition, prefix string) error {
 	return nil
 }
 
-// ValidateEpisodeSpecGuests checks that every guest character ID exists in chars,
-// and that each guest's condition has at least one of episodes or every set.
-func ValidateEpisodeSpecGuests(p *EpisodeSpec, chars map[string]CharacterConfig) error {
-	for charID, g := range p.Guests {
+// ValidateEpisodeSpecCasts checks that every cast character ID exists in chars,
+// that type is valid, and that condition is set correctly (guest requires condition).
+func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) error {
+	for charID, c := range p.Casts {
 		if _, ok := chars[charID]; !ok {
-			return fmt.Errorf("guests[%q]: character not found in characters catalog", charID)
+			return fmt.Errorf("casts[%q]: character not found in characters catalog", charID)
 		}
-		if err := validateEpisodeCondition(g.Condition, fmt.Sprintf("guests[%q].condition", charID)); err != nil {
-			return err
+		if c.Type != CastTypeRegular && c.Type != CastTypeGuest {
+			return fmt.Errorf("casts[%q].type: must be %q or %q, got %q", charID, CastTypeRegular, CastTypeGuest, c.Type)
+		}
+		if c.Type == CastTypeGuest && c.Condition == nil {
+			return fmt.Errorf("casts[%q].condition: required for guest type", charID)
+		}
+		if c.Condition != nil {
+			if err := validateEpisodeCondition(*c.Condition, fmt.Sprintf("casts[%q].condition", charID)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -700,12 +716,13 @@ func mergeAssets(dst, src *AssetsConfig) {
 	}
 }
 
-// ValidateEpisodeSpecCast checks that every character ID in corners[].cast exists in chars.
-func ValidateEpisodeSpecCast(p *EpisodeSpec, chars map[string]CharacterConfig) error {
+// ValidateEpisodeSpecCast checks that every character ID in corners[].cast is declared in casts.
+// This ensures corner-only characters are forbidden, preventing rest-state leaks and typos.
+func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
 	for _, corner := range p.Corners {
 		for charID := range corner.Cast {
-			if _, ok := chars[charID]; !ok {
-				return fmt.Errorf("corners[%q].cast: unknown character %q", corner.Title, charID)
+			if _, ok := p.Casts[charID]; !ok {
+				return fmt.Errorf("corners[%q].cast: character %q is not declared in casts", corner.Title, charID)
 			}
 		}
 	}

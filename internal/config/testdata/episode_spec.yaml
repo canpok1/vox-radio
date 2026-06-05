@@ -2,6 +2,11 @@ program:
   title: "テストニュース"
   description: "テスト用"
 
+casts:
+  zundamon:
+    type: regular
+    role: "MC。進行役。"
+
 corners:
   - title: "オープニング"
     content: "番組の挨拶とトピック紹介"

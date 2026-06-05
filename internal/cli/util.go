@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
+	"github.com/canpok1/vox-radio/internal/cast"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
-	"github.com/canpok1/vox-radio/internal/guest"
 	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
@@ -96,12 +96,17 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
-// selectGuests selects guests for the given episode number and warns when guests are configured
-// but the episode number is unknown.
-func selectGuests(guests map[string]config.GuestConfig, episodeNumber int, logger *slog.Logger) []model.RundownGuest {
-	selected := guest.Select(guests, episodeNumber)
-	if len(guests) > 0 && episodeNumber == 0 {
-		logger.Warn("ゲストが設定されていますが回番号が不明なため、ゲストは出演しません")
+// selectCasts selects cast members for the given episode number and warns when condition-based
+// cast members are configured but the episode number is unknown.
+func selectCasts(casts map[string]config.CastConfig, episodeNumber int, logger *slog.Logger) []model.RundownCast {
+	selected := cast.Select(casts, episodeNumber)
+	if episodeNumber == 0 {
+		for _, c := range casts {
+			if c.Condition != nil || c.Type == config.CastTypeGuest {
+				logger.Warn("条件付きキャストが設定されていますが回番号が不明なため、一部のキャストは出演しません")
+				break
+			}
+		}
 	}
 	return selected
 }
@@ -149,13 +154,13 @@ func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.Episod
 	if err != nil {
 		return nil, nil, fmt.Errorf("load spec: %w", err)
 	}
-	if err := config.ValidateEpisodeSpecCast(p, cfg.Characters); err != nil {
+	if err := config.ValidateEpisodeSpecCast(p); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
-	if err := config.ValidateEpisodeSpecGuests(p, cfg.Characters); err != nil {
+	if err := config.ValidateEpisodeSpecCasts(p, cfg.Characters); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	if err := config.ValidateEpisodeSpecCorners(p); err != nil {

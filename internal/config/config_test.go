@@ -481,29 +481,29 @@ func TestLoadEpisodeSpec_CornerDirection(t *testing.T) {
 
 func TestValidateEpisodeSpecCast_Valid(t *testing.T) {
 	p := &config.EpisodeSpec{
+		Casts: map[string]config.CastConfig{
+			"zundamon": {Type: config.CastTypeRegular, Role: "司会"},
+		},
 		Corners: []config.CornerConfig{
-			{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
+			{Title: "opening", Cast: map[string]string{"zundamon": "ボケ担当"}},
 		},
 	}
-	chars := map[string]config.CharacterConfig{
-		"zundamon": {Name: "ずんだもん"},
-	}
-	if err := config.ValidateEpisodeSpecCast(p, chars); err != nil {
+	if err := config.ValidateEpisodeSpecCast(p); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestValidateEpisodeSpecCast_UnknownCharacter(t *testing.T) {
+func TestValidateEpisodeSpecCast_UndeclaredCastKey(t *testing.T) {
 	p := &config.EpisodeSpec{
+		Casts: map[string]config.CastConfig{
+			"zundamon": {Type: config.CastTypeRegular, Role: "司会"},
+		},
 		Corners: []config.CornerConfig{
 			{Title: "opening", Cast: map[string]string{"unknown_char": "司会"}},
 		},
 	}
-	chars := map[string]config.CharacterConfig{
-		"zundamon": {Name: "ずんだもん"},
-	}
-	if err := config.ValidateEpisodeSpecCast(p, chars); err == nil {
-		t.Error("expected error for unknown character in cast")
+	if err := config.ValidateEpisodeSpecCast(p); err == nil {
+		t.Error("expected error for corner cast key not declared in casts")
 	}
 }
 
@@ -562,62 +562,62 @@ func TestEpisodeCondition_Matches(t *testing.T) {
 func TestValidateEpisodeCondition_Offset(t *testing.T) {
 	tests := []struct {
 		name    string
-		guests  map[string]config.GuestConfig
+		casts   map[string]config.CastConfig
 		wantErr bool
 	}{
 		{
 			name: "every+offset 有効（3者ローテ offset=0）",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 0}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: 3, Offset: 0}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "every+offset 有効（3者ローテ offset=1）",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 1}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: 3, Offset: 1}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "every+offset 有効（3者ローテ offset=2）",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 2}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: 3, Offset: 2}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "offset が負数",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: -1}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: 3, Offset: -1}},
 			},
 			wantErr: true,
 		},
 		{
 			name: "offset > 0 かつ every == 0",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Offset: 1}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Offset: 1}},
 			},
 			wantErr: true,
 		},
 		{
 			name: "offset >= every",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 3, Offset: 3}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: 3, Offset: 3}},
 			},
 			wantErr: true,
 		},
 		{
 			name: "not 内の offset が負数",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: -1}}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: -1}}},
 			},
 			wantErr: true,
 		},
 		{
 			name: "not 内の offset >= every",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: 3}}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 3, Offset: 3}}},
 			},
 			wantErr: true,
 		},
@@ -627,8 +627,8 @@ func TestValidateEpisodeCondition_Offset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &config.EpisodeSpec{Guests: tt.guests}
-			err := config.ValidateEpisodeSpecGuests(p, chars)
+			p := &config.EpisodeSpec{Casts: tt.casts}
+			err := config.ValidateEpisodeSpecCasts(p, chars)
 			if tt.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			} else if !tt.wantErr && err != nil {
@@ -638,103 +638,116 @@ func TestValidateEpisodeCondition_Offset(t *testing.T) {
 	}
 }
 
-func TestValidateEpisodeSpecGuests_Valid(t *testing.T) {
+func TestValidateEpisodeSpecCasts_Valid(t *testing.T) {
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん"},
 		"metan":    {Name: "めたん"},
 	}
 	tests := []struct {
-		name   string
-		guests map[string]config.GuestConfig
+		name  string
+		casts map[string]config.CastConfig
 	}{
 		{
-			name: "episodes のみ指定",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3, 10}}},
+			name: "regular condition 省略（毎回出演）",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeRegular, Role: "MC"},
 			},
 		},
 		{
-			name: "every のみ指定",
-			guests: map[string]config.GuestConfig{
-				"metan": {Role: "解説ゲスト", Condition: config.EpisodeCondition{Every: 5}},
+			name: "regular condition あり（お休み条件）",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeRegular, Role: "MC", Condition: &config.EpisodeCondition{Not: &config.EpisodeCondition{Episodes: []int{5}}}},
 			},
 		},
 		{
-			name: "両方指定",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}, Every: 5}},
+			name: "guest episodes のみ指定",
+			casts: map[string]config.CastConfig{
+				"metan": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Episodes: []int{3, 10}}},
 			},
 		},
 		{
-			name:   "guests が空（省略時）",
-			guests: nil,
-		},
-		{
-			name: "not のみ指定",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{Every: 5}}},
+			name: "guest every のみ指定",
+			casts: map[string]config.CastConfig{
+				"metan": {Type: config.CastTypeGuest, Role: "解説ゲスト", Condition: &config.EpisodeCondition{Every: 5}},
 			},
 		},
 		{
-			name: "episodes + not 指定",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: 2, Not: &config.EpisodeCondition{Episodes: []int{6}}}},
+			name:  "casts が空（省略時）",
+			casts: nil,
+		},
+		{
+			name: "regular と guest の混在",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeRegular, Role: "MC"},
+				"metan":    {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Episodes: []int{3}}},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &config.EpisodeSpec{Guests: tt.guests}
-			if err := config.ValidateEpisodeSpecGuests(p, chars); err != nil {
+			p := &config.EpisodeSpec{Casts: tt.casts}
+			if err := config.ValidateEpisodeSpecCasts(p, chars); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}
 }
 
-func TestValidateEpisodeSpecGuests_Error(t *testing.T) {
+func TestValidateEpisodeSpecCasts_Error(t *testing.T) {
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん"},
 	}
 	tests := []struct {
-		name   string
-		guests map[string]config.GuestConfig
+		name  string
+		casts map[string]config.CastConfig
 	}{
 		{
 			name: "存在しないキャラID",
-			guests: map[string]config.GuestConfig{
-				"unknown_char": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{3}}},
+			casts: map[string]config.CastConfig{
+				"unknown_char": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Episodes: []int{3}}},
+			},
+		},
+		{
+			name: "type が不正",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: "invalid", Role: "MC"},
+			},
+		},
+		{
+			name: "guest に condition がない",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト"},
 			},
 		},
 		{
 			name: "condition が空（episodes も every も not も未設定）",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{}},
 			},
 		},
 		{
-			name: "not の中身が空（episodes も every も not も未設定）",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Not: &config.EpisodeCondition{}}},
+			name: "not の中身が空",
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Not: &config.EpisodeCondition{}}},
 			},
 		},
 		{
 			name: "episodes の値が 0",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Episodes: []int{0}}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Episodes: []int{0}}},
 			},
 		},
 		{
 			name: "every が負数",
-			guests: map[string]config.GuestConfig{
-				"zundamon": {Role: "ゲスト", Condition: config.EpisodeCondition{Every: -1}},
+			casts: map[string]config.CastConfig{
+				"zundamon": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: &config.EpisodeCondition{Every: -1}},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &config.EpisodeSpec{Guests: tt.guests}
-			if err := config.ValidateEpisodeSpecGuests(p, chars); err == nil {
+			p := &config.EpisodeSpec{Casts: tt.casts}
+			if err := config.ValidateEpisodeSpecCasts(p, chars); err == nil {
 				t.Errorf("expected error for %q, got nil", tt.name)
 			}
 		})

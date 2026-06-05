@@ -105,7 +105,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	}
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	w.SetGuests(rd.Guests)
+	w.SetCasts(rd.Casts)
 
 	gen := script.NewLLMScriptGenerator(
 		w,
@@ -138,16 +138,19 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	}
 
 	cornerMap := rd.CornerMap()
-	appliedCorners := script.ApplyGuests(corners, rd.Guests)
+	allAssignments := make([][]write.CastAssignment, len(corners))
+	for i, corner := range corners {
+		allAssignments[i] = script.MergeCornerCast(corner, rd.Casts)
+	}
 
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
-	w.SetGuests(rd.Guests)
-	allCornerLines, err := script.WriteAll(ctx, w, p.Program, appliedCorners, cornerMap, cfg.Characters)
+	w.SetCasts(rd.Casts)
+	allCornerLines, err := script.WriteAll(ctx, w, p.Program, corners, allAssignments, cornerMap, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("write corners: %w", err)
 	}
 
-	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(appliedCorners, allCornerLines)}
+	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(corners, allCornerLines)}
 	outPath := filepath.Join(workDir, "03_lines.json")
 	if err := writeJSON(outPath, scriptLines); err != nil {
 		return err

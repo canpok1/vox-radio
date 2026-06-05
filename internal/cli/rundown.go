@@ -63,7 +63,7 @@ func newRundownCmd() *cobra.Command {
 				return fmt.Errorf("rundown: %w", err)
 			}
 
-			result.Guests = selectGuests(p.Guests, episodeNumber, logger)
+			result.Casts = selectCasts(p.Casts, episodeNumber, logger)
 
 			if err := writeJSON(out, result); err != nil {
 				return err
