@@ -50,6 +50,17 @@ func (e JingleEntry) EffectiveTrimSilenceThresholdDB() float64 {
 	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
 }
 
+// Validate checks that field values are in valid ranges.
+func (e JingleEntry) Validate() error {
+	if e.FadeIn < 0 {
+		return fmt.Errorf("fade_in: must be >= 0, got %v", e.FadeIn)
+	}
+	if e.FadeOut < 0 {
+		return fmt.Errorf("fade_out: must be >= 0, got %v", e.FadeOut)
+	}
+	return nil
+}
+
 type SEEntry struct {
 	File                 string   `yaml:"file"`
 	Volume               float64  `yaml:"volume"`
@@ -70,6 +81,14 @@ func (e SEEntry) EffectiveTrimSilenceThresholdDB() float64 {
 // EffectiveOverlay returns true only when Overlay is explicitly true.
 // Default (nil) is false: the SE plays to completion before the next dialogue.
 func (e SEEntry) EffectiveOverlay() bool { return e.Overlay != nil && *e.Overlay }
+
+// Validate checks that field values are in valid ranges.
+func (e SEEntry) Validate() error {
+	if e.Volume < 0 {
+		return fmt.Errorf("volume: must be >= 0, got %v", e.Volume)
+	}
+	return nil
+}
 
 // effectiveTrimSilence returns true when v is nil (default) or points to true.
 func effectiveTrimSilence(v *bool) bool {
@@ -122,6 +141,23 @@ func (e BGMEntry) EffectiveFadeIn() float64 { return effectiveFadeSec(e.FadeIn) 
 // EffectiveFadeOut returns the fade-out duration in seconds.
 // nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
 func (e BGMEntry) EffectiveFadeOut() float64 { return effectiveFadeSec(e.FadeOut) }
+
+// Validate checks that field values are in valid ranges.
+func (e BGMEntry) Validate() error {
+	if e.Volume < 0 {
+		return fmt.Errorf("volume: must be >= 0, got %v", e.Volume)
+	}
+	if e.DuckRatio < 1 {
+		return fmt.Errorf("duck_ratio: must be >= 1, got %v", e.DuckRatio)
+	}
+	if e.FadeIn != nil && *e.FadeIn < 0 {
+		return fmt.Errorf("fade_in: must be >= 0, got %v", *e.FadeIn)
+	}
+	if e.FadeOut != nil && *e.FadeOut < 0 {
+		return fmt.Errorf("fade_out: must be >= 0, got %v", *e.FadeOut)
+	}
+	return nil
+}
 
 type AssetsConfig struct {
 	Jingle map[string]JingleEntry `yaml:"jingle"`
@@ -697,11 +733,8 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if err := validateFileField("jingle", name, entry.File); err != nil {
 			return err
 		}
-		if entry.FadeIn < 0 {
-			return fmt.Errorf("jingle[%q].fade_in: must be >= 0, got %v", name, entry.FadeIn)
-		}
-		if entry.FadeOut < 0 {
-			return fmt.Errorf("jingle[%q].fade_out: must be >= 0, got %v", name, entry.FadeOut)
+		if err := entry.Validate(); err != nil {
+			return fmt.Errorf("jingle[%q]: %w", name, err)
 		}
 		if err := validateTrimSilenceThresholdDB("jingle", name, entry.TrimSilenceThreshold); err != nil {
 			return err
@@ -711,8 +744,8 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if err := validateFileField("se", name, entry.File); err != nil {
 			return err
 		}
-		if entry.Volume < 0 {
-			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
+		if err := entry.Validate(); err != nil {
+			return fmt.Errorf("se[%q]: %w", name, err)
 		}
 		if err := validateTrimSilenceThresholdDB("se", name, entry.TrimSilenceThreshold); err != nil {
 			return err
@@ -722,17 +755,8 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if err := validateFileField("bgm", name, entry.File); err != nil {
 			return err
 		}
-		if entry.Volume < 0 {
-			return fmt.Errorf("bgm[%q].volume: must be >= 0, got %v", name, entry.Volume)
-		}
-		if entry.DuckRatio < 1 {
-			return fmt.Errorf("bgm[%q].duck_ratio: must be >= 1, got %v", name, entry.DuckRatio)
-		}
-		if entry.FadeIn != nil && *entry.FadeIn < 0 {
-			return fmt.Errorf("bgm[%q].fade_in: must be >= 0, got %v", name, *entry.FadeIn)
-		}
-		if entry.FadeOut != nil && *entry.FadeOut < 0 {
-			return fmt.Errorf("bgm[%q].fade_out: must be >= 0, got %v", name, *entry.FadeOut)
+		if err := entry.Validate(); err != nil {
+			return fmt.Errorf("bgm[%q]: %w", name, err)
 		}
 	}
 	return nil
