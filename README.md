@@ -496,6 +496,7 @@ assets_files:
 | `fade_in` | float64 | 任意 | フェードイン時間（秒）。デフォルト: 0 |
 | `fade_out` | float64 | 任意 | フェードアウト時間（秒）。デフォルト: 0 |
 | `trim_silence` | bool | 任意 | 前後の無音を自動除去するかどうか。デフォルト: true |
+| `trim_silence_threshold` | float64 | 任意 | 無音判定の振幅閾値（dB、負値のみ）。デフォルト: -50。素材のノイズフロアに合わせて調整 |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
 ジングルはコーナー毎に `corners[].start_jingle` / `corners[].end_jingle` で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングルセグメントが含まれます。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
@@ -507,6 +508,7 @@ assets_files:
 | `file` | string | 必須 | 音声ファイルパス |
 | `volume` | float64 | 任意 | 音量倍率。デフォルト: 0（Go ゼロ値） |
 | `trim_silence` | bool | 任意 | 前後の無音を自動除去するかどうか。デフォルト: true |
+| `trim_silence_threshold` | float64 | 任意 | 無音判定の振幅閾値（dB、負値のみ）。デフォルト: -50。素材のノイズフロアに合わせて調整 |
 | `overlay` | bool | 任意 | `true` = 音声に重ねて再生（従来の overlay 動作）。`false` または省略 = SE が鳴り終わってから次のセリフを再生（順次）。デフォルト: false |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 

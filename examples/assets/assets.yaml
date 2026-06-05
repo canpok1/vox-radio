@@ -8,6 +8,8 @@ se:
   accent_low:
     file: se/accent-low.mp3
     volume: 0.8
+    # trim_silence: true          # 省略時 true（前後の無音を自動除去）
+    # trim_silence_threshold: -50 # 省略時 -50（dB）。素材のノイズフロアに合わせて調整
     description: "話題の切り替わりや新コーナー導入時に使うアクセント音"
 bgm:
   coffee_break:

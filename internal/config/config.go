@@ -34,26 +34,38 @@ type FeedsConfig struct {
 }
 
 type JingleEntry struct {
-	File        string  `yaml:"file"`
-	FadeIn      float64 `yaml:"fade_in"`
-	FadeOut     float64 `yaml:"fade_out"`
-	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
-	Description string  `yaml:"description,omitempty"`
+	File                 string   `yaml:"file"`
+	FadeIn               float64  `yaml:"fade_in"`
+	FadeOut              float64  `yaml:"fade_out"`
+	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`
+	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
+	Description          string   `yaml:"description,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
 func (e JingleEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
 
+// EffectiveTrimSilenceThresholdDB returns the threshold in dB; nil → DefaultSilenceTrimThresholdDB.
+func (e JingleEntry) EffectiveTrimSilenceThresholdDB() float64 {
+	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
+}
+
 type SEEntry struct {
-	File        string  `yaml:"file"`
-	Volume      float64 `yaml:"volume"`
-	TrimSilence *bool   `yaml:"trim_silence,omitempty"`
-	Overlay     *bool   `yaml:"overlay,omitempty"` // nil=false (sequential); true=overlay on speech track
-	Description string  `yaml:"description,omitempty"`
+	File                 string   `yaml:"file"`
+	Volume               float64  `yaml:"volume"`
+	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`
+	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
+	Overlay              *bool    `yaml:"overlay,omitempty"`                // nil=false (sequential); true=overlay on speech track
+	Description          string   `yaml:"description,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
 func (e SEEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
+
+// EffectiveTrimSilenceThresholdDB returns the threshold in dB; nil → DefaultSilenceTrimThresholdDB.
+func (e SEEntry) EffectiveTrimSilenceThresholdDB() float64 {
+	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
+}
 
 // EffectiveOverlay returns true only when Overlay is explicitly true.
 // Default (nil) is false: the SE plays to completion before the next dialogue.
@@ -63,6 +75,18 @@ func (e SEEntry) EffectiveOverlay() bool { return e.Overlay != nil && *e.Overlay
 func effectiveTrimSilence(v *bool) bool {
 	if v == nil {
 		return true
+	}
+	return *v
+}
+
+// DefaultSilenceTrimThresholdDB is the default amplitude threshold (dB) below which
+// audio is treated as silence when trimming leading/trailing silence from jingle/SE.
+const DefaultSilenceTrimThresholdDB = -50.0
+
+// effectiveTrimSilenceThresholdDB resolves a *float64 threshold: nil → DefaultSilenceTrimThresholdDB.
+func effectiveTrimSilenceThresholdDB(v *float64) float64 {
+	if v == nil {
+		return DefaultSilenceTrimThresholdDB
 	}
 	return *v
 }
@@ -654,6 +678,13 @@ func validateFileField(category, name, file string) error {
 	return nil
 }
 
+func validateTrimSilenceThresholdDB(category, name string, v *float64) error {
+	if v != nil && *v >= 0 {
+		return fmt.Errorf("%s[%q].trim_silence_threshold: must be < 0 (dB), got %v", category, name, *v)
+	}
+	return nil
+}
+
 // ValidateAssetsConfig checks that all referenced files exist and that field values are in valid ranges.
 func ValidateAssetsConfig(assets *AssetsConfig) error {
 	for name, entry := range assets.Jingle {
@@ -666,6 +697,9 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if entry.FadeOut < 0 {
 			return fmt.Errorf("jingle[%q].fade_out: must be >= 0, got %v", name, entry.FadeOut)
 		}
+		if err := validateTrimSilenceThresholdDB("jingle", name, entry.TrimSilenceThreshold); err != nil {
+			return err
+		}
 	}
 	for name, entry := range assets.SE {
 		if err := validateFileField("se", name, entry.File); err != nil {
@@ -673,6 +707,9 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		}
 		if entry.Volume < 0 {
 			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
+		}
+		if err := validateTrimSilenceThresholdDB("se", name, entry.TrimSilenceThreshold); err != nil {
+			return err
 		}
 	}
 	for name, entry := range assets.BGM {

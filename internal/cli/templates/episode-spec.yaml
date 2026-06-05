@@ -122,23 +122,27 @@ corners:
 #     fade_in: 0.5
 #     fade_out: 0.5
 #     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
 #     description: "番組冒頭で流すオープニングジングル"  # 省略可
 #   ending:
 #     file: jingle/ending.mp3
 #     fade_in: 0.5
 #     fade_out: 1.0
 #     # trim_silence: false  # 省略時は true
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）
 # se:
 #   chime:
 #     file: se/chime.wav
 #     volume: 0.8
 #     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
 #     # overlay: true  # 省略時は false（SE が鳴り終わってから次のセリフを再生）。セリフに重ねたい場合のみ true
 #     description: "話題の切り替わりに鳴らす明るいチャイム音"  # 省略可
 #   transition:
 #     file: se/transition.wav
 #     volume: 0.8
 #     # trim_silence: false  # 省略時は true
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）
 #     # overlay: true  # 省略時は false（順次再生）
 # bgm:
 #   talk_bgm:

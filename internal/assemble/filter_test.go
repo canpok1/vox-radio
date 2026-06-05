@@ -1719,3 +1719,78 @@ func TestBuildFFmpegArgs_BGMShortClamp_A4(t *testing.T) {
 		t.Errorf("unexpected error for short BGM with large fade: %v", err)
 	}
 }
+
+// TestBuildFFmpegArgs_SilenceRemoveExplicitThreshold verifies that an explicit
+// trim_silence_threshold is reflected in the silenceremove filter for jingle, SE sequential, and SE overlay.
+func TestBuildFFmpegArgs_SilenceRemoveExplicitThreshold(t *testing.T) {
+	threshold := -40.0
+	overlayTrue := true
+	seSeg := []model.ScriptSegment{
+		{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "intro"},
+		{Type: model.SegmentTypeSE, AssetName: "chime"},
+		{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "main"},
+	}
+	seClips := []model.ClipMeta{
+		{Index: 0, File: "clip_000.wav", DurationSec: 2.0},
+		{Index: 1, File: "clip_001.wav", DurationSec: 3.0},
+	}
+	cases := []struct {
+		name   string
+		segs   []model.ScriptSegment
+		clips  []model.ClipMeta
+		assets config.AssetsConfig
+	}{
+		{
+			name: "jingle",
+			segs: []model.ScriptSegment{
+				{Type: model.SegmentTypeJingle, AssetName: "op"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"},
+			},
+			clips: []model.ClipMeta{{Index: 0, File: "clip_000.wav", DurationSec: 2.0}},
+			assets: config.AssetsConfig{
+				Jingle: map[string]config.JingleEntry{
+					"op": {File: "/assets/op.wav", FadeIn: 0.3, TrimSilenceThreshold: &threshold},
+				},
+			},
+		},
+		{
+			name:  "SE sequential",
+			segs:  seSeg,
+			clips: seClips,
+			assets: config.AssetsConfig{
+				SE: map[string]config.SEEntry{
+					"chime": {File: "/assets/chime.wav", Volume: 0.8, TrimSilenceThreshold: &threshold},
+				},
+			},
+		},
+		{
+			name:  "SE overlay",
+			segs:  seSeg,
+			clips: seClips,
+			assets: config.AssetsConfig{
+				SE: map[string]config.SEEntry{
+					"chime": {File: "/assets/chime.wav", Volume: 0.8, TrimSilenceThreshold: &threshold, Overlay: &overlayTrue},
+				},
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := BuildContext{
+				Script:   model.Script{Segments: c.segs},
+				Clips:    model.ClipsMeta{Clips: c.clips},
+				ClipsDir: "/clips",
+				Assets:   c.assets,
+				PauseSec: 0.5,
+				OutPath:  "/out.mp3",
+			}
+			args, err := BuildFFmpegArgs(ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !strings.Contains(args.FilterComplex, "start_threshold=-40dB") {
+				t.Errorf("filter_complex missing start_threshold=-40dB: %s", args.FilterComplex)
+			}
+		})
+	}
+}
