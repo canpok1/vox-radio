@@ -10,10 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/cli"
 )
 
-func assetsTestdataPath(rel string) string {
-	return filepath.Join(cliTestSrcDir, "..", "config", "testdata", rel)
-}
-
 // buildValidAssetsYAML creates a temp dir with stub audio files and an assets.yaml referencing them.
 // Returns the path to the created assets.yaml.
 func buildValidAssetsYAML(t *testing.T) string {
@@ -112,7 +108,7 @@ func TestAssetsCheck_ValidYAML_Success(t *testing.T) {
 
 func TestAssetsCheck_Typo_Error(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"assets", "check", assetsTestdataPath("assets_typo.yaml")})
+	cmd.SetArgs([]string{"assets", "check", configTestdataPath("assets_typo.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for assets.yaml with unknown key (typo), got nil")

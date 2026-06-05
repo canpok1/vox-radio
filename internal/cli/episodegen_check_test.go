@@ -10,10 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/cli"
 )
 
-func episodeSpecTestdataPath(rel string) string {
-	return filepath.Join(cliTestSrcDir, "..", "config", "testdata", rel)
-}
-
 // setupEpisodegenCheckDir creates a temp dir with vox-radio.yaml and changes cwd to it.
 func setupEpisodegenCheckDir(t *testing.T, configSrc string) {
 	t.Helper()
@@ -29,12 +25,12 @@ func setupEpisodegenCheckDir(t *testing.T, configSrc string) {
 }
 
 func TestEpisodegenCheck_ValidSpec_Success(t *testing.T) {
-	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
 
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
 	cmd.SetOut(buf)
-	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", configTestdataPath("episode_spec.yaml")})
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -45,10 +41,10 @@ func TestEpisodegenCheck_ValidSpec_Success(t *testing.T) {
 }
 
 func TestEpisodegenCheck_UnknownKey_Error(t *testing.T) {
-	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec_unknown_key.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", configTestdataPath("episode_spec_unknown_key.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown key in strict mode")
@@ -56,7 +52,7 @@ func TestEpisodegenCheck_UnknownKey_Error(t *testing.T) {
 }
 
 func TestEpisodegenCheck_UnknownCast_Error(t *testing.T) {
-	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
 
 	// create a spec with an unknown cast character
 	dir := t.TempDir()
@@ -93,7 +89,7 @@ func TestEpisodegenCheck_MissingConfig_Error(t *testing.T) {
 	chdirTemp(t) // no vox-radio.yaml in cwd
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", configTestdataPath("episode_spec.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error when vox-radio.yaml is missing in cwd")
@@ -110,10 +106,10 @@ func TestEpisodegenCheck_MissingSpecArg_Error(t *testing.T) {
 }
 
 func TestEpisodegenCheck_AssetsTypo_Error(t *testing.T) {
-	setupEpisodegenCheckDir(t, episodeSpecTestdataPath("config.yaml"))
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
 
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "check", episodeSpecTestdataPath("episode_spec_with_typo_assets.yaml")})
+	cmd.SetArgs([]string{"episodegen", "check", configTestdataPath("episode_spec_with_typo_assets.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error when assets_files contains typo in strict mode, got nil")
@@ -127,8 +123,8 @@ func TestEpisodegenCheck_ConfigFlag_DifferentDir(t *testing.T) {
 	buf := &bytes.Buffer{}
 	cmd.SetOut(buf)
 	cmd.SetArgs([]string{"episodegen", "check",
-		"--config", episodeSpecTestdataPath("config.yaml"),
-		episodeSpecTestdataPath("episode_spec.yaml"),
+		"--config", configTestdataPath("config.yaml"),
+		configTestdataPath("episode_spec.yaml"),
 	})
 	err := cmd.Execute()
 	if err != nil {
