@@ -77,14 +77,17 @@ func ReadJSON(path string, v any) error {
 func DecodeYAML(path string, dest any, strict bool) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("open %s: %w", path, err)
 	}
 	defer func() { _ = f.Close() }()
 	dec := yaml.NewDecoder(f)
 	if strict {
 		dec.KnownFields(true)
 	}
-	return dec.Decode(dest)
+	if err := dec.Decode(dest); err != nil {
+		return fmt.Errorf("decode %s: %w", path, err)
+	}
+	return nil
 }
 
 // WriteJSON marshals v to indented JSON and writes it to path,

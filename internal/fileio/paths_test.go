@@ -8,30 +8,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
-func TestDecodeYAML(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "test.yaml")
-
-	type payload struct {
-		Name string `yaml:"name"`
-		Age  int    `yaml:"age"`
-	}
-	if err := os.WriteFile(path, []byte("name: ずんだもん\nage: 3\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	var got payload
-	if err := fileio.DecodeYAML(path, &got, false); err != nil {
-		t.Fatalf("DecodeYAML: %v", err)
-	}
-	if got.Name != "ずんだもん" {
-		t.Errorf("Name: got %q, want %q", got.Name, "ずんだもん")
-	}
-	if got.Age != 3 {
-		t.Errorf("Age: got %d, want %d", got.Age, 3)
-	}
-}
-
 func TestDecodeYAML_MissingFile(t *testing.T) {
 	var v any
 	err := fileio.DecodeYAML(filepath.Join(t.TempDir(), "nonexistent.yaml"), &v, false)
@@ -40,37 +16,69 @@ func TestDecodeYAML_MissingFile(t *testing.T) {
 	}
 }
 
-func TestDecodeYAML_UnknownField_NonStrict(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "test.yaml")
-
-	type payload struct {
+func TestDecodeYAML(t *testing.T) {
+	type nameOnly struct {
 		Name string `yaml:"name"`
 	}
-	if err := os.WriteFile(path, []byte("name: foo\nunknown_key: bar\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	var got payload
-	if err := fileio.DecodeYAML(path, &got, false); err != nil {
-		t.Errorf("DecodeYAML (non-strict): unexpected error: %v", err)
-	}
-}
-
-func TestDecodeYAML_UnknownField_Strict(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "test.yaml")
-
-	type payload struct {
+	type nameAge struct {
 		Name string `yaml:"name"`
+		Age  int    `yaml:"age"`
 	}
-	if err := os.WriteFile(path, []byte("name: foo\nunknown_key: bar\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
+	tests := []struct {
+		name        string
+		content     string
+		strict      bool
+		wantErr     bool
+		checkResult func(t *testing.T, path string)
+	}{
+		{
+			name:    "decodes valid YAML",
+			content: "name: ずんだもん\nage: 3\n",
+			strict:  false,
+			checkResult: func(t *testing.T, path string) {
+				var got nameAge
+				if err := fileio.DecodeYAML(path, &got, false); err != nil {
+					t.Fatalf("DecodeYAML: %v", err)
+				}
+				if got.Name != "ずんだもん" {
+					t.Errorf("Name: got %q, want %q", got.Name, "ずんだもん")
+				}
+				if got.Age != 3 {
+					t.Errorf("Age: got %d, want %d", got.Age, 3)
+				}
+			},
+		},
+		{
+			name:    "unknown field ignored when non-strict",
+			content: "name: foo\nunknown_key: bar\n",
+			strict:  false,
+			checkResult: func(t *testing.T, path string) {
+				var got nameOnly
+				if err := fileio.DecodeYAML(path, &got, false); err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name:    "unknown field rejected when strict",
+			content: "name: foo\nunknown_key: bar\n",
+			strict:  true,
+			checkResult: func(t *testing.T, path string) {
+				var got nameOnly
+				if err := fileio.DecodeYAML(path, &got, true); err == nil {
+					t.Error("expected error for unknown field, got nil")
+				}
+			},
+		},
 	}
-
-	var got payload
-	if err := fileio.DecodeYAML(path, &got, true); err == nil {
-		t.Error("DecodeYAML (strict): expected error for unknown field, got nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.yaml")
+			if err := os.WriteFile(path, []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+			tt.checkResult(t, path)
+		})
 	}
 }
 
