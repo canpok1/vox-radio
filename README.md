@@ -322,11 +322,11 @@ vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work
 | `length_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に文字数（≈7文字/秒）へ換算される |
 | `summary_length` | int | 任意 | コーナーサマリーの目安文字数。未指定時はデフォルト 100 文字 |
 | `source` | SourceConfig | 任意 | データソース（省略するとこのコーナーの収集はスキップ） |
-| `start_jingle` | string | 任意 | コーナー開始ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の前に確定的に挿入される |
-| `end_jingle` | string | 任意 | コーナー終了ジングルのキー名（`assets.jingle` のキーと一致させること）。コーナー本編の後に確定的に挿入される |
+| `start_audio` | AudioRef | 任意 | コーナー開始境界音声。`type` に `jingle`（BGM停止後再生）または `se`（BGMの下で再生）を指定し、`id` に `assets` の該当マップのキーを指定する。コーナー本編の前に確定的に挿入される |
+| `end_audio` | AudioRef | 任意 | コーナー終了境界音声。`type`/`id` は `start_audio` と同様。コーナー本編の後に確定的に挿入される |
 | `bgm` | string | 任意 | コーナー中 BGM のキー名（`assets.bgm` のキーと一致させること）。コーナー本編を開始/停止セグメントで挟む |
-| `start_pause_sec` | float64 | 任意 | コーナー先頭（`start_jingle` より前）に挿入する無音時間（秒）。0 または省略時は挿入しない |
-| `end_pause_sec` | float64 | 任意 | コーナー末尾（`end_jingle` より後）に挿入する無音時間（秒）。0 または省略時は挿入しない |
+| `start_pause_sec` | float64 | 任意 | コーナー先頭（`start_audio` より前）に挿入する無音時間（秒）。0 または省略時は挿入しない |
+| `end_pause_sec` | float64 | 任意 | コーナー末尾（`end_audio` より後）に挿入する無音時間（秒）。0 または省略時は挿入しない |
 | `condition` | EpisodeCondition | 任意 | コーナーの出現条件（省略すると毎回必ず出る固定コーナー） |
 
 ##### `corners[].condition` サブフィールド
@@ -500,7 +500,7 @@ assets_files:
 | `trim_silence_threshold` | float64 | 任意 | 無音判定の振幅閾値（dB、負値のみ）。デフォルト: -50。素材のノイズフロアに合わせて調整 |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
 
-ジングルはコーナー毎に `corners[].start_jingle` / `corners[].end_jingle` で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングルセグメントが含まれます。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
+ジングルおよびコーナー境界 SE はコーナー毎に `corners[].start_audio` / `corners[].end_audio`（`type: jingle` または `type: se`）で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングル/SEセグメントが含まれます。`type: jingle` は BGM を停止してから再生し、`type: se` は BGM を継続したまま BGM の下で再生します。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
 
 ##### アセット設定ファイル: `se` マップ値
 

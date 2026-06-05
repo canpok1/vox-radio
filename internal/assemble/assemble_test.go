@@ -273,11 +273,11 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	// Collect opening/ending jingle keys from corners (replacing program-level config).
 	var openingKey, endingKey string
 	for _, corner := range spec.Corners {
-		if openingKey == "" && corner.StartJingle != "" {
-			openingKey = corner.StartJingle
+		if openingKey == "" && corner.StartAudio != nil && corner.StartAudio.Type == "jingle" {
+			openingKey = corner.StartAudio.ID
 		}
-		if endingKey == "" && corner.EndJingle != "" {
-			endingKey = corner.EndJingle
+		if endingKey == "" && corner.EndAudio != nil && corner.EndAudio.Type == "jingle" {
+			endingKey = corner.EndAudio.ID
 		}
 	}
 	if openingKey == "" || endingKey == "" {

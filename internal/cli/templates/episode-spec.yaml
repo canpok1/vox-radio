@@ -55,8 +55,10 @@ corners:
     length_sec: 30
     # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
     # summary_length: 100
-    # コーナー開始ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
-    # start_jingle: opening
+    # コーナー境界音声（不要な場合は行ごと削除）
+    # start_audio:
+    #   type: jingle   # jingle（BGM停止後再生）または se（BGMの下で再生）
+    #   id: opening    # assets の該当マップのキー
     # コーナー開始前の無音時間（秒）。0 または省略時は挿入しない。
     # start_pause_sec: 1.0
     # コーナー終了後の無音時間（秒）。0 または省略時は挿入しない。
@@ -104,8 +106,10 @@ corners:
     length_sec: 30
     # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
     # summary_length: 100
-    # コーナー終了ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
-    # end_jingle: ending
+    # コーナー終了境界音声（不要な場合は行ごと削除）
+    # end_audio:
+    #   type: jingle   # jingle または se
+    #   id: ending     # assets の該当マップのキー
 
 # アセット設定ファイルの参照（ジングル・SE・BGM）
 # バイナリ素材ファイルは別途用意してください。

@@ -14,13 +14,17 @@ corners:
     cast:
       zundamon: "元気に挨拶する進行役"
     length_sec: 45
-    start_jingle: opening
+    start_audio:
+      type: jingle
+      id: opening
   - title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"
     length_sec: 30
-    end_jingle: ending
+    end_audio:
+      type: jingle
+      id: ending
     bgm: talk_bgm
     source:
       feeds:

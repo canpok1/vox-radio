@@ -256,6 +256,12 @@ type SourceConfig struct {
 	Articles []string    `yaml:"articles"`
 }
 
+// AudioRef references a jingle or SE asset by type and asset ID.
+type AudioRef struct {
+	Type string `yaml:"type"` // "jingle" or "se"
+	ID   string `yaml:"id"`
+}
+
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
 	Title         string            `yaml:"title"`
@@ -265,8 +271,8 @@ type CornerConfig struct {
 	LengthSec     int               `yaml:"length_sec"`
 	SummaryLength int               `yaml:"summary_length,omitempty"`
 	Source        *SourceConfig     `yaml:"source,omitempty"`
-	StartJingle   string            `yaml:"start_jingle,omitempty"`
-	EndJingle     string            `yaml:"end_jingle,omitempty"`
+	StartAudio    *AudioRef         `yaml:"start_audio,omitempty"`
+	EndAudio      *AudioRef         `yaml:"end_audio,omitempty"`
 	BGM           string            `yaml:"bgm,omitempty"`
 	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
 	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
@@ -766,17 +772,17 @@ func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
 	return nil
 }
 
-// ValidateEpisodeSpecAssets checks that corner-level jingle/bgm keys reference existing assets.
+// ValidateEpisodeSpecAssets checks that corner-level audio/bgm keys reference existing assets.
 func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
 	for _, corner := range p.Corners {
-		if corner.StartJingle != "" {
-			if _, ok := p.Assets.Jingle[corner.StartJingle]; !ok {
-				return fmt.Errorf("corners[%q].start_jingle: unknown jingle key %q", corner.Title, corner.StartJingle)
+		if corner.StartAudio != nil {
+			if err := validateAudioRef(corner.Title, "start_audio", corner.StartAudio, &p.Assets); err != nil {
+				return err
 			}
 		}
-		if corner.EndJingle != "" {
-			if _, ok := p.Assets.Jingle[corner.EndJingle]; !ok {
-				return fmt.Errorf("corners[%q].end_jingle: unknown jingle key %q", corner.Title, corner.EndJingle)
+		if corner.EndAudio != nil {
+			if err := validateAudioRef(corner.Title, "end_audio", corner.EndAudio, &p.Assets); err != nil {
+				return err
 			}
 		}
 		if corner.BGM != "" {
@@ -784,6 +790,22 @@ func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
 				return fmt.Errorf("corners[%q].bgm: unknown bgm key %q", corner.Title, corner.BGM)
 			}
 		}
+	}
+	return nil
+}
+
+func validateAudioRef(cornerTitle, field string, ref *AudioRef, assets *AssetsConfig) error {
+	switch ref.Type {
+	case "jingle":
+		if _, ok := assets.Jingle[ref.ID]; !ok {
+			return fmt.Errorf("corners[%q].%s: unknown jingle key %q", cornerTitle, field, ref.ID)
+		}
+	case "se":
+		if _, ok := assets.SE[ref.ID]; !ok {
+			return fmt.Errorf("corners[%q].%s: unknown se key %q", cornerTitle, field, ref.ID)
+		}
+	default:
+		return fmt.Errorf("corners[%q].%s: unknown type %q (must be jingle or se)", cornerTitle, field, ref.Type)
 	}
 	return nil
 }

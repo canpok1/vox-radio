@@ -145,16 +145,16 @@ func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_CornerStartJinglePrependedFirst(t *testing.T) {
+func TestLLMDirector_Direct_StartAudio_Jingle_PrependedFirst(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:       "C1",
-		StartJingle: "opening",
-		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:      "C1",
+		StartAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "opening"},
+		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -170,16 +170,16 @@ func TestLLMDirector_Direct_CornerStartJinglePrependedFirst(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_CornerEndJingleAppendedLast(t *testing.T) {
+func TestLLMDirector_Direct_EndAudio_Jingle_AppendedLast(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:     "C1",
-		EndJingle: "ending",
-		Lines:     []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:    "C1",
+		EndAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "ending"},
+		Lines:    []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -195,18 +195,18 @@ func TestLLMDirector_Direct_CornerEndJingleAppendedLast(t *testing.T) {
 	}
 }
 
-func TestLLMDirector_Direct_CornerAllAssets_CorrectOrder(t *testing.T) {
+func TestLLMDirector_Direct_CornerAllAssets_Jingle_CorrectOrder(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:       "C1",
-		StartJingle: "op",
-		BGM:         "bgm1",
-		EndJingle:   "ed",
-		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		Title:      "C1",
+		StartAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "op"},
+		BGM:        "bgm1",
+		EndAudio:   &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "ed"},
+		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
 	got, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -228,6 +228,96 @@ func TestLLMDirector_Direct_CornerAllAssets_CorrectOrder(t *testing.T) {
 	}
 	if got.Segments[3].Type != model.SegmentTypeJingle || got.Segments[3].AssetName != "ed" {
 		t.Errorf("Segment[3]: want jingle(ed), got %+v", got.Segments[3])
+	}
+}
+
+func TestLLMDirector_Direct_StartAudio_SE_AfterBGM_BGMContinues(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	// type:se → BGM先行 → SE（activeBGM維持）
+	corners := []model.CornerLines{
+		{
+			Title:      "C1",
+			StartAudio: &model.CornerAudio{Type: model.SegmentTypeSE, AssetName: "chime"},
+			BGM:        "talk_bgm",
+			Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		},
+		{
+			Title: "C2",
+			BGM:   "talk_bgm",
+			Lines: []model.Line{{SpeakerRole: "host", Text: "続き"}},
+		},
+	}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// C1: [bgm(talk_bgm), se(chime), speech]
+	// C2: BGMが維持されているので bgm再開なし → [speech]
+	// 計 [bgm(talk_bgm), se(chime), speech, speech]
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4\nsegments: %+v", len(got.Segments), got.Segments)
+	}
+	if got.Segments[0].Type != model.SegmentTypeBGM || got.Segments[0].AssetName != "talk_bgm" {
+		t.Errorf("Segment[0]: want bgm(talk_bgm), got %+v", got.Segments[0])
+	}
+	if got.Segments[1].Type != model.SegmentTypeSE || got.Segments[1].AssetName != "chime" {
+		t.Errorf("Segment[1]: want se(chime), got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[2]: want speech, got %+v", got.Segments[2])
+	}
+	if got.Segments[3].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[3]: want speech, got %+v", got.Segments[3])
+	}
+}
+
+func TestLLMDirector_Direct_EndAudio_SE_BGMContinues(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	// type:se の end_audio → SE後もactiveBGM維持
+	corners := []model.CornerLines{
+		{
+			Title:    "C1",
+			BGM:      "talk_bgm",
+			EndAudio: &model.CornerAudio{Type: model.SegmentTypeSE, AssetName: "chime"},
+			Lines:    []model.Line{{SpeakerRole: "host", Text: "話す"}},
+		},
+		{
+			Title: "C2",
+			BGM:   "talk_bgm",
+			Lines: []model.Line{{SpeakerRole: "host", Text: "続き"}},
+		},
+	}
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// C1: [bgm(talk_bgm), speech, se(chime)]
+	// C2: BGMが維持されているので bgm再開なし → [speech]
+	// 計 [bgm(talk_bgm), speech, se(chime), speech]
+	if len(got.Segments) != 4 {
+		t.Fatalf("Segments: got %d, want 4\nsegments: %+v", len(got.Segments), got.Segments)
+	}
+	if got.Segments[0].Type != model.SegmentTypeBGM || got.Segments[0].AssetName != "talk_bgm" {
+		t.Errorf("Segment[0]: want bgm(talk_bgm), got %+v", got.Segments[0])
+	}
+	if got.Segments[1].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[1]: want speech, got %+v", got.Segments[1])
+	}
+	if got.Segments[2].Type != model.SegmentTypeSE || got.Segments[2].AssetName != "chime" {
+		t.Errorf("Segment[2]: want se(chime), got %+v", got.Segments[2])
+	}
+	if got.Segments[3].Type != model.SegmentTypeSpeech {
+		t.Errorf("Segment[3]: want speech, got %+v", got.Segments[3])
 	}
 }
 
@@ -261,11 +351,11 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
 	corners := []model.CornerLines{{
-		Title:       "C1",
-		StartJingle: "opening",
-		EndJingle:   "ending",
-		BGM:         "talk_bgm",
-		Lines:       []model.Line{{SpeakerRole: "host", Text: "hello"}},
+		Title:      "C1",
+		StartAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "opening"},
+		EndAudio:   &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "ending"},
+		BGM:        "talk_bgm",
+		Lines:      []model.Line{{SpeakerRole: "host", Text: "hello"}},
 	}}
 
 	_, err := d.Direct(context.Background(), corners, emptyCatalog())
@@ -273,7 +363,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, key := range []string{"start_jingle", "end_jingle", "bgm"} {
+	for _, key := range []string{"start_audio", "end_audio", "bgm"} {
 		if strings.Contains(capturedPrompt, `"`+key+`"`) {
 			t.Errorf("field %q should not appear in LLM payload, got: %s", key, capturedPrompt)
 		}
@@ -398,12 +488,12 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	}
 }
 
-func TestBuildScript_StartPauseSec_InjectedBeforeStartJingle(t *testing.T) {
+func TestBuildScript_StartPauseSec_InjectedBeforeStartAudio(t *testing.T) {
 	d := noInsertionDirector()
 
 	corners := []model.CornerLines{{
 		Title:         "C1",
-		StartJingle:   "opening",
+		StartAudio:    &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "opening"},
 		StartPauseSec: 1.0,
 		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
@@ -427,12 +517,12 @@ func TestBuildScript_StartPauseSec_InjectedBeforeStartJingle(t *testing.T) {
 	}
 }
 
-func TestBuildScript_EndPauseSec_InjectedAfterEndJingle(t *testing.T) {
+func TestBuildScript_EndPauseSec_InjectedAfterEndAudio(t *testing.T) {
 	d := noInsertionDirector()
 
 	corners := []model.CornerLines{{
 		Title:       "C1",
-		EndJingle:   "ending",
+		EndAudio:    &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "ending"},
 		EndPauseSec: 2.0,
 		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
@@ -877,13 +967,13 @@ func TestBuildScript_LastCorner_NoBGMStop(t *testing.T) {
 	}
 }
 
-// TestBuildScript_EndJingle_ResetsBGM verifies that an EndJingle resets activeBGM,
+// TestBuildScript_EndAudio_Jingle_ResetsBGM verifies that an EndAudio with type:jingle resets activeBGM,
 // causing the same BGM to restart after the jingle.
-func TestBuildScript_EndJingle_ResetsBGM(t *testing.T) {
+func TestBuildScript_EndAudio_Jingle_ResetsBGM(t *testing.T) {
 	d := noInsertionDirector()
 
 	corners := []model.CornerLines{
-		{Title: "C1", BGM: "talk_bgm", EndJingle: "jingle", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
+		{Title: "C1", BGM: "talk_bgm", EndAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "jingle"}, Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
 		{Title: "C2", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 

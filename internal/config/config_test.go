@@ -77,22 +77,7 @@ func TestLoadEpisodeSpec(t *testing.T) {
 	})
 
 	t.Run("CornerAssets", func(t *testing.T) {
-		if len(spec.Corners) == 0 {
-			t.Fatal("Corners must not be empty")
-		}
-		corner0 := spec.Corners[0]
-		if corner0.StartJingle == "" {
-			t.Error("Corners[0].StartJingle must not be empty")
-		}
-		if len(spec.Corners) > 1 {
-			corner1 := spec.Corners[1]
-			if corner1.EndJingle == "" {
-				t.Error("Corners[1].EndJingle must not be empty")
-			}
-			if corner1.BGM == "" {
-				t.Error("Corners[1].BGM must not be empty")
-			}
-		}
+		checkCornerAssets(t, spec)
 	})
 
 	t.Run("Corners", func(t *testing.T) {
@@ -207,83 +192,154 @@ func TestLoadEpisodeSpec_MissingFile(t *testing.T) {
 	}
 }
 
-func TestValidateEpisodeSpecAssets_Valid(t *testing.T) {
-	p := &config.EpisodeSpec{
-		Corners: []config.CornerConfig{
-			{Title: "C1", StartJingle: "opening", EndJingle: "ending", BGM: "talk_bgm"},
-		},
-		Assets: config.AssetsConfig{
-			Jingle: map[string]config.JingleEntry{
-				"opening": {File: "opening.mp3"},
-				"ending":  {File: "ending.mp3"},
+func checkCornerAssets(t *testing.T, spec *config.EpisodeSpec) {
+	t.Helper()
+	if len(spec.Corners) == 0 {
+		t.Fatal("Corners must not be empty")
+	}
+	corner0 := spec.Corners[0]
+	if corner0.StartAudio == nil {
+		t.Error("Corners[0].StartAudio must not be nil")
+	} else {
+		if corner0.StartAudio.Type != "jingle" {
+			t.Errorf("Corners[0].StartAudio.Type: got %q, want jingle", corner0.StartAudio.Type)
+		}
+		if corner0.StartAudio.ID != "opening" {
+			t.Errorf("Corners[0].StartAudio.ID: got %q, want opening", corner0.StartAudio.ID)
+		}
+	}
+	if len(spec.Corners) <= 1 {
+		return
+	}
+	corner1 := spec.Corners[1]
+	if corner1.EndAudio == nil {
+		t.Error("Corners[1].EndAudio must not be nil")
+	} else {
+		if corner1.EndAudio.Type != "jingle" {
+			t.Errorf("Corners[1].EndAudio.Type: got %q, want jingle", corner1.EndAudio.Type)
+		}
+		if corner1.EndAudio.ID != "ending" {
+			t.Errorf("Corners[1].EndAudio.ID: got %q, want ending", corner1.EndAudio.ID)
+		}
+	}
+	if corner1.BGM == "" {
+		t.Error("Corners[1].BGM must not be empty")
+	}
+}
+
+func TestValidateEpisodeSpecAssets(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    *config.EpisodeSpec
+		wantErr bool
+	}{
+		{
+			name: "valid start_audio jingle",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"}, BGM: "talk_bgm"},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{"opening": {File: "opening.mp3"}},
+					BGM:    map[string]config.BGMEntry{"talk_bgm": {File: "bgm.mp3"}},
+				},
 			},
-			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "bgm.mp3"},
+		},
+		{
+			name: "valid end_audio se",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", EndAudio: &config.AudioRef{Type: "se", ID: "chime"}},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					SE:     map[string]config.SEEntry{"chime": {File: "chime.wav"}},
+					BGM:    map[string]config.BGMEntry{},
+				},
 			},
 		},
-	}
-	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-}
-
-func TestValidateEpisodeSpecAssets_UnknownStartJingle(t *testing.T) {
-	p := &config.EpisodeSpec{
-		Corners: []config.CornerConfig{
-			{Title: "C1", StartJingle: "nonexistent"},
+		{
+			name: "empty fields",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{Title: "C1"}},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
 		},
-		Assets: config.AssetsConfig{
-			Jingle: map[string]config.JingleEntry{},
-			BGM:    map[string]config.BGMEntry{},
+		{
+			name: "start_audio unknown jingle id",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "nonexistent"}},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "end_audio unknown jingle id",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", EndAudio: &config.AudioRef{Type: "jingle", ID: "nonexistent"}},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "start_audio unknown se id",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "se", ID: "nonexistent"}},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					SE:     map[string]config.SEEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "start_audio invalid type",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "bgm", ID: "something"}},
+				},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "unknown bgm",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{Title: "C1", BGM: "nonexistent"}},
+				Assets: config.AssetsConfig{
+					Jingle: map[string]config.JingleEntry{},
+					BGM:    map[string]config.BGMEntry{},
+				},
+			},
+			wantErr: true,
 		},
 	}
-	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
-		t.Error("expected error for unknown start_jingle key")
-	}
-}
-
-func TestValidateEpisodeSpecAssets_UnknownEndJingle(t *testing.T) {
-	p := &config.EpisodeSpec{
-		Corners: []config.CornerConfig{
-			{Title: "C1", EndJingle: "nonexistent"},
-		},
-		Assets: config.AssetsConfig{
-			Jingle: map[string]config.JingleEntry{},
-			BGM:    map[string]config.BGMEntry{},
-		},
-	}
-	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
-		t.Error("expected error for unknown end_jingle key")
-	}
-}
-
-func TestValidateEpisodeSpecAssets_UnknownBGM(t *testing.T) {
-	p := &config.EpisodeSpec{
-		Corners: []config.CornerConfig{
-			{Title: "C1", BGM: "nonexistent"},
-		},
-		Assets: config.AssetsConfig{
-			Jingle: map[string]config.JingleEntry{},
-			BGM:    map[string]config.BGMEntry{},
-		},
-	}
-	if err := config.ValidateEpisodeSpecAssets(p); err == nil {
-		t.Error("expected error for unknown bgm key")
-	}
-}
-
-func TestValidateEpisodeSpecAssets_EmptyFields_NoError(t *testing.T) {
-	p := &config.EpisodeSpec{
-		Corners: []config.CornerConfig{
-			{Title: "C1"},
-		},
-		Assets: config.AssetsConfig{
-			Jingle: map[string]config.JingleEntry{},
-			BGM:    map[string]config.BGMEntry{},
-		},
-	}
-	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
-		t.Errorf("unexpected error for empty fields: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := config.ValidateEpisodeSpecAssets(tt.spec)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateEpisodeSpecAssets() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
