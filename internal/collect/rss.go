@@ -39,7 +39,7 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 
 	if len(articles) == 0 {
 		c.logger.Warn("feed returned 0 items", "url", url)
-		return make([]model.Article, 0), nil
+		return articles, nil
 	}
 
 	if maxItems > 0 && len(articles) < maxItems {

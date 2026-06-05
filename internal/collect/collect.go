@@ -80,9 +80,12 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 	logger := c.logger.With("step", "collect")
 	start := time.Now()
 
-	excluded := make(map[string]struct{}, len(excludedURLs))
-	for _, u := range excludedURLs {
-		excluded[u] = struct{}{}
+	var excluded map[string]struct{}
+	if len(excludedURLs) > 0 {
+		excluded = make(map[string]struct{}, len(excludedURLs))
+		for _, u := range excludedURLs {
+			excluded[u] = struct{}{}
+		}
 	}
 
 	filtered := make([]config.CornerConfig, 0, len(corners))
