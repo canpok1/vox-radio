@@ -43,3 +43,4 @@
 | [0035](0035-slack-episode-posting-subcommand.md) | Slack へエピソードを投稿する slackpost サブコマンドを追加する（ADR-0005 の方針転換） | 採用 | 2026-06-04 |
 | [0036](0036-unify-cast-roster-with-regular-and-guest-types.md) | 出演者名簿を casts に一本化し、レギュラーと出演条件（お休み）を導入する | 採用 | 2026-06-05 |
 | [0037](0037-record-cast-appearances-in-cache-and-pass-counts-to-llm.md) | 出演キャスト実績をキャッシュに記録し、参加回数を rundown 経由で生成 LLM に渡す | 採用 | 2026-06-05 |
+| [0038](0038-unify-corner-boundary-audio-config.md) | コーナー境界音声を start_jingle/end_jingle から type 付き start_audio/end_audio へ再構成する | 採用 | 2026-06-05 |
