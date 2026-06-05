@@ -25,7 +25,7 @@ type CornerSummarizer interface {
 
 // Collector gathers articles per corner from configured sources.
 type Collector interface {
-	RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error)
+	RunAll(ctx context.Context, corners []config.CornerConfig, excludedURLs []string) (model.Articles, error)
 }
 
 // Rundowner selects articles and designs the talk flow for each corner.
@@ -68,6 +68,7 @@ type Runner struct {
 	ProgramSummarizer ProgramSummarizer // optional; if nil, program summary is omitted from manifest
 	CornerSummarizer  CornerSummarizer  // optional; if nil, corner summaries are omitted from manifest
 	Logger            *slog.Logger      // optional; if nil, slog.Default() is used
+	ExcludedURLs      []string          // URLs to exclude from feed collection (past-used articles)
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
@@ -78,7 +79,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("create output dirs: %w", err)
 	}
 
-	articles, err := r.Collector.RunAll(ctx, r.Spec.Corners)
+	articles, err := r.Collector.RunAll(ctx, r.Spec.Corners, r.ExcludedURLs)
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
 	}

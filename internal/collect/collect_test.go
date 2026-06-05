@@ -26,7 +26,7 @@ func TestCollector_Run_ErrorOnHTTPFailure(t *testing.T) {
 			},
 		}
 		c := collect.New(server.Client())
-		_, err := c.Run(context.Background(), cfg)
+		_, err := c.Run(context.Background(), cfg, nil)
 		if err == nil {
 			t.Error("expected error for HTTP 404, got nil")
 		}
@@ -37,7 +37,7 @@ func TestCollector_Run_ErrorOnHTTPFailure(t *testing.T) {
 			Articles: []string{server.URL + "/article.html"},
 		}
 		c := collect.New(server.Client())
-		_, err := c.Run(context.Background(), cfg)
+		_, err := c.Run(context.Background(), cfg, nil)
 		if err == nil {
 			t.Error("expected error for HTTP 404, got nil")
 		}
@@ -68,7 +68,7 @@ func TestCollector_Run_RSSAppliesMaxItems(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestCollector_Run_RSSParsesFields(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestCollector_Run_ArticleExtractsBody(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestCollector_Run_AtomAppliesMaxItems(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestCollector_Run_AtomParsesFields(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestCollector_Run_WarnOnEmptyFeed(t *testing.T) {
 	}
 
 	c := collect.New(server.Client(), collect.WithLogger(logger))
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("expected no error for empty feed, got: %v", err)
 	}
@@ -234,6 +234,110 @@ func TestCollector_Run_WarnOnEmptyFeed(t *testing.T) {
 	}
 }
 
+func TestCollector_Run_ExcludesURLsAndFillsFromLater(t *testing.T) {
+	// feed.xml has 3 articles: article/1, article/2, article/3
+	// Exclude article/1; with maxItems=2 should return article/2 and article/3
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed.xml", MaxItems: 2},
+		},
+	}
+	excluded := map[string]struct{}{
+		"https://example.com/article/1": {},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, excluded)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("articles count: got %d, want 2", len(result))
+	}
+	if result[0].URL != "https://example.com/article/2" {
+		t.Errorf("result[0].URL: got %q, want %q", result[0].URL, "https://example.com/article/2")
+	}
+	if result[1].URL != "https://example.com/article/3" {
+		t.Errorf("result[1].URL: got %q, want %q", result[1].URL, "https://example.com/article/3")
+	}
+}
+
+func TestCollector_Run_WarnWhenInsufficientNonExcludedArticles(t *testing.T) {
+	// feed.xml has 3 articles; exclude article/1 and article/2; want 3 but only 1 available
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed.xml", MaxItems: 3},
+		},
+	}
+	excluded := map[string]struct{}{
+		"https://example.com/article/1": {},
+		"https://example.com/article/2": {},
+	}
+
+	c := collect.New(server.Client(), collect.WithLogger(logger))
+	result, err := c.Run(context.Background(), cfg, excluded)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result) != 1 {
+		t.Errorf("articles count: got %d, want 1 (only non-excluded)", len(result))
+	}
+	if result[0].URL != "https://example.com/article/3" {
+		t.Errorf("result[0].URL: got %q, want %q", result[0].URL, "https://example.com/article/3")
+	}
+	if !strings.Contains(buf.String(), "WARN") {
+		t.Errorf("expected WARN log for insufficient articles, got: %q", buf.String())
+	}
+}
+
+func TestCollector_Run_UnlimitedWithExcludedURLs(t *testing.T) {
+	// maxItems=0 means unlimited; exclude article/1; should return article/2 and article/3
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed.xml", MaxItems: 0},
+		},
+	}
+	excluded := map[string]struct{}{
+		"https://example.com/article/1": {},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, excluded)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("articles count: got %d, want 2 (all non-excluded)", len(result))
+	}
+}
+
 func TestCollector_RunAll_SkipsSourcelessCorners(t *testing.T) {
 	corners := []config.CornerConfig{
 		{Title: "ソースなし", Content: "挨拶のみ"},
@@ -241,7 +345,7 @@ func TestCollector_RunAll_SkipsSourcelessCorners(t *testing.T) {
 	}
 
 	c := collect.New(nil)
-	result, err := c.RunAll(context.Background(), corners)
+	result, err := c.RunAll(context.Background(), corners, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -285,7 +389,7 @@ func TestCollector_RunAll_CollectsPerCorner(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.RunAll(context.Background(), corners)
+	result, err := c.RunAll(context.Background(), corners, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -304,6 +408,43 @@ func TestCollector_RunAll_CollectsPerCorner(t *testing.T) {
 	}
 	if len(result.Corners[1].Articles) != 1 {
 		t.Errorf("corners[1].articles count: got %d, want 1", len(result.Corners[1].Articles))
+	}
+}
+
+func TestCollector_RunAll_ExcludesURLsViaFeed(t *testing.T) {
+	// feed.xml has 3 articles; exclude article/1; maxItems=2 should return article/2 and article/3
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	corners := []config.CornerConfig{
+		{
+			Title: "ニュース",
+			Source: &config.SourceConfig{
+				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 2}},
+			},
+		},
+	}
+	excludedURLs := []string{"https://example.com/article/1"}
+
+	c := collect.New(server.Client())
+	result, err := c.RunAll(context.Background(), corners, excludedURLs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result.Corners) != 1 {
+		t.Fatalf("corners count: got %d, want 1", len(result.Corners))
+	}
+	articles := result.Corners[0].Articles
+	if len(articles) != 2 {
+		t.Errorf("articles count: got %d, want 2", len(articles))
+	}
+	if len(articles) > 0 && articles[0].URL != "https://example.com/article/2" {
+		t.Errorf("articles[0].URL: got %q, want %q", articles[0].URL, "https://example.com/article/2")
 	}
 }
 
@@ -330,7 +471,7 @@ func TestCollector_Run_CombinesFeedsAndArticles(t *testing.T) {
 	}
 
 	c := collect.New(server.Client())
-	result, err := c.Run(context.Background(), cfg)
+	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -361,7 +502,7 @@ func TestCollector_RunAll_LogsStartAndComplete(t *testing.T) {
 	}
 
 	c := collect.New(server.Client(), collect.WithLogger(logger))
-	_, err := c.RunAll(context.Background(), corners)
+	_, err := c.RunAll(context.Background(), corners, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -402,7 +543,7 @@ func TestCollector_RunAll_LogsPerCornerProgress(t *testing.T) {
 	}
 
 	c := collect.New(server.Client(), collect.WithLogger(logger))
-	_, err := c.RunAll(context.Background(), corners)
+	_, err := c.RunAll(context.Background(), corners, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
