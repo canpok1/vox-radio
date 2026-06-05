@@ -3,6 +3,7 @@ package slack
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -240,5 +241,32 @@ func TestRealPoster_UploadAudio_NonRetryableError_ImmediateFailure(t *testing.T)
 	}
 	if n := atomic.LoadInt32(&infoCallCount); n != 1 {
 		t.Errorf("files.info should be called exactly once for non-retryable error, got %d calls", n)
+	}
+}
+
+func TestIsNonRetryable(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"missing_scope", slackgo.SlackErrorResponse{Err: "missing_scope"}, true},
+		{"not_authed", slackgo.SlackErrorResponse{Err: "not_authed"}, true},
+		{"invalid_auth", slackgo.SlackErrorResponse{Err: "invalid_auth"}, true},
+		{"account_inactive", slackgo.SlackErrorResponse{Err: "account_inactive"}, true},
+		{"token_revoked", slackgo.SlackErrorResponse{Err: "token_revoked"}, true},
+		{"token_expired", slackgo.SlackErrorResponse{Err: "token_expired"}, true},
+		{"no_permission", slackgo.SlackErrorResponse{Err: "no_permission"}, true},
+		{"file_not_found", slackgo.SlackErrorResponse{Err: "file_not_found"}, true},
+		{"file_deleted", slackgo.SlackErrorResponse{Err: "file_deleted"}, true},
+		{"unknown Slack code is retryable", slackgo.SlackErrorResponse{Err: "service_error"}, false},
+		{"non-Slack error is retryable", errors.New("connection refused"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNonRetryable(tt.err); got != tt.want {
+				t.Errorf("isNonRetryable(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
 	}
 }
