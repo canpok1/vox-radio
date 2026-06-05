@@ -3,6 +3,7 @@ package slack
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -175,11 +176,12 @@ func TestRealPoster_UploadAudio_PollTimeout_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestRealPoster_UploadAudio_GetFileInfoError_RetriesAndWrapsOnTimeout(t *testing.T) {
+func TestRealPoster_UploadAudio_RetryableError_WrapsOnTimeout(t *testing.T) {
 	const channel = "C0123456789"
 
+	// service_error is not in the non-retryable list — polling should continue until timeout.
 	srv := newUploadTestServer(t, func(_ int32) any {
-		return map[string]any{"ok": false, "error": "file_not_found"}
+		return map[string]any{"ok": false, "error": "service_error"}
 	})
 	defer srv.Close()
 
@@ -201,7 +203,70 @@ func TestRealPoster_UploadAudio_GetFileInfoError_RetriesAndWrapsOnTimeout(t *tes
 	if !strings.Contains(err.Error(), "二重投稿") {
 		t.Errorf("error should mention double-posting, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "file_not_found") {
+	if !strings.Contains(err.Error(), "service_error") {
 		t.Errorf("error should wrap last GetFileInfo error, got: %v", err)
+	}
+}
+
+func TestRealPoster_UploadAudio_NonRetryableError_ImmediateFailure(t *testing.T) {
+	const channel = "C0123456789"
+
+	var infoCallCount int32
+	srv := newUploadTestServer(t, func(n int32) any {
+		atomic.StoreInt32(&infoCallCount, n)
+		return map[string]any{"ok": false, "error": "missing_scope"}
+	})
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 200*time.Millisecond)
+	filePath := writeTempAudioFile(t)
+
+	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
+		Channel:  channel,
+		FilePath: filePath,
+		Filename: "test.mp3",
+	})
+
+	if err == nil {
+		t.Fatal("UploadAudio should return error for non-retryable Slack error")
+	}
+	if !strings.Contains(err.Error(), "FTEST123") {
+		t.Errorf("error should contain fileID, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "二重投稿") {
+		t.Errorf("error should mention double-posting, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "missing_scope") {
+		t.Errorf("error should wrap original Slack error, got: %v", err)
+	}
+	if n := atomic.LoadInt32(&infoCallCount); n != 1 {
+		t.Errorf("files.info should be called exactly once for non-retryable error, got %d calls", n)
+	}
+}
+
+func TestIsNonRetryable(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"missing_scope", slackgo.SlackErrorResponse{Err: "missing_scope"}, true},
+		{"not_authed", slackgo.SlackErrorResponse{Err: "not_authed"}, true},
+		{"invalid_auth", slackgo.SlackErrorResponse{Err: "invalid_auth"}, true},
+		{"account_inactive", slackgo.SlackErrorResponse{Err: "account_inactive"}, true},
+		{"token_revoked", slackgo.SlackErrorResponse{Err: "token_revoked"}, true},
+		{"token_expired", slackgo.SlackErrorResponse{Err: "token_expired"}, true},
+		{"no_permission", slackgo.SlackErrorResponse{Err: "no_permission"}, true},
+		{"file_not_found", slackgo.SlackErrorResponse{Err: "file_not_found"}, true},
+		{"file_deleted", slackgo.SlackErrorResponse{Err: "file_deleted"}, true},
+		{"unknown Slack code is retryable", slackgo.SlackErrorResponse{Err: "service_error"}, false},
+		{"non-Slack error is retryable", errors.New("connection refused"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNonRetryable(tt.err); got != tt.want {
+				t.Errorf("isNonRetryable(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
 	}
 }
