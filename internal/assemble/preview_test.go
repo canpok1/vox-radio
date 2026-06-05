@@ -3,6 +3,7 @@ package assemble
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -325,6 +326,9 @@ func TestBuildPreviewFFmpegArgs_UnknownKey_ReturnsError(t *testing.T) {
 }
 
 func TestPreviewer_Run_InvokesFFmpegWithFilterComplex(t *testing.T) {
+	dir := t.TempDir()
+	outPath := dir + "/out.mp3"
+
 	assets := config.AssetsConfig{
 		SE: map[string]config.SEEntry{
 			"chime": {File: "/audio/chime.wav", Volume: 0.8},
@@ -343,7 +347,7 @@ func TestPreviewer_Run_InvokesFFmpegWithFilterComplex(t *testing.T) {
 		AssetType:    "se",
 		AssetKey:     "chime",
 		Assets:       assets,
-		OutPath:      "/out.mp3",
+		OutPath:      outPath,
 		MaxLengthSec: testMaxLengthSec,
 	}
 
@@ -362,7 +366,39 @@ func TestPreviewer_Run_InvokesFFmpegWithFilterComplex(t *testing.T) {
 		t.Errorf("expected -filter_complex in ffmpeg args, got: %v", capturedArgs)
 	}
 
-	if len(capturedArgs) == 0 || capturedArgs[len(capturedArgs)-1] != "/out.mp3" {
-		t.Errorf("expected /out.mp3 as last ffmpeg arg, got: %v", capturedArgs)
+	if len(capturedArgs) == 0 || capturedArgs[len(capturedArgs)-1] != outPath {
+		t.Errorf("expected %s as last ffmpeg arg, got: %v", outPath, capturedArgs)
+	}
+}
+
+func TestPreviewer_Run_CreatesOutputDirectory(t *testing.T) {
+	dir := t.TempDir()
+	outPath := dir + "/subdir/out.mp3"
+
+	assets := config.AssetsConfig{
+		SE: map[string]config.SEEntry{
+			"chime": {File: "/audio/chime.wav", Volume: 0.5},
+		},
+	}
+
+	p := &Previewer{
+		runFFmpeg: func(_ context.Context, _ []string, _ io.Writer) error { return nil },
+	}
+
+	pctx := PreviewContext{
+		AssetType:    "se",
+		AssetKey:     "chime",
+		Assets:       assets,
+		OutPath:      outPath,
+		MaxLengthSec: testMaxLengthSec,
+	}
+
+	err := p.Run(context.Background(), pctx, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, statErr := os.Stat(dir + "/subdir"); os.IsNotExist(statErr) {
+		t.Errorf("expected output directory to be created, but it does not exist")
 	}
 }

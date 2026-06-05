@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -39,6 +41,10 @@ func NewPreviewer() *Previewer {
 
 // Run builds ffmpeg args for the preview context and executes ffmpeg.
 func (p *Previewer) Run(ctx context.Context, pctx PreviewContext, w io.Writer) error {
+	if err := os.MkdirAll(filepath.Dir(pctx.OutPath), 0o755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
 	ffArgs, err := BuildPreviewFFmpegArgs(pctx)
 	if err != nil {
 		return err
