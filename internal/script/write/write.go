@@ -17,7 +17,7 @@ import (
 // 番組全体での役割とコーナー固有の役割の両方を保持する。
 type CastAssignment struct {
 	CharacterID string // キャラID
-	Type        string // "regular" | "guest"
+	Type        string // config.CastTypeRegular | config.CastTypeGuest
 	ProgramRole string // 番組全体での役割（casts[].role）
 	CornerRole  string // このコーナーでの役割（corners[].cast）。未指定は ""
 }
@@ -296,7 +296,7 @@ func formatCastInfo(casts []model.RundownCast) string {
 
 	var guests []model.RundownCast
 	for _, c := range casts {
-		if c.Type == "guest" {
+		if c.Type == config.CastTypeGuest {
 			guests = append(guests, c)
 		}
 	}
