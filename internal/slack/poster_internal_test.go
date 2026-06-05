@@ -174,3 +174,34 @@ func TestRealPoster_UploadAudio_PollTimeout_ReturnsError(t *testing.T) {
 		t.Errorf("error should mention double-posting, got: %v", err)
 	}
 }
+
+func TestRealPoster_UploadAudio_GetFileInfoError_RetriesAndWrapsOnTimeout(t *testing.T) {
+	const channel = "C0123456789"
+
+	srv := newUploadTestServer(t, func(_ int32) any {
+		return map[string]any{"ok": false, "error": "file_not_found"}
+	})
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 100*time.Millisecond)
+	filePath := writeTempAudioFile(t)
+
+	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
+		Channel:  channel,
+		FilePath: filePath,
+		Filename: "test.mp3",
+	})
+
+	if err == nil {
+		t.Fatal("UploadAudio should return error on poll timeout")
+	}
+	if !strings.Contains(err.Error(), "FTEST123") {
+		t.Errorf("error should contain fileID, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "二重投稿") {
+		t.Errorf("error should mention double-posting, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "file_not_found") {
+		t.Errorf("error should wrap last GetFileInfo error, got: %v", err)
+	}
+}
