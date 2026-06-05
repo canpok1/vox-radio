@@ -119,6 +119,7 @@ collect → rundown → script → synth → assemble → manifest
 | `config check` | 共通設定ファイルを strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する（パスは `--config` で指定、省略時は `vox-radio.yaml`） |
 | `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照の整合性を検証する（共通設定は `--config` で指定、省略時は `vox-radio.yaml`） |
 | `assets check` | アセット設定 YAML（`assets.yaml`）を strict モードでパースし、typo・参照ファイル欠落・不正値（volume/fade/duck_ratio）をエラーとして報告する |
+| `assets preview` | 素材IDを指定し、パラメータを適用したプレビュー音声を MP3 で生成する（`--id {type}:{key} --out out.mp3 [--max-length-sec 秒]`）。loudnorm/alimiter は適用されない |
 
 ### 設定ファイルの作成
 
