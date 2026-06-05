@@ -1,0 +1,37 @@
+## vox-radio assets preview
+
+素材ID単体にパラメータを適用した音声をプレビュー生成する
+
+### Synopsis
+
+指定した assets.yaml から素材IDを検索し、パラメータを適用したプレビュー音声を MP3 で生成します。
+
+loudnorm/alimiter は適用されないため、各パラメータの素の効果を確認できます。
+
+例:
+  vox-radio assets preview assets.yaml --id jingle:opening --out preview.mp3
+  vox-radio assets preview assets.yaml --id bgm:talk --out preview.mp3 --max-length-sec 15
+
+```
+vox-radio assets preview <path> [flags]
+```
+
+### Options
+
+```
+  -h, --help                   help for preview
+      --id string              {type}:{key} 形式の素材ID（type: jingle/se/bgm）（必須）
+      --max-length-sec float   プレビュー出力の最大長（秒）。出力がこれより長い場合に末尾を打ち切る (default 30)
+      --out string             MP3 出力先パス（必須）
+```
+
+### Options inherited from parent commands
+
+```
+      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+```
+
+### SEE ALSO
+
+* [vox-radio assets](vox-radio_assets.md)	 - アセット設定ファイルを管理するコマンド群
+

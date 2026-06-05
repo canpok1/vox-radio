@@ -149,3 +149,89 @@ func TestAssetsCheck_MissingArg_Error(t *testing.T) {
 		t.Error("expected error when PATH argument is missing")
 	}
 }
+
+func TestAssetsHelp_ListsPreviewSubcommand(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"assets", "--help"})
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "\n  preview ") {
+		t.Errorf("assets help should list preview subcommand, got:\n%s", out)
+	}
+	if !strings.Contains(out, "\n  check ") {
+		t.Errorf("assets help should list check subcommand, got:\n%s", out)
+	}
+}
+
+func TestAssetsPreview_MissingIDFlag_Error(t *testing.T) {
+	assetsPath := buildValidAssetsYAML(t)
+	dir := filepath.Dir(assetsPath)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--out", filepath.Join(dir, "out.mp3")})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error when --id is missing")
+	}
+}
+
+func TestAssetsPreview_MissingOutFlag_Error(t *testing.T) {
+	assetsPath := buildValidAssetsYAML(t)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--id", "bgm:talk"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error when --out is missing")
+	}
+}
+
+func TestAssetsPreview_MissingPathArg_Error(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", "--id", "bgm:talk", "--out", "/tmp/out.mp3"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error when assets.yaml path argument is missing")
+	}
+}
+
+func TestAssetsPreview_InvalidIDFormat_Error(t *testing.T) {
+	assetsPath := buildValidAssetsYAML(t)
+	dir := filepath.Dir(assetsPath)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--id", "invalidformat", "--out", filepath.Join(dir, "out.mp3")})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for --id without colon separator")
+	}
+}
+
+func TestAssetsPreview_InvalidType_Error(t *testing.T) {
+	assetsPath := buildValidAssetsYAML(t)
+	dir := filepath.Dir(assetsPath)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--id", "badtype:opening", "--out", filepath.Join(dir, "out.mp3")})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for unknown asset type in --id")
+	}
+}
+
+func TestAssetsPreview_KeyNotFound_Error(t *testing.T) {
+	assetsPath := buildValidAssetsYAML(t)
+	dir := filepath.Dir(assetsPath)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--id", "jingle:nonexistent", "--out", filepath.Join(dir, "out.mp3")})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for nonexistent key in assets.yaml")
+	}
+}

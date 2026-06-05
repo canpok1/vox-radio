@@ -7,7 +7,8 @@
 アセット設定ファイル（assets.yaml）の管理操作を提供します。
 
 サブコマンド:
-  check  アセット設定ファイルを strict モードで検証する
+  check    アセット設定ファイルを strict モードで検証する
+  preview  素材ID単体にパラメータを適用した音声をプレビュー生成する
 
 ### Options
 
@@ -25,4 +26,5 @@
 
 * [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
 * [vox-radio assets check](vox-radio_assets_check.md)	 - アセット設定ファイルを strict モードでフル検証する
+* [vox-radio assets preview](vox-radio_assets_preview.md)	 - 素材ID単体にパラメータを適用した音声をプレビュー生成する
 
