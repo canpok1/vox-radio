@@ -100,13 +100,13 @@ func (w *LLMWriter) SetCasts(casts []model.RundownCast) {
 }
 
 func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, assignments []CastAssignment, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
-	castEntries := make([]castEntryForPrompt, 0, len(assignments))
-	for _, a := range assignments {
-		castEntries = append(castEntries, castEntryForPrompt{
+	castEntries := make([]castEntryForPrompt, len(assignments))
+	for i, a := range assignments {
+		castEntries[i] = castEntryForPrompt{
 			ID:          a.CharacterID,
 			ProgramRole: a.ProgramRole,
 			CornerRole:  a.CornerRole,
-		})
+		}
 	}
 
 	promptCorner := cornerForPrompt{

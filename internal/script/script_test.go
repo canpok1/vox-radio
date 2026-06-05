@@ -471,11 +471,8 @@ func TestWriteAll(t *testing.T) {
 	c3Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C3のセリフ"}}
 
 	mw := &mockWriter{responses: [][]model.Line{c1Lines, c2Lines, c3Lines}}
-	assignments := [][]write.CastAssignment{
-		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
-		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
-		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
-	}
+	zundamonAssignment := []write.CastAssignment{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}}
+	assignments := [][]write.CastAssignment{zundamonAssignment, zundamonAssignment, zundamonAssignment}
 
 	got, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, assignments, cornerMap, testChars)
 	if err != nil {
