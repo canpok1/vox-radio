@@ -10,15 +10,11 @@ import (
 	"github.com/canpok1/vox-radio/internal/cli"
 )
 
-func feedSpecTestdataPath(rel string) string {
-	return filepath.Join(cliTestSrcDir, "..", "config", "testdata", rel)
-}
-
 func TestFeedgenCheck_ValidSpec_Success(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
 	cmd.SetOut(buf)
-	cmd.SetArgs([]string{"feedgen", "check", feedSpecTestdataPath("feed_spec.yaml")})
+	cmd.SetArgs([]string{"feedgen", "check", configTestdataPath("feed_spec.yaml")})
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -30,7 +26,7 @@ func TestFeedgenCheck_ValidSpec_Success(t *testing.T) {
 
 func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"feedgen", "check", feedSpecTestdataPath("feed_spec_unknown_key.yaml")})
+	cmd.SetArgs([]string{"feedgen", "check", configTestdataPath("feed_spec_unknown_key.yaml")})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown key in strict mode")
