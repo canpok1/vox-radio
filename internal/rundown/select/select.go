@@ -55,10 +55,16 @@ type LLMSelector struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
+	casts          []model.RundownCast
 }
 
 func NewLLMSelector(client llm.Client, promptTemplate string, temperature float64) *LLMSelector {
 	return &LLMSelector{client: client, promptTemplate: promptTemplate, temperature: temperature}
+}
+
+// SetCasts configures the confirmed cast members to inject into the selection prompt.
+func (s *LLMSelector) SetCasts(casts []model.RundownCast) {
+	s.casts = casts
 }
 
 func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error) {
@@ -81,9 +87,19 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 		return SelectResult{}, fmt.Errorf("marshal articles: %w", err)
 	}
 
+	casts := s.casts
+	if casts == nil {
+		casts = make([]model.RundownCast, 0)
+	}
+	castsJSON, err := json.Marshal(casts)
+	if err != nil {
+		return SelectResult{}, fmt.Errorf("marshal casts: %w", err)
+	}
+
 	prompt := strings.NewReplacer(
 		"{{corner}}", string(cornerJSON),
 		"{{articles}}", string(articlesJSON),
+		"{{casts}}", string(castsJSON),
 	).Replace(s.promptTemplate)
 
 	raw, err := s.client.Complete(ctx, llm.CompletionRequest{

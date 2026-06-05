@@ -27,6 +27,12 @@ type CornerEntry struct {
 	Articles []ArticleEntry `json:"articles"`
 }
 
+// CastEntry holds cast data for a single episode history entry.
+type CastEntry struct {
+	CharacterID string `json:"character_id"`
+	Type        string `json:"type"` // "regular" | "guest"
+}
+
 // Entry represents a single episode in the JSONL history file.
 type Entry struct {
 	ProgramID         string                   `json:"program_id"`
@@ -41,6 +47,7 @@ type Entry struct {
 	DurationSec       int                      `json:"duration_sec,omitempty"`
 	Corners           []CornerEntry            `json:"corners"`
 	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
+	Casts             []CastEntry              `json:"casts"`
 }
 
 // Manager handles JSONL cache file operations for a single program.
@@ -203,6 +210,12 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 	if notes == nil {
 		notes = make([]model.ConversationNote, 0)
 	}
+
+	casts := make([]CastEntry, len(m.Casts))
+	for i, c := range m.Casts {
+		casts[i] = CastEntry{CharacterID: c.CharacterID, Type: c.Type}
+	}
+
 	return Entry{
 		ProgramID:         programID,
 		Datetime:          m.Datetime,
@@ -216,7 +229,20 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		DurationSec:       durationSec,
 		Corners:           corners,
 		ConversationNotes: notes,
+		Casts:             casts,
 	}
+}
+
+// AppearanceCounts returns a map from character ID to the number of entries they appeared in.
+// Entries without Casts (legacy entries) are ignored.
+func AppearanceCounts(entries []Entry) map[string]int {
+	counts := make(map[string]int)
+	for _, e := range entries {
+		for _, c := range e.Casts {
+			counts[c.CharacterID]++
+		}
+	}
+	return counts
 }
 
 // NextEpisodeNumber returns the episode number to assign to the next episode.

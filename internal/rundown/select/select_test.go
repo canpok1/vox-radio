@@ -84,6 +84,55 @@ func TestLLMSelector_Select_LLMError(t *testing.T) {
 	}
 }
 
+func TestLLMSelector_SetCasts_PromptContainsCastInfo(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+	}
+	s := sel.NewLLMSelector(mc, "キャスト: {{casts}} コーナー: {{corner}} 記事: {{articles}}", 0)
+	s.SetCasts([]model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+	})
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
+	articles := []model.Article{{URL: "https://example.com/1", Title: "記事1"}}
+	_, _ = s.Select(context.Background(), corner, articles)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "zundamon") {
+		t.Errorf("prompt should contain cast character ID, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "guest1") {
+		t.Errorf("prompt should contain guest character ID, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "appearance_count") {
+		t.Errorf("prompt should contain appearance_count field, got: %s", prompt)
+	}
+}
+
+func TestLLMSelector_NoCasts_PromptHasEmptyArray(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+	}
+	s := sel.NewLLMSelector(mc, "キャスト: {{casts}} コーナー: {{corner}} 記事: {{articles}}", 0)
+	// SetCasts not called
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
+	articles := []model.Article{{URL: "https://example.com/1", Title: "記事1"}}
+	_, _ = s.Select(context.Background(), corner, articles)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "[]") {
+		t.Errorf("prompt should contain empty array [] for casts, got: %s", prompt)
+	}
+}
+
 func TestLLMSelector_Select_PromptUsesSemanticFieldName(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),

@@ -16,9 +16,10 @@ type RundownCorner struct {
 
 // RundownCast は出演確定したキャスト1人分の情報。
 type RundownCast struct {
-	CharacterID string `json:"character_id"`
-	Role        string `json:"role"`
-	Type        string `json:"type"` // "regular" | "guest"
+	CharacterID     string `json:"character_id"`
+	Role            string `json:"role"`
+	Type            string `json:"type"`             // "regular" | "guest"
+	AppearanceCount int    `json:"appearance_count"` // 過去の出演エピソード数（今回含まず）。0 = 初登場
 }
 
 type Rundown struct {

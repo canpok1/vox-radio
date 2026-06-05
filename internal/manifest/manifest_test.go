@@ -209,6 +209,47 @@ func TestBuild(t *testing.T) {
 	})
 }
 
+func TestBuild_CastsCopiedFromRundown(t *testing.T) {
+	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
+	corners := []config.CornerConfig{{Title: "コーナー1"}}
+	rundown := model.Rundown{
+		Casts: []model.RundownCast{
+			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 2},
+			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+		},
+	}
+
+	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+
+	if len(got.Casts) != 2 {
+		t.Fatalf("Casts: got %d, want 2", len(got.Casts))
+	}
+	if got.Casts[0].CharacterID != "zundamon" {
+		t.Errorf("Casts[0].CharacterID: got %q, want zundamon", got.Casts[0].CharacterID)
+	}
+	if got.Casts[0].AppearanceCount != 2 {
+		t.Errorf("Casts[0].AppearanceCount: got %d, want 2", got.Casts[0].AppearanceCount)
+	}
+	if got.Casts[1].CharacterID != "guest1" {
+		t.Errorf("Casts[1].CharacterID: got %q, want guest1", got.Casts[1].CharacterID)
+	}
+}
+
+func TestBuild_CastsNeverNil(t *testing.T) {
+	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
+	corners := []config.CornerConfig{{Title: "コーナー1"}}
+	rundown := model.Rundown{} // Casts is nil
+
+	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+
+	if got.Casts == nil {
+		t.Error("Casts must be [] not nil when rundown has no casts")
+	}
+	if len(got.Casts) != 0 {
+		t.Errorf("Casts: got %d, want 0", len(got.Casts))
+	}
+}
+
 func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
 	corners := []config.CornerConfig{{Title: "コーナー1"}}

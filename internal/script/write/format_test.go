@@ -8,6 +8,48 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+func TestFormatCastInfo_NoGuests_ReturnsNoGuestMessage(t *testing.T) {
+	casts := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular"},
+	}
+	got := formatCastInfo(casts)
+	if !strings.Contains(got, "ゲストなし") {
+		t.Errorf("formatCastInfo: expected 'ゲストなし', got: %s", got)
+	}
+}
+
+func TestFormatCastInfo_GuestFirstAppearance(t *testing.T) {
+	casts := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+	}
+	got := formatCastInfo(casts)
+	if !strings.Contains(got, "今回が初出演") {
+		t.Errorf("formatCastInfo: expected '今回が初出演', got: %s", got)
+	}
+}
+
+func TestFormatCastInfo_GuestReturningAppearance(t *testing.T) {
+	casts := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 3},
+	}
+	got := formatCastInfo(casts)
+	if !strings.Contains(got, "過去3回出演") {
+		t.Errorf("formatCastInfo: expected '過去3回出演', got: %s", got)
+	}
+}
+
+func TestFormatCastInfo_NoDirectionRules(t *testing.T) {
+	// 演出ルールは追加しない
+	casts := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+	}
+	got := formatCastInfo(casts)
+	// 演出ルール（初出演時に必ずリアクションする等）は含まれない
+	if strings.Contains(got, "必ず") {
+		t.Errorf("formatCastInfo: should not contain direction rules like '必ず', got: %s", got)
+	}
+}
+
 func TestFormatPastEpisodes(t *testing.T) {
 	tests := []struct {
 		name            string
