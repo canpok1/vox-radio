@@ -524,11 +524,10 @@ func applySilenceTrim(b *filterBuilder, currentLabel string, key string, enabled
 	if !enabled {
 		return currentLabel
 	}
-	th := fmt.Sprintf("%gdB", thresholdDB)
 	outLabel := fmt.Sprintf("[%s_st]", key)
 	b.addFilter(fmt.Sprintf(
-		"%ssilenceremove=start_periods=1:start_threshold=%s,areverse,silenceremove=start_periods=1:start_threshold=%s,areverse%s",
-		currentLabel, th, th, outLabel))
+		"%ssilenceremove=start_periods=1:start_threshold=%gdB,areverse,silenceremove=start_periods=1:start_threshold=%gdB,areverse%s",
+		currentLabel, thresholdDB, thresholdDB, outLabel))
 	return outLabel
 }
 

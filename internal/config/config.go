@@ -678,6 +678,13 @@ func validateFileField(category, name, file string) error {
 	return nil
 }
 
+func validateTrimSilenceThresholdDB(category, name string, v *float64) error {
+	if v != nil && *v >= 0 {
+		return fmt.Errorf("%s[%q].trim_silence_threshold: must be < 0 (dB), got %v", category, name, *v)
+	}
+	return nil
+}
+
 // ValidateAssetsConfig checks that all referenced files exist and that field values are in valid ranges.
 func ValidateAssetsConfig(assets *AssetsConfig) error {
 	for name, entry := range assets.Jingle {
@@ -690,8 +697,8 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if entry.FadeOut < 0 {
 			return fmt.Errorf("jingle[%q].fade_out: must be >= 0, got %v", name, entry.FadeOut)
 		}
-		if entry.TrimSilenceThreshold != nil && *entry.TrimSilenceThreshold >= 0 {
-			return fmt.Errorf("jingle[%q].trim_silence_threshold: must be < 0 (dB), got %v", name, *entry.TrimSilenceThreshold)
+		if err := validateTrimSilenceThresholdDB("jingle", name, entry.TrimSilenceThreshold); err != nil {
+			return err
 		}
 	}
 	for name, entry := range assets.SE {
@@ -701,8 +708,8 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if entry.Volume < 0 {
 			return fmt.Errorf("se[%q].volume: must be >= 0, got %v", name, entry.Volume)
 		}
-		if entry.TrimSilenceThreshold != nil && *entry.TrimSilenceThreshold >= 0 {
-			return fmt.Errorf("se[%q].trim_silence_threshold: must be < 0 (dB), got %v", name, *entry.TrimSilenceThreshold)
+		if err := validateTrimSilenceThresholdDB("se", name, entry.TrimSilenceThreshold); err != nil {
+			return err
 		}
 	}
 	for name, entry := range assets.BGM {
