@@ -85,6 +85,28 @@ func (r *realPoster) UploadAudio(ctx context.Context, u UploadParams) (string, s
 	return fileID, ts, nil
 }
 
+// nonRetryableCodes is the set of Slack API error codes that will never resolve on retry.
+var nonRetryableCodes = map[string]struct{}{
+	"missing_scope":    {},
+	"not_authed":       {},
+	"invalid_auth":     {},
+	"account_inactive": {},
+	"token_revoked":    {},
+	"token_expired":    {},
+	"no_permission":    {},
+	"file_not_found":   {},
+	"file_deleted":     {},
+}
+
+func isNonRetryable(err error) bool {
+	var slackErr slackgo.SlackErrorResponse
+	if !errors.As(err, &slackErr) {
+		return false
+	}
+	_, ok := nonRetryableCodes[slackErr.Err]
+	return ok
+}
+
 func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (string, error) {
 	pollCtx, cancel := context.WithTimeout(ctx, r.pollTimeout)
 	defer cancel()
@@ -96,6 +118,9 @@ func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (str
 	for {
 		fileInfo, _, _, err := r.client.GetFileInfoContext(pollCtx, fileID, 0, 0)
 		if err != nil {
+			if isNonRetryable(err) {
+				return "", r.nonRetryableError(fileID, err)
+			}
 			lastErr = err
 		} else {
 			if shares, ok := fileInfo.Shares.Public[channel]; ok && len(shares) > 0 {
@@ -113,6 +138,11 @@ func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (str
 			timer.Reset(r.pollInterval)
 		}
 	}
+}
+
+func (r *realPoster) nonRetryableError(fileID string, err error) error {
+	msg := fmt.Sprintf("non-retryable Slack error waiting for ts (file_id=%s): %s", fileID, doublePostWarning)
+	return fmt.Errorf("%s: %w", msg, err)
 }
 
 func (r *realPoster) timeoutError(fileID string, lastErr error) error {

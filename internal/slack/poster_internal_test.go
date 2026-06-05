@@ -175,11 +175,12 @@ func TestRealPoster_UploadAudio_PollTimeout_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestRealPoster_UploadAudio_GetFileInfoError_RetriesAndWrapsOnTimeout(t *testing.T) {
+func TestRealPoster_UploadAudio_RetryableError_WrapsOnTimeout(t *testing.T) {
 	const channel = "C0123456789"
 
+	// service_error is not in the non-retryable list — polling should continue until timeout.
 	srv := newUploadTestServer(t, func(_ int32) any {
-		return map[string]any{"ok": false, "error": "file_not_found"}
+		return map[string]any{"ok": false, "error": "service_error"}
 	})
 	defer srv.Close()
 
@@ -201,7 +202,43 @@ func TestRealPoster_UploadAudio_GetFileInfoError_RetriesAndWrapsOnTimeout(t *tes
 	if !strings.Contains(err.Error(), "二重投稿") {
 		t.Errorf("error should mention double-posting, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "file_not_found") {
+	if !strings.Contains(err.Error(), "service_error") {
 		t.Errorf("error should wrap last GetFileInfo error, got: %v", err)
+	}
+}
+
+func TestRealPoster_UploadAudio_NonRetryableError_ImmediateFailure(t *testing.T) {
+	const channel = "C0123456789"
+
+	var infoCallCount int32
+	srv := newUploadTestServer(t, func(n int32) any {
+		atomic.StoreInt32(&infoCallCount, n)
+		return map[string]any{"ok": false, "error": "missing_scope"}
+	})
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 200*time.Millisecond)
+	filePath := writeTempAudioFile(t)
+
+	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
+		Channel:  channel,
+		FilePath: filePath,
+		Filename: "test.mp3",
+	})
+
+	if err == nil {
+		t.Fatal("UploadAudio should return error for non-retryable Slack error")
+	}
+	if !strings.Contains(err.Error(), "FTEST123") {
+		t.Errorf("error should contain fileID, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "二重投稿") {
+		t.Errorf("error should mention double-posting, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "missing_scope") {
+		t.Errorf("error should wrap original Slack error, got: %v", err)
+	}
+	if n := atomic.LoadInt32(&infoCallCount); n != 1 {
+		t.Errorf("files.info should be called exactly once for non-retryable error, got %d calls", n)
 	}
 }
