@@ -660,7 +660,7 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 func loadAssetsFile(path string, strict bool) (AssetsConfig, error) {
 	var assets AssetsConfig
 	if err := fileio.DecodeYAML(path, &assets, strict); err != nil {
-		return AssetsConfig{}, fmt.Errorf("loading asset file %q: %w", path, err)
+		return AssetsConfig{}, fmt.Errorf("loading asset file: %w", err)
 	}
 	resolveAssetPaths(filepath.Dir(path), &assets)
 	return assets, nil

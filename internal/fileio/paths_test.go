@@ -27,14 +27,11 @@ func TestDecodeYAML(t *testing.T) {
 	tests := []struct {
 		name        string
 		content     string
-		strict      bool
-		wantErr     bool
 		checkResult func(t *testing.T, path string)
 	}{
 		{
 			name:    "decodes valid YAML",
 			content: "name: ずんだもん\nage: 3\n",
-			strict:  false,
 			checkResult: func(t *testing.T, path string) {
 				var got nameAge
 				if err := fileio.DecodeYAML(path, &got, false); err != nil {
@@ -51,7 +48,6 @@ func TestDecodeYAML(t *testing.T) {
 		{
 			name:    "unknown field ignored when non-strict",
 			content: "name: foo\nunknown_key: bar\n",
-			strict:  false,
 			checkResult: func(t *testing.T, path string) {
 				var got nameOnly
 				if err := fileio.DecodeYAML(path, &got, false); err != nil {
@@ -62,7 +58,6 @@ func TestDecodeYAML(t *testing.T) {
 		{
 			name:    "unknown field rejected when strict",
 			content: "name: foo\nunknown_key: bar\n",
-			strict:  true,
 			checkResult: func(t *testing.T, path string) {
 				var got nameOnly
 				if err := fileio.DecodeYAML(path, &got, true); err == nil {
