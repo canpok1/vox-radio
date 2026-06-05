@@ -6,6 +6,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/rundown"
+	"github.com/canpok1/vox-radio/internal/rundown/flow"
 	sel "github.com/canpok1/vox-radio/internal/rundown/select"
 	"github.com/canpok1/vox-radio/internal/script/summarize"
 	"github.com/spf13/cobra"
@@ -56,14 +57,14 @@ func newRundownCmd() *cobra.Command {
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rd := rundown.NewLLMRundowner(selector, summarizer, nil, nil, rundown.WithLogger(logger))
+			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
+			casts := selectCasts(p.Casts, episodeNumber, logger)
+			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, nil, rundown.WithLogger(logger))
 
-			result, err := rd.Run(context.Background(), corners, articles)
+			result, err := rd.Run(context.Background(), corners, articles, casts)
 			if err != nil {
 				return fmt.Errorf("rundown: %w", err)
 			}
-
-			result.Casts = selectCasts(p.Casts, episodeNumber, logger)
 
 			if err := writeJSON(out, result); err != nil {
 				return err

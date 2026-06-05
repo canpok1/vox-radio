@@ -8,9 +8,10 @@ type RundownArticle struct {
 }
 
 type RundownCorner struct {
-	Title    string           `json:"title"`
-	Flow     string           `json:"flow"`
-	Articles []RundownArticle `json:"articles"`
+	Title           string           `json:"title"`
+	Flow            string           `json:"flow"`             // フェーズ2で全コーナー分を生成
+	SelectionReason string           `json:"selection_reason"` // フェーズ1の選別理由（記事なしコーナーは空）
+	Articles        []RundownArticle `json:"articles"`
 }
 
 // RundownCast は出演確定したキャスト1人分の情報。

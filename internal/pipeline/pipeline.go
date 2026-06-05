@@ -30,7 +30,7 @@ type Collector interface {
 
 // Rundowner selects articles and designs the talk flow for each corner.
 type Rundowner interface {
-	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles) (model.Rundown, error)
+	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles, casts []model.RundownCast) (model.Rundown, error)
 }
 
 // Scripter generates a radio script from a rundown.
@@ -87,15 +87,10 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	rundown, err := r.Rundowner.Run(ctx, r.Spec.Corners, articles)
+	rundown, err := r.Rundowner.Run(ctx, r.Spec.Corners, articles, opts.Casts)
 	if err != nil {
 		return fmt.Errorf("rundown: %w", err)
 	}
-	// Casts を設定（nil の場合は空スライスで初期化して JSON で null を防ぐ）
-	if opts.Casts == nil {
-		opts.Casts = make([]model.RundownCast, 0)
-	}
-	rundown.Casts = opts.Casts
 	if err := fileio.WriteJSON(fileio.RundownPath(outDir), rundown); err != nil {
 		return err
 	}

@@ -25,7 +25,7 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 
 func TestLLMSelector_Select_Success(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"記事1を紹介して締める"}`),
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
@@ -45,14 +45,14 @@ func TestLLMSelector_Select_Success(t *testing.T) {
 	if got.SelectedURLs[0] != "https://example.com/1" {
 		t.Errorf("SelectedURLs[0]: got %q, want %q", got.SelectedURLs[0], "https://example.com/1")
 	}
-	if got.Flow != "記事1を紹介して締める" {
-		t.Errorf("Flow: got %q, want %q", got.Flow, "記事1を紹介して締める")
+	if got.SelectionReason != "AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する" {
+		t.Errorf("SelectionReason: got %q, want %q", got.SelectionReason, "AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する")
 	}
 }
 
 func TestLLMSelector_Select_PromptContainsCornerAndArticles(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
@@ -86,7 +86,7 @@ func TestLLMSelector_Select_LLMError(t *testing.T) {
 
 func TestLLMSelector_Select_PromptUsesSemanticFieldName(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"flow":"フロー"}`),
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
