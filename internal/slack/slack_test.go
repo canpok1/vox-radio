@@ -280,7 +280,7 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	}
 }
 
-func TestRun_TsEmpty_ThreadPostedWithoutTS(t *testing.T) {
+func TestRun_TsEmpty_ReturnsError(t *testing.T) {
 	dir := t.TempDir()
 
 	manifest := map[string]any{
@@ -312,7 +312,7 @@ func TestRun_TsEmpty_ThreadPostedWithoutTS(t *testing.T) {
 		DryRun:       false,
 		Out:          os.Stdout,
 	}, mock)
-	if err != nil {
-		t.Fatalf("Run should not fail when ts is empty: %v", err)
+	if err == nil {
+		t.Fatal("Run should return error when ts is empty and thread blocks are present")
 	}
 }
