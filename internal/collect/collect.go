@@ -42,11 +42,12 @@ func New(client *http.Client, opts ...Option) *Collector {
 }
 
 // Run collects articles from all feeds and individual URLs in cfg.
-func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig) ([]model.Article, error) {
+// excluded is a set of URLs to skip when fetching from feeds (nil means no exclusion).
+func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded map[string]struct{}) ([]model.Article, error) {
 	articles := make([]model.Article, 0)
 
 	for _, feed := range cfg.Feeds {
-		items, err := c.fetchFeed(ctx, feed.URL, feed.MaxItems)
+		items, err := c.fetchFeed(ctx, feed.URL, feed.MaxItems, excluded)
 		if err != nil {
 			return nil, fmt.Errorf("fetch feed %s: %w", feed.URL, err)
 		}
@@ -74,9 +75,15 @@ func (c *Collector) FetchFullText(ctx context.Context, url string) (string, erro
 }
 
 // RunAll collects articles per corner, skipping corners with no source.
-func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (model.Articles, error) {
+// excludedURLs is a list of URLs to skip when fetching from feeds (nil means no exclusion).
+func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedURLs []string) (model.Articles, error) {
 	logger := c.logger.With("step", "collect")
 	start := time.Now()
+
+	excluded := make(map[string]struct{}, len(excludedURLs))
+	for _, u := range excludedURLs {
+		excluded[u] = struct{}{}
+	}
 
 	filtered := make([]config.CornerConfig, 0, len(corners))
 	for _, corner := range corners {
@@ -96,7 +103,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig) (
 		articles, err := c.Run(ctx, config.FeedsConfig{
 			Feeds:    corner.Source.Feeds,
 			Articles: corner.Source.Articles,
-		})
+		}, excluded)
 		if err != nil {
 			return model.Articles{}, fmt.Errorf("collect corner %q: %w", corner.Title, err)
 		}

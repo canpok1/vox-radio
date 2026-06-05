@@ -23,7 +23,7 @@ type stubCollector struct {
 	called   bool
 }
 
-func (s *stubCollector) RunAll(_ context.Context, _ []config.CornerConfig) (model.Articles, error) {
+func (s *stubCollector) RunAll(_ context.Context, _ []config.CornerConfig, _ []string) (model.Articles, error) {
 	s.called = true
 	return s.articles, s.err
 }

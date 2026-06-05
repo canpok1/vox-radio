@@ -112,6 +112,7 @@ func newEpisodegenCmd() *cobra.Command {
 				Spec:              p,
 				Config:            cfg,
 				Collector:         collector,
+				ExcludedURLs:      excludedURLs,
 				Rundowner:         rundowner,
 				Scripter:          scripter,
 				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
