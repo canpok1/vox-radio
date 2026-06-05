@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -147,5 +148,30 @@ func TestLLMCornerSummarizer_SummarizeCorner_PromptContainsSummaryLength(t *test
 	}
 	if strings.Contains(prompt, "{{summary_length}}") {
 		t.Errorf("prompt should not contain unexpanded placeholder, got: %s", prompt)
+	}
+}
+
+func TestLLMCornerSummarizer_SummarizeCorner_LogsProgressWithWithLogger(t *testing.T) {
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	mc := &mockClient{
+		response: json.RawMessage(`{"summary":"要約","points":[]}`),
+	}
+	s := summary.NewLLMCornerSummarizer(mc, "{{corner_title}} {{script_lines}}", 0, summary.WithLogger(logger))
+
+	corner := model.CornerLines{
+		Title: "テストコーナー",
+		Lines: []model.Line{{Text: "テスト"}},
+	}
+
+	_, err := s.SummarizeCorner(context.Background(), corner, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logs := buf.String()
+	if !strings.Contains(logs, "summary/corner") {
+		t.Errorf("should log step=summary/corner, got: %q", logs)
 	}
 }
