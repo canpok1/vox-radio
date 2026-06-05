@@ -134,17 +134,14 @@ func buildBGMPreview(b *filterBuilder, ctx PreviewContext, maxSec float64) (stri
 	}
 
 	key := "preview"
-	var label string
+	volLabel := "[preview_bgm_vol]"
+	// For loop=true, chain atrim to stop the infinite loop at maxSec.
+	atrimSuffix := ""
 	if entry.Loop {
-		// Apply volume and atrim together to stop the infinite loop at maxSec.
-		trimLabel := "[preview_bgm_trim]"
-		b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f%s", bgmIdx, entry.Volume, maxSec, trimLabel))
-		label = trimLabel
-	} else {
-		volLabel := "[preview_bgm_vol]"
-		b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f%s", bgmIdx, entry.Volume, volLabel))
-		label = volLabel
+		atrimSuffix = fmt.Sprintf(",atrim=duration=%.3f", maxSec)
 	}
+	b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f%s%s", bgmIdx, entry.Volume, atrimSuffix, volLabel))
+	label := volLabel
 
 	label = applyFadeIn(b, label, key, entry.EffectiveFadeIn())
 	label = applyFadeOut(b, label, key, entry.EffectiveFadeOut())

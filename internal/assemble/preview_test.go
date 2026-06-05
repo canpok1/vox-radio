@@ -9,8 +9,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/config"
 )
 
-func floatPtr(v float64) *float64 { return &v }
-
 const testMaxLengthSec = 10.0
 
 func TestBuildPreviewFFmpegArgs_Jingle_ContainsExpectedFilters(t *testing.T) {
@@ -114,8 +112,8 @@ func TestBuildPreviewFFmpegArgs_BGM_ContainsExpectedFilters(t *testing.T) {
 			"talk": {
 				File:    "/audio/talk.mp3",
 				Volume:  0.3,
-				FadeIn:  floatPtr(1.0),
-				FadeOut: floatPtr(1.0),
+				FadeIn:  float64Ptr(1.0),
+				FadeOut: float64Ptr(1.0),
 			},
 		},
 	}
