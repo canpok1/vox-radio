@@ -29,6 +29,18 @@ const (
 	PositionMiddle  Position = "middle"  // 中間=つなぎ
 )
 
+// PositionFor は index（0始まり）と last（最後のインデックス）から Position を返す。
+func PositionFor(index, last int) Position {
+	switch index {
+	case 0:
+		return PositionOpening
+	case last:
+		return PositionEnding
+	default:
+		return PositionMiddle
+	}
+}
+
 // Designer は1コーナーの flow を番組構成全体の文脈から設計する。
 type Designer interface {
 	DesignFlow(ctx context.Context, corner config.CornerConfig, position Position, target model.RundownCorner, rundown model.Rundown) (string, error)
@@ -41,19 +53,11 @@ type cornerForPrompt struct {
 	TargetDurationSeconds int    `json:"target_duration_seconds"`
 }
 
-// articleForProgram はプロンプトに渡す記事情報（body 除外）。
-type articleForProgram struct {
-	URL     string   `json:"url"`
-	Title   string   `json:"title"`
-	Summary string   `json:"summary"`
-	Points  []string `json:"points"`
-}
-
 // cornerForProgram はプロンプトに渡す番組全体コーナー情報。
 type cornerForProgram struct {
-	Title           string              `json:"title"`
-	SelectionReason string              `json:"selection_reason"`
-	Articles        []articleForProgram `json:"articles"`
+	Title           string                 `json:"title"`
+	SelectionReason string                 `json:"selection_reason"`
+	Articles        []model.RundownArticle `json:"articles"`
 }
 
 // programForPrompt はプロンプトに渡す番組全体情報。
@@ -88,35 +92,17 @@ func (d *LLMDesigner) DesignFlow(ctx context.Context, corner config.CornerConfig
 		return "", fmt.Errorf("marshal corner: %w", err)
 	}
 
-	articles := make([]articleForProgram, len(target.Articles))
-	for i, a := range target.Articles {
-		articles[i] = articleForProgram{
-			URL:     a.URL,
-			Title:   a.Title,
-			Summary: a.Summary,
-			Points:  a.Points,
-		}
-	}
-	articlesJSON, err := json.Marshal(articles)
+	articlesJSON, err := json.Marshal(target.Articles)
 	if err != nil {
 		return "", fmt.Errorf("marshal articles: %w", err)
 	}
 
 	programCorners := make([]cornerForProgram, len(rundown.Corners))
 	for i, c := range rundown.Corners {
-		pas := make([]articleForProgram, len(c.Articles))
-		for j, a := range c.Articles {
-			pas[j] = articleForProgram{
-				URL:     a.URL,
-				Title:   a.Title,
-				Summary: a.Summary,
-				Points:  a.Points,
-			}
-		}
 		programCorners[i] = cornerForProgram{
 			Title:           c.Title,
 			SelectionReason: c.SelectionReason,
-			Articles:        pas,
+			Articles:        c.Articles,
 		}
 	}
 	casts := rundown.Casts

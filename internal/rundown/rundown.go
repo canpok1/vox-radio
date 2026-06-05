@@ -151,17 +151,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	// フェーズ2: 番組構成全体を文脈に全コーナーの flow を設計
 	last := len(corners) - 1
 	for i, corner := range corners {
-		var pos flow.Position
-		switch i {
-		case 0:
-			pos = flow.PositionOpening
-		case last:
-			pos = flow.PositionEnding
-		default:
-			pos = flow.PositionMiddle
-		}
-
-		designed, err := r.flowDesigner.DesignFlow(ctx, corner, pos, rd.Corners[i], rd)
+		designed, err := r.flowDesigner.DesignFlow(ctx, corner, flow.PositionFor(i, last), rd.Corners[i], rd)
 		if err != nil {
 			return model.Rundown{}, fmt.Errorf("design flow for corner %q: %w", corner.Title, err)
 		}

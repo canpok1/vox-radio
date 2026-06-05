@@ -23,6 +23,25 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 	return m.response, m.err
 }
 
+func TestPositionFor(t *testing.T) {
+	tests := []struct {
+		index   int
+		last    int
+		wantPos flow.Position
+	}{
+		{0, 2, flow.PositionOpening},
+		{1, 2, flow.PositionMiddle},
+		{2, 2, flow.PositionEnding},
+		{0, 0, flow.PositionOpening}, // single-corner: index==0 matches first → opening
+	}
+	for _, tc := range tests {
+		got := flow.PositionFor(tc.index, tc.last)
+		if got != tc.wantPos {
+			t.Errorf("PositionFor(%d, %d) = %q, want %q", tc.index, tc.last, got, tc.wantPos)
+		}
+	}
+}
+
 func TestLLMDesigner_DesignFlow_Success(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"flow":"ニュースを2本紹介して締める"}`),
