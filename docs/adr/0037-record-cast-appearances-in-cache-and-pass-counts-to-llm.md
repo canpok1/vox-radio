@@ -7,13 +7,13 @@
 
 初参加のゲストに「はじめて出演させてもらいます」のようなリアクションをさせたいが、キャラの参加回数情報をどこにも保持しておらず初参加判定ができない。
 
-出演確定情報は回ごとの `Rundown.Casts` に永続化される（ADR-0031/0036）が、回をまたぐ実績は `model.Manifest` にも履歴キャッシュ（`cache.Entry`）にも残らない。write は `{{guest_info}}` でゲスト有無を受け取るが、select はキャスト情報を受け取っていない。参加回数を select / write の生成 LLM に渡すためのデータの持ち方と配線方式を決める（Issue #266）。
+出演確定情報は回ごとの `Rundown.Casts` に永続化される（ADR-0031/0036）が、回をまたぐ実績は `model.Manifest` にも履歴キャッシュ（`cache.Entry`）にも残らない。write は `{{guest_info}}` でゲスト有無を受け取るが回数情報はなく、流れ設計を担う flow ステップ（#268）は `{{program}}` で `Rundown.Casts` をそのまま受け取る。参加回数を flow / write の生成 LLM に渡すためのデータの持ち方と配線方式を決める（Issue #266）。
 
 ## 決定
 
 - **実績ベースで記録する**: 出演キャストを `Manifest.Casts` → `cache.Entry.Casts` へ転記し、過去エントリの集計（`cache.AppearanceCounts`）で参加回数を導出する。
 - **rundown へ焼き込む**: 過去出演回数を出演確定時に `RundownCast.AppearanceCount`（今回含まず、0 = 初登場）として `02_rundown.json` に永続化し、下流は rundown を読むだけにする。
-- select には `{{casts}}`（JSON）、write には既存 `{{guest_info}}` への回数付記で渡す。演出ルールは明記せず情報提供にとどめる。
+- flow には `{{program}}` 内 casts の JSON マーシャルで自動的に、write には既存 `{{guest_info}}` への回数付記で渡す。演出ルールは明記せず情報提供にとどめる。select（記事選別）への配線は行わない。
 - `Compact()` では `Casts` を保持する（軽量で、全履歴の回数集計に必要）。
 - レガシーエントリのバックフィルは行わない（0 回扱い。ゲスト出演実績がなく実害なし）。
 
@@ -26,5 +26,5 @@
 ## 検討した代替案
 
 - **config の出演条件（EpisodeCondition）からの決定論的逆算**: 保存不要で済むが、設定変更で過去の出演実績が遡って書き換わり初登場判定が壊れるため却下。
-- **writer への直接注入のみ（SetPastEpisodes パターン）**: 単独 `script` コマンドで情報が欠落し、select への配線も別経路になるため却下。
+- **writer への直接注入のみ（SetPastEpisodes パターン）**: 単独 `script` コマンドで情報が欠落し、flow への配線も別経路になるため却下。
 - **キャッシュとは別の専用カウントファイル**: 集計値の二重管理で実績との不整合リスクがあるため、エントリから都度集計する方式を採用。
