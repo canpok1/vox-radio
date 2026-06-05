@@ -47,4 +47,5 @@ type Manifest struct {
 	AudioFile         string             `json:"audio_file"`
 	Corners           []ManifestCorner   `json:"corners"`
 	ConversationNotes []ConversationNote `json:"conversation_notes"`
+	Casts             []RundownCast      `json:"casts"`
 }

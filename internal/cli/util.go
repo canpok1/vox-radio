@@ -96,10 +96,13 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
-// selectCasts selects cast members for the given episode number and warns when condition-based
-// cast members are configured but the episode number is unknown.
-func selectCasts(casts map[string]config.CastConfig, episodeNumber int, logger *slog.Logger) []model.RundownCast {
+// selectCasts selects cast members for the given episode number, injects appearance counts,
+// and warns when condition-based cast members are configured but the episode number is unknown.
+func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts map[string]int, logger *slog.Logger) []model.RundownCast {
 	selected := cast.Select(casts, episodeNumber)
+	for i, c := range selected {
+		selected[i].AppearanceCount = counts[c.CharacterID]
+	}
 	if episodeNumber == 0 {
 		for _, c := range casts {
 			if c.Condition != nil || c.Type == config.CastTypeGuest {
@@ -130,19 +133,26 @@ func resolveCorners(corners []config.CornerConfig, episodeNumber int, logger *sl
 	return config.ResolveCornersForEpisode(corners, episodeNumber)
 }
 
-// resolveEpisodeNumber returns the next episode number from cache.
-// Returns 0 if cache is disabled, programID is empty, or cache fails to load.
-func resolveEpisodeNumber(cfg *config.Config, programID string) int {
+// loadCacheEntries loads all cache entries for the given program.
+// Returns (entries, nextEpisodeNumber). Both are zero values if cache is disabled, programID is empty, or load fails.
+func loadCacheEntries(cfg *config.Config, programID string) ([]cache.Entry, int) {
 	if !cfg.Cache.Enabled || programID == "" {
-		return 0
+		return make([]cache.Entry, 0), 0
 	}
 	cachePath := filepath.Join(".vox-radio", "cache", programID+".jsonl")
 	mgr := cache.New(cachePath)
 	entries, err := mgr.Load()
 	if err != nil {
-		return 0
+		return make([]cache.Entry, 0), 0
 	}
-	return cache.NextEpisodeNumber(entries)
+	return entries, cache.NextEpisodeNumber(entries)
+}
+
+// resolveEpisodeNumber returns the next episode number from cache.
+// Returns 0 if cache is disabled, programID is empty, or cache fails to load.
+func resolveEpisodeNumber(cfg *config.Config, programID string) int {
+	_, n := loadCacheEntries(cfg, programID)
+	return n
 }
 
 func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.EpisodeSpec, error) {

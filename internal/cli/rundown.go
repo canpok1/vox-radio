@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/rundown"
 	"github.com/canpok1/vox-radio/internal/rundown/flow"
@@ -52,13 +53,15 @@ func newRundownCmd() *cobra.Command {
 				return fmt.Errorf("read articles: %w", err)
 			}
 
-			episodeNumber := resolveEpisodeNumber(cfg, p.Program.ID)
+			entries, episodeNumber := loadCacheEntries(cfg, p.Program.ID)
 			corners := resolveCorners(p.Corners, episodeNumber, logger)
+			appearanceCounts := cache.AppearanceCounts(entries)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
-			casts := selectCasts(p.Casts, episodeNumber, logger)
+			casts := selectCasts(p.Casts, episodeNumber, appearanceCounts, logger)
+			selector.SetCasts(casts)
 			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, nil, rundown.WithLogger(logger))
 
 			result, err := rd.Run(context.Background(), corners, articles, casts)

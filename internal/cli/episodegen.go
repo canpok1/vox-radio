@@ -74,6 +74,7 @@ func newEpisodegenCmd() *cobra.Command {
 			var cacheMgr *cache.Manager
 			var episodeNumber int
 			var excludedURLs []string
+			appearanceCounts := make(map[string]int)
 			if cfg.Cache.Enabled && p.Program.ID != "" {
 				cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
 				cacheMgr = cache.New(cachePath)
@@ -84,12 +85,14 @@ func newEpisodegenCmd() *cobra.Command {
 				episodeNumber = cache.NextEpisodeNumber(entries)
 				recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 				excludedURLs = cache.PastURLs(entries)
+				appearanceCounts = cache.AppearanceCounts(entries)
 				writer.SetPastEpisodes(recent)
 				writer.SetEpisodeNumber(episodeNumber)
 			}
 
-			selectedCasts := selectCasts(p.Casts, episodeNumber, logger)
+			selectedCasts := selectCasts(p.Casts, episodeNumber, appearanceCounts, logger)
 			writer.SetCasts(selectedCasts)
+			selector.SetCasts(selectedCasts)
 
 			p.Corners = resolveCorners(p.Corners, episodeNumber, logger)
 

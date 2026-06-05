@@ -193,6 +193,100 @@ func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
 	}
 }
 
+func TestLoadCacheEntries_CacheDisabled(t *testing.T) {
+	cfg := &config.Config{Cache: config.CacheConfig{Enabled: false}}
+	entries, n := loadCacheEntries(cfg, "test_program")
+	if len(entries) != 0 {
+		t.Errorf("expected empty entries when cache disabled, got %d", len(entries))
+	}
+	if n != 0 {
+		t.Errorf("expected 0 when cache disabled, got %d", n)
+	}
+}
+
+func TestLoadCacheEntries_EmptyProgramID(t *testing.T) {
+	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
+	entries, n := loadCacheEntries(cfg, "")
+	if len(entries) != 0 {
+		t.Errorf("expected empty entries when programID empty, got %d", len(entries))
+	}
+	if n != 0 {
+		t.Errorf("expected 0 when programID empty, got %d", n)
+	}
+}
+
+func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
+	origDir, _ := os.Getwd()
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer func() { _ = os.Chdir(origDir) }()
+
+	writeCacheJSONL(t, tmpDir, "prog", []cache.Entry{
+		{EpisodeNumber: 5, Casts: []cache.CastEntry{
+			{CharacterID: "zundamon", Type: "regular"},
+		}},
+	})
+
+	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
+	entries, n := loadCacheEntries(cfg, "prog")
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if n != 6 {
+		t.Errorf("expected 6 (next after 5), got %d", n)
+	}
+	if len(entries[0].Casts) != 1 {
+		t.Errorf("expected 1 cast, got %d", len(entries[0].Casts))
+	}
+}
+
+func TestSelectCasts_InjectsAppearanceCount(t *testing.T) {
+	// guest は condition が必要（cast.Select の仕様）
+	guestCond := &config.EpisodeCondition{Episodes: []int{1}}
+	casts := map[string]config.CastConfig{
+		"zundamon": {Role: "MC", Type: config.CastTypeRegular},
+		"guest1":   {Role: "ゲスト", Type: config.CastTypeGuest, Condition: guestCond},
+	}
+	counts := map[string]int{
+		"zundamon": 10,
+		"guest1":   2,
+	}
+	logger := slog.Default()
+
+	selected := selectCasts(casts, 1, counts, logger)
+
+	countByID := make(map[string]int)
+	for _, c := range selected {
+		countByID[c.CharacterID] = c.AppearanceCount
+	}
+	if countByID["zundamon"] != 10 {
+		t.Errorf("zundamon AppearanceCount: got %d, want 10", countByID["zundamon"])
+	}
+	if countByID["guest1"] != 2 {
+		t.Errorf("guest1 AppearanceCount: got %d, want 2", countByID["guest1"])
+	}
+}
+
+func TestSelectCasts_UnknownCharHasZeroCount(t *testing.T) {
+	casts := map[string]config.CastConfig{
+		"zundamon": {Role: "MC", Type: config.CastTypeRegular},
+	}
+	counts := map[string]int{} // no entry for zundamon
+	logger := slog.Default()
+
+	selected := selectCasts(casts, 1, counts, logger)
+	if len(selected) == 0 {
+		t.Fatal("expected at least one cast member")
+	}
+	for _, c := range selected {
+		if c.CharacterID == "zundamon" && c.AppearanceCount != 0 {
+			t.Errorf("zundamon AppearanceCount: got %d, want 0 (not in counts)", c.AppearanceCount)
+		}
+	}
+}
+
 func TestConfigPath_Default(t *testing.T) {
 	root := NewRootCmd()
 	got := configPath(root)

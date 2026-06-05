@@ -36,6 +36,12 @@ func Build(program config.ProgramConfig, corners []config.CornerConfig, rundown 
 	if notes == nil {
 		notes = make([]model.ConversationNote, 0)
 	}
+
+	casts := rundown.Casts
+	if casts == nil {
+		casts = make([]model.RundownCast, 0)
+	}
+
 	return model.Manifest{
 		Title:             program.Title,
 		EpisodeNumber:     episodeNumber,
@@ -46,5 +52,6 @@ func Build(program config.ProgramConfig, corners []config.CornerConfig, rundown 
 		AudioFile:         audioFile,
 		Corners:           manifestCorners,
 		ConversationNotes: notes,
+		Casts:             casts,
 	}
 }

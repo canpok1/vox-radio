@@ -673,3 +673,116 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 		t.Errorf("Compact: entry[0].Corners should be empty (compacted), got %d", len(e0.Corners))
 	}
 }
+
+func TestCompact_PreservesCasts(t *testing.T) {
+	casts := []cache.CastEntry{
+		{CharacterID: "zundamon", Type: "regular"},
+		{CharacterID: "guest1", Type: "guest"},
+	}
+	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+	entries := []cache.Entry{
+		{Datetime: "2026-01-01T00:00:00Z", Title: "e1", Casts: casts, Corners: []cache.CornerEntry{corner}},
+		{Datetime: "2026-01-02T00:00:00Z", Title: "e2", Casts: casts, Corners: []cache.CornerEntry{corner}},
+		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Casts: casts, Corners: []cache.CornerEntry{corner}},
+	}
+
+	got := cache.Compact(entries, 2, 9999)
+
+	// entry[0] is compacted (Corners emptied) but Casts must be preserved
+	if len(got[0].Casts) != 2 {
+		t.Errorf("Compact: entry[0].Casts: got %d, want 2 (preserved even when compacted)", len(got[0].Casts))
+	}
+	if got[0].Casts[0].CharacterID != "zundamon" {
+		t.Errorf("Compact: entry[0].Casts[0].CharacterID: got %q, want zundamon", got[0].Casts[0].CharacterID)
+	}
+}
+
+func TestAppearanceCounts_EmptyEntries(t *testing.T) {
+	counts := cache.AppearanceCounts([]cache.Entry{})
+	if len(counts) != 0 {
+		t.Errorf("AppearanceCounts(empty): got %d entries, want 0", len(counts))
+	}
+}
+
+func TestAppearanceCounts_LegacyEntriesWithNoCasts(t *testing.T) {
+	entries := []cache.Entry{
+		{Title: "e1"}, // legacy: no Casts field
+		{Title: "e2"},
+	}
+	counts := cache.AppearanceCounts(entries)
+	// legacy entries contribute nothing, map should be empty
+	if len(counts) != 0 {
+		t.Errorf("AppearanceCounts(legacy): got %d entries, want 0", len(counts))
+	}
+}
+
+func TestAppearanceCounts_CountsPerCharacter(t *testing.T) {
+	entries := []cache.Entry{
+		{Title: "e1", Casts: []cache.CastEntry{
+			{CharacterID: "zundamon", Type: "regular"},
+			{CharacterID: "guest1", Type: "guest"},
+		}},
+		{Title: "e2", Casts: []cache.CastEntry{
+			{CharacterID: "zundamon", Type: "regular"},
+		}},
+		{Title: "e3", Casts: []cache.CastEntry{
+			{CharacterID: "zundamon", Type: "regular"},
+			{CharacterID: "guest1", Type: "guest"},
+		}},
+	}
+	counts := cache.AppearanceCounts(entries)
+
+	if counts["zundamon"] != 3 {
+		t.Errorf("AppearanceCounts: zundamon: got %d, want 3", counts["zundamon"])
+	}
+	if counts["guest1"] != 2 {
+		t.Errorf("AppearanceCounts: guest1: got %d, want 2", counts["guest1"])
+	}
+}
+
+func TestBuildEntryFromManifest_CastsCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners:  []model.ManifestCorner{},
+		Casts: []model.RundownCast{
+			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 3},
+			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+		},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+
+	if len(got.Casts) != 2 {
+		t.Fatalf("BuildEntryFromManifest: Casts: got %d, want 2", len(got.Casts))
+	}
+	if got.Casts[0].CharacterID != "zundamon" {
+		t.Errorf("Casts[0].CharacterID: got %q, want zundamon", got.Casts[0].CharacterID)
+	}
+	if got.Casts[0].Type != "regular" {
+		t.Errorf("Casts[0].Type: got %q, want regular", got.Casts[0].Type)
+	}
+	if got.Casts[1].CharacterID != "guest1" {
+		t.Errorf("Casts[1].CharacterID: got %q, want guest1", got.Casts[1].CharacterID)
+	}
+}
+
+func TestBuildEntryFromManifest_CastsNeverNil(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners:  []model.ManifestCorner{},
+		// Casts is nil
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+
+	if got.Casts == nil {
+		t.Error("BuildEntryFromManifest: Casts must be [] not nil")
+	}
+	if len(got.Casts) != 0 {
+		t.Errorf("BuildEntryFromManifest: Casts: got %d, want 0", len(got.Casts))
+	}
+}
