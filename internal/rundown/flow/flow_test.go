@@ -177,25 +177,23 @@ func TestLLMDesigner_DesignFlow_LLMError(t *testing.T) {
 	}
 }
 
-func TestLLMDesigner_DesignFlow_ArticleBodyExcludedFromProgram(t *testing.T) {
+func TestLLMDesigner_DesignFlow_ArticleSummarySerializedToProgram(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"flow":"フロー"}`),
 	}
 	d := flow.NewLLMDesigner(mc, "{{program}}", 0)
 
-	secretBody := "これは秘密の本文です"
 	corner := config.CornerConfig{Title: "テック"}
 	target := model.RundownCorner{
 		Title: "テック",
 		Articles: []model.RundownArticle{
-			{URL: "u1", Title: "記事1", Summary: "要約", Points: []string{"p1"}},
+			{URL: "u1", Title: "記事1", Summary: "ユニークな要約テキスト", Points: []string{"p1"}},
 		},
 	}
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{target},
 		Casts:   make([]model.RundownCast, 0),
 	}
-	_ = secretBody
 
 	_, _ = d.DesignFlow(context.Background(), corner, flow.PositionOpening, target, rd)
 
@@ -203,8 +201,8 @@ func TestLLMDesigner_DesignFlow_ArticleBodyExcludedFromProgram(t *testing.T) {
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if strings.Contains(prompt, secretBody) {
-		t.Errorf("prompt must not contain article body, got: %s", prompt)
+	if !strings.Contains(prompt, "ユニークな要約テキスト") {
+		t.Errorf("prompt should contain article summary via program serialization, got: %s", prompt)
 	}
 }
 

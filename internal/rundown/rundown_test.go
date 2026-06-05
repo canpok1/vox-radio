@@ -96,6 +96,17 @@ func (m *mockFlowDesigner) DesignFlow(_ context.Context, corner config.CornerCon
 
 var _ flow.Designer = (*mockFlowDesigner)(nil)
 
+type positionCapturingDesigner struct {
+	positions *[]flow.Position
+	flow      string
+	err       error
+}
+
+func (d *positionCapturingDesigner) DesignFlow(_ context.Context, _ config.CornerConfig, pos flow.Position, _ model.RundownCorner, _ model.Rundown) (string, error) {
+	*d.positions = append(*d.positions, pos)
+	return d.flow, d.err
+}
+
 // --- helpers ---
 
 func defaultCorner(title string) config.CornerConfig {
@@ -637,17 +648,6 @@ func TestLLMRundowner_Run_PositionOpeningForFirstCorner(t *testing.T) {
 	if capturedPositions[2] != flow.PositionEnding {
 		t.Errorf("last corner position: got %q, want %q", capturedPositions[2], flow.PositionEnding)
 	}
-}
-
-type positionCapturingDesigner struct {
-	positions *[]flow.Position
-	flow      string
-	err       error
-}
-
-func (d *positionCapturingDesigner) DesignFlow(_ context.Context, _ config.CornerConfig, pos flow.Position, _ model.RundownCorner, _ model.Rundown) (string, error) {
-	*d.positions = append(*d.positions, pos)
-	return d.flow, d.err
 }
 
 func TestLLMRundowner_Run_FlowDesignerReceivesRundownContext(t *testing.T) {
