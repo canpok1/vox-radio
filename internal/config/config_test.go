@@ -1566,3 +1566,73 @@ func TestSEEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
 		})
 	}
 }
+
+func TestJingleEntry_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		entry   config.JingleEntry
+		wantErr bool
+	}{
+		{"valid zero values", config.JingleEntry{FadeIn: 0, FadeOut: 0}, false},
+		{"valid positive values", config.JingleEntry{FadeIn: 0.5, FadeOut: 1.0}, false},
+		{"fade_in negative", config.JingleEntry{FadeIn: -1.0, FadeOut: 0}, true},
+		{"fade_out negative", config.JingleEntry{FadeIn: 0, FadeOut: -0.5}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.entry.Validate()
+			if (err != nil) != c.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestSEEntry_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		entry   config.SEEntry
+		wantErr bool
+	}{
+		{"valid zero volume", config.SEEntry{Volume: 0}, false},
+		{"valid positive volume", config.SEEntry{Volume: 0.8}, false},
+		{"volume negative", config.SEEntry{Volume: -0.1}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.entry.Validate()
+			if (err != nil) != c.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestBGMEntry_Validate(t *testing.T) {
+	cases := []struct {
+		name    string
+		entry   config.BGMEntry
+		wantErr bool
+	}{
+		{"valid minimum values", config.BGMEntry{Volume: 0, DuckRatio: 1}, false},
+		{"valid typical values", config.BGMEntry{Volume: 0.3, DuckRatio: 8}, false},
+		{"volume negative", config.BGMEntry{Volume: -1, DuckRatio: 8}, true},
+		{"duck_ratio zero", config.BGMEntry{Volume: 0.3, DuckRatio: 0}, true},
+		{"duck_ratio less than 1", config.BGMEntry{Volume: 0.3, DuckRatio: 0.5}, true},
+		{"fade_in nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: nil}, false},
+		{"fade_in zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(0.0)}, false},
+		{"fade_in positive is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(1.0)}, false},
+		{"fade_in negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(-1.0)}, true},
+		{"fade_out nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: nil}, false},
+		{"fade_out zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: float64Ptr(0.0)}, false},
+		{"fade_out negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: float64Ptr(-0.5)}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.entry.Validate()
+			if (err != nil) != c.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, c.wantErr)
+			}
+		})
+	}
+}
