@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -66,6 +68,24 @@ func ReadJSON(path string, v any) error {
 	}
 	if err := json.Unmarshal(data, v); err != nil {
 		return fmt.Errorf("unmarshal %s: %w", path, err)
+	}
+	return nil
+}
+
+// DecodeYAML opens the YAML file at path and decodes it into dest.
+// When strict is true, unknown fields cause an error.
+func DecodeYAML(path string, dest any, strict bool) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", path, err)
+	}
+	defer func() { _ = f.Close() }()
+	dec := yaml.NewDecoder(f)
+	if strict {
+		dec.KnownFields(true)
+	}
+	if err := dec.Decode(dest); err != nil {
+		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
 }

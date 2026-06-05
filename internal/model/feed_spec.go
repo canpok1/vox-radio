@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"net/mail"
 	"net/url"
-	"os"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
 const DefaultPublicDir = "public"
@@ -58,18 +57,9 @@ func LoadFeedSpecStrict(path string) (FeedSpec, error) {
 }
 
 func loadFeedSpecWith(path string, strict bool) (FeedSpec, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return FeedSpec{}, fmt.Errorf("read feed spec: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-	dec := yaml.NewDecoder(f)
-	if strict {
-		dec.KnownFields(true)
-	}
 	var cfg FeedSpec
-	if err := dec.Decode(&cfg); err != nil {
-		return FeedSpec{}, fmt.Errorf("parse feed spec: %w", err)
+	if err := fileio.DecodeYAML(path, &cfg, strict); err != nil {
+		return FeedSpec{}, fmt.Errorf("load feed spec: %w", err)
 	}
 	return cfg, nil
 }
