@@ -15,6 +15,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/pipeline"
 	"github.com/canpok1/vox-radio/internal/rundown"
+	"github.com/canpok1/vox-radio/internal/rundown/flow"
 	sel "github.com/canpok1/vox-radio/internal/rundown/select"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/direct"
@@ -67,6 +68,7 @@ func newEpisodegenCmd() *cobra.Command {
 			intermediateDir := fileio.IntermediateDir(outDir)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
+			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
 			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 
 			var cacheMgr *cache.Manager
@@ -93,7 +95,7 @@ func newEpisodegenCmd() *cobra.Command {
 
 			collector := collect.New(nil, collect.WithLogger(logger))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rundowner := rundown.NewLLMRundowner(selector, summarizer, collector, excludedURLs, rundown.WithLogger(logger))
+			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedURLs, rundown.WithLogger(logger))
 
 			scripter := script.NewLLMScriptGenerator(
 				writer,

@@ -34,9 +34,14 @@ type stubRundowner struct {
 	called  bool
 }
 
-func (s *stubRundowner) Run(_ context.Context, _ []config.CornerConfig, _ model.Articles) (model.Rundown, error) {
+func (s *stubRundowner) Run(_ context.Context, _ []config.CornerConfig, _ model.Articles, casts []model.RundownCast) (model.Rundown, error) {
 	s.called = true
-	return s.rundown, s.err
+	rd := s.rundown
+	if casts == nil {
+		casts = make([]model.RundownCast, 0)
+	}
+	rd.Casts = casts
+	return rd, s.err
 }
 
 type stubScripter struct {
