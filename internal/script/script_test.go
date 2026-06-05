@@ -13,22 +13,25 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
+	"github.com/canpok1/vox-radio/internal/script/write"
 )
 
 // mock implementations
 
 type mockWriter struct {
-	lines            []model.Line
-	err              error
-	callCount        int
-	responses        [][]model.Line
-	receivedPrevious [][]model.CornerLines
-	receivedCorners  []config.CornerConfig
+	lines               []model.Line
+	err                 error
+	callCount           int
+	responses           [][]model.Line
+	receivedPrevious    [][]model.CornerLines
+	receivedCorners     []config.CornerConfig
+	receivedAssignments [][]write.CastAssignment
 }
 
-func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner config.CornerConfig, _ []config.CornerConfig, previousCorners []model.CornerLines, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
+func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner config.CornerConfig, assignments []write.CastAssignment, _ []config.CornerConfig, previousCorners []model.CornerLines, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
 	m.receivedPrevious = append(m.receivedPrevious, previousCorners)
 	m.receivedCorners = append(m.receivedCorners, corner)
+	m.receivedAssignments = append(m.receivedAssignments, assignments)
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -76,6 +79,7 @@ func corneredRundown(cornerTitle string, arts ...model.RundownArticle) model.Run
 		Corners: []model.RundownCorner{
 			{Title: cornerTitle, Flow: "テスト用フロー", Articles: arts},
 		},
+		Casts: make([]model.RundownCast, 0),
 	}
 }
 
@@ -180,7 +184,7 @@ func TestLLMScriptGenerator_Generate_EmptyRundown(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{}, testCorners, testChars)
+	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{Casts: make([]model.RundownCast, 0)}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -244,6 +248,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 				},
 			},
 		},
+		Casts: make([]model.RundownCast, 0),
 	}
 	corners := []config.CornerConfig{{Title: "ニュース"}}
 
@@ -402,6 +407,7 @@ func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing
 			{Title: "C2", Flow: "フロー2"},
 			{Title: "C3", Flow: "フロー3"},
 		},
+		Casts: make([]model.RundownCast, 0),
 	}
 	c1Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C1のセリフ"}}
 	c2Lines := []model.Line{{SpeakerRole: "metan", Text: "C2のセリフ"}}
@@ -465,8 +471,13 @@ func TestWriteAll(t *testing.T) {
 	c3Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C3のセリフ"}}
 
 	mw := &mockWriter{responses: [][]model.Line{c1Lines, c2Lines, c3Lines}}
+	assignments := [][]write.CastAssignment{
+		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
+		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
+		{{CharacterID: "zundamon", ProgramRole: "MC", CornerRole: "司会"}},
+	}
 
-	got, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, cornerMap, testChars)
+	got, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, assignments, cornerMap, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -494,28 +505,113 @@ func TestWriteAll_Error(t *testing.T) {
 	cornerMap := map[string]model.RundownCorner{
 		"C1": {Title: "C1", Flow: "フロー1"},
 	}
+	assignments := [][]write.CastAssignment{nil}
 
 	mw := &mockWriter{err: context.Canceled}
 
-	_, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, cornerMap, testChars)
+	_, err := script.WriteAll(context.Background(), mw, config.ProgramConfig{}, corners, assignments, cornerMap, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
 
-func TestGenerate_AppliesGuestsToCornerCast(t *testing.T) {
+func TestMergeCornerCast_NoEpisodeCasts_EmptyAssignments(t *testing.T) {
+	corner := config.CornerConfig{
+		Title: "opening",
+		Cast:  map[string]string{"zundamon": "ボケ担当"},
+	}
+	result := script.MergeCornerCast(corner, nil)
+	if len(result) != 0 {
+		t.Errorf("expected empty assignments when no episode casts, got %v", result)
+	}
+}
+
+func TestMergeCornerCast_BothRolesPreserved(t *testing.T) {
+	corner := config.CornerConfig{
+		Title: "main",
+		Cast:  map[string]string{"zundamon": "ボケ担当", "metan": "ツッコミ担当"},
+	}
+	casts := []model.RundownCast{
+		{CharacterID: "metan", Role: "MC。相棒。", Type: "regular"},
+		{CharacterID: "zundamon", Role: "MC。進行役。", Type: "regular"},
+	}
+	result := script.MergeCornerCast(corner, casts)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 assignments, got %d", len(result))
+	}
+	byID := make(map[string]write.CastAssignment)
+	for _, a := range result {
+		byID[a.CharacterID] = a
+	}
+	if byID["zundamon"].ProgramRole != "MC。進行役。" {
+		t.Errorf("zundamon ProgramRole: got %q, want MC。進行役。", byID["zundamon"].ProgramRole)
+	}
+	if byID["zundamon"].CornerRole != "ボケ担当" {
+		t.Errorf("zundamon CornerRole: got %q, want ボケ担当", byID["zundamon"].CornerRole)
+	}
+	if byID["metan"].ProgramRole != "MC。相棒。" {
+		t.Errorf("metan ProgramRole: got %q, want MC。相棒。", byID["metan"].ProgramRole)
+	}
+	if byID["metan"].CornerRole != "ツッコミ担当" {
+		t.Errorf("metan CornerRole: got %q, want ツッコミ担当", byID["metan"].CornerRole)
+	}
+}
+
+func TestMergeCornerCast_CastNotInCornerCast_EmptyCornerRole(t *testing.T) {
+	corner := config.CornerConfig{
+		Title: "main",
+		Cast:  map[string]string{}, // no corner-specific annotations
+	}
+	casts := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular"},
+	}
+	result := script.MergeCornerCast(corner, casts)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 assignment, got %d", len(result))
+	}
+	if result[0].CornerRole != "" {
+		t.Errorf("CornerRole should be empty when not in corner cast, got %q", result[0].CornerRole)
+	}
+}
+
+func TestMergeCornerCast_AbsentCastExcluded(t *testing.T) {
+	// corner.Cast に zundamon が書かれていても、episode casts に含まれなければ割り当てから除外される
+	corner := config.CornerConfig{
+		Title: "main",
+		Cast:  map[string]string{"zundamon": "ボケ担当", "absent": "休演中"},
+	}
+	// casts には zundamon だけ（absent は休演なので含まれない）
+	casts := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular"},
+	}
+	result := script.MergeCornerCast(corner, casts)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 assignment (absent excluded), got %d: %v", len(result), result)
+	}
+	if result[0].CharacterID != "zundamon" {
+		t.Errorf("expected zundamon, got %q", result[0].CharacterID)
+	}
+	// absent は含まれないこと
+	for _, a := range result {
+		if a.CharacterID == "absent" {
+			t.Error("absent cast should not appear in assignments")
+		}
+	}
+}
+
+func TestGenerate_UsesEpisodeCastsForAssignments(t *testing.T) {
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
 	md := &mockDirector{}
 	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
 
 	rundown := model.Rundown{
 		Corners: []model.RundownCorner{{Title: "AIコーナー", Flow: "フロー"}},
-		Guests: []model.RundownGuest{
-			{CharacterID: "guest_char", Role: "スペシャルゲスト"},
+		Casts: []model.RundownCast{
+			{CharacterID: "guest_char", Role: "スペシャルゲスト", Type: "guest"},
 		},
 	}
 	corners := []config.CornerConfig{
-		{Title: "AIコーナー", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{Title: "AIコーナー", Cast: map[string]string{"guest_char": "特別ゲスト役"}, LengthSec: 15},
 	}
 
 	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
@@ -523,30 +619,39 @@ func TestGenerate_AppliesGuestsToCornerCast(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// writer に渡されたコーナーのキャストにゲストが含まれること
-	if len(mw.receivedCorners) == 0 {
+	if len(mw.receivedAssignments) == 0 {
 		t.Fatal("writer was not called")
 	}
-	role, ok := mw.receivedCorners[0].Cast["guest_char"]
-	if !ok {
-		t.Error("guest_char not found in corner cast passed to writer")
+	// assignment に guest_char が含まれること
+	found := false
+	for _, a := range mw.receivedAssignments[0] {
+		if a.CharacterID == "guest_char" {
+			found = true
+			if a.ProgramRole != "スペシャルゲスト" {
+				t.Errorf("ProgramRole = %q, want スペシャルゲスト", a.ProgramRole)
+			}
+			if a.CornerRole != "特別ゲスト役" {
+				t.Errorf("CornerRole = %q, want 特別ゲスト役", a.CornerRole)
+			}
+		}
 	}
-	if role != "スペシャルゲスト" {
-		t.Errorf("guest_char role = %q, want %q", role, "スペシャルゲスト")
+	if !found {
+		t.Error("guest_char not found in assignments passed to writer")
 	}
 }
 
-func TestGenerate_NoGuestsDoesNotChangeCast(t *testing.T) {
+func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
 	md := &mockDirector{}
 	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
 
+	// absent_char は casts に含まれないが corner.Cast に書かれている
 	rundown := model.Rundown{
 		Corners: []model.RundownCorner{{Title: "AIコーナー", Flow: "フロー"}},
-		Guests:  []model.RundownGuest{},
+		Casts:   []model.RundownCast{},
 	}
 	corners := []config.CornerConfig{
-		{Title: "AIコーナー", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{Title: "AIコーナー", Cast: map[string]string{"absent_char": "休演中"}, LengthSec: 15},
 	}
 
 	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
@@ -554,75 +659,12 @@ func TestGenerate_NoGuestsDoesNotChangeCast(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(mw.receivedCorners) == 0 {
+	if len(mw.receivedAssignments) == 0 {
 		t.Fatal("writer was not called")
 	}
-	if _, ok := mw.receivedCorners[0].Cast["guest_char"]; ok {
-		t.Error("guest_char should not be in cast when no guests")
-	}
-}
-
-func TestApplyGuests_NoGuests(t *testing.T) {
-	corners := []config.CornerConfig{
-		{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
-	}
-	result := script.ApplyGuests(corners, nil)
-	if len(result) != 1 {
-		t.Fatalf("expected 1 corner, got %d", len(result))
-	}
-	if len(result[0].Cast) != 1 {
-		t.Errorf("expected cast unchanged, got %v", result[0].Cast)
-	}
-}
-
-func TestApplyGuests_AddsGuestsToCast(t *testing.T) {
-	corners := []config.CornerConfig{
-		{Title: "opening", Cast: map[string]string{"zundamon": "司会"}},
-		{Title: "main", Cast: map[string]string{"metan": "コメンテーター"}},
-	}
-	guests := []model.RundownGuest{
-		{CharacterID: "guest_char", Role: "古参リスナー"},
-	}
-	result := script.ApplyGuests(corners, guests)
-	if len(result) != 2 {
-		t.Fatalf("expected 2 corners, got %d", len(result))
-	}
-	// 全コーナーにゲストが追加されていること
-	for _, c := range result {
-		role, ok := c.Cast["guest_char"]
-		if !ok {
-			t.Errorf("corner %q: guest_char not in cast", c.Title)
+	for _, a := range mw.receivedAssignments[0] {
+		if a.CharacterID == "absent_char" {
+			t.Error("absent_char should not appear in assignments (休演リーク防止)")
 		}
-		if role != "古参リスナー" {
-			t.Errorf("corner %q: guest_char role = %q, want %q", c.Title, role, "古参リスナー")
-		}
-	}
-}
-
-func TestApplyGuests_DoesNotMutateOriginalCast(t *testing.T) {
-	original := map[string]string{"zundamon": "司会"}
-	corners := []config.CornerConfig{
-		{Title: "opening", Cast: original},
-	}
-	guests := []model.RundownGuest{
-		{CharacterID: "guest_char", Role: "ゲスト"},
-	}
-	script.ApplyGuests(corners, guests)
-	// 元のマップは変更されていないこと
-	if _, ok := original["guest_char"]; ok {
-		t.Error("original cast was mutated by ApplyGuests")
-	}
-}
-
-func TestApplyGuests_EmptyGuestsReturnsCopy(t *testing.T) {
-	corners := []config.CornerConfig{
-		{Title: "opening", Cast: map[string]string{"host": "司会"}},
-	}
-	result := script.ApplyGuests(corners, []model.RundownGuest{})
-	if len(result) != 1 {
-		t.Fatalf("expected 1 corner, got %d", len(result))
-	}
-	if result[0].Cast["host"] != "司会" {
-		t.Errorf("cast not preserved: %v", result[0].Cast)
 	}
 }

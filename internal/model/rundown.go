@@ -13,15 +13,16 @@ type RundownCorner struct {
 	Articles []RundownArticle `json:"articles"`
 }
 
-// RundownGuest は出演確定したゲスト1人分の情報。
-type RundownGuest struct {
+// RundownCast は出演確定したキャスト1人分の情報。
+type RundownCast struct {
 	CharacterID string `json:"character_id"`
 	Role        string `json:"role"`
+	Type        string `json:"type"` // "regular" | "guest"
 }
 
 type Rundown struct {
 	Corners []RundownCorner `json:"corners"`
-	Guests  []RundownGuest  `json:"guests"` // 出演確定ゲスト（キャラID昇順、0件でも null でなく []）
+	Casts   []RundownCast   `json:"casts"` // その回の出演者（キャラID昇順、0件でも null でなく []）
 }
 
 // CornerMap returns a map from corner title to its RundownCorner.

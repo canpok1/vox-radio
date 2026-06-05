@@ -165,7 +165,7 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if cfg.Slack.BotTokenEnv == "" {
 		t.Error("vox-radio.yaml template should have slack.bot_token_env set")
 	}
-	if err := config.ValidateEpisodeSpecCast(spec, cfg.Characters); err != nil {
+	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
 		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
 	}
 

@@ -51,9 +51,9 @@ type Assembler interface {
 // Options configures a single pipeline run.
 type Options struct {
 	OutDir        string
-	GeneratedAt   time.Time            // zero value means time.Now().UTC()
-	EpisodeNumber int                  // 0 means unknown (omitted from manifest)
-	Guests        []model.RundownGuest // confirmed guests for this episode; nil treated as empty
+	GeneratedAt   time.Time           // zero value means time.Now().UTC()
+	EpisodeNumber int                 // 0 means unknown (omitted from manifest)
+	Casts         []model.RundownCast // confirmed cast for this episode; nil treated as empty
 }
 
 // Runner orchestrates the full collect→rundown→script→synth→assemble→manifest pipeline.
@@ -90,11 +90,11 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("rundown: %w", err)
 	}
-	// Guests を設定（nil の場合は空スライスで初期化して JSON で null を防ぐ）
-	if opts.Guests == nil {
-		opts.Guests = make([]model.RundownGuest, 0)
+	// Casts を設定（nil の場合は空スライスで初期化して JSON で null を防ぐ）
+	if opts.Casts == nil {
+		opts.Casts = make([]model.RundownCast, 0)
 	}
-	rundown.Guests = opts.Guests
+	rundown.Casts = opts.Casts
 	if err := fileio.WriteJSON(fileio.RundownPath(outDir), rundown); err != nil {
 		return err
 	}

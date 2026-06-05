@@ -13,13 +13,29 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
+// CastAssignment はコーナー内のキャスト割り当て情報。
+// 番組全体での役割とコーナー固有の役割の両方を保持する。
+type CastAssignment struct {
+	CharacterID string // キャラID
+	Type        string // "regular" | "guest"
+	ProgramRole string // 番組全体での役割（casts[].role）
+	CornerRole  string // このコーナーでの役割（corners[].cast）。未指定は ""
+}
+
+// castEntryForPrompt はプロンプトに渡すキャスト情報の1エントリ。
+type castEntryForPrompt struct {
+	ID          string `json:"id"`
+	ProgramRole string `json:"program_role"`
+	CornerRole  string `json:"corner_role,omitempty"`
+}
+
 // cornerForPrompt is the subset of corner data passed to the LLM.
 // TargetChars is computed from LengthSec via config.DurationSecToTargetChars.
 type cornerForPrompt struct {
-	Title       string            `json:"title"`
-	Content     string            `json:"content"`
-	Cast        map[string]string `json:"cast"`
-	TargetChars int               `json:"target_chars"`
+	Title       string               `json:"title"`
+	Content     string               `json:"content"`
+	Cast        []castEntryForPrompt `json:"cast"`
+	TargetChars int                  `json:"target_chars"`
 }
 
 // cornerOutline is the program-level outline of a corner (title+content only, no cast).
@@ -49,7 +65,7 @@ type programForPrompt struct {
 }
 
 type Writer interface {
-	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
+	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, assignments []CastAssignment, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
 
 type LLMWriter struct {
@@ -59,7 +75,7 @@ type LLMWriter struct {
 	config         *config.Config
 	pastEpisodes   []cache.Entry
 	episodeNumber  int
-	guests         []model.RundownGuest
+	casts          []model.RundownCast
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
@@ -78,16 +94,25 @@ func (w *LLMWriter) SetEpisodeNumber(n int) {
 	w.episodeNumber = n
 }
 
-// SetGuests configures the confirmed guests to inject into the script generation prompt.
-func (w *LLMWriter) SetGuests(guests []model.RundownGuest) {
-	w.guests = guests
+// SetCasts configures the confirmed cast members to inject into the script generation prompt.
+func (w *LLMWriter) SetCasts(casts []model.RundownCast) {
+	w.casts = casts
 }
 
-func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
+func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, assignments []CastAssignment, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
+	castEntries := make([]castEntryForPrompt, 0, len(assignments))
+	for _, a := range assignments {
+		castEntries = append(castEntries, castEntryForPrompt{
+			ID:          a.CharacterID,
+			ProgramRole: a.ProgramRole,
+			CornerRole:  a.CornerRole,
+		})
+	}
+
 	promptCorner := cornerForPrompt{
 		Title:       corner.Title,
 		Content:     corner.Content,
-		Cast:        corner.Cast,
+		Cast:        castEntries,
 		TargetChars: config.DurationSecToTargetChars(corner.LengthSec),
 	}
 	cornerJSON, err := json.Marshal(promptCorner)
@@ -117,10 +142,10 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	}
 
 	presets := w.effectivePresets()
-	castInfo := buildCastInfo(corner.Cast, chars)
+	castInfo := buildCastInfo(assignments, chars)
 	presetInfo := buildPresetInfo(presets)
 
-	guestInfoStr := formatGuestInfo(w.guests)
+	castOverviewStr := formatCastInfo(w.casts)
 	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
 
 	episodeNumberStr := "（不明）"
@@ -153,7 +178,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{past_episodes}}", pastEpisodesStr,
 		"{{previous_corners}}", previousCornersStr,
 		"{{episode_number}}", episodeNumberStr,
-		"{{guest_info}}", guestInfoStr,
+		"{{guest_info}}", castOverviewStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)
@@ -229,12 +254,13 @@ func buildPresetInfo(presets config.VoicevoxPresets) string {
 }
 
 // buildCastInfo formats cast assignments with character catalog features for the prompt.
-func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConfig) string {
+// Includes both program role and corner role (if specified).
+func buildCastInfo(assignments []CastAssignment, chars map[string]config.CharacterConfig) string {
 	var sb strings.Builder
-	for charID, role := range cast {
-		ch, ok := chars[charID]
+	for _, a := range assignments {
+		ch, ok := chars[a.CharacterID]
 		if !ok {
-			fmt.Fprintf(&sb, "- %s（%s）\n", charID, role)
+			fmt.Fprintf(&sb, "- %s（番組ロール: %s）\n", a.CharacterID, a.ProgramRole)
 			continue
 		}
 		styleNames := make([]string, 0, len(ch.Styles))
@@ -242,8 +268,13 @@ func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConf
 			styleNames = append(styleNames, s)
 		}
 		sort.Strings(styleNames)
+
+		roleStr := fmt.Sprintf("番組ロール: %s", a.ProgramRole)
+		if a.CornerRole != "" {
+			roleStr += fmt.Sprintf(" / コーナーロール: %s", a.CornerRole)
+		}
 		fmt.Fprintf(&sb, "- %s（%s）: 名前=%s、一人称=%s、語尾=[%s]、性格=[%s]、スタイル=[%s]（デフォルト: %s）\n",
-			charID, role,
+			a.CharacterID, roleStr,
 			ch.Name,
 			ch.Pronoun,
 			strings.Join(ch.SpeechSuffix, ", "),
@@ -255,11 +286,25 @@ func buildCastInfo(cast map[string]string, chars map[string]config.CharacterConf
 	return sb.String()
 }
 
-// formatGuestInfo formats confirmed guests for the prompt.
-func formatGuestInfo(guests []model.RundownGuest) string {
-	if len(guests) == 0 {
+// formatCastInfo formats the episode's cast overview for the prompt.
+// regular type → 常連扱い（紹介・見送り不要）
+// guest type → 最初のコーナーで紹介・中間で同席継続・最後で見送り（既存演出）
+func formatCastInfo(casts []model.RundownCast) string {
+	if len(casts) == 0 {
 		return "（なし）この回はゲストのいない通常回です。ゲストの存在に一切触れないでください。"
 	}
+
+	var guests []model.RundownCast
+	for _, c := range casts {
+		if c.Type == "guest" {
+			guests = append(guests, c)
+		}
+	}
+
+	if len(guests) == 0 {
+		return "（ゲストなし）この回はレギュラーメンバーのみの通常回です。ゲストの存在に一切触れないでください。"
+	}
+
 	var sb strings.Builder
 	sb.WriteString("この回は以下のゲストが番組を通して（最初から最後まで）出演します:\n")
 	for _, g := range guests {

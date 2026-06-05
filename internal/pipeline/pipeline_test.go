@@ -519,28 +519,28 @@ func TestRunner_Run_NoSummaryLogWhenSummarizersNil(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_GuestsWrittenToRundown(t *testing.T) {
+func TestRunner_Run_CastsWrittenToRundown(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	guests := []model.RundownGuest{
-		{CharacterID: "metan", Role: "解説ゲスト"},
+	casts := []model.RundownCast{
+		{CharacterID: "metan", Role: "解説ゲスト", Type: "guest"},
 	}
 
-	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir, Guests: guests}); err != nil {
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir, Casts: casts}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// rundown.json に Guests が書き込まれていること
+	// rundown.json に Casts が書き込まれていること
 	var rd model.Rundown
 	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
 		t.Fatalf("read rundown: %v", err)
 	}
-	if len(rd.Guests) != 1 || rd.Guests[0].CharacterID != "metan" {
-		t.Errorf("unexpected guests in rundown: %+v", rd.Guests)
+	if len(rd.Casts) != 1 || rd.Casts[0].CharacterID != "metan" {
+		t.Errorf("unexpected casts in rundown: %+v", rd.Casts)
 	}
 }
 
-func TestRunner_Run_NoGuestsRundownHasEmptySlice(t *testing.T) {
+func TestRunner_Run_NoCastsRundownHasEmptySlice(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 
@@ -552,12 +552,12 @@ func TestRunner_Run_NoGuestsRundownHasEmptySlice(t *testing.T) {
 	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
 		t.Fatalf("read rundown: %v", err)
 	}
-	// Guests が nil でなく空スライスであること（JSON で null になるのを防ぐ）
-	if rd.Guests == nil {
-		t.Error("rundown.Guests should be non-nil empty slice, not nil")
+	// Casts が nil でなく空スライスであること（JSON で null になるのを防ぐ）
+	if rd.Casts == nil {
+		t.Error("rundown.Casts should be non-nil empty slice, not nil")
 	}
-	if len(rd.Guests) != 0 {
-		t.Errorf("expected 0 guests, got %d", len(rd.Guests))
+	if len(rd.Casts) != 0 {
+		t.Errorf("expected 0 casts, got %d", len(rd.Casts))
 	}
 }
 

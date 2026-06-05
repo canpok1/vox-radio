@@ -13,6 +13,33 @@ program:
   # 番組全体サマリーの目安文字数（任意。未指定時はデフォルト 200 文字）
   # summary_length: 200
 
+# 出演者名簿（番組全体で出演するキャラクターを宣言する）
+# キーは vox-radio.yaml の characters のキーと一致させること
+# corners[].cast に書くキャラは必ずここで宣言すること
+casts:
+  zundamon:
+    type: regular            # regular（レギュラー） または guest（ゲスト）
+    role: "MC。進行役。ボケ担当。"  # 番組全体での役割（プロンプトに渡す）
+    # condition 省略 = 毎回出演（regular のデフォルト）
+  metan:
+    type: regular
+    role: "MC。相棒。ツッコミ担当。"
+    # お休み条件の例（5回目だけ出演しない）:
+    # condition:
+    #   not:
+    #     episodes: [5]
+  # ゲストの例（condition 必須）:
+  # zunko:
+  #   type: guest
+  #   role: 古参リスナー出身の常連ゲスト
+  #   condition:
+  #     episodes: [3, 10, 20]   # 第3・10・20回に出演（明示リスト）
+  # --- N者ゲストローテーション（every + offset）---
+  # every: 3 + offset: 0/1/2 の3条件で全回を均等に分担できる
+  # guest_a: { type: guest, role: ゲストA, condition: { every: 3, offset: 1 } }  # 1,4,7,…
+  # guest_b: { type: guest, role: ゲストB, condition: { every: 3, offset: 2 } }  # 2,5,8,…
+  # guest_c: { type: guest, role: ゲストC, condition: { every: 3, offset: 0 } }  # 3,6,9,…
+
 # コーナー定義（番組を構成する各コーナーを順番に記述）
 corners:
   - title: "オープニング"
@@ -20,10 +47,10 @@ corners:
     content: "番組の挨拶と本日のトピック紹介"
     # 演出生成 LLM のみに渡る演出専用指示。台本生成には渡らない。（不要な場合は行ごと削除）
     # direction: "明るく元気に。BGM はフェードインで開始。"
-    # 出演キャラクター（キャラクターID: 役割の説明）
-    # キャラクターIDは vox-radio.yaml の characters のキーと一致させること
+    # コーナー固有の役割注釈（キーは casts に宣言済みのもの限定）
+    # 省略した場合は番組ロール（casts[].role）のみが使われる
     cast:
-      zundamon: "元気に挨拶する進行役"
+      zundamon: "このコーナーでの役割（省略可）"
     # このコーナーの目標時間（秒）
     length_sec: 30
     # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
@@ -38,8 +65,8 @@ corners:
   - title: "メインコーナー"
     content: "メインコンテンツの紹介"
     cast:
-      zundamon: "進行役"
-      metan: "解説役"
+      zundamon: "ボケ担当。あまり詳しくない設定。"
+      metan: "解説役。ツッコミ担当。"
     length_sec: 180
     # コーナーサマリーの目安文字数（任意。未指定時はデフォルト 100 文字）
     # summary_length: 100
@@ -79,30 +106,6 @@ corners:
     # summary_length: 100
     # コーナー終了ジングル（assets.jingle のキー名。不要な場合は行ごと削除）
     # end_jingle: ending
-
-# ゲスト設定（省略可。回番号条件に合致した回だけ、全コーナーに通しで出演）
-# キーは vox-radio.yaml の characters のキーと一致させること
-# guests:
-#   zunko:
-#     role: 古参リスナー出身の常連ゲスト   # 全コーナーの cast にマージされる役割
-#     condition:
-#       episodes: [3, 10, 20]            # 第3・10・20回に出演（明示リスト）
-#   metan:
-#     role: 業界に詳しい解説ゲスト
-#     condition:
-#       every: 5                         # 5,10,15,… 回に出演（周期）
-#   # --- N者ローテーション（every + offset で複数ゲストを均等分担）---
-#   # every: 3 + offset: 0/1/2 の3条件で全回を均等に分担できる
-#   # guest_a: { role: ゲストA, condition: { every: 3, offset: 1 } }  # 1,4,7,…
-#   # guest_b: { role: ゲストB, condition: { every: 3, offset: 2 } }  # 2,5,8,…
-#   # guest_c: { role: ゲストC, condition: { every: 3, offset: 0 } }  # 3,6,9,…
-#   # not 条件で特定回を除外することも可能
-#   # guest_d:
-#   #   role: 不定期ゲスト
-#   #   condition:
-#   #     every: 2
-#   #     not:
-#   #       every: 10                    # 10の倍数回を除く偶数回に出演
 
 # アセット設定ファイルの参照（ジングル・SE・BGM）
 # バイナリ素材ファイルは別途用意してください。

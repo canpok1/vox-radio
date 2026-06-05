@@ -8,8 +8,8 @@
 
   (a) strict パース: 未知キー（typo）をエラー化
   (b) アセット参照: corners[].start_jingle / end_jingle / bgm が assets に存在するか
-  (c) キャラ参照: corners[].cast のキャラ ID が共通設定ファイルの characters に存在するか
-  (d) ゲスト参照: guests のキャラ ID が共通設定ファイルに存在するか、condition が正しいか
+  (c) corners[].cast のキーが casts に宣言済みであるか
+  (d) casts のキャラ ID が共通設定ファイルの characters に存在するか、type/condition が正しいか
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 

@@ -641,26 +641,26 @@ func TestCornerLines_AssetFields_MarshaledAndUnmarshaled(t *testing.T) {
 	}
 }
 
-func TestRundown_Guests_EmptySliceNotNull(t *testing.T) {
+func TestRundown_Casts_EmptySliceNotNull(t *testing.T) {
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{{Title: "op", Flow: "test", Articles: []model.RundownArticle{}}},
-		Guests:  make([]model.RundownGuest, 0),
+		Casts:   make([]model.RundownCast, 0),
 	}
 	data, err := json.Marshal(rd)
 	if err != nil {
 		t.Fatalf("marshal error: %v", err)
 	}
-	if !strings.Contains(string(data), `"guests":[]`) {
-		t.Errorf("expected guests to be [] (not null), got: %s", string(data))
+	if !strings.Contains(string(data), `"casts":[]`) {
+		t.Errorf("expected casts to be [] (not null), got: %s", string(data))
 	}
 }
 
-func TestRundown_Guests_RoundTrip(t *testing.T) {
+func TestRundown_Casts_RoundTrip(t *testing.T) {
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{},
-		Guests: []model.RundownGuest{
-			{CharacterID: "metan", Role: "解説"},
-			{CharacterID: "zundamon", Role: "ゲスト"},
+		Casts: []model.RundownCast{
+			{CharacterID: "metan", Role: "解説", Type: "guest"},
+			{CharacterID: "zundamon", Role: "MC", Type: "regular"},
 		},
 	}
 	data, err := json.Marshal(rd)
@@ -671,11 +671,14 @@ func TestRundown_Guests_RoundTrip(t *testing.T) {
 	if err := json.Unmarshal(data, &rd2); err != nil {
 		t.Fatalf("unmarshal error: %v", err)
 	}
-	if len(rd2.Guests) != 2 {
-		t.Fatalf("expected 2 guests, got %d", len(rd2.Guests))
+	if len(rd2.Casts) != 2 {
+		t.Fatalf("expected 2 casts, got %d", len(rd2.Casts))
 	}
-	if rd2.Guests[0].CharacterID != "metan" || rd2.Guests[1].CharacterID != "zundamon" {
-		t.Errorf("unexpected guests order: %+v", rd2.Guests)
+	if rd2.Casts[0].CharacterID != "metan" || rd2.Casts[1].CharacterID != "zundamon" {
+		t.Errorf("unexpected casts order: %+v", rd2.Casts)
+	}
+	if rd2.Casts[0].Type != "guest" || rd2.Casts[1].Type != "regular" {
+		t.Errorf("unexpected casts types: %+v", rd2.Casts)
 	}
 }
 
