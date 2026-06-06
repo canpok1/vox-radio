@@ -261,11 +261,11 @@ func TestSelectCasts_InjectsAppearanceCount(t *testing.T) {
 	for _, c := range selected {
 		countByID[c.CharacterID] = c.AppearanceCount
 	}
-	if countByID["zundamon"] != 10 {
-		t.Errorf("zundamon AppearanceCount: got %d, want 10", countByID["zundamon"])
+	if countByID["zundamon"] != 11 {
+		t.Errorf("zundamon AppearanceCount: got %d, want 11 (counts[id]+1)", countByID["zundamon"])
 	}
-	if countByID["guest1"] != 2 {
-		t.Errorf("guest1 AppearanceCount: got %d, want 2", countByID["guest1"])
+	if countByID["guest1"] != 3 {
+		t.Errorf("guest1 AppearanceCount: got %d, want 3 (counts[id]+1)", countByID["guest1"])
 	}
 }
 
@@ -281,8 +281,8 @@ func TestSelectCasts_UnknownCharHasZeroCount(t *testing.T) {
 		t.Fatal("expected at least one cast member")
 	}
 	for _, c := range selected {
-		if c.CharacterID == "zundamon" && c.AppearanceCount != 0 {
-			t.Errorf("zundamon AppearanceCount: got %d, want 0 (not in counts)", c.AppearanceCount)
+		if c.CharacterID == "zundamon" && c.AppearanceCount != 1 {
+			t.Errorf("zundamon AppearanceCount: got %d, want 1 (not in counts: 0+1)", c.AppearanceCount)
 		}
 	}
 }

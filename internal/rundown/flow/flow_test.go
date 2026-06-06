@@ -250,3 +250,31 @@ func TestLLMDesigner_DesignFlow_AppearanceCountIncludedInProgram(t *testing.T) {
 		t.Errorf("program JSON should contain appearance_count field for cast, got: %s", prompt)
 	}
 }
+
+func TestLLMDesigner_DesignFlow_AppearanceCountIsConverted(t *testing.T) {
+	// appearance_count in prompt should be PastAppearanceCount() (new_count - 1), not raw value
+	mc := &mockClient{
+		response: json.RawMessage(`{"flow":"フロー"}`),
+	}
+	d := flow.NewLLMDesigner(mc, "{{program}}", 0)
+
+	corner := config.CornerConfig{Title: "テック"}
+	target := model.RundownCorner{Title: "テック"}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{target},
+		Casts: []model.RundownCast{
+			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+		},
+	}
+
+	_, _ = d.DesignFlow(context.Background(), corner, flow.PositionOpening, target, rd)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	// AppearanceCount=5 → PastAppearanceCount()=4 should appear in prompt
+	if !strings.Contains(prompt, `"appearance_count":4`) {
+		t.Errorf("program JSON should contain appearance_count:4 (converted from 5), got: %s", prompt)
+	}
+}

@@ -120,7 +120,7 @@ func newLLMClient(cfg *config.Config) llm.Client {
 func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts map[string]int, logger *slog.Logger) []model.RundownCast {
 	selected := cast.Select(casts, episodeNumber)
 	for i, c := range selected {
-		selected[i].AppearanceCount = counts[c.CharacterID]
+		selected[i].AppearanceCount = counts[c.CharacterID] + 1
 	}
 	if episodeNumber == 0 {
 		for _, c := range casts {

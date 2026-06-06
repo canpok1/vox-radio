@@ -235,6 +235,27 @@ func TestBuild_CastsCopiedFromRundown(t *testing.T) {
 	}
 }
 
+func TestBuild_CastsFirstAppearancePreserved(t *testing.T) {
+	// 新定義: AppearanceCount=1 は初登場（今回含む出演回数）
+	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
+	corners := []config.CornerConfig{{Title: "コーナー1"}}
+	rundown := model.Rundown{
+		Casts: []model.RundownCast{
+			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
+		},
+	}
+
+	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+
+	if len(got.Casts) != 1 {
+		t.Fatalf("Casts: got %d, want 1", len(got.Casts))
+	}
+	// 新定義値（1=初登場）がマニフェストにそのまま保持される
+	if got.Casts[0].AppearanceCount != 1 {
+		t.Errorf("Casts[0].AppearanceCount: got %d, want 1 (初登場=1 in new definition)", got.Casts[0].AppearanceCount)
+	}
+}
+
 func TestBuild_CastsNeverNil(t *testing.T) {
 	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
 	corners := []config.CornerConfig{{Title: "コーナー1"}}

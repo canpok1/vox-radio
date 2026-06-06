@@ -105,13 +105,9 @@ func (d *LLMDesigner) DesignFlow(ctx context.Context, corner config.CornerConfig
 			Articles:        c.Articles,
 		}
 	}
-	casts := rundown.Casts
-	if casts == nil {
-		casts = make([]model.RundownCast, 0)
-	}
 	prog := programForPrompt{
 		Corners: programCorners,
-		Casts:   casts,
+		Casts:   model.CastsForLLM(rundown.Casts),
 	}
 	programJSON, err := json.Marshal(prog)
 	if err != nil {

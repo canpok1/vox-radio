@@ -19,7 +19,27 @@ type RundownCast struct {
 	CharacterID     string `json:"character_id"`
 	Role            string `json:"role"`
 	Type            string `json:"type"`             // "regular" | "guest"
-	AppearanceCount int    `json:"appearance_count"` // 過去の出演エピソード数（今回含まず）。0 = 初登場
+	AppearanceCount int    `json:"appearance_count"` // その回を含めた出演回数。1 = 初登場（その回に初めて出演）
+}
+
+// PastAppearanceCount returns the number of past appearances (excluding this episode).
+// This is the LLM-facing value: AppearanceCount - 1, clamped to 0.
+func (c RundownCast) PastAppearanceCount() int {
+	if c.AppearanceCount <= 1 {
+		return 0
+	}
+	return c.AppearanceCount - 1
+}
+
+// CastsForLLM returns a copy of casts with AppearanceCount replaced by PastAppearanceCount()
+// for each element, converting from the persisted definition to the LLM-facing definition.
+func CastsForLLM(casts []RundownCast) []RundownCast {
+	result := make([]RundownCast, len(casts))
+	for i, c := range casts {
+		result[i] = c
+		result[i].AppearanceCount = c.PastAppearanceCount()
+	}
+	return result
 }
 
 type Rundown struct {
