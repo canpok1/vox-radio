@@ -290,7 +290,7 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 		}
 	}
 
-	// 第1回はローテ枠のうちスポーツコーナー（every:3, offset:1）のみが採用され、
+	// 第1回はローテ枠のうち地震・火山コーナー（every:3, offset:1）のみが採用され、
 	// 採用コーナーは 4 つ（固定3＋ローテ1）であること。
 	ep1 := config.ResolveCornersForEpisode(spec.Corners, 1)
 	if len(ep1) != 4 {
@@ -300,11 +300,11 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 	for _, c := range ep1 {
 		ep1Titles[c.Title] = true
 	}
-	if !ep1Titles["スポーツコーナー"] {
-		t.Error("第1回はスポーツコーナーが放送されるべき")
+	if !ep1Titles["地震・火山コーナー"] {
+		t.Error("第1回は地震・火山コーナーが放送されるべき")
 	}
-	if ep1Titles["エンタメコーナー"] || ep1Titles["気になるサイエンス"] {
-		t.Error("第1回はスポーツコーナー以外のローテ枠は放送されないべき")
+	if ep1Titles["お天気豆知識"] || ep1Titles["防災ワンポイント"] {
+		t.Error("第1回は地震・火山コーナー以外のローテ枠は放送されないべき")
 	}
 
 	if _, err := model.LoadFeedSpec(filepath.Join(dir, "sample", "feed-spec.yaml")); err != nil {

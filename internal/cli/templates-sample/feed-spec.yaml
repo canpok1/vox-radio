@@ -5,7 +5,7 @@
 
 # 番組のID。どのエピソードを集めるかの突き合わせに使うので、
 # episode-spec.yaml の program.id と同じ値にしてください。
-program_id: "news-variety"
+program_id: "weather-radio"
 
 # 配信フィードに載せる番組情報。
 feed:
@@ -27,7 +27,9 @@ feed:
   # {episode_number}（回番号）と {audio_file}（音声ファイル名）が自動で置き換わります。
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
   # 各回のクレジット表記。不要なら空文字にします。
-  credit: ""
+  # サンプルは気象庁の防災情報XMLを加工（要約・番組化）して利用しているため、
+  # 公共データ利用規約に沿って出典と加工の旨を明記しています。
+  credit: "気象庁「防災情報XML」（https://xml.kishou.go.jp/）を加工して作成"
 
 # 出力先の設定。
 output:
