@@ -61,7 +61,7 @@ func (e JingleEntry) Validate() error {
 	if err := validateNonNegative("fade_out", e.FadeOut); err != nil {
 		return err
 	}
-	return validateNegativeDB("trim_silence_threshold", e.TrimSilenceThreshold)
+	return validateOptionalNegative("trim_silence_threshold", e.TrimSilenceThreshold)
 }
 
 type SEEntry struct {
@@ -90,7 +90,7 @@ func (e SEEntry) Validate() error {
 	if err := validateNonNegative("volume", e.Volume); err != nil {
 		return err
 	}
-	return validateNegativeDB("trim_silence_threshold", e.TrimSilenceThreshold)
+	return validateOptionalNegative("trim_silence_threshold", e.TrimSilenceThreshold)
 }
 
 // effectiveTrimSilence returns true when v is nil (default) or points to true.
@@ -776,9 +776,8 @@ func validateFileField(category, name, file string) error {
 	return nil
 }
 
-// validateNegativeDB returns an error if v is non-nil and *v >= 0.
-// Used for dB threshold fields that must be strictly negative.
-func validateNegativeDB(field string, v *float64) error {
+// validateOptionalNegative returns an error if v is non-nil and *v >= 0.
+func validateOptionalNegative(field string, v *float64) error {
 	if v != nil && *v >= 0 {
 		return fmt.Errorf("%s: must be < 0 (dB), got %v", field, *v)
 	}
