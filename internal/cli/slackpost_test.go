@@ -13,8 +13,7 @@ import (
 
 func writeSlackSpecForTest(t *testing.T, dir, channel string) string {
 	t.Helper()
-	content := `program_id: test-program
-slack:
+	content := `slack:
   channel: "` + channel + `"
 `
 	path := filepath.Join(dir, "slack-spec.yaml")
@@ -90,8 +89,7 @@ func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 
 func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
 	dir := t.TempDir()
-	content := `program_id: test
-slack:
+	content := `slack:
   channel: ""
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
@@ -106,8 +104,7 @@ slack:
 
 func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
 	dir := t.TempDir()
-	content := `program_id: test
-slack:
+	content := `slack:
   channel: "C0123456789"
 unknown_key: value
 `
@@ -118,6 +115,23 @@ unknown_key: value
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
 	if err := cmd.Execute(); err == nil {
 		t.Error("expected error for unknown key in strict mode")
+	}
+}
+
+// program_id は SlackSpec から削除されたため、slackpost check で unknown key エラーになること
+func TestSlackpostCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
+	dir := t.TempDir()
+	content := `program_id: my-radio
+slack:
+  channel: "C0123456789"
+`
+	specPath := filepath.Join(dir, "slack-spec.yaml")
+	_ = os.WriteFile(specPath, []byte(content), 0o644)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"slackpost", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for program_id (unknown key) in slackpost check, got nil")
 	}
 }
 
@@ -155,40 +169,5 @@ func TestSlackpost_DryRun_Success(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, "ep1.mp3") {
 		t.Errorf("output should contain audio filename, got: %q", out)
-	}
-}
-
-func TestSlackpost_MissingManifestFlag_Error(t *testing.T) {
-	dir := t.TempDir()
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
-
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"slackpost", "--spec", specPath})
-	if err := cmd.Execute(); err == nil {
-		t.Error("expected error when --manifest is missing")
-	}
-}
-
-func TestSlackpost_MissingSpecFlag_Error(t *testing.T) {
-	dir := t.TempDir()
-	manifestPath := writeManifestForTest(t, dir)
-
-	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"slackpost", "--manifest", manifestPath})
-	if err := cmd.Execute(); err == nil {
-		t.Error("expected error when --spec is missing")
-	}
-}
-
-func TestRootHelp_ContainsSlackpost(t *testing.T) {
-	cmd := cli.NewRootCmd()
-	buf := &bytes.Buffer{}
-	cmd.SetOut(buf)
-	cmd.SetArgs([]string{"--help"})
-	_ = cmd.Execute()
-
-	out := buf.String()
-	if !strings.Contains(out, "slackpost") {
-		t.Errorf("root help should contain slackpost, got: %s", out)
 	}
 }

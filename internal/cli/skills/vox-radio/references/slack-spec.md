@@ -37,7 +37,6 @@ vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yam
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `program_id` | string | 任意 | 番組 ID（ログ・将来の突合用） |
 | `slack.channel` | string | 必須 | 投稿先チャンネル ID（`C` で始まる Slack のチャンネル ID） |
 | `slack.message.header` | string | 任意 | 親メッセージ（mp3 アップロード時の初期コメント）のテンプレート |
 | `slack.message.fallback` | string | 任意 | スレッド返信の通知用プレーンテキストのテンプレート |

@@ -8,7 +8,6 @@
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `program_id` | string | 必須 | feedgen がキャッシュから対象エピソードを絞り込むキー。`episode-spec.yaml` の `program.id` と一致させること |
 | `feed.language` | string | 必須 | 言語コード（RSS channel language）。例: `ja` |
 | `feed.author` | string | 必須 | 配信者名（itunes:author） |
 | `feed.email` | string | 必須 | 連絡先メールアドレス（itunes:email） |

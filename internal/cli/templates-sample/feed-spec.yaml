@@ -3,10 +3,6 @@
 #   vox-radio feedgen --cache (キャッシュファイルのパス) --spec sample/feed-spec.yaml
 # できあがった feed.xml は下の output.public のフォルダに書き出されます。
 
-# 番組のID。どのエピソードを集めるかの突き合わせに使うので、
-# episode-spec.yaml の program.id と同じ値にしてください。
-program_id: "weather-radio"
-
 # 配信フィードに載せる番組情報。
 feed:
   # 番組の言語。

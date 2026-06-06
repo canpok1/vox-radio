@@ -3,9 +3,6 @@
 #   vox-radio slackpost --manifest (manifest.jsonのパス) --spec sample/slack-spec.yaml
 # Slack のトークンは vox-radio.yaml の slack.bot_token_env で指定した環境変数から読み込みます。
 
-# 番組のID（ログや突き合わせ用）。episode-spec.yaml の program.id と合わせておくと分かりやすいです。
-program_id: "weather-radio"
-
 # Slack 投稿の設定。
 slack:
   # 投稿先チャンネルのID（"C" で始まる文字列）。自分のチャンネルIDに置き換えてください。
