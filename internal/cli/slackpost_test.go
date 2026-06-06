@@ -13,8 +13,7 @@ import (
 
 func writeSlackSpecForTest(t *testing.T, dir, channel string) string {
 	t.Helper()
-	content := `program_id: test-program
-slack:
+	content := `slack:
   channel: "` + channel + `"
 `
 	path := filepath.Join(dir, "slack-spec.yaml")
@@ -90,12 +89,13 @@ func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 
 func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
 	dir := t.TempDir()
-	content := `program_id: test
-slack:
+	content := `slack:
   channel: ""
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
-	_ = os.WriteFile(specPath, []byte(content), 0o644)
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
@@ -106,18 +106,38 @@ slack:
 
 func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
 	dir := t.TempDir()
-	content := `program_id: test
-slack:
+	content := `slack:
   channel: "C0123456789"
 unknown_key: value
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
-	_ = os.WriteFile(specPath, []byte(content), 0o644)
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
 	if err := cmd.Execute(); err == nil {
 		t.Error("expected error for unknown key in strict mode")
+	}
+}
+
+// program_id は SlackSpec から削除されたため、slackpost check で unknown key エラーになること
+func TestSlackpostCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
+	dir := t.TempDir()
+	content := `program_id: my-radio
+slack:
+  channel: "C0123456789"
+`
+	specPath := filepath.Join(dir, "slack-spec.yaml")
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"slackpost", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for program_id (unknown key) in slackpost check, got nil")
 	}
 }
 

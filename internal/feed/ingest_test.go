@@ -64,7 +64,6 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	writeCacheJSONL(t, cachePath, entries)
 
 	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
@@ -97,7 +96,8 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 }
 
-func TestRun_FiltersByProgramID(t *testing.T) {
+// program_id フィルタが廃止されたため、cache の全エントリが対象になること
+func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "cache.jsonl")
 	specPath := filepath.Join(dir, "feed-spec.yaml")
@@ -115,7 +115,7 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 		{
 			ProgramID:     "other-radio",
 			Datetime:      time.Now().Format(time.RFC3339),
-			EpisodeNumber: 10,
+			EpisodeNumber: 2,
 			Title:         "別番組",
 			Summary:       "別番組概要",
 			AudioFile:     "episode.mp3",
@@ -124,7 +124,6 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 	writeCacheJSONL(t, cachePath, entries)
 
 	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
@@ -139,9 +138,9 @@ func TestRun_FiltersByProgramID(t *testing.T) {
 		t.Fatalf("Run: unexpected error: %v", err)
 	}
 
-	// should only include test-radio entries, not other-radio
-	if n != 1 {
-		t.Errorf("Run: got %d items, want 1 (only test-radio entries)", n)
+	// program_id フィルタ廃止のため、全エントリが含まれること
+	if n != 2 {
+		t.Errorf("Run: got %d items, want 2 (all entries included regardless of program_id)", n)
 	}
 }
 
@@ -164,7 +163,6 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	writeCacheJSONL(t, cachePath, entries)
 
 	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
@@ -189,7 +187,6 @@ func TestRun_EmptyCache(t *testing.T) {
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
 	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		ProgramID: "test-radio",
 		Feed: model.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
@@ -205,43 +202,5 @@ func TestRun_EmptyCache(t *testing.T) {
 	}
 	if n != 0 {
 		t.Errorf("Run: got %d items, want 0 for empty cache", n)
-	}
-}
-
-func TestRun_ProgramIDMismatch(t *testing.T) {
-	dir := t.TempDir()
-	cachePath := filepath.Join(dir, "cache.jsonl")
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	publicDir := filepath.Join(dir, "public")
-
-	entries := []cache.Entry{
-		{
-			ProgramID:     "other-program",
-			Datetime:      time.Now().Format(time.RFC3339),
-			EpisodeNumber: 1,
-			Title:         "別番組",
-			Summary:       "概要",
-			AudioFile:     "episode.mp3",
-		},
-	}
-	writeCacheJSONL(t, cachePath, entries)
-
-	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		ProgramID: "test-radio",
-		Feed: model.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: model.OutputConfig{Public: publicDir},
-	})
-
-	_, n, err := feed.Run(feed.Options{
-		CachePath: cachePath,
-		SpecPath:  specPath,
-	})
-	if err != nil {
-		t.Fatalf("Run: unexpected error for program_id mismatch: %v", err)
-	}
-	if n != 0 {
-		t.Errorf("Run: got %d items, want 0 (no matching program_id)", n)
 	}
 }

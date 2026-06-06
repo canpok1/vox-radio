@@ -52,7 +52,7 @@ func newFeedgenCheckCmd() *cobra.Command {
 		Long: `指定した feed-spec.yaml を strict モードでパースし、以下を検証します:
 
   (a) strict パース: 未知キー（typo）をエラー化
-  (b) 必須フィールド: program_id / feed.language / feed.author / feed.email /
+  (b) 必須フィールド: feed.language / feed.author / feed.email /
       feed.site_url / feed.audio_url_template の存在チェック
   (c) URL / email 形式: 各フィールドの値が正しい形式かチェック
   (d) プレースホルダ: audio_url_template に {episode_number} と {audio_file} が含まれるかチェック

@@ -3,9 +3,6 @@
 # mp3 を Slack にアップロードし、要約やコーナーをスレッドに投稿します。
 # Slack のトークンは vox-radio.yaml の slack.bot_token_env で指定した環境変数から読み込みます。
 
-# 番組のID（ログや突き合わせ用）。
-program_id: "my-radio"
-
 # Slack 投稿の設定。
 slack:
   # 投稿先チャンネルのID（必須。"C" で始まる文字列）。自分のチャンネルIDに置き換えてください。

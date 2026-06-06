@@ -36,9 +36,8 @@ func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "feed-spec.yaml")
-	// program_id が欠落した feed-spec.yaml
+	// feed.language が欠落した feed-spec.yaml
 	content := []byte(`feed:
-  language: ja
   author: Test Author
   email: test@example.com
   site_url: https://example.com/
@@ -55,6 +54,29 @@ func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for missing required field")
+	}
+}
+
+// program_id は FeedSpec から削除されたため、feedgen check で unknown key エラーになること
+func TestFeedgenCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
+	dir := t.TempDir()
+	specPath := filepath.Join(dir, "feed-spec.yaml")
+	content := []byte(`program_id: my-radio
+feed:
+  language: ja
+  author: Test Author
+  email: test@example.com
+  site_url: https://example.com/
+  audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
+`)
+	if err := os.WriteFile(specPath, content, 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"feedgen", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for program_id (unknown key) in feedgen check, got nil")
 	}
 }
 

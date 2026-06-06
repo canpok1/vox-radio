@@ -9,7 +9,6 @@ import (
 )
 
 const validSlackSpecYAML = `
-program_id: zundamon-tech-radio
 slack:
   channel: "C0123456789"
   message:
@@ -38,9 +37,6 @@ func TestLoadSlackSpec_ValidYAML(t *testing.T) {
 		t.Fatalf("LoadSlackSpec: unexpected error: %v", err)
 	}
 
-	if spec.ProgramID != "zundamon-tech-radio" {
-		t.Errorf("ProgramID: got %q, want %q", spec.ProgramID, "zundamon-tech-radio")
-	}
 	if spec.Slack.Channel != "C0123456789" {
 		t.Errorf("Slack.Channel: got %q, want %q", spec.Slack.Channel, "C0123456789")
 	}
@@ -78,9 +74,19 @@ func TestLoadSlackSpecStrict_ValidYAML_Success(t *testing.T) {
 	}
 }
 
+// program_id は SlackSpec から削除されたため、strict モードで unknown key エラーになること
+func TestLoadSlackSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
+	content := "program_id: my-radio\n" + validSlackSpecYAML
+	path := writeTempSlackSpec(t, content)
+
+	_, err := model.LoadSlackSpecStrict(path)
+	if err == nil {
+		t.Error("expected error for program_id (unknown key) in strict mode, got nil")
+	}
+}
+
 func TestLoadSlackSpec_MessageOmitted_DefaultsToEmpty(t *testing.T) {
 	content := `
-program_id: test
 slack:
   channel: "C0123456789"
 `

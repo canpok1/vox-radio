@@ -43,7 +43,6 @@ func writeTestAudio(t *testing.T, dir string) {
 func writeTestSlackSpec(t *testing.T, dir string) string {
 	t.Helper()
 	content := `
-program_id: test
 slack:
   channel: "C0123456789"
 `

@@ -32,9 +32,8 @@ type OutputConfig struct {
 
 // FeedSpec is the top-level structure for feed-spec.yaml.
 type FeedSpec struct {
-	ProgramID string       `yaml:"program_id"`
-	Feed      FeedConfig   `yaml:"feed"`
-	Output    OutputConfig `yaml:"output"`
+	Feed   FeedConfig   `yaml:"feed"`
+	Output OutputConfig `yaml:"output"`
 }
 
 // EffectivePublicDir returns the configured public directory or DefaultPublicDir if not set.
@@ -71,9 +70,6 @@ func ValidateFeedSpec(spec FeedSpec) error {
 	var errs []error
 
 	// (b) required fields
-	if spec.ProgramID == "" {
-		errs = append(errs, errors.New("program_id is required"))
-	}
 	if spec.Feed.Language == "" {
 		errs = append(errs, errors.New("feed.language is required"))
 	}

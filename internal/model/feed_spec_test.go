@@ -10,7 +10,6 @@ import (
 )
 
 const validFeedSpecYAML = `
-program_id: zundamon-tech-radio
 feed:
   language: ja
   author: Test Author
@@ -35,7 +34,6 @@ func TestLoadFeedSpec_ValidYAML(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "feed-spec.yaml")
 	content := `
-program_id: zundamon-tech-radio
 feed:
   language: ja
   author: testauthor
@@ -58,9 +56,6 @@ output:
 		t.Fatalf("LoadFeedSpec: unexpected error: %v", err)
 	}
 
-	if cfg.ProgramID != "zundamon-tech-radio" {
-		t.Errorf("ProgramID: got %q, want %q", cfg.ProgramID, "zundamon-tech-radio")
-	}
 	if cfg.Feed.Language != "ja" {
 		t.Errorf("Feed.Language: got %q, want %q", cfg.Feed.Language, "ja")
 	}
@@ -121,12 +116,9 @@ func TestFeedSpec_EffectivePublicDir_Custom(t *testing.T) {
 
 func TestLoadFeedSpecStrict_Valid(t *testing.T) {
 	path := writeTempFeedSpec(t, validFeedSpecYAML)
-	cfg, err := model.LoadFeedSpecStrict(path)
+	_, err := model.LoadFeedSpecStrict(path)
 	if err != nil {
 		t.Fatalf("LoadFeedSpecStrict: unexpected error: %v", err)
-	}
-	if cfg.ProgramID != "zundamon-tech-radio" {
-		t.Errorf("ProgramID: got %q, want %q", cfg.ProgramID, "zundamon-tech-radio")
 	}
 }
 
@@ -135,6 +127,16 @@ func TestLoadFeedSpecStrict_UnknownKey(t *testing.T) {
 	_, err := model.LoadFeedSpecStrict(path)
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for unknown key, got nil")
+	}
+}
+
+// program_id は FeedSpec から削除されたため、strict モードで unknown key エラーになること
+func TestLoadFeedSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
+	content := "program_id: my-radio\n" + validFeedSpecYAML
+	path := writeTempFeedSpec(t, content)
+	_, err := model.LoadFeedSpecStrict(path)
+	if err == nil {
+		t.Error("LoadFeedSpecStrict: expected error for program_id (unknown key), got nil")
 	}
 }
 
@@ -147,7 +149,6 @@ func TestLoadFeedSpecStrict_FileNotExist(t *testing.T) {
 
 func validSpec() model.FeedSpec {
 	return model.FeedSpec{
-		ProgramID: "test-program",
 		Feed: model.FeedConfig{
 			Language:         "ja",
 			Author:           "Test Author",
@@ -179,12 +180,6 @@ func TestValidateFeedSpec(t *testing.T) {
 				s.Output.Public = ""
 			},
 			wantErr: false,
-		},
-		{
-			name:        "missing program_id",
-			mutate:      func(s *model.FeedSpec) { s.ProgramID = "" },
-			wantErr:     true,
-			errContains: []string{"program_id"},
 		},
 		{
 			name:        "missing language",

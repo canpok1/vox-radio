@@ -49,8 +49,7 @@ func (c SlackChannelConfig) EffectiveMessageTemplate() MessageTemplate {
 
 // SlackSpec is the top-level structure for slack-spec.yaml.
 type SlackSpec struct {
-	ProgramID string             `yaml:"program_id"`
-	Slack     SlackChannelConfig `yaml:"slack"`
+	Slack SlackChannelConfig `yaml:"slack"`
 }
 
 // LoadSlackSpec reads and parses a slack-spec.yaml file.

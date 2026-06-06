@@ -26,17 +26,9 @@ func Run(opts Options) (string, int, error) {
 	}
 
 	mgr := cache.New(opts.CachePath)
-	allEntries, err := mgr.Load()
+	entries, err := mgr.Load()
 	if err != nil {
 		return "", 0, fmt.Errorf("load cache: %w", err)
-	}
-
-	// Filter by program_id
-	entries := make([]cache.Entry, 0, len(allEntries))
-	for _, e := range allEntries {
-		if e.ProgramID == cfg.ProgramID {
-			entries = append(entries, e)
-		}
 	}
 
 	// Validate: episode_number must be > 0
