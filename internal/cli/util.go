@@ -190,13 +190,6 @@ func loadCacheEntries(programID string) ([]cache.Entry, int) {
 	return entries, cache.NextEpisodeNumber(entries)
 }
 
-// resolveEpisodeNumber returns the next episode number from cache.
-// Returns 0 if the cache fails to load.
-func resolveEpisodeNumber(programID string) int {
-	_, n := loadCacheEntries(programID)
-	return n
-}
-
 func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.EpisodeSpec, error) {
 	cfg, err := config.LoadConfig(cfgPath)
 	if err != nil {

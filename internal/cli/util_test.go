@@ -33,29 +33,6 @@ func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache
 	}
 }
 
-func TestResolveEpisodeNumber_FirstEpisode(t *testing.T) {
-	chdirTemp(t)
-
-	// キャッシュファイルが存在しない場合は第1回
-	n := resolveEpisodeNumber("my_program")
-	if n != 1 {
-		t.Errorf("expected 1 for first episode, got %d", n)
-	}
-}
-
-func TestResolveEpisodeNumber_WithExistingCache(t *testing.T) {
-	tmpDir := chdirTemp(t)
-
-	writeCacheJSONL(t, tmpDir, "prog", []cache.Entry{
-		{EpisodeNumber: 3},
-	})
-
-	n := resolveEpisodeNumber("prog")
-	if n != 4 {
-		t.Errorf("expected 4 (next after 3), got %d", n)
-	}
-}
-
 func TestSetupLogger_DefaultLogDir(t *testing.T) {
 	tmpDir := chdirTemp(t)
 
