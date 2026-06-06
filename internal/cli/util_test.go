@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
@@ -245,5 +246,35 @@ func TestLogDirFlag_CustomValue(t *testing.T) {
 	want := "/custom/logs"
 	if got != want {
 		t.Errorf("logDirFlag(root) = %q, want %q", got, want)
+	}
+}
+
+func TestResolveLocation_ValidTimezone(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	program := config.ProgramConfig{Timezone: "Asia/Tokyo"}
+
+	loc := resolveLocation(program, logger)
+
+	want, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatalf("time.LoadLocation: %v", err)
+	}
+	if loc.String() != want.String() {
+		t.Errorf("resolveLocation = %q, want %q", loc.String(), want.String())
+	}
+}
+
+func TestResolveLocation_InvalidTimezone_FallsBackToUTC(t *testing.T) {
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	program := config.ProgramConfig{Timezone: "Invalid/Zone"}
+
+	loc := resolveLocation(program, logger)
+
+	if loc != time.UTC {
+		t.Errorf("resolveLocation with invalid timezone = %q, want UTC", loc.String())
+	}
+	if !strings.Contains(buf.String(), "WARN") {
+		t.Errorf("expected WARN log for invalid timezone, got: %q", buf.String())
 	}
 }
