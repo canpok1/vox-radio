@@ -50,13 +50,7 @@ func TestResolveEpisodeNumber_EmptyProgramID(t *testing.T) {
 }
 
 func TestResolveEpisodeNumber_FirstEpisode(t *testing.T) {
-	// os.Chdir はプロセス全体の cwd を変更するため並列禁止
-	origDir, _ := os.Getwd()
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	defer func() { _ = os.Chdir(origDir) }()
+	chdirTemp(t)
 
 	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
 	// キャッシュファイルが存在しない場合は第1回
@@ -67,12 +61,7 @@ func TestResolveEpisodeNumber_FirstEpisode(t *testing.T) {
 }
 
 func TestResolveEpisodeNumber_WithExistingCache(t *testing.T) {
-	origDir, _ := os.Getwd()
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	defer func() { _ = os.Chdir(origDir) }()
+	tmpDir := chdirTemp(t)
 
 	writeCacheJSONL(t, tmpDir, "prog", []cache.Entry{
 		{EpisodeNumber: 3},
@@ -86,18 +75,7 @@ func TestResolveEpisodeNumber_WithExistingCache(t *testing.T) {
 }
 
 func TestSetupLogger_DefaultLogDir(t *testing.T) {
-	// os.Chdir changes the process-wide cwd, so no t.Parallel().
-	origDir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("chdir to tmpDir: %v", err)
-	}
-	defer func() {
-		_ = os.Chdir(origDir)
-	}()
+	tmpDir := chdirTemp(t)
 
 	logger, f, err := setupLogger("collect", "")
 	if err != nil {
@@ -216,12 +194,7 @@ func TestLoadCacheEntries_EmptyProgramID(t *testing.T) {
 }
 
 func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
-	origDir, _ := os.Getwd()
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	defer func() { _ = os.Chdir(origDir) }()
+	tmpDir := chdirTemp(t)
 
 	writeCacheJSONL(t, tmpDir, "prog", []cache.Entry{
 		{EpisodeNumber: 5, Casts: []cache.CastEntry{
