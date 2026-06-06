@@ -52,4 +52,5 @@
 | [0044](0044-switch-sample-feeds-to-jma-weather.md) | サンプル設定のデータソースを気象庁防災情報XMLフィードへ変更する | 採用 | 2026-06-06 |
 | [0045](0045-add-pronunciation-proofread-pass-to-direct.md) | direct に発音校正パスを追加し VOICEVOX のかな化取りこぼしによる誤読を抑制する | 採用 | 2026-06-06 |
 | [0046](0046-article-source-attribution-to-llm.md) | 記事の出典（サイト名・著者名）を rundown 経由で生成 LLM に渡す | 採用 | 2026-06-06 |
-| [0047](0047-program-level-direction-and-non-public-script-note.md) | 番組全体の演出指示（direct専用）と台本指示 script_note（write専用・非公開、番組/コーナー両レベル）を追加する | 採用 | 2026-06-06 |
+| [0047](0047-program-timezone-and-temporal-context-to-llm.md) | 番組タイムゾーン設定の導入と時間文脈（記事配信日時・収録日時）の生成 LLM への伝達 | 採用 | 2026-06-06 |
+| [0048](0048-program-level-direction-and-non-public-script-note.md) | 番組全体の演出指示（direct専用）と台本指示 script_note（write専用・非公開、番組/コーナー両レベル）を追加する | 採用 | 2026-06-06 |
