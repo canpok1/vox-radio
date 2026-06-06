@@ -3,7 +3,6 @@ package cli
 import (
 	"embed"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -35,23 +34,11 @@ func newInitCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("read template %s: %w", e.Name(), err)
 				}
-				if err := generateFile(cmd, e.Name(), content); err != nil {
+				if err := writeFile(cmd, e.Name(), content, false); err != nil {
 					return err
 				}
 			}
 			return nil
 		},
 	}
-}
-
-func generateFile(cmd *cobra.Command, path string, content []byte) error {
-	if _, err := os.Stat(path); err == nil {
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "skip: %s already exists\n", path)
-		return nil
-	}
-	if err := os.WriteFile(path, content, 0644); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s\n", path)
-	return nil
 }
