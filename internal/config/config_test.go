@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 )
@@ -341,6 +342,56 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProgramConfig_EffectiveTimezone(t *testing.T) {
+	tests := []struct {
+		name   string
+		cfg    config.ProgramConfig
+		wantTZ string
+	}{
+		{"default (empty)", config.ProgramConfig{}, config.DefaultProgramTimezone},
+		{"custom", config.ProgramConfig{Timezone: "America/New_York"}, "America/New_York"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.cfg.EffectiveTimezone()
+			if got != tt.wantTZ {
+				t.Errorf("EffectiveTimezone() = %q, want %q", got, tt.wantTZ)
+			}
+		})
+	}
+}
+
+func TestProgramConfig_Location(t *testing.T) {
+	t.Run("default loads Asia/Tokyo", func(t *testing.T) {
+		cfg := config.ProgramConfig{}
+		loc, err := cfg.Location()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want, _ := time.LoadLocation("Asia/Tokyo")
+		if loc.String() != want.String() {
+			t.Errorf("Location() = %q, want %q", loc.String(), want.String())
+		}
+	})
+	t.Run("custom timezone loads correctly", func(t *testing.T) {
+		cfg := config.ProgramConfig{Timezone: "America/New_York"}
+		loc, err := cfg.Location()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if loc.String() != "America/New_York" {
+			t.Errorf("Location() = %q, want %q", loc.String(), "America/New_York")
+		}
+	})
+	t.Run("invalid timezone returns error", func(t *testing.T) {
+		cfg := config.ProgramConfig{Timezone: "Invalid/Timezone"}
+		_, err := cfg.Location()
+		if err == nil {
+			t.Error("expected error for invalid timezone, got nil")
+		}
+	})
 }
 
 func TestProgramConfig_EffectiveSummaryLength(t *testing.T) {

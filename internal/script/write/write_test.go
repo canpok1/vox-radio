@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
@@ -673,5 +674,45 @@ func TestLLMWriter_CastInfo_ProgramRoleOnly_WhenNoCornerRole(t *testing.T) {
 	// コーナーロール未指定時はコーナーロール記述がないこと
 	if strings.Contains(prompt, "コーナーロール") {
 		t.Errorf("prompt should NOT contain 'コーナーロール' when corner role is empty, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_SetRecordedAt_InjectsIntoPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "recorded={{recorded_at}} tz={{timezone}}", 0, nil)
+
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatalf("time.LoadLocation: %v", err)
+	}
+	recordedAt := time.Date(2026, 6, 6, 19, 0, 0, 0, loc)
+	w.SetRecordedAt(recordedAt, loc)
+
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{LengthSec: 14}, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "2026-06-06T19:00:00+09:00") {
+		t.Errorf("prompt should contain recorded_at RFC3339, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "Asia/Tokyo") {
+		t.Errorf("prompt should contain timezone name, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_SetRecordedAt_Unset_UsesPlaceholder(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "recorded={{recorded_at}} tz={{timezone}}", 0, nil)
+
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{LengthSec: 14}, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "（不明）") {
+		t.Errorf("unset recorded_at/timezone should show placeholder, got: %s", prompt)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/collect"
 	"github.com/canpok1/vox-radio/internal/config"
@@ -585,5 +586,106 @@ func TestCollector_FetchFullText_ReturnsErrorOnHTTPFailure(t *testing.T) {
 	_, err := c.FetchFullText(context.Background(), server.URL+"/notfound.html")
 	if err == nil {
 		t.Error("expected error for HTTP 404, got nil")
+	}
+}
+
+func TestCollector_Run_RSS_ExtractsSourceAuthorPublished(t *testing.T) {
+	rssData := loadTestdata(t, "feed_with_meta.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatalf("time.LoadLocation: %v", err)
+	}
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed_with_meta.xml"},
+		},
+	}
+
+	c := collect.New(server.Client(), collect.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) < 1 {
+		t.Fatal("no articles returned")
+	}
+
+	// 1件目: dc:creator=山田太郎, pubDate=2026-06-06T10:00:00+00:00
+	// Asia/Tokyo に変換すると 2026-06-06T19:00:00+09:00
+	art := result[0]
+	if art.Source != "メタ情報テストフィード" {
+		t.Errorf("Source: got %q, want %q", art.Source, "メタ情報テストフィード")
+	}
+	if art.Author != "山田太郎" {
+		t.Errorf("Author: got %q, want %q", art.Author, "山田太郎")
+	}
+	if art.Published != "2026-06-06T19:00:00+09:00" {
+		t.Errorf("Published: got %q, want %q", art.Published, "2026-06-06T19:00:00+09:00")
+	}
+}
+
+func TestCollector_Run_RSS_EmailAuthorExcluded(t *testing.T) {
+	rssData := loadTestdata(t, "feed_with_meta.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed_with_meta.xml"},
+		},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) < 2 {
+		t.Fatalf("need at least 2 articles, got %d", len(result))
+	}
+
+	// 2件目: dc:creator=author@example.com → @ を含むため空
+	art := result[1]
+	if art.Author != "" {
+		t.Errorf("email author should be excluded (got %q, want empty)", art.Author)
+	}
+}
+
+func TestCollector_Run_RSS_PublishedEmptyWhenNil(t *testing.T) {
+	rssData := loadTestdata(t, "feed_with_meta.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: server.URL + "/feed_with_meta.xml"},
+		},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) < 3 {
+		t.Fatalf("need at least 3 articles, got %d", len(result))
+	}
+
+	// 3件目: pubDate なし → Published = ""
+	art := result[2]
+	if art.Published != "" {
+		t.Errorf("Published should be empty when no pubDate, got %q", art.Published)
 	}
 }

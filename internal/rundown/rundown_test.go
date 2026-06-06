@@ -721,3 +721,60 @@ func TestLLMRundowner_Run_CastsSetInRundown(t *testing.T) {
 		t.Errorf("Rundown.Casts should contain passed casts, got: %+v", got.Casts)
 	}
 }
+
+func TestLLMRundowner_Run_PropagatesSourceAuthorPublished(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{
+			SelectedURLs:    []string{"https://example.com/meta/1"},
+			SelectionReason: "出典テスト",
+		},
+	}
+	msum := &mockSummarizer{
+		byURL: map[string]model.Summary{
+			"https://example.com/meta/1": {
+				URL:     "https://example.com/meta/1",
+				Summary: "要約テキスト",
+				Points:  []string{"ポイント1"},
+			},
+		},
+	}
+	mfd := &mockFlowDesigner{flow: "フロー"}
+	rd := newRundowner(ms, msum, nil, nil, mfd)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{
+						URL:       "https://example.com/meta/1",
+						Title:     "メタ記事",
+						Body:      "本文",
+						Source:    "テストフィード",
+						Author:    "山田太郎",
+						Published: "2026-06-06T19:00:00+09:00",
+					},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 1 || len(got.Corners[0].Articles) != 1 {
+		t.Fatalf("unexpected structure: %+v", got)
+	}
+	a := got.Corners[0].Articles[0]
+	if a.Source != "テストフィード" {
+		t.Errorf("Source: got %q, want %q", a.Source, "テストフィード")
+	}
+	if a.Author != "山田太郎" {
+		t.Errorf("Author: got %q, want %q", a.Author, "山田太郎")
+	}
+	if a.Published != "2026-06-06T19:00:00+09:00" {
+		t.Errorf("Published: got %q, want %q", a.Published, "2026-06-06T19:00:00+09:00")
+	}
+}

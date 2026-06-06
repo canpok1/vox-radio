@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>メタ情報テストフィード</title>
+    <link>https://meta.example.com</link>
+    <description>著者・配信日時テスト用フィード</description>
+    <item>
+      <title>著者名付き記事</title>
+      <link>https://meta.example.com/article/1</link>
+      <description>著者名（dc:creator）と配信日時がある記事</description>
+      <dc:creator>山田太郎</dc:creator>
+      <pubDate>Sat, 06 Jun 2026 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Email著者記事</title>
+      <link>https://meta.example.com/article/2</link>
+      <description>dc:creatorにメールアドレスが入っている記事</description>
+      <dc:creator>author@example.com</dc:creator>
+      <pubDate>Fri, 05 Jun 2026 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>著者・配信日時なし記事</title>
+      <link>https://meta.example.com/article/3</link>
+      <description>著者情報も配信日時もない記事</description>
+    </item>
+  </channel>
+</rss>

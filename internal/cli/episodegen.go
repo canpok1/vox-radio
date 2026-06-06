@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/cache"
@@ -70,7 +71,9 @@ func newEpisodegenCmd() *cobra.Command {
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
+			loc := resolveLocation(p.Program, logger)
 			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
+			writer.SetRecordedAt(time.Now(), loc)
 
 			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
 			cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
@@ -92,7 +95,7 @@ func newEpisodegenCmd() *cobra.Command {
 
 			p.Corners = resolveCorners(p.Corners, episodeNumber, logger)
 
-			collector := collect.New(nil, collect.WithLogger(logger))
+			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedURLs, rundown.WithLogger(logger))
 

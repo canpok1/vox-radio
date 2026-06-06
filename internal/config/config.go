@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/fileio"
 )
@@ -219,6 +220,9 @@ func (c LLMConfig) EffectiveMinRequestIntervalMS() int {
 // DefaultProgramSummaryLength is the default summary length (chars) for program-wide summaries.
 const DefaultProgramSummaryLength = 200
 
+// DefaultProgramTimezone is the default IANA timezone for the program.
+const DefaultProgramTimezone = "Asia/Tokyo"
+
 // DefaultCornerSummaryLength is the default summary length (chars) for per-corner summaries.
 const DefaultCornerSummaryLength = 100
 
@@ -270,6 +274,7 @@ type ProgramConfig struct {
 	Title         string `yaml:"title"`
 	Description   string `yaml:"description"`
 	SummaryLength int    `yaml:"summary_length,omitempty"`
+	Timezone      string `yaml:"timezone,omitempty"` // IANA tz名。未設定時は DefaultProgramTimezone
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.
@@ -278,6 +283,20 @@ func (p ProgramConfig) EffectiveSummaryLength() int {
 		return DefaultProgramSummaryLength
 	}
 	return p.SummaryLength
+}
+
+// EffectiveTimezone returns Timezone, falling back to DefaultProgramTimezone.
+func (p ProgramConfig) EffectiveTimezone() string {
+	if p.Timezone == "" {
+		return DefaultProgramTimezone
+	}
+	return p.Timezone
+}
+
+// Location resolves EffectiveTimezone() to *time.Location via time.LoadLocation.
+// Returns an error if the timezone name is invalid.
+func (p ProgramConfig) Location() (*time.Location, error) {
+	return time.LoadLocation(p.EffectiveTimezone())
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).

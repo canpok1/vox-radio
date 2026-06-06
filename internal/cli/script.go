@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -72,7 +73,7 @@ func newScriptCmd() *cobra.Command {
 			case "":
 				return runScriptFull(context.Background(), in, out, workDir, llmClient, cfg, p, prompts, assetCatalog, logger)
 			case "write":
-				return runScriptWrite(context.Background(), in, workDir, llmClient, cfg, p, prompts)
+				return runScriptWrite(context.Background(), in, workDir, llmClient, cfg, p, prompts, logger)
 			case "direct":
 				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, prompts, assetCatalog)
 			default:
@@ -104,8 +105,10 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		return fmt.Errorf("resolve corners: %w", err)
 	}
 
+	loc := resolveLocation(p.Program, logger)
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	w.SetCasts(rd.Casts)
+	w.SetRecordedAt(time.Now(), loc)
 
 	gen := script.NewLLMScriptGenerator(
 		w,
@@ -125,7 +128,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	return writeJSON(out, scr)
 }
 
-func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *config.Config, p *config.EpisodeSpec, prompts map[string]string) error {
+func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *config.Config, p *config.EpisodeSpec, prompts map[string]string, logger *slog.Logger) error {
 	if in == "" {
 		return fmt.Errorf("--in is required for write step")
 	}
@@ -145,8 +148,10 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 		allAssignments[i] = script.MergeCornerCast(corner, rd.Casts)
 	}
 
+	loc := resolveLocation(p.Program, logger)
 	w := write.NewLLMWriter(c, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 	w.SetCasts(rd.Casts)
+	w.SetRecordedAt(time.Now(), loc)
 	allCornerLines, err := script.WriteAll(ctx, w, p.Program, corners, allAssignments, cornerMap, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("write corners: %w", err)

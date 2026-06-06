@@ -40,8 +40,10 @@ source フィールドのないコーナーはスキップされます。
 				return fmt.Errorf("spec validation: %w", err)
 			}
 
+			loc := resolveLocation(p.Program, logger)
+
 			// 回番号を持たないため全コーナーを superset として収集する（rundown 側で絞る）
-			c := collect.New(nil, collect.WithLogger(logger))
+			c := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
 			articles, err := c.RunAll(context.Background(), p.Corners, nil)
 			if err != nil {
 				return err
