@@ -36,22 +36,12 @@ func writeTestFile(t *testing.T, dir, name string, content []byte) {
 	}
 }
 
-func runInitCmd(t *testing.T) (string, error) {
+func runInitCmd(t *testing.T, extraArgs ...string) (string, error) {
 	t.Helper()
 	cmd := cli.NewRootCmd()
 	var buf strings.Builder
 	cmd.SetOut(&buf)
-	cmd.SetArgs([]string{"init"})
-	err := cmd.Execute()
-	return buf.String(), err
-}
-
-func runInitSampleCmd(t *testing.T) (string, error) {
-	t.Helper()
-	cmd := cli.NewRootCmd()
-	var buf strings.Builder
-	cmd.SetOut(&buf)
-	cmd.SetArgs([]string{"init", "--sample"})
+	cmd.SetArgs(append([]string{"init"}, extraArgs...))
 	err := cmd.Execute()
 	return buf.String(), err
 }
@@ -234,7 +224,7 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 
 func TestInitCmd_Sample_AllGenerated(t *testing.T) {
 	dir := chdirTemp(t)
-	_, err := runInitSampleCmd(t)
+	_, err := runInitCmd(t, "--sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -253,7 +243,7 @@ func TestInitCmd_Sample_AllGenerated(t *testing.T) {
 
 func TestInitCmd_Sample_Loadable(t *testing.T) {
 	dir := chdirTemp(t)
-	_, err := runInitSampleCmd(t)
+	_, err := runInitCmd(t, "--sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -312,7 +302,7 @@ func TestInitCmd_Sample_Skip(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
 	writeTestFile(t, dir, "sample/episode-spec.yaml", existingContent)
-	out, err := runInitSampleCmd(t)
+	out, err := runInitCmd(t, "--sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
