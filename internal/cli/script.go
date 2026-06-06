@@ -43,7 +43,7 @@ func newScriptCmd() *cobra.Command {
   vox-radio episodegen script --out work/intermediate/04_script.json --step write
   vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json --spec sample/episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, logFile, err := setupLogger("script", "")
+			logger, logFile, err := setupLogger("script", logDirFlag(cmd))
 			if err != nil {
 				return fmt.Errorf("setup logger: %w", err)
 			}

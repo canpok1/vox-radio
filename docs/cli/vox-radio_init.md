@@ -37,7 +37,8 @@ vox-radio init [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string   共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+      --config string    共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+      --log-dir string   ログ出力ディレクトリのパス (default ".vox-radio/logs")
 ```
 
 ### SEE ALSO

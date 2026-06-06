@@ -31,6 +31,15 @@ func configPath(cmd *cobra.Command) string {
 	return p
 }
 
+// logDirFlag returns the value of the --log-dir persistent flag, falling back to defaultLogDir.
+func logDirFlag(cmd *cobra.Command) string {
+	d, _ := cmd.Flags().GetString("log-dir")
+	if d == "" {
+		return defaultLogDir
+	}
+	return d
+}
+
 // registerSpecFlag registers the required --spec flag on cmd, binding it
 // to specPath. Used by episodegen subcommands that load an episode spec (assemble is the
 // exception: its --spec is optional because assets can be skipped).

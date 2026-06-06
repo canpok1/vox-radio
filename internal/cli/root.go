@@ -22,6 +22,7 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	root.PersistentFlags().String("config", DefaultConfigPath, "共通設定 YAML ファイル（vox-radio.yaml）のパス")
+	root.PersistentFlags().String("log-dir", defaultLogDir, "ログ出力ディレクトリのパス")
 
 	root.AddCommand(
 		newInitCmd(),
