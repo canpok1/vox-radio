@@ -25,10 +25,7 @@ type RundownCast struct {
 // PastAppearanceCount returns the number of past appearances (excluding this episode).
 // This is the LLM-facing value: AppearanceCount - 1, clamped to 0.
 func (c RundownCast) PastAppearanceCount() int {
-	if c.AppearanceCount <= 1 {
-		return 0
-	}
-	return c.AppearanceCount - 1
+	return max(0, c.AppearanceCount-1)
 }
 
 // CastsForLLM returns a copy of casts with AppearanceCount replaced by PastAppearanceCount()
@@ -36,8 +33,8 @@ func (c RundownCast) PastAppearanceCount() int {
 func CastsForLLM(casts []RundownCast) []RundownCast {
 	result := make([]RundownCast, len(casts))
 	for i, c := range casts {
+		c.AppearanceCount = c.PastAppearanceCount()
 		result[i] = c
-		result[i].AppearanceCount = c.PastAppearanceCount()
 	}
 	return result
 }
