@@ -98,7 +98,9 @@ func newEpisodegenCmd() *cobra.Command {
 
 			scripter := script.NewLLMScriptGenerator(
 				writer,
-				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct")),
+				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct"),
+					direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
+				),
 				assetCatalog,
 				intermediateDir,
 				script.WithLogger(logger),

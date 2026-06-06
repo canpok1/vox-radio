@@ -3,6 +3,7 @@ package direct_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -1122,5 +1123,155 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConvertedText(t *testing
 	}
 	if got.Segments[0].Text != "AI" {
 		t.Errorf("Segment[0].Text: got %q, want AI (empty converted text → original fallback)", got.Segments[0].Text)
+	}
+}
+
+// sequentialClient returns different responses for each successive Complete call.
+type sequentialClient struct {
+	responses []json.RawMessage
+	errs      []error
+	callIdx   int
+}
+
+func (c *sequentialClient) Complete(_ context.Context, _ llm.CompletionRequest) (json.RawMessage, error) {
+	i := c.callIdx
+	c.callIdx++
+	if i >= len(c.responses) {
+		return nil, fmt.Errorf("unexpected call index %d", i)
+	}
+	var e error
+	if i < len(c.errs) {
+		e = c.errs[i]
+	}
+	return c.responses[i], e
+}
+
+// TestLLMDirector_Direct_WithProofread_CorrectsMisreading verifies that the proofreading pass
+// applies corrections to the conversionMap, overriding the direct step's conversion.
+// Reproduces the "頭突き" misread case: direct converts to "あたまつきするのだ",
+// proofread corrects it to "ずつきするのだ".
+func TestLLMDirector_Direct_WithProofread_CorrectsMisreading(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			// Call 1: main direct LLM — returns wrong kana for 頭突き
+			json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"あたまつきするのだ"}]}`),
+			// Call 2: proofread LLM — corrects to the right reading
+			json.RawMessage(`{"corrections":[{"corner_index":0,"line_index":0,"text":"ずつきするのだ","reason":"頭突き→ずつき（連濁の取りこぼし）"}]}`),
+		},
+		errs: []error{nil, nil},
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithProofread("{{lines}}", 0),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "ずつきするのだ" {
+		t.Errorf("Segment[0].Text: got %q, want ずつきするのだ (proofread correction applied)", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_WithProofread_FallbackOnLLMError verifies that when the proofread
+// LLM call fails, the pipeline does not stop and falls back to the direct conversion.
+func TestLLMDirector_Direct_WithProofread_FallbackOnLLMError(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			// Call 1: main direct LLM — returns kana conversion
+			json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"あたまつきするのだ"}]}`),
+			// Call 2: proofread LLM — fails
+			nil,
+		},
+		errs: []error{nil, fmt.Errorf("proofread llm error")},
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithProofread("{{lines}}", 0),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("pipeline must not stop on proofread error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	// Falls back to direct's conversion (not original text)
+	if got.Segments[0].Text != "あたまつきするのだ" {
+		t.Errorf("Segment[0].Text: got %q, want あたまつきするのだ (fallback to direct conversion)", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_WithProofread_SkipWhenNotSet verifies that when WithProofread is not
+// used, only one LLM call is made and the direct conversion result is used unchanged.
+func TestLLMDirector_Direct_WithProofread_SkipWhenNotSet(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			// Only one call expected
+			json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"ずつきするのだ"}]}`),
+		},
+		errs: []error{nil},
+	}
+	// No WithProofread option
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "ずつきするのだ" {
+		t.Errorf("Segment[0].Text: got %q, want ずつきするのだ (direct conversion used, no proofreading)", got.Segments[0].Text)
+	}
+	// Verify only one LLM call was made
+	if mc.callIdx != 1 {
+		t.Errorf("LLM call count: got %d, want 1 (no proofread call when WithProofread not set)", mc.callIdx)
+	}
+}
+
+// TestLLMDirector_Direct_WithProofread_EmptyCorrections verifies that when proofread returns
+// an empty corrections list, the direct conversion is used unchanged.
+func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"てすとてきすと"}]}`),
+			json.RawMessage(`{"corrections":[]}`),
+		},
+		errs: []error{nil, nil},
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithProofread("{{lines}}", 0),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "テストテキスト"},
+	)
+
+	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "てすとてきすと" {
+		t.Errorf("Segment[0].Text: got %q, want てすとてきすと (direct conversion unchanged when no corrections)", got.Segments[0].Text)
 	}
 }

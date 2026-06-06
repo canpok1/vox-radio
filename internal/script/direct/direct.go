@@ -4,11 +4,34 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
+
+var correctionsSchema = json.RawMessage(`{
+  "type": "object",
+  "required": ["corrections"],
+  "properties": {
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["corner_index", "line_index", "text"],
+        "properties": {
+          "corner_index": {"type": "integer", "minimum": 0},
+          "line_index":   {"type": "integer", "minimum": 0},
+          "text":         {"type": "string"},
+          "reason":       {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}`)
 
 var insertionsSchema = json.RawMessage(`{
   "type": "object",
@@ -100,14 +123,51 @@ type insertionsResponse struct {
 	LineConversions []lineConversion `json:"line_conversions"`
 }
 
+type correction struct {
+	CornerIndex int    `json:"corner_index"`
+	LineIndex   int    `json:"line_index"`
+	Text        string `json:"text"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+type correctionsResponse struct {
+	Corrections []correction `json:"corrections"`
+}
+
+// proofreadLine is the per-line input sent to the proofreading LLM.
+type proofreadLine struct {
+	CornerIndex   int    `json:"corner_index"`
+	LineIndex     int    `json:"line_index"`
+	OriginalText  string `json:"original_text"`
+	ConvertedText string `json:"converted_text"`
+}
+
+type proofreadConfig struct {
+	prompt      string
+	temperature float64
+}
+
 type LLMDirector struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
+	proofread      *proofreadConfig
 }
 
-func NewLLMDirector(client llm.Client, promptTemplate string, temperature float64) *LLMDirector {
-	return &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
+// WithProofread enables a proofreading LLM pass that detects and corrects misreadings
+// in the kana conversion output. When not set, proofreading is skipped (backward-compatible).
+func WithProofread(prompt string, temperature float64) func(*LLMDirector) {
+	return func(d *LLMDirector) {
+		d.proofread = &proofreadConfig{prompt: prompt, temperature: temperature}
+	}
+}
+
+func NewLLMDirector(client llm.Client, promptTemplate string, temperature float64, opts ...func(*LLMDirector)) *LLMDirector {
+	d := &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error) {
@@ -149,10 +209,83 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions, resp.LineConversions), nil
+	lineConversions := resp.LineConversions
+	if d.proofread != nil {
+		corrections, err := d.runProofread(ctx, corners, lineConversions)
+		if err != nil {
+			slog.Default().Warn("proofread failed, using direct conversion", "err", err)
+		} else if len(corrections) > 0 {
+			for _, c := range corrections {
+				lineConversions = append(lineConversions, lineConversion{
+					CornerIndex: c.CornerIndex,
+					LineIndex:   c.LineIndex,
+					Text:        c.Text,
+				})
+				slog.Default().Info("proofread correction", "corner_index", c.CornerIndex, "line_index", c.LineIndex, "text", c.Text, "reason", c.Reason)
+			}
+			slog.Default().Info("proofread: applied corrections", "count", len(corrections))
+		}
+	}
+
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), nil
+}
+
+func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, error) {
+	convMap := buildConversionMap(lineConversions)
+
+	totalLines := 0
+	for _, corner := range corners {
+		totalLines += len(corner.Lines)
+	}
+	lines := make([]proofreadLine, 0, totalLines)
+	for ci, corner := range corners {
+		for li, line := range corner.Lines {
+			converted := line.Text
+			if v, ok := convMap[insertKey{ci, li}]; ok && v != "" {
+				converted = v
+			}
+			lines = append(lines, proofreadLine{
+				CornerIndex:   ci,
+				LineIndex:     li,
+				OriginalText:  line.Text,
+				ConvertedText: converted,
+			})
+		}
+	}
+
+	linesJSON, err := json.Marshal(lines)
+	if err != nil {
+		return nil, fmt.Errorf("marshal proofread lines: %w", err)
+	}
+
+	prompt := strings.NewReplacer("{{lines}}", string(linesJSON)).Replace(d.proofread.prompt)
+
+	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
+		Messages:    []llm.Message{{Role: "user", Content: prompt}},
+		JSONSchema:  correctionsSchema,
+		Temperature: d.proofread.temperature,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("proofread llm: %w", err)
+	}
+
+	var cr correctionsResponse
+	if err := json.Unmarshal(raw, &cr); err != nil {
+		return nil, fmt.Errorf("unmarshal corrections: %w", err)
+	}
+
+	return cr.Corrections, nil
 }
 
 type insertKey struct{ cornerIdx, lineIdx int }
+
+func buildConversionMap(lineConversions []lineConversion) map[insertKey]string {
+	m := make(map[insertKey]string, len(lineConversions))
+	for _, lc := range lineConversions {
+		m[insertKey{lc.CornerIndex, lc.LineIndex}] = lc.Text
+	}
+	return m
+}
 
 func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
@@ -169,11 +302,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 	}
 
-	conversionMap := make(map[insertKey]string, len(lineConversions))
-	for _, lc := range lineConversions {
-		key := insertKey{lc.CornerIndex, lc.LineIndex}
-		conversionMap[key] = lc.Text
-	}
+	conversionMap := buildConversionMap(lineConversions)
 
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
