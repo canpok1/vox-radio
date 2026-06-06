@@ -166,7 +166,12 @@ vox-radio episodegen --spec episode-spec.yaml
 
 # 別パスの設定ファイルを指定する
 vox-radio --config /path/to/my-station/vox-radio.yaml episodegen --spec episode-spec.yaml
+
+# 成果物とログを同一ツリーへ集約する
+vox-radio episodegen --out-dir output --log-dir output/logs --spec episode-spec.yaml
 ```
+
+ログはデフォルトで `.vox-radio/logs/` に出力されます（`--log-dir` フラグで変更可能）。
 
 #### 過去回の記憶（キャッシュ）と `program.id`
 
