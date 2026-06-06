@@ -436,8 +436,8 @@ func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
 	// t.Setenv を使うため t.Parallel() は併用しない。
 	tests := []struct {
 		name   string
-		env    string // 空文字なら環境変数未設定として扱う
-		setEnv bool
+		env    string // setEnv が true のときに環境変数へ設定する値
+		setEnv bool   // false なら環境変数を未設定にして検証する
 		url    string
 		want   string
 	}{
