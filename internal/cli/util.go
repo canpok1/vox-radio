@@ -178,11 +178,9 @@ func resolveCorners(corners []config.CornerConfig, episodeNumber int, logger *sl
 }
 
 // loadCacheEntries loads all cache entries for the given program.
-// Returns (entries, nextEpisodeNumber). Both are zero values if cache is disabled, programID is empty, or load fails.
-func loadCacheEntries(cfg *config.Config, programID string) ([]cache.Entry, int) {
-	if !cfg.Cache.Enabled || programID == "" {
-		return make([]cache.Entry, 0), 0
-	}
+// Returns (entries, nextEpisodeNumber). Both are zero values if the cache fails to load.
+// program.id is required (validated at load time), so the cache is always consulted.
+func loadCacheEntries(programID string) ([]cache.Entry, int) {
 	cachePath := filepath.Join(".vox-radio", "cache", programID+".jsonl")
 	mgr := cache.New(cachePath)
 	entries, err := mgr.Load()
@@ -193,9 +191,9 @@ func loadCacheEntries(cfg *config.Config, programID string) ([]cache.Entry, int)
 }
 
 // resolveEpisodeNumber returns the next episode number from cache.
-// Returns 0 if cache is disabled, programID is empty, or cache fails to load.
-func resolveEpisodeNumber(cfg *config.Config, programID string) int {
-	_, n := loadCacheEntries(cfg, programID)
+// Returns 0 if the cache fails to load.
+func resolveEpisodeNumber(programID string) int {
+	_, n := loadCacheEntries(programID)
 	return n
 }
 
@@ -207,6 +205,9 @@ func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.Episod
 	p, err := config.LoadEpisodeSpec(specPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load spec: %w", err)
+	}
+	if err := config.ValidateEpisodeSpecProgram(p); err != nil {
+		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	if err := config.ValidateEpisodeSpecCast(p); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)

@@ -14,9 +14,10 @@ func newEpisodegenCheckCmd() *cobra.Command {
 		Long: `指定したエピソード仕様ファイルを strict モードでパースし、以下を検証します:
 
   (a) strict パース: 未知キー（typo）をエラー化
-  (b) アセット参照: corners[].start_audio / end_audio の type+id と bgm が assets に存在するか
-  (c) corners[].cast のキーが casts に宣言済みであるか
-  (d) casts のキャラ ID が共通設定ファイルの characters に存在するか、type/condition が正しいか
+  (b) program.id が設定されているか（キャッシュキーのため必須）
+  (c) アセット参照: corners[].start_audio / end_audio の type+id と bgm が assets に存在するか
+  (d) corners[].cast のキーが casts に宣言済みであるか
+  (e) casts のキャラ ID が共通設定ファイルの characters に存在するか、type/condition が正しいか
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 
@@ -28,6 +29,10 @@ func newEpisodegenCheckCmd() *cobra.Command {
 
 			p, err := config.LoadEpisodeSpecStrict(path)
 			if err != nil {
+				return err
+			}
+
+			if err := config.ValidateEpisodeSpecProgram(p); err != nil {
 				return err
 			}
 

@@ -1,4 +1,5 @@
 program:
+  id: "test-program"
   title: "テストニュース"
   description: "テスト用"
 

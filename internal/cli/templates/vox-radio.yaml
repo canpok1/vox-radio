@@ -68,8 +68,8 @@ voicevox:
       とても早口: 1.4
 
 # 過去回を覚えておくための設定。日替わりコーナーやゲストの「何回目か」の判定に使います。
+# キャッシュは常に有効です（episode-spec.yaml の program.id がキーになります）。
 cache:
-  enabled: true            # 過去回の記憶を使うか（program.id が未設定だと自動で無効）
   max_entries: 100         # 記憶しておく最大エピソード数（超えた分は古いものから消す）
   retention_days: 90       # 記憶を残す日数（超えた古いものは消す）
   llm_context_entries: 10  # AIに参考として渡す直近エピソード数

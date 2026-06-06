@@ -57,6 +57,7 @@ func TestEpisodegenCheck_UnknownCast_Error(t *testing.T) {
 	// create a spec with an unknown cast character
 	dir := t.TempDir()
 	specContent := []byte(`program:
+  id: "test-program"
   title: "テスト"
   description: "テスト"
 
@@ -82,6 +83,33 @@ assets:
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown cast character")
+	}
+}
+
+func TestEpisodegenCheck_MissingProgramID_Error(t *testing.T) {
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
+
+	dir := t.TempDir()
+	specContent := []byte(`program:
+  title: "テスト"
+  description: "テスト"
+
+corners: []
+
+assets:
+  jingle: {}
+  se: {}
+  bgm: {}
+`)
+	specPath := filepath.Join(dir, "episode_spec_no_id.yaml")
+	if err := os.WriteFile(specPath, specContent, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"episodegen", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when program.id is missing")
 	}
 }
 
