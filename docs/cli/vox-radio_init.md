@@ -7,7 +7,7 @@
 vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）・slack-spec.yaml（Slack 投稿設定）・assets/assets.yaml（アセット設定）を
 カレントディレクトリに生成します。
 
---sample を指定すると、ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の
+--sample を指定すると、ずんだもん・めたんが MC を務めるお天気番組（気象庁の防災情報XMLを利用）の
 「すぐ動くサンプル設定一式」を sample/ ディレクトリに生成します。生成されるのは
 sample/vox-radio.yaml・sample/episode-spec.yaml・sample/feed-spec.yaml・
 sample/slack-spec.yaml・sample/assets/assets.yaml の 5 ファイルです。生成後は次のコマンドで
@@ -31,7 +31,7 @@ vox-radio init [flags]
 
 ```
   -h, --help     help for init
-      --sample   ずんだもん・めたんMCのニュース番組サンプル一式を sample/ に生成する
+      --sample   ずんだもん・めたんMCのお天気番組サンプル一式を sample/ に生成する
 ```
 
 ### Options inherited from parent commands
