@@ -49,7 +49,7 @@ type mockDirector struct {
 	err    error
 }
 
-func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog) (model.Script, error) {
+func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, error) {
 	if m.err != nil {
 		return model.Script{}, m.err
 	}

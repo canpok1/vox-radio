@@ -93,7 +93,7 @@ type cornerLLMPayload struct {
 }
 
 type Director interface {
-	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error)
+	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error)
 }
 
 type insertion struct {
@@ -170,7 +170,7 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return d
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error) {
+func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error) {
 	payload := make([]cornerLLMPayload, len(corners))
 	for i, c := range corners {
 		payload[i] = cornerLLMPayload{
@@ -190,9 +190,15 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		return model.Script{}, fmt.Errorf("marshal asset catalog: %w", err)
 	}
 
+	programDirectionStr := programDirection
+	if programDirectionStr == "" {
+		programDirectionStr = "（なし）"
+	}
+
 	prompt := strings.NewReplacer(
 		"{{corners}}", string(cornersJSON),
 		"{{asset_catalog}}", string(catalogJSON),
+		"{{program_direction}}", programDirectionStr,
 	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{

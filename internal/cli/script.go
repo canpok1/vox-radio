@@ -157,7 +157,7 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 		return fmt.Errorf("write corners: %w", err)
 	}
 
-	scriptLines := model.ScriptLines{Corners: script.BuildScriptLines(corners, allCornerLines)}
+	scriptLines := model.ScriptLines{Direction: p.Program.Direction, Corners: script.BuildScriptLines(corners, allCornerLines)}
 	outPath := filepath.Join(workDir, "03_lines.json")
 	if err := writeJSON(outPath, scriptLines); err != nil {
 		return err
@@ -180,7 +180,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
 		direct.WithProofread(prompts["proofread"], stepTemp(llmCfg, "proofread")),
 	)
-	scr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog)
+	scr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog, scriptLines.Direction)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
 	}

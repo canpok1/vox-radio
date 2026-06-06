@@ -77,6 +77,27 @@ func TestLoadEpisodeSpec(t *testing.T) {
 		}
 	})
 
+	t.Run("ProgramDirection", func(t *testing.T) {
+		if spec.Program.Direction == "" {
+			t.Error("Program.Direction must not be empty")
+		}
+	})
+
+	t.Run("ProgramScriptNote", func(t *testing.T) {
+		if spec.Program.ScriptNote == "" {
+			t.Error("Program.ScriptNote must not be empty")
+		}
+	})
+
+	t.Run("CornerScriptNote", func(t *testing.T) {
+		if len(spec.Corners) == 0 {
+			t.Fatal("Corners must not be empty")
+		}
+		if spec.Corners[0].ScriptNote == "" {
+			t.Error("Corners[0].ScriptNote must not be empty")
+		}
+	})
+
 	t.Run("CornerAssets", func(t *testing.T) {
 		checkCornerAssets(t, spec)
 	})
