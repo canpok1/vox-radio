@@ -104,7 +104,7 @@ collect → rundown → script → synth → assemble → manifest
 
 | コマンド | 概要 |
 |----------|------|
-| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml` のテンプレートを生成する（初回セットアップ用） |
+| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用） |
 | `install --skills` | LLM エージェント向けスキルファイル（SKILL.md + references/*.md）を `.claude/skills/vox-radio/` にインストールする |
 | `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
 | `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
@@ -124,7 +124,7 @@ collect → rundown → script → synth → assemble → manifest
 
 ### 設定ファイルの作成
 
-`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`episode-spec.yaml`（エピソード仕様）・`feed-spec.yaml`（フィード生成設定）・`slack-spec.yaml`（Slack 投稿設定）のテンプレートが生成されます。
+`vox-radio init` を実行すると、カレントディレクトリに `vox-radio.yaml`（共通設定）・`episode-spec.yaml`（エピソード仕様）・`feed-spec.yaml`（フィード生成設定）・`slack-spec.yaml`（Slack 投稿設定）・`assets/assets.yaml`（アセット設定）のテンプレートが生成されます。
 
 ```bash
 # テンプレートを生成

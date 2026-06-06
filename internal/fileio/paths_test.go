@@ -30,6 +30,16 @@ func TestDecodeYAML(t *testing.T) {
 		checkResult func(t *testing.T, path string)
 	}{
 		{
+			name:    "empty (comments-only) YAML is valid",
+			content: "# just a comment\n",
+			checkResult: func(t *testing.T, path string) {
+				var got struct{ Name string }
+				if err := fileio.DecodeYAML(path, &got, false); err != nil {
+					t.Errorf("unexpected error for comments-only YAML: %v", err)
+				}
+			},
+		},
+		{
 			name:    "decodes valid YAML",
 			content: "name: ずんだもん\nage: 3\n",
 			checkResult: func(t *testing.T, path string) {

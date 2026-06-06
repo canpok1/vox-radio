@@ -37,6 +37,7 @@ check-samples: build
 	./$(BINARY_NAME) --config vox-radio.yaml config check
 	./$(BINARY_NAME) --config internal/cli/templates/vox-radio.yaml config check
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" episodegen check episode-spec.yaml
+	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" assets check assets/assets.yaml
 	for f in examples/*.yaml; do ./$(BINARY_NAME) episodegen check "$$f"; done
 
 release-check:

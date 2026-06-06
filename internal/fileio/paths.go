@@ -2,7 +2,9 @@ package fileio
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -74,6 +76,7 @@ func ReadJSON(path string, v any) error {
 
 // DecodeYAML opens the YAML file at path and decodes it into dest.
 // When strict is true, unknown fields cause an error.
+// An empty or comments-only file is treated as valid and leaves dest unchanged.
 func DecodeYAML(path string, dest any, strict bool) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -85,6 +88,9 @@ func DecodeYAML(path string, dest any, strict bool) error {
 		dec.KnownFields(true)
 	}
 	if err := dec.Decode(dest); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
