@@ -716,3 +716,82 @@ func TestLLMWriter_SetRecordedAt_Unset_UsesPlaceholder(t *testing.T) {
 		t.Errorf("unset recorded_at/timezone should show placeholder, got: %s", prompt)
 	}
 }
+
+func TestLLMWriter_Write_ProgramScriptNoteInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{program_script_note}}", 0, nil)
+
+	program := config.ProgramConfig{ScriptNote: "記事タイトルを正確に伝えること"}
+	_, _ = w.Write(context.Background(), program, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "記事タイトルを正確に伝えること") {
+		t.Errorf("program_script_note should appear in prompt, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_ProgramScriptNoteEmptyUsesNone(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{program_script_note}}", 0, nil)
+
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "（なし）") {
+		t.Errorf("empty program_script_note should be rendered as （なし）, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_CornerScriptNoteInCornerJSON(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
+
+	corner := config.CornerConfig{Title: "テスト", Content: "内容", ScriptNote: "コーナー台本指示", LengthSec: 14}
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "コーナー台本指示") {
+		t.Errorf("corner script_note should appear in {{corner}} prompt, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_ProgramDirectionNotInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{program}} {{corner}}", 0, nil)
+
+	program := config.ProgramConfig{Title: "テスト", Direction: "番組演出方針（direct専用）"}
+	_, _ = w.Write(context.Background(), program, config.CornerConfig{LengthSec: 14}, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if strings.Contains(prompt, "番組演出方針（direct専用）") {
+		t.Errorf("program.Direction must not leak into write prompt, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_CornerDirectionNotInCornerJSON(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
+
+	corner := config.CornerConfig{Title: "テスト", Content: "内容", Direction: "コーナー演出方針（direct専用）", LengthSec: 14}
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if strings.Contains(prompt, "コーナー演出方針（direct専用）") {
+		t.Errorf("corner.Direction must not leak into write prompt, got: %s", prompt)
+	}
+}
