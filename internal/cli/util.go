@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -56,6 +57,30 @@ func writeFile(cmd *cobra.Command, path string, content []byte, force bool) erro
 	}
 	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s\n", path)
 	return nil
+}
+
+// writeEmbeddedTree copies every file under srcRoot in fsys to dstRoot, preserving
+// the relative directory structure. Directories are skipped (writeFile creates parents
+// as needed). Each file is written via writeFile, so existing files are skipped
+// individually when force is false. Used by both `init` and `install --skills`.
+func writeEmbeddedTree(cmd *cobra.Command, fsys fs.FS, srcRoot, dstRoot string, force bool) error {
+	return fs.WalkDir(fsys, srcRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(srcRoot, path)
+		if err != nil {
+			return fmt.Errorf("rel path: %w", err)
+		}
+		content, err := fs.ReadFile(fsys, path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
+		return writeFile(cmd, filepath.Join(dstRoot, rel), content, force)
+	})
 }
 
 func writeJSON(path string, v any) error {

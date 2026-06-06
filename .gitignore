@@ -49,5 +49,8 @@ go.work.sum
 # 生成物（中間生成物・最終成果物）
 output/
 
+# init --sample で生成されるサンプル設定一式
+/sample/
+
 # Claudeのスケジュールされたタスクのロックファイル
 .claude/scheduled_tasks.lock

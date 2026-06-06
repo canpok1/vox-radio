@@ -1,0 +1,135 @@
+# この番組の中身（コーナーの並び・長さ・台本づくりの指示）を決めるサンプルです。
+# 次のコマンドで番組を作れます:
+#   vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+
+program:
+  # 番組を見分けるためのID。過去回の記憶や配信フィードの突き合わせに使います（変えなくてOK）。
+  # 日替わりコーナーやゲストの登場回を正しく数えるために必要です。
+  id: "news-variety"
+  # 番組タイトル。
+  title: "ずんだもんとめたんの5分ニュース"
+  # 番組の紹介文。台本づくりの方向性として使われます。
+  description: "今日の主要ニュースに加え、スポーツ・エンタメ・サイエンスを日替わりで、ずんだもんとめたんがバラエティ風に5分でお届けする一般向けニュース番組。"
+  # 番組まとめ文のおおよその文字数。
+  summary_length: 200
+
+# 出演者の一覧。ここに書いた人だけが番組に登場します。
+casts:
+  # ずんだもん（毎回出演のMC）
+  zundamon:
+    type: regular                    # regular = 毎回出演
+    role: "MC。進行役。各トピックに素朴な疑問やリアクションを返す聞き役。元気なボケ担当。"
+  # めたん（毎回出演のMC）
+  metan:
+    type: regular
+    role: "MC。各トピックを選んで紹介・解説する主担当。落ち着いたツッコミ役。"
+  # ずん子（ときどき登場するゲスト）
+  zunko:
+    type: guest                      # guest = 決まった回だけ出演
+    role: "ニュースの背景や豆知識を補足して深掘りする物知りゲスト。"
+    # 5回おきに出演、初回の出演は2回目。→ 第2,7,12,…回に登場。
+    condition:
+      every: 5                       # 5回おきに
+      offset: 2                      # 初回の出演は2回目
+
+# コーナーは書いた順に放送されます。length_sec は各コーナーのおおよその長さ（秒）です。
+corners:
+  # オープニング（毎回放送）
+  - title: "オープニング"
+    content: "明るく挨拶し、今日のラインナップ（一般ニュースと日替わりコーナー）を軽く予告。"
+    direction: "テンポよく明るく。"   # 演出メモ。台本本文には使われません。
+    cast:
+      zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
+      metan: "MC。ずんだもんに軽くツッコむ相棒。"
+    length_sec: 15
+    summary_length: 60
+    end_pause_sec: 2.0               # このコーナーの後に入れる無音（秒）。コーナーの切れ目に2秒の間。
+
+  # 今日のニュース（毎回放送・一般ニュース）
+  - title: "今日のニュース"
+    content: "主要トピックから2〜3本を選び、めたんが噛み砕いて紹介・解説し、ずんだもんが素朴な疑問やリアクションで盛り上げる。"
+    cast:
+      metan: "MC。ニュースを選んで紹介・解説する主担当。"
+      zundamon: "MC。素朴な疑問やリアクションを返す聞き役。ボケ担当。"
+    length_sec: 180
+    summary_length: 120
+    end_pause_sec: 2.0
+    # ニュースの取得元（RSSフィード）。ここから記事を集めて紹介します。
+    source:
+      feeds:
+        - url: https://news.yahoo.co.jp/rss/topics/top-picks.xml
+          max_items: 5               # このフィードから使う記事の最大本数
+        - url: https://www.nhk.or.jp/rss/news/cat0.xml
+          max_items: 5
+
+  # ここから下の3つは日替わりコーナー。毎回どれか1つだけ放送されます。
+  # 回番号で出し分けるので、上の program.id と vox-radio.yaml の cache.enabled が必要です。
+  # スポーツコーナー
+  - title: "スポーツコーナー"
+    content: "注目の試合結果や話題のアスリートを、めたんが紹介しずんだもんが一喜一憂する。"
+    cast:
+      metan: "MC。試合結果や話題を紹介・解説。"
+      zundamon: "MC。結果に一喜一憂する聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は1回目。→ 第1,4,7,…回に放送。
+    condition:
+      every: 3                       # 3回おきに
+      offset: 1                      # 初回は1回目
+    source:
+      feeds:
+        - url: https://news.yahoo.co.jp/rss/topics/sports.xml
+          max_items: 5
+
+  # エンタメコーナー
+  - title: "エンタメコーナー"
+    content: "話題の映画・音楽・芸能ニュースを、めたんが紹介しずんだもんがミーハーに食いつく。"
+    cast:
+      metan: "MC。エンタメ話題を紹介・解説。"
+      zundamon: "MC。ミーハーに反応する聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は2回目。→ 第2,5,8,…回に放送。
+    condition:
+      every: 3
+      offset: 2
+    source:
+      feeds:
+        - url: https://news.yahoo.co.jp/rss/topics/entertainment.xml
+          max_items: 5
+
+  # 気になるサイエンス（科学・トリビア）
+  - title: "気になるサイエンス"
+    content: "科学やテクノロジーの話題を、めたんがやさしく解説しずんだもんが驚く豆知識コーナー。"
+    cast:
+      metan: "MC。科学トピックをやさしく解説。"
+      zundamon: "MC。驚いたり感心したりする聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は3回目。→ 第3,6,9,…回に放送。
+    condition:
+      every: 3
+      offset: 0
+    source:
+      feeds:
+        - url: https://news.yahoo.co.jp/rss/topics/science.xml
+          max_items: 5
+
+  # エンディング（毎回放送）
+  - title: "エンディング"
+    content: "今日のまとめと次回予告。次回も聴いてほしいと明るく締める。"
+    direction: "余韻を残しつつ明るく。"
+    cast:
+      zundamon: "MC。進行役。ボケ担当。"
+      metan: "MC。相棒。ツッコミ担当。"
+    length_sec: 15
+    summary_length: 60
+    # 末尾コーナーなので、この後の無音（end_pause_sec）は入れません。
+
+# 効果音やBGMを使う場合は、音声ファイルを用意したうえで、
+# 下の行頭の # を外し、各コーナーに start_audio / end_audio / bgm を追記してください。
+# assets_files:
+#   - assets/assets.yaml

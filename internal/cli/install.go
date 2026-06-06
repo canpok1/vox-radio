@@ -2,9 +2,6 @@ package cli
 
 import (
 	"embed"
-	"fmt"
-	"io/fs"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -41,21 +38,5 @@ func runInstallSkills(cmd *cobra.Command, force bool) error {
 	const srcDir = "skills/vox-radio"
 	const dstDir = ".claude/skills/vox-radio"
 
-	return fs.WalkDir(skillsFS, srcDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(srcDir, path)
-		if err != nil {
-			return fmt.Errorf("rel path: %w", err)
-		}
-		content, err := skillsFS.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
-		}
-		return writeFile(cmd, filepath.Join(dstDir, rel), content, force)
-	})
+	return writeEmbeddedTree(cmd, skillsFS, srcDir, dstDir, force)
 }

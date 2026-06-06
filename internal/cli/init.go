@@ -2,9 +2,6 @@ package cli
 
 import (
 	"embed"
-	"fmt"
-	"io/fs"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -12,12 +9,25 @@ import (
 //go:embed all:templates
 var templatesFS embed.FS
 
+//go:embed all:templates-sample
+var sampleFS embed.FS
+
 func newInitCmd() *cobra.Command {
-	return &cobra.Command{
+	var sample bool
+
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "カレントディレクトリにテンプレート設定ファイルを生成する",
 		Long: `vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）・slack-spec.yaml（Slack 投稿設定）・assets/assets.yaml（アセット設定）を
 カレントディレクトリに生成します。
+
+--sample を指定すると、ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の
+「すぐ動くサンプル設定一式」を sample/ ディレクトリに生成します。生成されるのは
+sample/vox-radio.yaml・sample/episode-spec.yaml・sample/feed-spec.yaml・
+sample/slack-spec.yaml・sample/assets/assets.yaml の 5 ファイルです。生成後は次のコマンドで
+番組生成を試せます:
+
+  vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
 
 既存ファイルは上書きを防ぐため個別にスキップされます。
 すべてのファイルがすでに存在する場合は何も生成されません。
@@ -27,23 +37,14 @@ func newInitCmd() *cobra.Command {
 
   vox-radio episodegen --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return fs.WalkDir(templatesFS, "templates", func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if d.IsDir() {
-					return nil
-				}
-				content, err := templatesFS.ReadFile(path)
-				if err != nil {
-					return fmt.Errorf("read template %s: %w", path, err)
-				}
-				outPath, err := filepath.Rel("templates", path)
-				if err != nil {
-					return fmt.Errorf("rel path: %w", err)
-				}
-				return writeFile(cmd, outPath, content, false)
-			})
+			if sample {
+				return writeEmbeddedTree(cmd, sampleFS, "templates-sample", "sample", false)
+			}
+			return writeEmbeddedTree(cmd, templatesFS, "templates", ".", false)
 		},
 	}
+
+	cmd.Flags().BoolVar(&sample, "sample", false, "ずんだもん・めたんMCのニュース番組サンプル一式を sample/ に生成する")
+
+	return cmd
 }

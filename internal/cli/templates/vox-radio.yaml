@@ -1,47 +1,48 @@
-# vox-radio.yaml - 共通設定ファイル
-# このファイルを編集して LLM・VOICEVOX の接続情報とキャラクター設定を行ってください。
+# vox-radio.yaml - 番組づくりの共通設定ファイルです。
+# 台本の文章を作るAI（LLM）と、文章を音声にする VOICEVOX の接続先、キャラクターを設定します。
+# 番組の中身は episode-spec.yaml で決めます。このファイルは「仕組み側」の設定です。
 
-# LLM（大規模言語モデル）の接続設定
+# 台本の文章を作るAI（LLM）の接続設定。
 llm:
-  # プロバイダ: openai（デフォルト）または dify-chat
+  # 使うAIサービスの種類。openai（標準）か dify-chat を選びます。
   provider: openai
-  # 生成のランダム性（0.0〜1.0）。低いほど安定、高いほど多様な出力になる
+  # 文章のばらつき具合（0.0〜1.0）。小さいほど安定、大きいほど多彩になります。
   temperature: 0.7
-  # APIリトライ回数
+  # 通信に失敗したときのやり直し回数。
   max_retries: 3
-  # LLM リクエストの最小インターバル（ミリ秒）。省略時は 4500ms（≈13.3 RPM）が適用される。0 を明示するとスロットリング無効。
+  # AIへの問い合わせ間隔の下限（ミリ秒）。省略すると 4500ミリ秒（1分あたり約13回）。0 にすると間隔制限なし。
   min_request_interval_ms: 4500
-  # ステップごとの温度設定（省略時は上記 temperature を使用）
+  # 作業の段階ごとの temperature（省略すると上の temperature を使います）。
   steps:
     summarize: { temperature: 0.2 }
     plan:      { temperature: 0.4 }
     write:     { temperature: 0.8 }
     direct:    { temperature: 0.2 }
-  # OpenAI 互換プロバイダの接続設定（provider: openai 時に必須）
+  # openai を選んだとき必須の接続設定。
   openai:
-    # LLM API のベースURL（OpenAI 互換エンドポイント）
+    # AIの接続先URL（OpenAI互換のエンドポイント）。
     base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-    # APIキーを格納する環境変数名（export GEMINI_API_KEY=xxx などで設定）
+    # APIキーを入れておく環境変数の名前（例: export GEMINI_API_KEY=xxx で設定）。
     api_key_env: GEMINI_API_KEY
-    # 使用するモデル名
+    # 使うAIモデルの名前。
     model: gemini-3.1-flash-lite
-  # Dify chat-messages の接続設定（provider: dify-chat 時に必須）
+  # dify-chat を選んだとき必須の接続設定（使うときだけ行頭の # を外します）。
   # dify-chat:
   #   base_url: https://api.dify.ai/v1
   #   api_key_env: DIFY_API_KEY
-  #   user: vox-radio            # 利用者識別子（省略時は vox-radio）
-  #   inputs:                    # Dify アプリに渡す変数（省略可）
+  #   user: vox-radio            # 利用者を見分ける名前（省略すると vox-radio）
+  #   inputs:                    # Dify アプリに渡す追加の値（省略可）
   #     temperature: "${temperature}"   # 完全一致なので数値で送信
   #     lang: ja
 
-# VOICEVOX 音声合成エンジンの接続設定
+# 文章を音声に変換する VOICEVOX の接続設定。
 voicevox:
-  # VOICEVOX Engine の URL
-  # devcontainer 環境で利用する場合は http://voicevox:50021 に変更してください
+  # VOICEVOX Engine のURL。
+  # devcontainer で使う場合は http://voicevox:50021 に変えてください。
   url: http://localhost:50021
-  # 抑揚・音高・話速のプリセット定義（省略時はコード組込みのデフォルトプリセットが適用される）
+  # 声の抑揚・高さ・速さの呼び名を数値に対応づけます（省略すると組み込みの標準セットを使用）。
   presets:
-    intonation:   # 抑揚 (intonationScale, 0.0〜2.0)
+    intonation:   # 抑揚の強さ（小さいほど棒読み、大きいほど豊かに。0.0〜2.0）
       棒読み: 0.0
       かなり控えめ: 0.3
       控えめ: 0.6
@@ -49,7 +50,7 @@ voicevox:
       やや豊か: 1.2
       表現豊か: 1.5
       とても豊か: 1.8
-    pitch:        # 音高 (pitchScale, -0.15〜0.15)
+    pitch:        # 声の高さ（マイナスで低く、プラスで高く。-0.15〜0.15）
       低め: -0.05
       やや低め: -0.033
       わずかに低め: -0.017
@@ -57,7 +58,7 @@ voicevox:
       わずかに高め: 0.017
       やや高め: 0.033
       高め: 0.05
-    speed:        # 話速 (speedScale, 0.5〜2.0)
+    speed:        # 話す速さ（小さいほどゆっくり、大きいほど早口。0.5〜2.0）
       とてもゆっくり: 0.6
       ゆっくり: 0.8
       ややゆっくり: 0.9
@@ -66,31 +67,31 @@ voicevox:
       早口: 1.2
       とても早口: 1.4
 
-# キャッシュ設定（過去エピソードの記憶）
+# 過去回を覚えておくための設定。日替わりコーナーやゲストの「何回目か」の判定に使います。
 cache:
-  enabled: true            # キャッシュ機能の有効/無効（program.id 未設定時は常に無効）
-  max_entries: 100         # JSONL に保持する最大エピソード数（超過分は古い行から削除）
-  retention_days: 90       # 保持日数（超過した古い行は削除）
-  llm_context_entries: 10  # LLM へ渡す直近エピソード件数
+  enabled: true            # 過去回の記憶を使うか（program.id が未設定だと自動で無効）
+  max_entries: 100         # 記憶しておく最大エピソード数（超えた分は古いものから消す）
+  retention_days: 90       # 記憶を残す日数（超えた古いものは消す）
+  llm_context_entries: 10  # AIに参考として渡す直近エピソード数
 
-# Slack 投稿設定（slackpost コマンドで使用）
+# Slack へ配信するときの設定（slackpost コマンドで使用）。
 slack:
-  # Bot トークン（xoxb-...）を格納する環境変数名
-  # export SLACK_BOT_TOKEN=xoxb-xxx などで設定すること
-  # 必要なスコープ: chat:write / files:write
+  # Slack の Bot トークン（xoxb-... ）を入れておく環境変数の名前。
+  # 例: export SLACK_BOT_TOKEN=xoxb-xxx で設定します。
+  # 必要な権限: chat:write / files:write
   bot_token_env: SLACK_BOT_TOKEN
 
-# キャラクター設定（VOICEVOX の話者IDと紐付け）
-# キャラクターIDは corners[].cast のキーとして使用します
+# 登場キャラクターの設定（VOICEVOX の話者と結びつけます）。
+# ここのキー（zundamon など）を episode-spec.yaml の casts / cast で使います。
 characters:
   zundamon:
     name: ずんだもん
     pronoun: ボク
     speech_suffix: ["〜のだ", "〜なのだ"]
     personality: ["元気", "明るい", "素直", "前向き", "おっちょこちょい", "好奇心旺盛"]
-    # デフォルトで使用するスタイル名（styles のキーと一致させること）
+    # 標準で使う声の種類（styles のキーと同じ名前にします）。
     default_style: ノーマル
-    # スタイル名と VOICEVOX 話者IDの対応
+    # 声の種類の名前と VOICEVOX の話者番号の対応。
     styles:
       ノーマル: 3
       あまあま: 1

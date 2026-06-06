@@ -4,7 +4,7 @@
 
 > **検証コマンド**: `vox-radio episodegen check <パス> --config vox-radio.yaml`
 
-`--spec` フラグで指定するジャンル別設定ファイルです。`vox-radio init` で生成されるテンプレートは `episode-spec.yaml` という名前です。詳細は [examples/README.md](examples/README.md) も参照してください。
+`--spec` フラグで指定するジャンル別設定ファイルです。`vox-radio init` で生成されるテンプレートは `episode-spec.yaml` という名前です。記入済みのサンプル一式は `vox-radio init --sample` で `sample/` に生成できます。
 
 ## `program` セクション
 
@@ -115,54 +115,64 @@ corners:
 | `url` | string | 必須 | フィードの URL |
 | `max_items` | int | 任意 | 過去使用URLを除外したうえで確保する最大記事数。デフォルト: 0（実質無制限）。除外で減った分はフィード内の後続記事で補う。 |
 
-## `guests` セクション（省略可）
+## `casts` セクション（出演者名簿）
 
-`guests` はゲスト出演者の設定をキャラID（`vox-radio.yaml` の `characters` のキー）をキーとするマップで定義します。指定した条件に合致した回だけゲストが出演し、その回はオープニングからエンディングまで全コーナーにゲストが通しで出演します。
+`casts` は番組に登場する出演者をキャラID（`vox-radio.yaml` の `characters` のキー）をキーとするマップで宣言します。`corners[].cast` に書くキャラは、必ずここで宣言してください。`type` で毎回出演（`regular`）かゲスト（`guest`）かを指定します。ゲストは指定した条件に合致した回だけ出演し、その回はオープニングからエンディングまで、採用された全コーナーにゲストが通しで出演します（コーナーの `cast` への明示追記は不要）。
 
 ```yaml
-guests:
-  zunko:                             # キー = characters に定義済みのキャラID
-    role: 古参リスナー出身の常連ゲスト  # 全コーナーの cast にマージされる役割説明
-    condition:
-      episodes: [3, 10, 20]          # 第3回・第10回・第20回に登場（明示リスト）
+casts:
+  zundamon:
+    type: regular                      # regular = 毎回出演 / guest = 決まった回だけ出演
+    role: "MC。進行役。ボケ担当。"        # 番組全体での役割（プロンプトに渡す）
+    # condition を省略すると毎回出演（regular のデフォルト）
   metan:
-    role: 業界に詳しい解説ゲスト
+    type: regular
+    role: "MC。相棒。ツッコミ担当。"
+    # お休み条件の例（5回目だけ出演しない）:
+    # condition:
+    #   not:
+    #     episodes: [5]
+  zunko:                               # キー = characters に定義済みのキャラID
+    type: guest                        # guest は condition が必須
+    role: "古参リスナー出身の常連ゲスト"
     condition:
-      every: 5                       # 5, 10, 15, … の回に登場（定期出演）
-  sora:
-    role: フリーランスエンジニア
-    condition:
-      not:
-        every: 5                     # 5の倍数以外の回に登場（metan がいない回すべて）
+      episodes: [3, 10, 20]            # 第3・10・20回に出演（明示リスト）
 ```
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `role` | string | 任意 | 全コーナーの cast にマージされるゲストの役割説明 |
+| `type` | string | 必須 | `regular`（毎回または条件付きで出演）または `guest`（条件付きで出演。`condition` 必須） |
+| `role` | string | 任意 | 番組全体での役割説明（プロンプトに渡す。ゲストは出演回の全コーナーの cast にマージされる） |
 | `condition.episodes` | []int | 任意 | 出演する回番号の明示リスト（各値は 1 以上） |
 | `condition.every` | int | 任意 | 周期的な出演（N の倍数回に出演。1 以上） |
 | `condition.offset` | int | 任意 | `every` と組み合わせる剰余（`episodeNumber % every == offset` で出演。未指定=0 で倍数回） |
 | `condition.not` | EpisodeCondition | 任意 | この条件に合致する回を除外（補集合） |
 
+- `type` は `regular` または `guest` のいずれか。それ以外はバリデーションエラー
+- `type: guest` は `condition` が必須（省略するとバリデーションエラー）
+- `type: regular` は `condition` を省略すると毎回出演。`condition` を書くと条件に合致した回だけ出演
 - `condition.episodes` と `condition.every` の両方を指定した場合は **論理和**（どちらかに合致すれば出演）
 - `condition.not` に合致する回は除外される。`not` 単独指定（`episodes`/`every` を省略）すると「合致しない回すべて」を表現できる
 - 肯定条件（`episodes`/`every`）を省略すると「常に真」として扱われ、`not` 単独で補集合を表現できる
-- `condition.episodes`・`condition.every`・`condition.not` のいずれも未設定の場合はバリデーションエラー
-- キャッシュが無効または `program.id` が未設定で回番号が不明な場合、ゲストは出演しません（警告ログが出力されます）
+- キャストのキャラ ID は `vox-radio.yaml` の `characters` に存在しなければバリデーションエラー
+- キャッシュが無効または `program.id` が未設定で回番号が不明な場合、条件付きキャスト（ゲスト含む）は出演しません（警告ログが出力されます）
 
-**N者ローテーションの例（`every` + `offset`）**
+**3人のゲストを順番に出す例（`every` + `offset` で均等に分担）**
 
 ```yaml
-guests:
+casts:
   alice:
+    type: guest
     role: ゲストA
-    condition: { every: 3, offset: 1 }   # 1,4,7,… 回に出演
+    condition: { every: 3, offset: 1 }   # 3回おきに出演、初回は1回目。→ 第1,4,7,… 回に出演。
   bob:
+    type: guest
     role: ゲストB
-    condition: { every: 3, offset: 2 }   # 2,5,8,… 回に出演
+    condition: { every: 3, offset: 2 }   # 3回おきに出演、初回は2回目。→ 第2,5,8,… 回に出演。
   carol:
+    type: guest
     role: ゲストC
-    condition: { every: 3, offset: 0 }   # 3,6,9,… 回に出演
+    condition: { every: 3, offset: 0 }   # 3回おきに出演、初回は3回目。→ 第3,6,9,… 回に出演。
 ```
 
 ## `assets_files` フィールド

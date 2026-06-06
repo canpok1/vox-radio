@@ -74,7 +74,7 @@ vox-radio --version
 
 ### 動作確認用サンプル実行
 
-`examples/tech.yaml` を使ってパイプライン全体を試すには `make run-sample` を実行します。
+`vox-radio init --sample` で生成される「すぐ動くサンプル設定一式」（`sample/`）を使ってパイプライン全体を試すには `make run-sample` を実行します。`make run-sample` は内部で `init --sample` を実行してから `sample/episode-spec.yaml` を生成・実行します。
 
 ```bash
 make run-sample
@@ -86,7 +86,7 @@ make run-sample
 
 ```bash
 # 別のプロファイルを使う
-make run-sample PROFILE=examples/other.yaml
+make run-sample PROFILE=path/to/your-episode-spec.yaml
 
 # 出力先を指定する
 make run-sample OUT_DIR=output/test
@@ -104,7 +104,7 @@ collect → rundown → script → synth → assemble → manifest
 
 | コマンド | 概要 |
 |----------|------|
-| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用） |
+| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用）。`--sample` を付けると、ずんだもん・めたんMCのニュース番組（バラエティ風）の「すぐ動くサンプル設定一式」を `sample/` に生成する |
 | `install --skills` | LLM エージェント向けスキルファイル（SKILL.md + references/*.md）を `.claude/skills/vox-radio/` にインストールする |
 | `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
 | `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
@@ -135,6 +135,16 @@ vox-radio init
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
+すぐ動くサンプル設定一式がほしい場合は `--sample` を付けます。ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の記入済み設定が `sample/` に生成され、そのまま番組生成を試せます（音声アセットは同梱しないため、効果音・BGM 設定はコメントアウトした記入例として入っています）。
+
+```bash
+# すぐ動くサンプル一式を sample/ に生成
+vox-radio init --sample
+
+# サンプルでそのまま番組生成を試す
+vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+```
+
 既存ファイルは上書きされません（ファイルごとに独立してスキップ判定します）。
 
 ### 設定ファイル
@@ -144,7 +154,7 @@ vox-radio episodegen --spec episode-spec.yaml
 | 種別 | ファイル | 内容 |
 |------|---------|------|
 | 共通設定 (config) | `vox-radio.yaml`（デフォルト。`--config` フラグで別パス指定可） | LLM / VOICEVOX URL / キャラカタログ |
-| エピソード仕様 (spec) | `episode-spec.yaml` または `examples/<genre>.yaml` | program / corners（各コーナーの source でデータソース指定） / assets |
+| エピソード仕様 (spec) | `episode-spec.yaml`（`init --sample` で生成される `sample/episode-spec.yaml` も同形式） | program / corners（各コーナーの source でデータソース指定） / assets |
 
 `vox-radio.yaml` はデフォルトでカレントディレクトリから読み込まれます。別ディレクトリの設定ファイルを使う場合は `--config` フラグでパスを指定します。
 
@@ -176,28 +186,28 @@ characters:
 
 台本生成（`script` コマンド）では、LLM がセリフの感情に応じてスタイルを選択します。`synth` コマンドは行ごとの `style` フィールドを読み取り、指定されたスタイルの `speaker_id` で合成します。`style` が未指定または不正な場合は `default_style` にフォールバックします。
 
-エピソード仕様のサンプルは `examples/` ディレクトリに用意しています。`examples/tech.yaml`（技術ニュース用）を、共通アセット（`examples/assets/`）とあわせて配置しています。これらをコピー・編集して利用してください。詳細は [examples/README.md](examples/README.md) を参照してください。
+エピソード仕様の記入済みサンプルは `vox-radio init --sample` で生成できます。ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の完成済み構成一式（`sample/vox-radio.yaml`・`sample/episode-spec.yaml`・`sample/feed-spec.yaml`・`sample/slack-spec.yaml`・`sample/assets/assets.yaml`）が `sample/` に生成されます。これをコピー・編集して利用してください。
 
 ### 実行例
 
 ```bash
 # 記事を収集（--spec は必須）
-vox-radio episodegen collect --out work/intermediate/01_articles.json --spec examples/tech.yaml
+vox-radio episodegen collect --out work/intermediate/01_articles.json --spec sample/episode-spec.yaml
 
 # 番組設計図（rundown）を生成
 vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json \
-    --spec examples/tech.yaml
+    --spec sample/episode-spec.yaml
 
 # 台本を生成
 vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json \
-    --spec examples/tech.yaml
+    --spec sample/episode-spec.yaml
 
 # 音声合成（設定不要）
 vox-radio episodegen synth --in work/intermediate/04_script.json --out-dir work/clips
 
 # 音声結合
 vox-radio episodegen assemble --in work/intermediate/04_script.json --clips work/clips --out work/episode.mp3 \
-    --spec examples/tech.yaml
+    --spec sample/episode-spec.yaml
 ```
 
 ### 詳細リファレンス

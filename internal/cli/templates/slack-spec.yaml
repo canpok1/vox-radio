@@ -1,40 +1,40 @@
-# slack-spec.yaml - Slack 投稿設定
+# slack-spec.yaml - 番組を Slack に投稿するための設定です。
 # vox-radio slackpost --manifest (manifest.jsonのパス) --spec slack-spec.yaml で
-# mp3 を Slack へアップロードし、要約・コーナーをスレッドに投稿します。
-# Bot トークンは共通設定の slack.bot_token_env で指定した環境変数から取得します。
+# mp3 を Slack にアップロードし、要約やコーナーをスレッドに投稿します。
+# Slack のトークンは vox-radio.yaml の slack.bot_token_env で指定した環境変数から読み込みます。
 
-# 番組ID（任意。ログや将来の突合用）
+# 番組のID（ログや突き合わせ用）。
 program_id: "my-radio"
 
-# Slack 投稿設定
+# Slack 投稿の設定。
 slack:
-  # 投稿先チャンネルID（必須。"C"で始まる Slack のチャンネルID）
+  # 投稿先チャンネルのID（必須。"C" で始まる文字列）。自分のチャンネルIDに置き換えてください。
   channel: "C0123456789"
 
-  # メッセージテンプレート（省略時はコード組込みのデフォルトテンプレートが適用される）
-  # 利用可能なプレースホルダ:
+  # 投稿文のひな型（省略すると組み込みの標準テンプレートを使います）。
+  # 使える置き換え語:
   #   {title}           番組タイトル
-  #   {episode_number}  回番号（0のとき "第N回" セグメントを除去）
-  #   {episode_title}   エピソードサブタイトル（空のとき「」を除去）
+  #   {episode_number}  回番号（0のときは「第N回」の部分が消えます）
+  #   {episode_title}   その回のサブタイトル（空のときは「」が消えます）
   #   {description}     番組説明
   #   {summary}         要約
   #   {datetime}        配信日時
   #   {audio_file}      音声ファイル名
-  # コーナー内追加プレースホルダ:
+  # コーナー内で追加で使える置き換え語:
   #   {corner_title}    コーナータイトル
   #   {corner_summary}  コーナー要約
-  #   {articles}        記事リスト（article テンプレートを各記事に適用して改行連結）
-  # 記事内プレースホルダ:
+  #   {articles}        記事リスト（article のひな型を各記事に当てはめて改行でつなぎます）
+  # 記事内で使える置き換え語:
   #   {title}           記事タイトル
   #   {url}             記事URL
   message:
-    # 親メッセージ（mp3アップロード時の初期コメント）
+    # 親メッセージ（mp3 をアップロードするときの最初のコメント）。
     header: "🎙️ {title} 第{episode_number}回「{episode_title}」"
-    # スレッド返信の通知用プレーンテキスト
+    # スレッド返信の通知に使うプレーンテキスト。
     fallback: "{title} 第{episode_number}回 を配信しました"
-    # スレッド返信の要約 Section（空のとき省略）
+    # スレッド返信に載せる要約（空のときは省略）。
     summary: "*今回のまとめ*\n{summary}"
-    # コーナー Section テンプレート（{articles} は article テンプレートを展開して連結）
+    # コーナーごとの本文（{articles} は下の article を展開してつなぎます）。
     corner: "*{corner_title}*\n{corner_summary}\n{articles}"
-    # 記事1件のテンプレート
+    # 記事1件分のひな型。
     article: " • <{url}|{title}>"
