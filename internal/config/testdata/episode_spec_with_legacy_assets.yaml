@@ -1,4 +1,5 @@
 program:
+  id: "test-program"
   title: "旧形式アセットテスト"
   description: "テスト用"
 

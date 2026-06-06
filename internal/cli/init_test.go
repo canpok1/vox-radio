@@ -185,6 +185,9 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if cfg.Slack.BotTokenEnv == "" {
 		t.Error("vox-radio.yaml template should have slack.bot_token_env set")
 	}
+	if err := config.ValidateEpisodeSpecProgram(spec); err != nil {
+		t.Fatalf("ValidateEpisodeSpecProgram failed (template must set program.id): %v", err)
+	}
 	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
 		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
 	}
@@ -193,9 +196,6 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	}
 
 	// cache フィールドのアサート
-	if !cfg.Cache.Enabled {
-		t.Error("cfg.Cache.Enabled should be true")
-	}
 	if cfg.Cache.MaxEntries != config.DefaultCacheMaxEntries {
 		t.Errorf("cfg.Cache.MaxEntries = %d, want %d", cfg.Cache.MaxEntries, config.DefaultCacheMaxEntries)
 	}

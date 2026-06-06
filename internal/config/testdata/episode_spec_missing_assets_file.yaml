@@ -1,4 +1,5 @@
 program:
+  id: "test-program"
   title: "存在しないアセットファイルテスト"
   description: "テスト用"
 

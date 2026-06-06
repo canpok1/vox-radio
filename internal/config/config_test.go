@@ -1069,13 +1069,17 @@ func TestLoadEpisodeSpec_ProgramID(t *testing.T) {
 	}
 }
 
-func TestLoadEpisodeSpec_ProgramIDEmpty_NoError(t *testing.T) {
-	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
-	if err != nil {
-		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+func TestValidateEpisodeSpecProgram_EmptyID_Error(t *testing.T) {
+	p := &config.EpisodeSpec{Program: config.ProgramConfig{Title: "t", Description: "d"}}
+	if err := config.ValidateEpisodeSpecProgram(p); err == nil {
+		t.Error("ValidateEpisodeSpecProgram should error when program.id is empty")
 	}
-	if spec.Program.ID != "" {
-		t.Errorf("Program.ID: expected empty, got %q", spec.Program.ID)
+}
+
+func TestValidateEpisodeSpecProgram_WithID_NoError(t *testing.T) {
+	p := &config.EpisodeSpec{Program: config.ProgramConfig{ID: "my-program", Title: "t", Description: "d"}}
+	if err := config.ValidateEpisodeSpecProgram(p); err != nil {
+		t.Errorf("ValidateEpisodeSpecProgram should not error when program.id is set: %v", err)
 	}
 }
 
@@ -1118,16 +1122,6 @@ func TestLoadEpisodeSpec_UnknownKey_NoError(t *testing.T) {
 	_, err := config.LoadEpisodeSpec("testdata/episode_spec_unknown_key.yaml")
 	if err != nil {
 		t.Errorf("LoadEpisodeSpec should not error on unknown key (non-strict): %v", err)
-	}
-}
-
-func TestLoadConfig_Cache_DefaultsToDisabled(t *testing.T) {
-	cfg, err := config.LoadConfig("testdata/config.yaml")
-	if err != nil {
-		t.Fatalf("LoadConfig failed: %v", err)
-	}
-	if cfg.Cache.Enabled {
-		t.Error("Cache.Enabled should default to false when not set in YAML")
 	}
 }
 

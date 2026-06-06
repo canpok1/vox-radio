@@ -232,11 +232,11 @@ const DefaultCacheRetentionDays = 90
 const DefaultCacheLLMContextEntries = 10
 
 // CacheConfig controls the episode history cache behavior.
+// The cache is always enabled; episodes are keyed by program.id (required).
 type CacheConfig struct {
-	Enabled           bool `yaml:"enabled"`
-	MaxEntries        int  `yaml:"max_entries"`
-	RetentionDays     int  `yaml:"retention_days"`
-	LLMContextEntries int  `yaml:"llm_context_entries"`
+	MaxEntries        int `yaml:"max_entries"`
+	RetentionDays     int `yaml:"retention_days"`
+	LLMContextEntries int `yaml:"llm_context_entries"`
 }
 
 // EffectiveMaxEntries returns the configured MaxEntries, falling back to DefaultCacheMaxEntries.
@@ -265,7 +265,8 @@ func (c CacheConfig) EffectiveLLMContextEntries() int {
 
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
-	ID            string `yaml:"id,omitempty"`
+	// ID is required: it is the cache key (episodes are stored per program.id).
+	ID            string `yaml:"id"`
 	Title         string `yaml:"title"`
 	Description   string `yaml:"description"`
 	SummaryLength int    `yaml:"summary_length,omitempty"`
@@ -811,6 +812,15 @@ func mergeAssets(dst, src *AssetsConfig) {
 		}
 		maps.Copy(dst.BGM, src.BGM)
 	}
+}
+
+// ValidateEpisodeSpecProgram checks that program.id is set.
+// program.id is the cache key (episodes are stored per program.id), so it is required.
+func ValidateEpisodeSpecProgram(p *EpisodeSpec) error {
+	if p.Program.ID == "" {
+		return fmt.Errorf("program.id is required (it is the cache key for episode history)")
+	}
+	return nil
 }
 
 // ValidateEpisodeSpecCast checks that every character ID in corners[].cast is declared in casts.

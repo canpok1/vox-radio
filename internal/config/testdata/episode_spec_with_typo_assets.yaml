@@ -1,4 +1,5 @@
 program:
+  id: "test-program"
   title: "テスト"
   description: "typoアセット参照テスト用"
 

@@ -1,2 +1,7 @@
+program:
+  id: "test-program"
+  title: "絶対パステスト"
+  description: "テスト用"
+
 assets_files:
   - assets_abs.yaml

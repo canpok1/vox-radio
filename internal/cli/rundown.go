@@ -53,7 +53,7 @@ func newRundownCmd() *cobra.Command {
 				return fmt.Errorf("read articles: %w", err)
 			}
 
-			entries, episodeNumber := loadCacheEntries(cfg, p.Program.ID)
+			entries, episodeNumber := loadCacheEntries(p.Program.ID)
 			corners := resolveCorners(p.Corners, episodeNumber, logger)
 			appearanceCounts := cache.AppearanceCounts(entries)
 

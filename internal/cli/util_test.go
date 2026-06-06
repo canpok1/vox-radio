@@ -33,47 +33,6 @@ func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache
 	}
 }
 
-func TestResolveEpisodeNumber_CacheDisabled(t *testing.T) {
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: false}}
-	n := resolveEpisodeNumber(cfg, "test_program")
-	if n != 0 {
-		t.Errorf("expected 0 when cache disabled, got %d", n)
-	}
-}
-
-func TestResolveEpisodeNumber_EmptyProgramID(t *testing.T) {
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
-	n := resolveEpisodeNumber(cfg, "")
-	if n != 0 {
-		t.Errorf("expected 0 when programID empty, got %d", n)
-	}
-}
-
-func TestResolveEpisodeNumber_FirstEpisode(t *testing.T) {
-	chdirTemp(t)
-
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
-	// キャッシュファイルが存在しない場合は第1回
-	n := resolveEpisodeNumber(cfg, "my_program")
-	if n != 1 {
-		t.Errorf("expected 1 for first episode, got %d", n)
-	}
-}
-
-func TestResolveEpisodeNumber_WithExistingCache(t *testing.T) {
-	tmpDir := chdirTemp(t)
-
-	writeCacheJSONL(t, tmpDir, "prog", []cache.Entry{
-		{EpisodeNumber: 3},
-	})
-
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
-	n := resolveEpisodeNumber(cfg, "prog")
-	if n != 4 {
-		t.Errorf("expected 4 (next after 3), got %d", n)
-	}
-}
-
 func TestSetupLogger_DefaultLogDir(t *testing.T) {
 	tmpDir := chdirTemp(t)
 
@@ -171,25 +130,15 @@ func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
 	}
 }
 
-func TestLoadCacheEntries_CacheDisabled(t *testing.T) {
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: false}}
-	entries, n := loadCacheEntries(cfg, "test_program")
-	if len(entries) != 0 {
-		t.Errorf("expected empty entries when cache disabled, got %d", len(entries))
-	}
-	if n != 0 {
-		t.Errorf("expected 0 when cache disabled, got %d", n)
-	}
-}
+func TestLoadCacheEntries_NoCacheFile(t *testing.T) {
+	chdirTemp(t)
 
-func TestLoadCacheEntries_EmptyProgramID(t *testing.T) {
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
-	entries, n := loadCacheEntries(cfg, "")
+	entries, n := loadCacheEntries("test_program")
 	if len(entries) != 0 {
-		t.Errorf("expected empty entries when programID empty, got %d", len(entries))
+		t.Errorf("expected empty entries when no cache file, got %d", len(entries))
 	}
-	if n != 0 {
-		t.Errorf("expected 0 when programID empty, got %d", n)
+	if n != 1 {
+		t.Errorf("expected 1 (first episode) when no cache file, got %d", n)
 	}
 }
 
@@ -202,8 +151,7 @@ func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
 		}},
 	})
 
-	cfg := &config.Config{Cache: config.CacheConfig{Enabled: true}}
-	entries, n := loadCacheEntries(cfg, "prog")
+	entries, n := loadCacheEntries("prog")
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}

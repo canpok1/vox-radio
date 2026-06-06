@@ -168,6 +168,19 @@ vox-radio episodegen --spec episode-spec.yaml
 vox-radio --config /path/to/my-station/vox-radio.yaml episodegen --spec episode-spec.yaml
 ```
 
+#### 過去回の記憶（キャッシュ）と `program.id`
+
+過去回の記憶（エピソード履歴キャッシュ）は常に有効です。`vox-radio.yaml` の `cache` セクションでは保持件数・保持日数などを調整できますが、有効/無効の切り替えはできません。キャッシュの実体は `episode-spec.yaml` の `program.id` をキーにした JSONL ファイル（`.vox-radio/cache/<program.id>.jsonl`）です。
+
+このため **`program.id` は必須** です。未設定の場合は `episodegen check` および `episodegen`（番組生成）でバリデーションエラーになります。回番号・過去回参照・出演回数などは `program.id` をキーに記録されます。
+
+##### 移行手順（破壊的変更）
+
+以前のバージョンから移行する場合は、以下を実施してください。
+
+- `vox-radio.yaml` の `cache.enabled` 行を削除する（残っていると strict 解析の `check` でエラーになります）。
+- `episode-spec.yaml` の `program.id` を設定する（未設定だとエラーになります）。
+
 #### キャラカタログとスタイル選択
 
 `vox-radio.yaml` の `characters` セクションには、キャラIDごとに複数の音声スタイルを定義できます。`default_style` は `style` 未指定時のフォールバックスタイルです。

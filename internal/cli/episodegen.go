@@ -72,24 +72,19 @@ func newEpisodegenCmd() *cobra.Command {
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
 			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 
-			var cacheMgr *cache.Manager
-			var episodeNumber int
-			var excludedURLs []string
-			appearanceCounts := make(map[string]int)
-			if cfg.Cache.Enabled && p.Program.ID != "" {
-				cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
-				cacheMgr = cache.New(cachePath)
-				entries, err := cacheMgr.Load()
-				if err != nil {
-					return fmt.Errorf("load cache: %w", err)
-				}
-				episodeNumber = cache.NextEpisodeNumber(entries)
-				recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
-				excludedURLs = cache.PastURLs(entries)
-				appearanceCounts = cache.AppearanceCounts(entries)
-				writer.SetPastEpisodes(recent)
-				writer.SetEpisodeNumber(episodeNumber)
+			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
+			cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
+			cacheMgr := cache.New(cachePath)
+			entries, err := cacheMgr.Load()
+			if err != nil {
+				return fmt.Errorf("load cache: %w", err)
 			}
+			episodeNumber := cache.NextEpisodeNumber(entries)
+			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
+			excludedURLs := cache.PastURLs(entries)
+			appearanceCounts := cache.AppearanceCounts(entries)
+			writer.SetPastEpisodes(recent)
+			writer.SetEpisodeNumber(episodeNumber)
 
 			selectedCasts := selectCasts(p.Casts, episodeNumber, appearanceCounts, logger)
 			writer.SetCasts(selectedCasts)
@@ -132,10 +127,8 @@ func newEpisodegenCmd() *cobra.Command {
 				return err
 			}
 
-			if cacheMgr != nil {
-				if err := appendToCache(cacheMgr, p.Program.ID, outDir, cfg.Cache, logger); err != nil {
-					logger.Warn("cache append failed (non-fatal)", "err", err)
-				}
+			if err := appendToCache(cacheMgr, p.Program.ID, outDir, cfg.Cache, logger); err != nil {
+				logger.Warn("cache append failed (non-fatal)", "err", err)
 			}
 
 			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir))
