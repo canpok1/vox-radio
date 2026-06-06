@@ -8,6 +8,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/rundown/prompt"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
@@ -38,13 +39,6 @@ type articleForPrompt struct {
 	Title string `json:"title"`
 }
 
-// cornerForPrompt is the subset of corner data passed to the LLM.
-type cornerForPrompt struct {
-	Title                 string `json:"title"`
-	Content               string `json:"content"`
-	TargetDurationSeconds int    `json:"target_duration_seconds"`
-}
-
 type selectResponse struct {
 	SelectedURLs    []string `json:"selected_urls"`
 	SelectionReason string   `json:"selection_reason"`
@@ -68,11 +62,7 @@ func (s *LLMSelector) SetCasts(casts []model.RundownCast) {
 }
 
 func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error) {
-	cp := cornerForPrompt{
-		Title:                 corner.Title,
-		Content:               corner.Content,
-		TargetDurationSeconds: corner.LengthSec,
-	}
+	cp := prompt.NewCornerForPrompt(corner)
 	cornerJSON, err := json.Marshal(cp)
 	if err != nil {
 		return SelectResult{}, fmt.Errorf("marshal corner: %w", err)

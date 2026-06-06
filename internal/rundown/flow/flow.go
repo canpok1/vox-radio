@@ -8,6 +8,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/rundown/prompt"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
@@ -46,13 +47,6 @@ type Designer interface {
 	DesignFlow(ctx context.Context, corner config.CornerConfig, position Position, target model.RundownCorner, rundown model.Rundown) (string, error)
 }
 
-// cornerForPrompt はプロンプトに渡すコーナー情報（body 除外）。
-type cornerForPrompt struct {
-	Title                 string `json:"title"`
-	Content               string `json:"content"`
-	TargetDurationSeconds int    `json:"target_duration_seconds"`
-}
-
 // cornerForProgram はプロンプトに渡す番組全体コーナー情報。
 type cornerForProgram struct {
 	Title           string                 `json:"title"`
@@ -82,11 +76,7 @@ func NewLLMDesigner(client llm.Client, promptTemplate string, temperature float6
 }
 
 func (d *LLMDesigner) DesignFlow(ctx context.Context, corner config.CornerConfig, position Position, target model.RundownCorner, rundown model.Rundown) (string, error) {
-	cp := cornerForPrompt{
-		Title:                 corner.Title,
-		Content:               corner.Content,
-		TargetDurationSeconds: corner.LengthSec,
-	}
+	cp := prompt.NewCornerForPrompt(corner)
 	cornerJSON, err := json.Marshal(cp)
 	if err != nil {
 		return "", fmt.Errorf("marshal corner: %w", err)
