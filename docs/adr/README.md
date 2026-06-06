@@ -45,3 +45,4 @@
 | [0037](0037-record-cast-appearances-in-cache-and-pass-counts-to-llm.md) | 出演キャスト実績をキャッシュに記録し、参加回数を rundown 経由で生成 LLM に渡す | 採用 | 2026-06-05 |
 | [0038](0038-unify-corner-boundary-audio-config.md) | コーナー境界音声を start_jingle/end_jingle から type 付き start_audio/end_audio へ再構成する | 採用 | 2026-06-05 |
 | [0039](0039-distribute-vox-radio-as-installable-agent-skill.md) | vox-radio をインストール可能なエージェントスキルとして配布する | 採用 | 2026-06-06 |
+| [0040](0040-appearance-count-include-current-episode-with-boundary-conversion.md) | 出演回数を「今回を含めた回数（初登場=1）」で永続化し、LLM 入力は境界で逆変換して維持する（ADR-0037 の回数定義を置換） | 採用 | 2026-06-06 |
