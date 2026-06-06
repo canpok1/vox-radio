@@ -167,6 +167,17 @@ func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts m
 	return selected
 }
 
+// resolveLocation resolves program timezone to *time.Location.
+// On invalid timezone, logs a WARN and falls back to time.UTC.
+func resolveLocation(program config.ProgramConfig, logger *slog.Logger) *time.Location {
+	loc, err := program.Location()
+	if err != nil {
+		logger.Warn("番組タイムゾーンが不正なため UTC にフォールバックします", "timezone", program.EffectiveTimezone(), "err", err)
+		return time.UTC
+	}
+	return loc
+}
+
 // resolveCornersByRundown は rundown のコーナータイトル順に spec のコーナーを再構成する。
 // script 系で採用コーナーを再現するために使う（回番号不要・再実行で不変）。
 func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([]config.CornerConfig, error) {
