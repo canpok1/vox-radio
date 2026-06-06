@@ -221,11 +221,9 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 					LineIndex:   c.LineIndex,
 					Text:        c.Text,
 				})
-			}
-			slog.Default().Info("proofread: applied corrections", "count", len(corrections))
-			for _, c := range corrections {
 				slog.Default().Info("proofread correction", "corner_index", c.CornerIndex, "line_index", c.LineIndex, "text", c.Text, "reason", c.Reason)
 			}
+			slog.Default().Info("proofread: applied corrections", "count", len(corrections))
 		}
 	}
 
@@ -233,12 +231,13 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 }
 
 func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, error) {
-	convMap := make(map[insertKey]string, len(lineConversions))
-	for _, lc := range lineConversions {
-		convMap[insertKey{lc.CornerIndex, lc.LineIndex}] = lc.Text
-	}
+	convMap := buildConversionMap(lineConversions)
 
-	lines := make([]proofreadLine, 0)
+	totalLines := 0
+	for _, corner := range corners {
+		totalLines += len(corner.Lines)
+	}
+	lines := make([]proofreadLine, 0, totalLines)
 	for ci, corner := range corners {
 		for li, line := range corner.Lines {
 			converted := line.Text
@@ -280,6 +279,14 @@ func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLi
 
 type insertKey struct{ cornerIdx, lineIdx int }
 
+func buildConversionMap(lineConversions []lineConversion) map[insertKey]string {
+	m := make(map[insertKey]string, len(lineConversions))
+	for _, lc := range lineConversions {
+		m[insertKey{lc.CornerIndex, lc.LineIndex}] = lc.Text
+	}
+	return m
+}
+
 func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
@@ -295,11 +302,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 	}
 
-	conversionMap := make(map[insertKey]string, len(lineConversions))
-	for _, lc := range lineConversions {
-		key := insertKey{lc.CornerIndex, lc.LineIndex}
-		conversionMap[key] = lc.Text
-	}
+	conversionMap := buildConversionMap(lineConversions)
 
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
