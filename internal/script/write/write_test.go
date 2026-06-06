@@ -423,6 +423,13 @@ func TestLLMWriter_Write_PromptContainsProgramInfo(t *testing.T) {
 	if !strings.Contains(prompt, "エンディング") {
 		t.Errorf("prompt should contain corner title 'エンディング', got: %s", prompt)
 	}
+	// 他コーナーの content は {{program}} に露出してはならない（コーナー先取り防止）。
+	// 当該コーナーの content は {{corner}} 側で渡されるため {{program}} には含まれない。
+	for _, leaked := range []string{"番組の挨拶", "記事紹介", "まとめ"} {
+		if strings.Contains(prompt, leaked) {
+			t.Errorf("prompt {{program}} should NOT contain corner content %q, got: %s", leaked, prompt)
+		}
+	}
 }
 
 func TestLLMWriter_Write_PreviousCornersInjectedInPrompt(t *testing.T) {

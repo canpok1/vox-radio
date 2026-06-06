@@ -38,10 +38,12 @@ type cornerForPrompt struct {
 	TargetChars int                  `json:"target_chars"`
 }
 
-// cornerOutline is the program-level outline of a corner (title+content only, no cast).
+// cornerOutline is the program-level outline of a corner (title only).
+// Other corners' content is intentionally omitted so the LLM cannot "spoil"
+// topics that belong to other corners. The current corner's full content is
+// still provided separately via cornerForPrompt ({{corner}}).
 type cornerOutline struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Title string `json:"title"`
 }
 
 // previousCornerForPrompt is the context of a previously generated corner, passed to the LLM.
@@ -129,7 +131,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 
 	outlines := make([]cornerOutline, len(allCorners))
 	for i, c := range allCorners {
-		outlines[i] = cornerOutline{Title: c.Title, Content: c.Content}
+		outlines[i] = cornerOutline{Title: c.Title}
 	}
 	promptProgram := programForPrompt{
 		Title:       program.Title,
