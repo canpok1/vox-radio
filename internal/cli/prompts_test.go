@@ -10,7 +10,7 @@ func TestLoadPrompts(t *testing.T) {
 		t.Fatalf("loadPrompts() error = %v", err)
 	}
 
-	expectedKeys := []string{"select", "summarize", "write", "direct", "summary", "corner_summary"}
+	expectedKeys := []string{"select", "summarize", "write", "direct", "proofread", "summary", "corner_summary"}
 	for _, key := range expectedKeys {
 		t.Run(key, func(t *testing.T) {
 			val, ok := prompts[key]

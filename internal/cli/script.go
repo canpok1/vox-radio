@@ -109,7 +109,9 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 
 	gen := script.NewLLMScriptGenerator(
 		w,
-		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct")),
+		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct"),
+			direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
+		),
 		assetCatalog,
 		workDir,
 		script.WithLogger(logger),
@@ -170,7 +172,9 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 		return fmt.Errorf("parse 03_lines.json: %w", err)
 	}
 
-	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"))
+	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
+		direct.WithProofread(prompts["proofread"], stepTemp(llmCfg, "proofread")),
+	)
 	scr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
