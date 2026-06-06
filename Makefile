@@ -35,7 +35,6 @@ run-sample: build
 	./$(BINARY_NAME) --config sample/vox-radio.yaml episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)"
 
 check-samples: build
-	./$(BINARY_NAME) --config vox-radio.yaml config check
 	./$(BINARY_NAME) --config internal/cli/templates/vox-radio.yaml config check
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" episodegen check episode-spec.yaml
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" assets check assets/assets.yaml
