@@ -93,7 +93,9 @@ func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
   channel: ""
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
-	_ = os.WriteFile(specPath, []byte(content), 0o644)
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
@@ -109,7 +111,9 @@ func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
 unknown_key: value
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
-	_ = os.WriteFile(specPath, []byte(content), 0o644)
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
@@ -126,7 +130,9 @@ slack:
   channel: "C0123456789"
 `
 	specPath := filepath.Join(dir, "slack-spec.yaml")
-	_ = os.WriteFile(specPath, []byte(content), 0o644)
+	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
