@@ -694,6 +694,66 @@ func TestRundown_Casts_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestRundownCast_PastAppearanceCount(t *testing.T) {
+	tests := []struct {
+		name            string
+		appearanceCount int
+		want            int
+	}{
+		{"初登場（1）は0を返す", 1, 0},
+		{"4回目（4）は3を返す", 4, 3},
+		{"0のとき0クランプ", 0, 0},
+		{"負値のとき0クランプ", -1, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := model.RundownCast{AppearanceCount: tt.appearanceCount}
+			got := c.PastAppearanceCount()
+			if got != tt.want {
+				t.Errorf("PastAppearanceCount() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCastsForLLM_ConvertsAppearanceCount(t *testing.T) {
+	original := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
+	}
+
+	got := model.CastsForLLM(original)
+
+	if len(got) != 2 {
+		t.Fatalf("CastsForLLM: got %d items, want 2", len(got))
+	}
+	if got[0].AppearanceCount != 4 {
+		t.Errorf("got[0].AppearanceCount = %d, want 4 (5-1)", got[0].AppearanceCount)
+	}
+	if got[1].AppearanceCount != 0 {
+		t.Errorf("got[1].AppearanceCount = %d, want 0 (1-1)", got[1].AppearanceCount)
+	}
+}
+
+func TestCastsForLLM_DoesNotModifyOriginal(t *testing.T) {
+	original := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+	}
+
+	_ = model.CastsForLLM(original)
+
+	if original[0].AppearanceCount != 5 {
+		t.Errorf("original[0].AppearanceCount modified: got %d, want 5", original[0].AppearanceCount)
+	}
+}
+
+func TestCastsForLLM_Empty(t *testing.T) {
+	got := model.CastsForLLM([]model.RundownCast{})
+	if len(got) != 0 {
+		t.Errorf("CastsForLLM(empty) should return empty slice, got %d items", len(got))
+	}
+}
+
 func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 	cl := model.CornerLines{
 		Title: "C1",

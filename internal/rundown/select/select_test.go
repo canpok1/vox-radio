@@ -113,6 +113,28 @@ func TestLLMSelector_SetCasts_PromptContainsCastInfo(t *testing.T) {
 	}
 }
 
+func TestLLMSelector_SetCasts_AppearanceCountIsConverted(t *testing.T) {
+	// appearance_count in prompt should be PastAppearanceCount() (new_count - 1), not the raw value
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+	}
+	s := sel.NewLLMSelector(mc, "{{casts}}", 0)
+	s.SetCasts([]model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},
+	})
+
+	_, _ = s.Select(context.Background(), config.CornerConfig{Title: "t"}, []model.Article{{URL: "u"}})
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	// AppearanceCount=5 → PastAppearanceCount()=4 should appear in prompt
+	if !strings.Contains(prompt, `"appearance_count":4`) {
+		t.Errorf("prompt should contain appearance_count:4 (converted from 5), got: %s", prompt)
+	}
+}
+
 func TestLLMSelector_NoCasts_PromptHasEmptyArray(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),

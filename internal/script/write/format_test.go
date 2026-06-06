@@ -19,8 +19,9 @@ func TestFormatCastInfo_NoGuests_ReturnsNoGuestMessage(t *testing.T) {
 }
 
 func TestFormatCastInfo_GuestFirstAppearance(t *testing.T) {
+	// AppearanceCount: 1 = 初登場（新定義: 今回含む出演回数）
 	casts := []model.RundownCast{
-		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
 	}
 	got := formatCastInfo(casts)
 	if !strings.Contains(got, "今回が初出演") {
@@ -29,8 +30,9 @@ func TestFormatCastInfo_GuestFirstAppearance(t *testing.T) {
 }
 
 func TestFormatCastInfo_GuestReturningAppearance(t *testing.T) {
+	// AppearanceCount: 4 = 今回が4回目（新定義）→ 過去3回出演
 	casts := []model.RundownCast{
-		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 3},
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 4},
 	}
 	got := formatCastInfo(casts)
 	if !strings.Contains(got, "過去3回出演") {
@@ -41,7 +43,7 @@ func TestFormatCastInfo_GuestReturningAppearance(t *testing.T) {
 func TestFormatCastInfo_NoDirectionRules(t *testing.T) {
 	// 演出ルールは追加しない
 	casts := []model.RundownCast{
-		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
 	}
 	got := formatCastInfo(casts)
 	// 演出ルール（初出演時に必ずリアクションする等）は含まれない

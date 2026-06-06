@@ -309,8 +309,8 @@ func formatCastInfo(casts []model.RundownCast) string {
 	sb.WriteString("この回は以下のゲストが番組を通して（最初から最後まで）出演します:\n")
 	for _, g := range guests {
 		appearanceInfo := "（今回が初出演）"
-		if g.AppearanceCount > 0 {
-			appearanceInfo = fmt.Sprintf("（過去%d回出演）", g.AppearanceCount)
+		if past := g.PastAppearanceCount(); past > 0 {
+			appearanceInfo = fmt.Sprintf("（過去%d回出演）", past)
 		}
 		fmt.Fprintf(&sb, "- %s（役割: %s）%s\n", g.CharacterID, g.Role, appearanceInfo)
 	}

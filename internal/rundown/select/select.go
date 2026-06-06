@@ -87,11 +87,7 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 		return SelectResult{}, fmt.Errorf("marshal articles: %w", err)
 	}
 
-	casts := s.casts
-	if casts == nil {
-		casts = make([]model.RundownCast, 0)
-	}
-	castsJSON, err := json.Marshal(casts)
+	castsJSON, err := json.Marshal(model.CastsForLLM(s.casts))
 	if err != nil {
 		return SelectResult{}, fmt.Errorf("marshal casts: %w", err)
 	}
