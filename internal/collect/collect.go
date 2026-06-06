@@ -16,6 +16,7 @@ import (
 type Collector struct {
 	client *http.Client
 	logger *slog.Logger
+	loc    *time.Location
 }
 
 // Option configures a Collector.
@@ -26,6 +27,11 @@ func WithLogger(l *slog.Logger) Option {
 	return func(c *Collector) { c.logger = l }
 }
 
+// WithLocation sets the timezone used for converting article published times.
+func WithLocation(loc *time.Location) Option {
+	return func(c *Collector) { c.loc = loc }
+}
+
 // New creates a Collector. If client is nil, http.DefaultClient is used.
 func New(client *http.Client, opts ...Option) *Collector {
 	if client == nil {
@@ -34,6 +40,7 @@ func New(client *http.Client, opts ...Option) *Collector {
 	c := &Collector{
 		client: client,
 		logger: slog.Default(),
+		loc:    time.UTC,
 	}
 	for _, opt := range opts {
 		opt(c)

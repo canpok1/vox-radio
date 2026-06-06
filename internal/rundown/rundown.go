@@ -125,10 +125,13 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 				points = make([]string, 0)
 			}
 			rdArticles = append(rdArticles, model.RundownArticle{
-				URL:     a.URL,
-				Title:   a.Title,
-				Summary: sum.Summary,
-				Points:  points,
+				URL:       a.URL,
+				Title:     a.Title,
+				Summary:   sum.Summary,
+				Points:    points,
+				Source:    a.Source,
+				Author:    a.Author,
+				Published: a.Published,
 			})
 		}
 

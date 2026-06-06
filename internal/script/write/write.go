@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
@@ -78,6 +79,8 @@ type LLMWriter struct {
 	pastEpisodes   []cache.Entry
 	episodeNumber  int
 	casts          []model.RundownCast
+	recordedAt     string // RFC3339 in program timezone; empty means unknown
+	timezone       string // IANA timezone name; empty means unknown
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
@@ -99,6 +102,13 @@ func (w *LLMWriter) SetEpisodeNumber(n int) {
 // SetCasts configures the confirmed cast members to inject into the script generation prompt.
 func (w *LLMWriter) SetCasts(casts []model.RundownCast) {
 	w.casts = casts
+}
+
+// SetRecordedAt configures the recording time to inject into the script generation prompt.
+// t is formatted as RFC3339 in loc; loc.String() is used as the timezone name.
+func (w *LLMWriter) SetRecordedAt(t time.Time, loc *time.Location) {
+	w.recordedAt = t.In(loc).Format(time.RFC3339)
+	w.timezone = loc.String()
 }
 
 func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, assignments []CastAssignment, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error) {
@@ -170,6 +180,15 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		}
 	}
 
+	recordedAtStr := w.recordedAt
+	if recordedAtStr == "" {
+		recordedAtStr = "（不明）"
+	}
+	timezoneStr := w.timezone
+	if timezoneStr == "" {
+		timezoneStr = "（不明）"
+	}
+
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
@@ -181,6 +200,8 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{previous_corners}}", previousCornersStr,
 		"{{episode_number}}", episodeNumberStr,
 		"{{guest_info}}", castOverviewStr,
+		"{{recorded_at}}", recordedAtStr,
+		"{{timezone}}", timezoneStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)

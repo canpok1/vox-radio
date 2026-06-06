@@ -1,9 +1,12 @@
 package model
 
 type Article struct {
-	URL   string `json:"url"`
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	URL       string `json:"url"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	Source    string `json:"source,omitempty"`    // 媒体名（RSS feed.Title）
+	Author    string `json:"author,omitempty"`    // 著者名（ベストエフォート）
+	Published string `json:"published,omitempty"` // 配信日時（RFC3339・番組TZ変換済み）
 }
 
 type CornerArticles struct {

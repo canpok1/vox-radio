@@ -3,6 +3,8 @@ package collect
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/mmcdole/gofeed"
 
@@ -18,6 +20,8 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 		return nil, fmt.Errorf("parse feed: %w", err)
 	}
 
+	source := feed.Title
+
 	articles := make([]model.Article, 0, len(feed.Items))
 	for _, item := range feed.Items {
 		if _, skip := excluded[item.Link]; skip {
@@ -28,9 +32,12 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 			body = item.Description
 		}
 		articles = append(articles, model.Article{
-			URL:   item.Link,
-			Title: item.Title,
-			Body:  extractTextFromHTML(body),
+			URL:       item.Link,
+			Title:     item.Title,
+			Body:      extractTextFromHTML(body),
+			Source:    source,
+			Author:    extractAuthor(item),
+			Published: extractPublished(item, c.loc),
 		})
 		if maxItems > 0 && len(articles) >= maxItems {
 			break
@@ -47,4 +54,30 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 	}
 
 	return articles, nil
+}
+
+// extractAuthor extracts the author name from a feed item.
+// Priority: item.Authors[0].Name → item.Author.Name.
+// Returns empty string if the result contains "@" (email format) or is blank.
+func extractAuthor(item *gofeed.Item) string {
+	var name string
+	if len(item.Authors) > 0 {
+		name = strings.TrimSpace(item.Authors[0].Name)
+	}
+	if name == "" && item.Author != nil {
+		name = strings.TrimSpace(item.Author.Name)
+	}
+	if strings.Contains(name, "@") {
+		return ""
+	}
+	return name
+}
+
+// extractPublished returns the item's published time as RFC3339 in loc.
+// Returns empty string if PublishedParsed is nil.
+func extractPublished(item *gofeed.Item, loc *time.Location) string {
+	if item.PublishedParsed == nil {
+		return ""
+	}
+	return item.PublishedParsed.In(loc).Format(time.RFC3339)
 }

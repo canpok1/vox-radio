@@ -1,10 +1,13 @@
 package model
 
 type RundownArticle struct {
-	URL     string   `json:"url"`
-	Title   string   `json:"title"`
-	Summary string   `json:"summary"`
-	Points  []string `json:"points"`
+	URL       string   `json:"url"`
+	Title     string   `json:"title"`
+	Summary   string   `json:"summary"`
+	Points    []string `json:"points"`
+	Source    string   `json:"source,omitempty"`    // 媒体名
+	Author    string   `json:"author,omitempty"`    // 著者名
+	Published string   `json:"published,omitempty"` // 配信日時（RFC3339）
 }
 
 type RundownCorner struct {
