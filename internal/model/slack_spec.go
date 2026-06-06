@@ -3,9 +3,8 @@ package model
 import (
 	"errors"
 	"fmt"
-	"os"
 
-	"gopkg.in/yaml.v3"
+	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
 const (
@@ -66,18 +65,9 @@ func LoadSlackSpecStrict(path string) (SlackSpec, error) {
 }
 
 func loadSlackSpecWith(path string, strict bool) (SlackSpec, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return SlackSpec{}, fmt.Errorf("read slack spec: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-	dec := yaml.NewDecoder(f)
-	if strict {
-		dec.KnownFields(true)
-	}
 	var spec SlackSpec
-	if err := dec.Decode(&spec); err != nil {
-		return SlackSpec{}, fmt.Errorf("parse slack spec: %w", err)
+	if err := fileio.DecodeYAML(path, &spec, strict); err != nil {
+		return SlackSpec{}, fmt.Errorf("load slack spec: %w", err)
 	}
 	return spec, nil
 }
