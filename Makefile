@@ -1,7 +1,7 @@
 BINARY_NAME=vox-radio
 VERSION ?= dev
 LDFLAGS=-X github.com/canpok1/vox-radio/internal/cli.version=$(VERSION)
-PROFILE ?= examples/tech.yaml
+PROFILE ?= sample/episode-spec.yaml
 OUT_DIR ?= output/$(shell date +%Y%m%d%H%M%S)
 
 setup:
@@ -31,14 +31,20 @@ docs:
 	go run ./tools/gendocs
 
 run-sample: build
-	./$(BINARY_NAME) episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)"
+	./$(BINARY_NAME) init --sample
+	./$(BINARY_NAME) --config sample/vox-radio.yaml episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)"
 
 check-samples: build
 	./$(BINARY_NAME) --config vox-radio.yaml config check
 	./$(BINARY_NAME) --config internal/cli/templates/vox-radio.yaml config check
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" episodegen check episode-spec.yaml
 	cd internal/cli/templates && "$(CURDIR)/$(BINARY_NAME)" assets check assets/assets.yaml
-	for f in examples/*.yaml; do ./$(BINARY_NAME) episodegen check "$$f"; done
+	./$(BINARY_NAME) init --sample
+	./$(BINARY_NAME) --config sample/vox-radio.yaml config check
+	./$(BINARY_NAME) --config sample/vox-radio.yaml episodegen check sample/episode-spec.yaml
+	./$(BINARY_NAME) assets check sample/assets/assets.yaml
+	./$(BINARY_NAME) feedgen check sample/feed-spec.yaml
+	./$(BINARY_NAME) slackpost check sample/slack-spec.yaml
 
 release-check:
 	goreleaser check

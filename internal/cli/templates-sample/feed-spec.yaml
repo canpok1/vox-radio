@@ -1,0 +1,35 @@
+# これはポッドキャストの配信フィード（RSS）を作るための設定サンプルです。
+# 次のコマンドで feed.xml（配信用の目次ファイル）を作れます:
+#   vox-radio feedgen --cache (キャッシュファイルのパス) --spec sample/feed-spec.yaml
+# できあがった feed.xml は下の output.public のフォルダに書き出されます。
+
+# 番組のID。どのエピソードを集めるかの突き合わせに使うので、
+# episode-spec.yaml の program.id と同じ値にしてください。
+program_id: "news-variety"
+
+# 配信フィードに載せる番組情報。
+feed:
+  # 番組の言語。
+  language: "ja"
+  # 配信者の名前。
+  author: "あなたの名前"
+  # 連絡先メールアドレス。
+  email: "you@example.com"
+  # ジャンル（Apple Podcasts などのカテゴリ）。不要なら空文字にします。
+  category: "News"
+  # 過激な表現を含むか。
+  explicit: false
+  # 番組のカバー画像のURL。不要なら空文字にします。
+  cover_image_url: "https://example.com/cover.jpg"
+  # 番組のホームページURL。
+  site_url: "https://example.com"
+  # 各回の音声ファイルのURLのひな型。
+  # {episode_number}（回番号）と {audio_file}（音声ファイル名）が自動で置き換わります。
+  audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
+  # 各回のクレジット表記。不要なら空文字にします。
+  credit: ""
+
+# 出力先の設定。
+output:
+  # feed.xml を書き出すフォルダ（省略すると public）。
+  public: "public"

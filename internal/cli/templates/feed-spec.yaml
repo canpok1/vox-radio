@@ -1,35 +1,35 @@
-# feed-spec.yaml - 配信フィード（RSS）生成設定
-# vox-radio feedgen --cache (cacheファイルのパス) --spec feed-spec.yaml で
-# RSS 2.0 + iTunes フィード（feed.xml）を生成します。
-# feed.xml は output.public ディレクトリに書き出されます。
+# feed-spec.yaml - ポッドキャストの配信フィード（RSS）を作るための設定です。
+# vox-radio feedgen --cache (キャッシュファイルのパス) --spec feed-spec.yaml で
+# feed.xml（配信用の目次ファイル。RSS 2.0 + iTunes 形式）を作れます。
+# feed.xml は下の output.public のフォルダに書き出されます。
 
-# 番組ID（feedgen が cache から対象エピソードを絞り込むキー。
-# episode-spec.yaml の program.id と一致させること）
+# 番組のID。どのエピソードを集めるかの突き合わせに使うので、
+# episode-spec.yaml の program.id と同じ値にしてください。
 program_id: "my-radio"
 
-# RSS / iTunes チャンネルのメタデータ
+# 配信フィードに載せる番組情報。
 feed:
-  # 言語コード（RSS channel language）
+  # 番組の言語。
   language: "ja"
-  # 配信者名（itunes:author）
+  # 配信者の名前。
   author: "あなたの名前"
-  # 連絡先メールアドレス（itunes:email）
+  # 連絡先メールアドレス。
   email: "you@example.com"
-  # iTunes カテゴリ（不要な場合は空文字でタグ省略）
+  # ジャンル（Apple Podcasts などのカテゴリ）。不要なら空文字にするとタグが省かれます。
   category: "Technology"
-  # 露骨な表現の有無（itunes:explicit）
+  # 過激な表現を含むか。
   explicit: false
-  # カバー画像URL（itunes:image。不要な場合は空文字でタグ省略）
+  # 番組のカバー画像のURL。不要なら空文字にするとタグが省かれます。
   cover_image_url: "https://example.com/cover.jpg"
-  # 番組サイトURL（RSS channel link）
+  # 番組のホームページURL。
   site_url: "https://example.com"
-  # 各エピソード音声ファイルのURLテンプレート。
-  # {episode_number} と {audio_file} が cache の値で置換されます。
+  # 各回の音声ファイルのURLのひな型。
+  # {episode_number}（回番号）と {audio_file}（音声ファイル名）が自動で置き換わります。
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
-  # クレジット表記（各 item の itunes:author。不要な場合は空文字で省略）
+  # 各回のクレジット表記。不要なら空文字にすると省かれます。
   credit: ""
 
-# 出力設定
+# 出力先の設定。
 output:
-  # feed.xml を書き出すディレクトリ（省略時は "public"）
+  # feed.xml を書き出すフォルダ（省略すると public）。
   public: "public"

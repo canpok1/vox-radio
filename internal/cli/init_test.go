@@ -36,12 +36,12 @@ func writeTestFile(t *testing.T, dir, name string, content []byte) {
 	}
 }
 
-func runInitCmd(t *testing.T) (string, error) {
+func runInitCmd(t *testing.T, extraArgs ...string) (string, error) {
 	t.Helper()
 	cmd := cli.NewRootCmd()
 	var buf strings.Builder
 	cmd.SetOut(&buf)
-	cmd.SetArgs([]string{"init"})
+	cmd.SetArgs(append([]string{"init"}, extraArgs...))
 	err := cmd.Execute()
 	return buf.String(), err
 }
@@ -219,6 +219,120 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	}
 	if v, ok := presets.ResolveSpeed("標準"); !ok || v != 1.0 {
 		t.Errorf("presets.Speed[標準] = %v (ok=%v), want 1.0", v, ok)
+	}
+}
+
+func TestInitCmd_Sample_AllGenerated(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--sample")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{
+		"sample/vox-radio.yaml",
+		"sample/episode-spec.yaml",
+		"sample/feed-spec.yaml",
+		"sample/slack-spec.yaml",
+		"sample/assets/assets.yaml",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
+	}
+}
+
+func TestInitCmd_Sample_Loadable(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--sample")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cfg, err := config.LoadConfig(filepath.Join(dir, "sample", "vox-radio.yaml"))
+	if err != nil {
+		t.Fatalf("LoadConfig failed on sample: %v", err)
+	}
+
+	spec, err := config.LoadEpisodeSpecStrict(filepath.Join(dir, "sample", "episode-spec.yaml"))
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpecStrict failed on sample: %v", err)
+	}
+	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
+		t.Fatalf("ValidateEpisodeSpecAssets failed on sample: %v", err)
+	}
+	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
+		t.Fatalf("ValidateEpisodeSpecCast failed on sample: %v", err)
+	}
+	if err := config.ValidateEpisodeSpecCasts(spec, cfg.Characters); err != nil {
+		t.Fatalf("ValidateEpisodeSpecCasts failed on sample: %v", err)
+	}
+	if err := config.ValidateEpisodeSpecCorners(spec); err != nil {
+		t.Fatalf("ValidateEpisodeSpecCorners failed on sample: %v", err)
+	}
+
+	// 毎回の放送コーナーの length_sec 合計が 300 秒（尺不変）であること。
+	// 固定コーナー（condition なし）＋ ローテ枠どれか1つ = 15+180+90+15 = 300。
+	fixed := 0
+	var rotation []int
+	for _, c := range spec.Corners {
+		if c.Condition == nil {
+			fixed += c.LengthSec
+		} else {
+			rotation = append(rotation, c.LengthSec)
+		}
+	}
+	if len(rotation) == 0 {
+		t.Fatal("rotation corners (with condition) not found")
+	}
+	for _, r := range rotation {
+		if total := fixed + r; total != 300 {
+			t.Errorf("放送コーナーの length_sec 合計 = %d, want 300", total)
+		}
+	}
+
+	// 第1回はローテ枠のうちスポーツコーナー（every:3, offset:1）のみが採用され、
+	// 採用コーナーは 4 つ（固定3＋ローテ1）であること。
+	ep1 := config.ResolveCornersForEpisode(spec.Corners, 1)
+	if len(ep1) != 4 {
+		t.Errorf("第1回の採用コーナー数 = %d, want 4", len(ep1))
+	}
+	ep1Titles := make(map[string]bool, len(ep1))
+	for _, c := range ep1 {
+		ep1Titles[c.Title] = true
+	}
+	if !ep1Titles["スポーツコーナー"] {
+		t.Error("第1回はスポーツコーナーが放送されるべき")
+	}
+	if ep1Titles["エンタメコーナー"] || ep1Titles["気になるサイエンス"] {
+		t.Error("第1回はスポーツコーナー以外のローテ枠は放送されないべき")
+	}
+
+	if _, err := model.LoadFeedSpec(filepath.Join(dir, "sample", "feed-spec.yaml")); err != nil {
+		t.Fatalf("LoadFeedSpec failed on sample: %v", err)
+	}
+	if _, err := model.LoadSlackSpec(filepath.Join(dir, "sample", "slack-spec.yaml")); err != nil {
+		t.Fatalf("LoadSlackSpec failed on sample: %v", err)
+	}
+}
+
+func TestInitCmd_Sample_Skip(t *testing.T) {
+	dir := chdirTemp(t)
+	existingContent := []byte("# existing")
+	writeTestFile(t, dir, "sample/episode-spec.yaml", existingContent)
+	out, err := runInitCmd(t, "--sample")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sample", "episode-spec.yaml"))
+	if string(data) != string(existingContent) {
+		t.Error("sample/episode-spec.yaml should not be overwritten")
+	}
+	if !strings.Contains(out, "skip") {
+		t.Errorf("expected skip message for sample/episode-spec.yaml, got: %s", out)
+	}
+	// 他のファイルは生成される。
+	if _, err := os.Stat(filepath.Join(dir, "sample", "vox-radio.yaml")); os.IsNotExist(err) {
+		t.Error("sample/vox-radio.yaml was not generated")
 	}
 }
 

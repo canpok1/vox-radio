@@ -1,44 +1,47 @@
-# assets.yaml - アセット設定ファイル
-# ジングル・SE・BGM の素材ファイルとパラメータを定義します。
-# 素材バイナリ（mp3/wav 等）は別途用意してください。
-# 検証は vox-radio assets check assets/assets.yaml で実行できます。
-# パスはこのファイルのディレクトリを基準に解決されます。
-# 素材が不要な場合は episode-spec.yaml の assets_files をコメントアウトまたは削除してください。
+# assets.yaml - 効果音やBGMを設定するファイルです（ジングル・SE・BGM）。
+# 音声ファイル（mp3 や wav）は別途自分で用意してください。
+# 使うときは、使いたい項目の行頭の # を外して設定します。
+# 設定できているかは vox-radio assets check assets/assets.yaml で確認できます。
+# ファイルのパスは、このファイルがある場所を基準に探します。
+# 効果音やBGMが不要なら、episode-spec.yaml の assets_files をコメントアウトするか削除すればOKです。
 
+# jingle = コーナーの区切りで流す短い音楽（流す間はセリフを止めます）。
 # jingle:
 #   opening:
 #     file: jingle/opening.mp3
-#     fade_in: 0.5
-#     fade_out: 0.5
-#     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
-#     description: "番組冒頭で流すオープニングジングル"  # 省略可
+#     fade_in: 0.5                 # 鳴り始めの音量を上げる秒数
+#     fade_out: 0.5                # 鳴り終わりの音量を下げる秒数
+#     # trim_silence: false        # 省略時は true（素材の前後の無音を自動で取り除く）。残したいときだけ false
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材の雑音レベルに合わせて調整
+#     description: "番組冒頭で流すオープニングジングル"  # メモ（省略可）
 #   ending:
 #     file: jingle/ending.mp3
 #     fade_in: 0.5
 #     fade_out: 1.0
-#     # trim_silence: false  # 省略時は true
+#     # trim_silence: false        # 省略時は true
 #     # trim_silence_threshold: -50  # 省略時は -50（dB）
+# se = 場面の切り替えなどで鳴らす短い効果音。
 # se:
 #   chime:
 #     file: se/chime.wav
-#     volume: 0.8
-#     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
-#     # overlay: true  # 省略時は false（SE が鳴り終わってから次のセリフを再生）。セリフに重ねたい場合のみ true
-#     description: "話題の切り替わりに鳴らす明るいチャイム音"  # 省略可
+#     volume: 0.8                  # 音量（1.0 が等倍）
+#     # trim_silence: false        # 省略時は true（前後の無音を自動で取り除く）。残したいときだけ false
+#     # trim_silence_threshold: -50  # 省略時は -50（dB）
+#     # overlay: true              # 省略時は false（効果音が鳴り終わってから次のセリフ）。セリフに重ねるなら true
+#     description: "話題の切り替わりに鳴らす明るいチャイム音"  # メモ（省略可）
 #   transition:
 #     file: se/transition.wav
 #     volume: 0.8
-#     # trim_silence: false  # 省略時は true
+#     # trim_silence: false        # 省略時は true
 #     # trim_silence_threshold: -50  # 省略時は -50（dB）
-#     # overlay: true  # 省略時は false（順次再生）
+#     # overlay: true              # 省略時は false（順番に再生）
+# bgm = コーナー中ずっと流す背景音楽（セリフの下で小さく流します）。
 # bgm:
 #   talk_bgm:
 #     file: bgm/talk.mp3
-#     volume: 0.3
-#     duck_ratio: 8
-#     loop: true
-#     # fade_in: 1.0   # フェードイン秒数（省略時デフォルト 1.0 秒）
-#     # fade_out: 1.0  # フェードアウト秒数（省略時デフォルト 1.0 秒）。0 指定でフェードなし
-#     description: "雑談向けの落ち着いたBGM"  # 省略可
+#     volume: 0.3                  # 音量（小さめにするとセリフが聞き取りやすい）
+#     duck_ratio: 8                # セリフ中にBGMを下げる強さ
+#     loop: true                   # コーナーの長さに合わせて繰り返すか
+#     # fade_in: 1.0               # 鳴り始めの音量を上げる秒数（省略時は 1.0 秒）
+#     # fade_out: 1.0              # 鳴り終わりの音量を下げる秒数（省略時は 1.0 秒）。0 でフェードなし
+#     description: "雑談向けの落ち着いたBGM"  # メモ（省略可）
