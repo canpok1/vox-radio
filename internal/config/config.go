@@ -58,7 +58,10 @@ func (e JingleEntry) Validate() error {
 	if err := validateNonNegative("fade_in", e.FadeIn); err != nil {
 		return err
 	}
-	return validateNonNegative("fade_out", e.FadeOut)
+	if err := validateNonNegative("fade_out", e.FadeOut); err != nil {
+		return err
+	}
+	return validateOptionalNegative("trim_silence_threshold", e.TrimSilenceThreshold)
 }
 
 type SEEntry struct {
@@ -84,7 +87,10 @@ func (e SEEntry) EffectiveOverlay() bool { return e.Overlay != nil && *e.Overlay
 
 // Validate checks that field values are in valid ranges.
 func (e SEEntry) Validate() error {
-	return validateNonNegative("volume", e.Volume)
+	if err := validateNonNegative("volume", e.Volume); err != nil {
+		return err
+	}
+	return validateOptionalNegative("trim_silence_threshold", e.TrimSilenceThreshold)
 }
 
 // effectiveTrimSilence returns true when v is nil (default) or points to true.
@@ -770,9 +776,10 @@ func validateFileField(category, name, file string) error {
 	return nil
 }
 
-func validateTrimSilenceThresholdDB(category, name string, v *float64) error {
+// validateOptionalNegative returns an error if v is non-nil and *v >= 0.
+func validateOptionalNegative(field string, v *float64) error {
 	if v != nil && *v >= 0 {
-		return fmt.Errorf("%s[%q].trim_silence_threshold: must be < 0 (dB), got %v", category, name, *v)
+		return fmt.Errorf("%s: must be < 0 (dB), got %v", field, *v)
 	}
 	return nil
 }
@@ -786,9 +793,6 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		if err := entry.Validate(); err != nil {
 			return fmt.Errorf("jingle[%q]: %w", name, err)
 		}
-		if err := validateTrimSilenceThresholdDB("jingle", name, entry.TrimSilenceThreshold); err != nil {
-			return err
-		}
 	}
 	for name, entry := range assets.SE {
 		if err := validateFileField("se", name, entry.File); err != nil {
@@ -796,9 +800,6 @@ func ValidateAssetsConfig(assets *AssetsConfig) error {
 		}
 		if err := entry.Validate(); err != nil {
 			return fmt.Errorf("se[%q]: %w", name, err)
-		}
-		if err := validateTrimSilenceThresholdDB("se", name, entry.TrimSilenceThreshold); err != nil {
-			return err
 		}
 	}
 	for name, entry := range assets.BGM {
