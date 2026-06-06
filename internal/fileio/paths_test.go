@@ -1,6 +1,8 @@
 package fileio_test
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,12 +32,17 @@ func TestDecodeYAML(t *testing.T) {
 		checkResult func(t *testing.T, path string)
 	}{
 		{
-			name:    "empty (comments-only) YAML is valid",
+			name:    "empty (comments-only) YAML returns wrapped io.EOF",
 			content: "# just a comment\n",
 			checkResult: func(t *testing.T, path string) {
 				var got struct{ Name string }
-				if err := fileio.DecodeYAML(path, &got, false); err != nil {
-					t.Errorf("unexpected error for comments-only YAML: %v", err)
+				err := fileio.DecodeYAML(path, &got, false)
+				if err == nil {
+					t.Error("expected error for comments-only YAML, got nil")
+					return
+				}
+				if !errors.Is(err, io.EOF) {
+					t.Errorf("expected io.EOF in error chain, got: %v", err)
 				}
 			},
 		},

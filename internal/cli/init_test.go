@@ -62,9 +62,7 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 func TestInitCmd_ConfigExists_EpisodeSpecGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "vox-radio.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "vox-radio.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -87,9 +85,7 @@ func TestInitCmd_ConfigExists_EpisodeSpecGenerated(t *testing.T) {
 func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "episode-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "episode-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -131,9 +127,7 @@ func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 func TestInitCmd_FeedSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "feed-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "feed-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -231,9 +225,7 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "slack-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "slack-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

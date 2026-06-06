@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"strings"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,10 @@ func newInitCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("read template %s: %w", path, err)
 				}
-				outPath := strings.TrimPrefix(path, "templates/")
+				outPath, err := filepath.Rel("templates", path)
+				if err != nil {
+					return fmt.Errorf("rel path: %w", err)
+				}
 				return writeFile(cmd, outPath, content, false)
 			})
 		},
