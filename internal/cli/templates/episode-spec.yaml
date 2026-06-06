@@ -116,44 +116,7 @@ corners:
 # アセット設定ファイルのパスはこのエピソード仕様ファイルからの相対パスで解決されます。
 # 素材ファイルのパスはアセット設定ファイルのディレクトリを基準に解決されます。
 # 複数ファイルを指定した場合は後勝ちでマージされます。
-# 素材が不要な場合はこのセクション全体をコメントアウトするか削除してください。
-# assets_files:
-#   - assets/assets.yaml
-# アセット設定ファイル（assets/assets.yaml）の内容例:
-# jingle:
-#   opening:
-#     file: jingle/opening.mp3
-#     fade_in: 0.5
-#     fade_out: 0.5
-#     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
-#     description: "番組冒頭で流すオープニングジングル"  # 省略可
-#   ending:
-#     file: jingle/ending.mp3
-#     fade_in: 0.5
-#     fade_out: 1.0
-#     # trim_silence: false  # 省略時は true
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）
-# se:
-#   chime:
-#     file: se/chime.wav
-#     volume: 0.8
-#     # trim_silence: false  # 省略時は true（素材前後の無音を自動除去）。無効にしたい場合のみ記載
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）。素材のノイズフロアに合わせて調整
-#     # overlay: true  # 省略時は false（SE が鳴り終わってから次のセリフを再生）。セリフに重ねたい場合のみ true
-#     description: "話題の切り替わりに鳴らす明るいチャイム音"  # 省略可
-#   transition:
-#     file: se/transition.wav
-#     volume: 0.8
-#     # trim_silence: false  # 省略時は true
-#     # trim_silence_threshold: -50  # 省略時は -50（dB）
-#     # overlay: true  # 省略時は false（順次再生）
-# bgm:
-#   talk_bgm:
-#     file: bgm/talk.mp3
-#     volume: 0.3
-#     duck_ratio: 8
-#     loop: true
-#     # fade_in: 1.0   # フェードイン秒数（省略時デフォルト 1.0 秒）
-#     # fade_out: 1.0  # フェードアウト秒数（省略時デフォルト 1.0 秒）。0 指定でフェードなし
-#     description: "雑談向けの落ち着いたBGM"  # 省略可
+# アセットの記入例は assets/assets.yaml のコメントを参照してください。
+# 素材が不要な場合は assets_files をコメントアウトするか削除してください。
+assets_files:
+  - assets/assets.yaml

@@ -25,6 +25,17 @@ func chdirTemp(t *testing.T) string {
 	return dir
 }
 
+func writeTestFile(t *testing.T, dir, name string, content []byte) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func runInitCmd(t *testing.T) (string, error) {
 	t.Helper()
 	cmd := cli.NewRootCmd()
@@ -41,7 +52,7 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml"} {
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
@@ -51,9 +62,7 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 func TestInitCmd_ConfigExists_EpisodeSpecGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "vox-radio.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "vox-radio.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -76,9 +85,7 @@ func TestInitCmd_ConfigExists_EpisodeSpecGenerated(t *testing.T) {
 func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "episode-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "episode-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -101,11 +108,9 @@ func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml"}
+	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"}
 	for _, name := range allFiles {
-		if err := os.WriteFile(filepath.Join(dir, name), existingContent, 0644); err != nil {
-			t.Fatal(err)
-		}
+		writeTestFile(t, dir, name, existingContent)
 	}
 	_, err := runInitCmd(t)
 	if err != nil {
@@ -122,9 +127,7 @@ func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 func TestInitCmd_FeedSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "feed-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "feed-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -135,6 +138,23 @@ func TestInitCmd_FeedSpecExists_Skipped(t *testing.T) {
 	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for feed-spec.yaml, got: %s", out)
+	}
+}
+
+func TestInitCmd_AssetsYamlExists_Skipped(t *testing.T) {
+	dir := chdirTemp(t)
+	existingContent := []byte("# existing")
+	writeTestFile(t, dir, "assets/assets.yaml", existingContent)
+	out, err := runInitCmd(t)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "assets", "assets.yaml"))
+	if string(data) != string(existingContent) {
+		t.Error("assets/assets.yaml should not be overwritten")
+	}
+	if !strings.Contains(out, "skip") {
+		t.Errorf("expected skip message for assets/assets.yaml, got: %s", out)
 	}
 }
 
@@ -167,6 +187,9 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	}
 	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
 		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
+	}
+	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
+		t.Fatalf("ValidateEpisodeSpecAssets failed: %v", err)
 	}
 
 	// cache フィールドのアサート
@@ -202,9 +225,7 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	if err := os.WriteFile(filepath.Join(dir, "slack-spec.yaml"), existingContent, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, dir, "slack-spec.yaml", existingContent)
 	out, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
