@@ -4,7 +4,7 @@
 # Slack のトークンは vox-radio.yaml の slack.bot_token_env で指定した環境変数から読み込みます。
 
 # 番組のID（ログや突き合わせ用）。episode-spec.yaml の program.id と合わせておくと分かりやすいです。
-program_id: "news-variety"
+program_id: "weather-radio"
 
 # Slack 投稿の設定。
 slack:

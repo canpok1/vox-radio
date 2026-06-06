@@ -104,7 +104,7 @@ collect → rundown → script → synth → assemble → manifest
 
 | コマンド | 概要 |
 |----------|------|
-| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用）。`--sample` を付けると、ずんだもん・めたんMCのニュース番組（バラエティ風）の「すぐ動くサンプル設定一式」を `sample/` に生成する |
+| `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用）。`--sample` を付けると、ずんだもん・めたんMCのお天気番組（気象庁の防災情報XMLを利用）の「すぐ動くサンプル設定一式」を `sample/` に生成する |
 | `install --skills` | LLM エージェント向けスキルファイル（SKILL.md + references/*.md）を `.claude/skills/vox-radio/` にインストールする |
 | `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
 | `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
@@ -135,7 +135,7 @@ vox-radio init
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
-すぐ動くサンプル設定一式がほしい場合は `--sample` を付けます。ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の記入済み設定が `sample/` に生成され、そのまま番組生成を試せます（音声アセットは同梱しないため、効果音・BGM 設定はコメントアウトした記入例として入っています）。
+すぐ動くサンプル設定一式がほしい場合は `--sample` を付けます。ずんだもん・めたんが MC を務めるお天気番組の記入済み設定が `sample/` に生成され、そのまま番組生成を試せます（音声アセットは同梱しないため、効果音・BGM 設定はコメントアウトした記入例として入っています）。データソースには利用規約上、出典明記のうえで翻案・再配信が可能な気象庁の防災情報XMLフィードを使っています。
 
 ```bash
 # すぐ動くサンプル一式を sample/ に生成
@@ -188,7 +188,7 @@ characters:
 
 台本生成（`script` コマンド）では、LLM がセリフの感情に応じてスタイルを選択します。`synth` コマンドは行ごとの `style` フィールドを読み取り、指定されたスタイルの `speaker_id` で合成します。`style` が未指定または不正な場合は `default_style` にフォールバックします。
 
-エピソード仕様の記入済みサンプルは `vox-radio init --sample` で生成できます。ずんだもん・めたんが MC を務めるニュース番組（バラエティ風）の完成済み構成一式（`sample/vox-radio.yaml`・`sample/episode-spec.yaml`・`sample/feed-spec.yaml`・`sample/slack-spec.yaml`・`sample/assets/assets.yaml`）が `sample/` に生成されます。これをコピー・編集して利用してください。
+エピソード仕様の記入済みサンプルは `vox-radio init --sample` で生成できます。ずんだもん・めたんが MC を務めるお天気番組の完成済み構成一式（`sample/vox-radio.yaml`・`sample/episode-spec.yaml`・`sample/feed-spec.yaml`・`sample/slack-spec.yaml`・`sample/assets/assets.yaml`）が `sample/` に生成されます。これをコピー・編集して利用してください。
 
 ### 実行例
 
