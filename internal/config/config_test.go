@@ -1674,6 +1674,10 @@ func TestJingleEntry_Validate(t *testing.T) {
 		{"valid positive values", config.JingleEntry{FadeIn: 0.5, FadeOut: 1.0}, false},
 		{"fade_in negative", config.JingleEntry{FadeIn: -1.0, FadeOut: 0}, true},
 		{"fade_out negative", config.JingleEntry{FadeIn: 0, FadeOut: -0.5}, true},
+		{"trim_silence_threshold nil is valid", config.JingleEntry{TrimSilenceThreshold: nil}, false},
+		{"trim_silence_threshold negative is valid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(-40.0)}, false},
+		{"trim_silence_threshold zero is invalid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(0.0)}, true},
+		{"trim_silence_threshold positive is invalid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(1.0)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -1694,6 +1698,10 @@ func TestSEEntry_Validate(t *testing.T) {
 		{"valid zero volume", config.SEEntry{Volume: 0}, false},
 		{"valid positive volume", config.SEEntry{Volume: 0.8}, false},
 		{"volume negative", config.SEEntry{Volume: -0.1}, true},
+		{"trim_silence_threshold nil is valid", config.SEEntry{TrimSilenceThreshold: nil}, false},
+		{"trim_silence_threshold negative is valid", config.SEEntry{TrimSilenceThreshold: float64Ptr(-40.0)}, false},
+		{"trim_silence_threshold zero is invalid", config.SEEntry{TrimSilenceThreshold: float64Ptr(0.0)}, true},
+		{"trim_silence_threshold positive is invalid", config.SEEntry{TrimSilenceThreshold: float64Ptr(1.0)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
