@@ -50,3 +50,4 @@
 | [0042](0042-voicevox-url-env-override.md) | VOICEVOX URL に環境変数オーバーライドを導入する | 採用 | 2026-06-06 |
 | [0043](0043-deprecate-cache-disable-and-require-program-id.md) | キャッシュ無効化機能（cache.enabled）を廃止し program.id を必須化する | 採用 | 2026-06-06 |
 | [0044](0044-switch-sample-feeds-to-jma-weather.md) | サンプル設定のデータソースを気象庁防災情報XMLフィードへ変更する | 採用 | 2026-06-06 |
+| [0045](0045-add-pronunciation-proofread-pass-to-direct.md) | direct に発音校正パスを追加し VOICEVOX のかな化取りこぼしによる誤読を抑制する | 採用 | 2026-06-06 |
