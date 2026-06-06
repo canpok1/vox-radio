@@ -177,3 +177,38 @@ func TestSlackpost_DryRun_Success(t *testing.T) {
 		t.Errorf("output should contain audio filename, got: %q", out)
 	}
 }
+
+func TestSlackpost_MissingManifestFlag_Error(t *testing.T) {
+	dir := t.TempDir()
+	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"slackpost", "--spec", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when --manifest is missing")
+	}
+}
+
+func TestSlackpost_MissingSpecFlag_Error(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForTest(t, dir)
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"slackpost", "--manifest", manifestPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when --spec is missing")
+	}
+}
+
+func TestRootHelp_ContainsSlackpost(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"--help"})
+	_ = cmd.Execute()
+
+	out := buf.String()
+	if !strings.Contains(out, "slackpost") {
+		t.Errorf("root help should contain slackpost, got: %s", out)
+	}
+}
