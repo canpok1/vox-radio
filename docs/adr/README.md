@@ -46,3 +46,4 @@
 | [0038](0038-unify-corner-boundary-audio-config.md) | コーナー境界音声を start_jingle/end_jingle から type 付き start_audio/end_audio へ再構成する | 採用 | 2026-06-05 |
 | [0039](0039-distribute-vox-radio-as-installable-agent-skill.md) | vox-radio をインストール可能なエージェントスキルとして配布する | 採用 | 2026-06-06 |
 | [0040](0040-appearance-count-include-current-episode-with-boundary-conversion.md) | 出演回数を「今回を含めた回数（初登場=1）」で永続化し、LLM 入力は境界で逆変換して維持する（ADR-0037 の回数定義を置換） | 採用 | 2026-06-06 |
+| [0041](0041-sample-config-generation-command.md) | 番組生成お試し用のサンプル設定一式を init --sample で生成し、リポジトリ同梱の examples/ サンプルを廃止する | 採用 | 2026-06-06 |
