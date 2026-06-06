@@ -290,6 +290,23 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 		}
 	}
 
+	// 第1回はローテ枠のうちスポーツコーナー（every:3, offset:1）のみが採用され、
+	// 採用コーナーは 4 つ（固定3＋ローテ1）であること。
+	ep1 := config.ResolveCornersForEpisode(spec.Corners, 1)
+	if len(ep1) != 4 {
+		t.Errorf("第1回の採用コーナー数 = %d, want 4", len(ep1))
+	}
+	ep1Titles := make(map[string]bool, len(ep1))
+	for _, c := range ep1 {
+		ep1Titles[c.Title] = true
+	}
+	if !ep1Titles["スポーツコーナー"] {
+		t.Error("第1回はスポーツコーナーが放送されるべき")
+	}
+	if ep1Titles["エンタメコーナー"] || ep1Titles["気になるサイエンス"] {
+		t.Error("第1回はスポーツコーナー以外のローテ枠は放送されないべき")
+	}
+
 	if _, err := model.LoadFeedSpec(filepath.Join(dir, "sample", "feed-spec.yaml")); err != nil {
 		t.Fatalf("LoadFeedSpec failed on sample: %v", err)
 	}
