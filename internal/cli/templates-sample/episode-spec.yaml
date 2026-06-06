@@ -1,15 +1,20 @@
 # この番組の中身（コーナーの並び・長さ・台本づくりの指示）を決めるサンプルです。
 # 次のコマンドで番組を作れます:
 #   vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+#
+# データソースには気象庁の防災情報XMLフィード（https://xml.kishou.go.jp/xmlpull.html）を使っています。
+# 気象庁ホームページのコンテンツは「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づき、
+# 出典を明記すれば複製・翻案・再配信が可能です（https://www.jma.go.jp/jma/kishou/info/coment.html）。
+# 配信時の出典表記は feed-spec.yaml の feed.credit に記入してあります。
 
 program:
   # 番組を見分けるためのID【必須】。過去回の記憶や配信フィードの突き合わせに使います（変えなくてOK）。
   # 日替わりコーナーやゲストの登場回を正しく数えるためにも使われます。
-  id: "news-variety"
+  id: "weather-radio"
   # 番組タイトル。
-  title: "ずんだもんとめたんの5分ニュース"
+  title: "ずんだもんとめたんのお天気ラジオ"
   # 番組の紹介文。台本づくりの方向性として使われます。
-  description: "今日の主要ニュースに加え、スポーツ・エンタメ・サイエンスを日替わりで、ずんだもんとめたんがバラエティ風に5分でお届けする一般向けニュース番組。"
+  description: "気象庁の気象警報・注意報をもとに、全国のお天気の注意ポイントに加え、地震・火山情報やお天気の豆知識を日替わりで、ずんだもんとめたんが5分でお届けするお天気情報番組。"
   # 番組まとめ文のおおよその文字数。
   summary_length: 200
 
@@ -22,11 +27,11 @@ casts:
   # めたん（毎回出演のMC）
   metan:
     type: regular
-    role: "MC。各トピックを選んで紹介・解説する主担当。落ち着いたツッコミ役。"
+    role: "MC。お天気キャスター役。気象情報を選んで紹介・解説する主担当。落ち着いたツッコミ役。"
   # ずん子（ときどき登場するゲスト）
   zunko:
     type: guest                      # guest = 決まった回だけ出演
-    role: "ニュースの背景や豆知識を補足して深掘りする物知りゲスト。"
+    role: "気象や防災の背景・豆知識を補足して深掘りする物知りゲスト。"
     # 5回おきに出演、初回の出演は2回目。→ 第2,7,12,…回に登場。
     condition:
       every: 5                       # 5回おきに
@@ -36,7 +41,7 @@ casts:
 corners:
   # オープニング（毎回放送）
   - title: "オープニング"
-    content: "明るく挨拶し、今日のラインナップ（一般ニュースと日替わりコーナー）を軽く予告。"
+    content: "明るく挨拶し、今日のラインナップ（全国の気象情報と日替わりコーナー）を軽く予告。"
     direction: "テンポよく明るく。"   # 演出メモ。台本本文には使われません。
     cast:
       zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
@@ -45,31 +50,29 @@ corners:
     summary_length: 60
     end_pause_sec: 2.0               # このコーナーの後に入れる無音（秒）。コーナーの切れ目に2秒の間。
 
-  # 今日のニュース（毎回放送・一般ニュース）
-  - title: "今日のニュース"
-    content: "主要トピックから2〜3本を選び、めたんが噛み砕いて紹介・解説し、ずんだもんが素朴な疑問やリアクションで盛り上げる。"
+  # 全国の気象情報（毎回放送・メインコーナー）
+  - title: "全国の気象情報"
+    content: "気象庁の気象警報・注意報から注目の地域を2〜3つ選び、めたんがお天気キャスターとして噛み砕いて紹介・解説し、ずんだもんが素朴な疑問やリアクションで盛り上げる。同じ地域の重複した情報は1つにまとめる。"
     cast:
-      metan: "MC。ニュースを選んで紹介・解説する主担当。"
+      metan: "MC。お天気キャスター役。気象情報を選んで紹介・解説する主担当。"
       zundamon: "MC。素朴な疑問やリアクションを返す聞き役。ボケ担当。"
     length_sec: 180
     summary_length: 120
     end_pause_sec: 2.0
-    # ニュースの取得元（RSSフィード）。ここから記事を集めて紹介します。
+    # 気象情報の取得元（気象庁 防災情報XMLの随時フィード。警報・注意報など）。
     source:
       feeds:
-        - url: https://news.yahoo.co.jp/rss/topics/top-picks.xml
-          max_items: 5               # このフィードから使う記事の最大本数
-        - url: https://www.nhk.or.jp/rss/news/cat0.xml
-          max_items: 5
+        - url: https://www.data.jma.go.jp/developer/xml/feed/extra.xml
+          max_items: 10              # このフィードから使う記事の最大本数
 
   # ここから下の3つは日替わりコーナー。毎回どれか1つだけ放送されます。
   # 回番号で出し分けるので、上の program.id（必須）をキーにした過去回の記憶を使います。
-  # スポーツコーナー
-  - title: "スポーツコーナー"
-    content: "注目の試合結果や話題のアスリートを、めたんが紹介しずんだもんが一喜一憂する。"
+  # 地震・火山コーナー
+  - title: "地震・火山コーナー"
+    content: "最近の地震情報や火山の降灰予報・噴火警戒レベルを、めたんが紹介しずんだもんが驚いたり備えを考えたりする。"
     cast:
-      metan: "MC。試合結果や話題を紹介・解説。"
-      zundamon: "MC。結果に一喜一憂する聞き役。ボケ担当。"
+      metan: "MC。地震・火山情報を紹介・解説。"
+      zundamon: "MC。驚いたり備えを考えたりする聞き役。ボケ担当。"
     length_sec: 90
     summary_length: 80
     end_pause_sec: 2.0
@@ -77,17 +80,18 @@ corners:
     condition:
       every: 3                       # 3回おきに
       offset: 1                      # 初回は1回目
+    # 地震・火山情報の取得元（気象庁 防災情報XMLの地震火山フィード）。
     source:
       feeds:
-        - url: https://news.yahoo.co.jp/rss/topics/sports.xml
+        - url: https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml
           max_items: 5
 
-  # エンタメコーナー
-  - title: "エンタメコーナー"
-    content: "話題の映画・音楽・芸能ニュースを、めたんが紹介しずんだもんがミーハーに食いつく。"
+  # お天気豆知識コーナー（データソースなし。AIが知識から話題を作ります）
+  - title: "お天気豆知識"
+    content: "季節や気象にまつわる雑学・豆知識（例: 天気のことわざ、雲の種類、気象現象のしくみ）をめたんがやさしく紹介し、ずんだもんが驚いたり感心したりする。"
     cast:
-      metan: "MC。エンタメ話題を紹介・解説。"
-      zundamon: "MC。ミーハーに反応する聞き役。ボケ担当。"
+      metan: "MC。お天気の雑学をやさしく紹介・解説。"
+      zundamon: "MC。驚いたり感心したりする聞き役。ボケ担当。"
     length_sec: 90
     summary_length: 80
     end_pause_sec: 2.0
@@ -95,17 +99,13 @@ corners:
     condition:
       every: 3
       offset: 2
-    source:
-      feeds:
-        - url: https://news.yahoo.co.jp/rss/topics/entertainment.xml
-          max_items: 5
 
-  # 気になるサイエンス（科学・トリビア）
-  - title: "気になるサイエンス"
-    content: "科学やテクノロジーの話題を、めたんがやさしく解説しずんだもんが驚く豆知識コーナー。"
+  # 防災ワンポイント（データソースなし。AIが知識から話題を作ります）
+  - title: "防災ワンポイント"
+    content: "日常でできる防災の備えや心得（例: 非常用持ち出し袋、家具の固定、避難経路の確認）をめたんがやさしく解説し、ずんだもんが今日からやってみたくなるよう盛り上げる。"
     cast:
-      metan: "MC。科学トピックをやさしく解説。"
-      zundamon: "MC。驚いたり感心したりする聞き役。ボケ担当。"
+      metan: "MC。防災の備えをやさしく解説。"
+      zundamon: "MC。実践したい気持ちになる聞き役。ボケ担当。"
     length_sec: 90
     summary_length: 80
     end_pause_sec: 2.0
@@ -113,14 +113,10 @@ corners:
     condition:
       every: 3
       offset: 0
-    source:
-      feeds:
-        - url: https://news.yahoo.co.jp/rss/topics/science.xml
-          max_items: 5
 
   # エンディング（毎回放送）
   - title: "エンディング"
-    content: "今日のまとめと次回予告。次回も聴いてほしいと明るく締める。"
+    content: "今日のまとめと次回予告。引き続き気象情報に気をつけてほしいと明るく締める。"
     direction: "余韻を残しつつ明るく。"
     cast:
       zundamon: "MC。進行役。ボケ担当。"
