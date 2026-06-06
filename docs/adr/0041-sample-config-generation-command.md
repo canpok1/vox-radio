@@ -20,7 +20,7 @@
 記入済みの「すぐ動くサンプル設定一式」をバイナリに `//go:embed` で同梱し、`vox-radio init --sample` で生成する。
 
 - スケルトン雛形を生成する従来の `vox-radio init`（フラグなし）はそのまま残す。`--sample` はゼロから作るユーザーではなく「まず動かして体験したい」ユーザー向けに、ずんだもん・めたんが MC を務める一般向けニュース番組（バラエティ風）の完成済み構成を生成する。
-- サンプルには音声バイナリを含めない（容量削減）。音声アセットに依存する設定（`corners[].start_audio` / `end_audio` / `bgm`、`assets_files`、`assets/assets.yaml` の中身）はコメントアウトした記入例として同梱し、ユーザーが音声素材を用意してから有効化できるようにする。
+- サンプルには音声バイナリを含めない（容量削減）。音声バイナリに依存する設定（`corners[].start_audio` / `end_audio` / `bgm`、`assets/assets.yaml` の中身）はコメントアウトした記入例として同梱し、ユーザーが音声素材を用意してから有効化できるようにする。一方 `episode-spec.yaml` の `assets_files` 参照は有効のままとし、中身が空（全コメント）の `assets/assets.yaml` を指す。これにより spec → アセット設定ファイルの配線をサンプルで示しつつ、ユーザーは `episode-spec.yaml` を編集せず `assets.yaml` のコメントを外すだけで音を追加できる（音声バイナリ非同梱でも `check` は空アセットとして通る）。
 - リポジトリ同梱の `examples/` ディレクトリ（`tech.yaml`・音声 mp3・README）を廃止する。`Makefile` の `run-sample` / `check-samples`、README、各コマンドの `Long` 例の参照は、`init --sample` で生成したサンプルを用いる形に置き換える。
 
 ## 結果

@@ -125,7 +125,10 @@ corners:
     summary_length: 60
     # 末尾コーナーなので、この後の無音（end_pause_sec）は入れません。
 
-# 効果音やBGMを使う場合は、音声ファイルを用意したうえで、
-# 下の行頭の # を外し、各コーナーに start_audio / end_audio / bgm を追記してください。
-# assets_files:
-#   - assets/assets.yaml
+# 効果音やBGMの設定ファイル（ジングル・SE・BGM）の参照。
+# 音声ファイル（mp3 など）は別途自分で用意してください。
+# 書き方の例は assets/assets.yaml のコメントを参照し、
+# 使う音を各コーナーに start_audio / end_audio / bgm として追記してください。
+# 効果音やBGMが不要なら assets_files をコメントアウトするか削除してください。
+assets_files:
+  - assets/assets.yaml
