@@ -18,7 +18,7 @@ func TestRootHelp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	for _, sub := range []string{"init", "episodegen", "config", "feedgen", "assets", "slackpost"} {
+	for _, sub := range []string{"init", "install", "episodegen", "config", "feedgen", "assets", "slackpost"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("root help missing subcommand %q", sub)
 		}
@@ -157,7 +157,7 @@ func TestRootVersionFlag(t *testing.T) {
 
 func TestSubcommandHelp(t *testing.T) {
 	// トップレベルのサブコマンド
-	for _, sub := range []string{"init", "config"} {
+	for _, sub := range []string{"init", "install", "config"} {
 		t.Run(sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			buf := &bytes.Buffer{}

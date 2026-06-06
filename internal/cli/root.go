@@ -25,6 +25,7 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(
 		newInitCmd(),
+		newInstallCmd(),
 		newEpisodegenCmd(),
 		newConfigCmd(),
 		newFeedgenCmd(),
