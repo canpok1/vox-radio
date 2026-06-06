@@ -180,14 +180,8 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		}
 	}
 
-	recordedAtStr := w.recordedAt
-	if recordedAtStr == "" {
-		recordedAtStr = "（不明）"
-	}
-	timezoneStr := w.timezone
-	if timezoneStr == "" {
-		timezoneStr = "（不明）"
-	}
+	recordedAtStr := stringOrUnknown(w.recordedAt)
+	timezoneStr := stringOrUnknown(w.timezone)
 
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
@@ -342,6 +336,13 @@ func formatCastInfo(casts []model.RundownCast) string {
 	sb.WriteString("- 中間のコーナーではゲストが継続して同席している前提で会話する（途中で急に登場・退場させない）。\n")
 	sb.WriteString("- 最後のコーナーでゲストを見送る。\n")
 	return sb.String()
+}
+
+func stringOrUnknown(s string) string {
+	if s == "" {
+		return "（不明）"
+	}
+	return s
 }
 
 func sortedKeys(m map[string]float64) []string {
