@@ -186,10 +186,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	recordedAtStr := stringOrUnknown(w.recordedAt)
 	timezoneStr := stringOrUnknown(w.timezone)
 
-	programScriptNoteStr := program.ScriptNote
-	if programScriptNoteStr == "" {
-		programScriptNoteStr = "（なし）"
-	}
+	programScriptNoteStr := stringOrNone(program.ScriptNote)
 
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
@@ -350,6 +347,13 @@ func formatCastInfo(casts []model.RundownCast) string {
 func stringOrUnknown(s string) string {
 	if s == "" {
 		return "（不明）"
+	}
+	return s
+}
+
+func stringOrNone(s string) string {
+	if s == "" {
+		return "（なし）"
 	}
 	return s
 }

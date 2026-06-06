@@ -190,15 +190,10 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		return model.Script{}, fmt.Errorf("marshal asset catalog: %w", err)
 	}
 
-	programDirectionStr := programDirection
-	if programDirectionStr == "" {
-		programDirectionStr = "（なし）"
-	}
-
 	prompt := strings.NewReplacer(
 		"{{corners}}", string(cornersJSON),
 		"{{asset_catalog}}", string(catalogJSON),
-		"{{program_direction}}", programDirectionStr,
+		"{{program_direction}}", stringOrNone(programDirection),
 	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
@@ -281,6 +276,13 @@ func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLi
 	}
 
 	return cr.Corrections, nil
+}
+
+func stringOrNone(s string) string {
+	if s == "" {
+		return "（なし）"
+	}
+	return s
 }
 
 type insertKey struct{ cornerIdx, lineIdx int }
