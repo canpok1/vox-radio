@@ -67,9 +67,10 @@
 
 ## `cache` セクション
 
+キャッシュは常に有効です。エピソード履歴は `episode-spec.yaml` の `program.id`（必須）をキーに JSONL へ保存されます。
+
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `enabled` | bool | 任意 | キャッシュ機能の有効/無効。デフォルト: false。`program.id` 未設定時は常に無効 |
 | `max_entries` | int | 任意 | JSONL に保持する最大エピソード数（超過分は古い行から削除）。デフォルト: 100 |
 | `retention_days` | int | 任意 | 保持日数（超過した古い行は削除）。デフォルト: 90 |
 | `llm_context_entries` | int | 任意 | LLM へ渡す直近エピソード件数。デフォルト: 10 |
