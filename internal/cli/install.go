@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -53,26 +52,10 @@ func runInstallSkills(cmd *cobra.Command, force bool) error {
 		if err != nil {
 			return fmt.Errorf("rel path: %w", err)
 		}
-		dst := filepath.Join(dstDir, rel)
 		content, err := skillsFS.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", path, err)
 		}
-		return writeSkillFile(cmd, dst, content, force)
+		return writeFile(cmd, filepath.Join(dstDir, rel), content, force)
 	})
-}
-
-func writeSkillFile(cmd *cobra.Command, path string, content []byte, force bool) error {
-	if _, err := os.Stat(path); err == nil && !force {
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "skip: %s already exists\n", path)
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, content, 0644); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s\n", path)
-	return nil
 }

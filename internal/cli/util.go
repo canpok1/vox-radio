@@ -39,6 +39,25 @@ func registerSpecFlag(cmd *cobra.Command, specPath *string) {
 	_ = cmd.MarkFlagRequired("spec")
 }
 
+// writeFile writes content to path. If the file already exists and force is
+// false, it prints a skip message and returns nil. Otherwise it creates
+// parent directories as needed and overwrites the file.
+func writeFile(cmd *cobra.Command, path string, content []byte, force bool) error {
+	if _, err := os.Stat(path); err == nil && !force {
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "skip: %s already exists\n", path)
+		return nil
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", dir, err)
+	}
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "created: %s\n", path)
+	return nil
+}
+
 func writeJSON(path string, v any) error {
 	return fileio.WriteJSON(path, v)
 }
