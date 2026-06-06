@@ -40,6 +40,7 @@ func newEpisodegenCmd() *cobra.Command {
 最終的な episode.mp3 は <out-dir>/ 直下に配置されます。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
+環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの voicevox.url より優先して VOICEVOX エンジンの URL を上書きできます。
 
 例:
   vox-radio episodegen
@@ -108,10 +109,7 @@ func newEpisodegenCmd() *cobra.Command {
 				script.WithLogger(logger),
 			)
 
-			engineURL := cfg.Voicevox.URL
-			if engineURL == "" {
-				engineURL = "http://localhost:50021"
-			}
+			engineURL := cfg.Voicevox.EffectiveURL()
 
 			runner := &pipeline.Runner{
 				Spec:              p,

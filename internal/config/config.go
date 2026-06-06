@@ -376,9 +376,27 @@ var defaultSpeedPresets = map[string]float64{
 	"とても早口":   1.4,
 }
 
+const (
+	// DefaultVoicevoxURL は voicevox.url 未指定時のデフォルト URL。
+	DefaultVoicevoxURL = "http://localhost:50021"
+	// VoicevoxURLEnv は VOICEVOX URL を上書きする環境変数名。
+	VoicevoxURLEnv = "VOX_RADIO_VOICEVOX_URL"
+)
+
 type VoicevoxConfig struct {
 	URL     string           `yaml:"url"`
 	Presets *VoicevoxPresets `yaml:"presets,omitempty"`
+}
+
+// EffectiveURL は環境変数 > 設定値 > デフォルトの優先順で URL を返す。
+func (c VoicevoxConfig) EffectiveURL() string {
+	if v := os.Getenv(VoicevoxURLEnv); v != "" {
+		return v
+	}
+	if c.URL != "" {
+		return c.URL
+	}
+	return DefaultVoicevoxURL
 }
 
 // EffectivePresets returns the configured presets, falling back per-axis to defaults when nil.

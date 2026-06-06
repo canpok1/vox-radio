@@ -432,6 +432,58 @@ func TestLoadConfig_Voicevox(t *testing.T) {
 	}
 }
 
+func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
+	// t.Setenv を使うため t.Parallel() は併用しない。
+	tests := []struct {
+		name   string
+		env    string // setEnv が true のときに環境変数へ設定する値
+		setEnv bool   // false なら環境変数を未設定にして検証する
+		url    string
+		want   string
+	}{
+		{
+			name:   "環境変数が設定値・デフォルトより優先される",
+			env:    "http://voicevox:50021",
+			setEnv: true,
+			url:    "http://localhost:50021",
+			want:   "http://voicevox:50021",
+		},
+		{
+			name: "環境変数なしなら設定値を使う",
+			url:  "http://example.com:50021",
+			want: "http://example.com:50021",
+		},
+		{
+			name: "環境変数も設定値もなければデフォルトを使う",
+			want: config.DefaultVoicevoxURL,
+		},
+		{
+			name:   "環境変数が空文字なら設定値を使う",
+			env:    "",
+			setEnv: true,
+			url:    "http://example.com:50021",
+			want:   "http://example.com:50021",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(config.VoicevoxURLEnv, tt.env)
+			} else {
+				// 他テストの影響を排除するため明示的に未設定化する。
+				t.Setenv(config.VoicevoxURLEnv, "")
+				if err := os.Unsetenv(config.VoicevoxURLEnv); err != nil {
+					t.Fatalf("Unsetenv failed: %v", err)
+				}
+			}
+			c := config.VoicevoxConfig{URL: tt.url}
+			if got := c.EffectiveURL(); got != tt.want {
+				t.Errorf("EffectiveURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoadConfig_Characters(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/config.yaml")
 	if err != nil {
