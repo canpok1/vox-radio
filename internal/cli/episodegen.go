@@ -47,7 +47,7 @@ func newEpisodegenCmd() *cobra.Command {
   vox-radio episodegen --out-dir output --spec sample/episode-spec.yaml
   vox-radio --config /path/to/vox-radio.yaml episodegen --spec sample/episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, logFile, err := setupLogger("episodegen", "")
+			logger, logFile, err := setupLogger("episodegen", logDirFlag(cmd))
 			if err != nil {
 				return fmt.Errorf("setup logger: %w", err)
 			}

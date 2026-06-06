@@ -30,7 +30,7 @@ func newRundownCmd() *cobra.Command {
 例:
   vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json --spec sample/episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, logFile, err := setupLogger("rundown", "")
+			logger, logFile, err := setupLogger("rundown", logDirFlag(cmd))
 			if err != nil {
 				return fmt.Errorf("setup logger: %w", err)
 			}

@@ -227,3 +227,23 @@ func TestConfigPath_CustomValue(t *testing.T) {
 		t.Errorf("configPath(root) = %q, want %q", got, want)
 	}
 }
+
+func TestLogDirFlag_Default(t *testing.T) {
+	root := NewRootCmd()
+	got := logDirFlag(root)
+	if got != defaultLogDir {
+		t.Errorf("logDirFlag(root) = %q, want %q", got, defaultLogDir)
+	}
+}
+
+func TestLogDirFlag_CustomValue(t *testing.T) {
+	root := NewRootCmd()
+	if err := root.ParseFlags([]string{"--log-dir", "/custom/logs"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	got := logDirFlag(root)
+	want := "/custom/logs"
+	if got != want {
+		t.Errorf("logDirFlag(root) = %q, want %q", got, want)
+	}
+}

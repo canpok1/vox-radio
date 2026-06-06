@@ -25,7 +25,7 @@ source フィールドのないコーナーはスキップされます。
   vox-radio episodegen collect --out work/articles.json
   vox-radio episodegen collect --out work/articles.json --spec sample/episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger, logFile, err := setupLogger("collect", "")
+			logger, logFile, err := setupLogger("collect", logDirFlag(cmd))
 			if err != nil {
 				return fmt.Errorf("setup logger: %w", err)
 			}
