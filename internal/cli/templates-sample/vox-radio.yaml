@@ -37,7 +37,8 @@ llm:
 # 文章を音声に変換する VOICEVOX の接続設定。
 voicevox:
   # VOICEVOX Engine のURL。
-  # devcontainer で使う場合は http://voicevox:50021 に変えてください。
+  # 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、この値より優先して上書きされます。
+  # devcontainer では VOX_RADIO_VOICEVOX_URL が自動設定されるため、この値の変更は不要です。
   url: http://localhost:50021
   # 声の抑揚・高さ・速さの呼び名を数値に対応づけます（省略すると組み込みの標準セットを使用）。
   presets:

@@ -6,6 +6,10 @@ services:
     env_file:
       - path: .env
         required: false
+    environment:
+      # VOICEVOX は同一 compose 内の voicevox サービスで動作するため、
+      # サンプル設定の voicevox.url を上書きしてサービス名で到達させる。
+      VOX_RADIO_VOICEVOX_URL: http://voicevox:50021
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project
       - ../..:/workspaces:cached

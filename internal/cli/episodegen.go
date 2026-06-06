@@ -108,10 +108,7 @@ func newEpisodegenCmd() *cobra.Command {
 				script.WithLogger(logger),
 			)
 
-			engineURL := cfg.Voicevox.URL
-			if engineURL == "" {
-				engineURL = "http://localhost:50021"
-			}
+			engineURL := cfg.Voicevox.EffectiveURL()
 
 			runner := &pipeline.Runner{
 				Spec:              p,

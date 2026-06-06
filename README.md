@@ -158,6 +158,8 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 
 `vox-radio.yaml` はデフォルトでカレントディレクトリから読み込まれます。別ディレクトリの設定ファイルを使う場合は `--config` フラグでパスを指定します。
 
+VOICEVOX エンジンの URL は環境変数 `VOX_RADIO_VOICEVOX_URL` で上書きできます（優先順位は 環境変数 > `voicevox.url` > デフォルト `http://localhost:50021`）。devcontainer では VOICEVOX が別サービスとして起動するため、この環境変数が自動設定されており、サンプル設定そのままで音声生成できます。
+
 ```bash
 # カレントディレクトリの vox-radio.yaml を使う（デフォルト）
 vox-radio episodegen --spec episode-spec.yaml
