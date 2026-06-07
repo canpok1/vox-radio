@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -77,9 +76,7 @@ func runSummarize(ctx context.Context, t *testing.T, client llm.Client, summariz
 }
 
 func TestSummarizeEval(t *testing.T) {
-	if os.Getenv("GEMINI_API_KEY") == "" {
-		t.Skip("GEMINI_API_KEY not set")
-	}
+	requireGeminiKey(t)
 
 	targetClient, judgeClient := buildEvalClients(t)
 
@@ -88,15 +85,7 @@ func TestSummarizeEval(t *testing.T) {
 		t.Fatalf("parse VOX_EVAL_SUMMARIZE_THRESHOLD: %v", err)
 	}
 
-	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
-	}
-
-	seed, err := getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
-	}
+	sampleSize, seed := loadSampleParams(t)
 
 	summarizePrompt, err := eval.LoadPrompt("summarize")
 	if err != nil {
@@ -116,18 +105,13 @@ func TestSummarizeEval(t *testing.T) {
 	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
 
 	caseByName := make(map[string]summarizeCase, len(regressionCases)+len(sampled))
-	for _, c := range regressionCases {
-		caseByName[c.Name] = c
-	}
-	for _, c := range sampled {
-		caseByName[c.Name] = c
-	}
-
 	var allCases []harnessCase
 	for _, c := range regressionCases {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "regression"})
 	}
 	for _, c := range sampled {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "generalization"})
 	}
 

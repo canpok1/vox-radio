@@ -77,6 +77,29 @@ func getEnvInt64(key string, defaultVal int64) (int64, error) {
 	return strconv.ParseInt(v, 10, 64)
 }
 
+// requireGeminiKey skips the test if GEMINI_API_KEY is not set.
+func requireGeminiKey(t *testing.T) {
+	t.Helper()
+	if os.Getenv("GEMINI_API_KEY") == "" {
+		t.Skip("GEMINI_API_KEY not set")
+	}
+}
+
+// loadSampleParams reads VOX_EVAL_SAMPLE_SIZE and VOX_EVAL_SAMPLE_SEED from env.
+func loadSampleParams(t *testing.T) (sampleSize int, seed int64) {
+	t.Helper()
+	var err error
+	sampleSize, err = getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
+	if err != nil {
+		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
+	}
+	seed, err = getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
+	if err != nil {
+		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
+	}
+	return
+}
+
 // buildEvalClients creates target and judge LLM clients from env vars.
 func buildEvalClients(t *testing.T) (llm.Client, llm.Client) {
 	t.Helper()

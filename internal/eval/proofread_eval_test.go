@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -28,14 +27,6 @@ type proofreadCase struct {
 	Category    string          `json:"category"`
 	Lines       []proofreadLine `json:"lines"`
 	Expectation string          `json:"expectation,omitempty"`
-}
-
-func loadJudgePrompt(t *testing.T) string {
-	return loadTestdataString(t, "proofread_judge.md")
-}
-
-func loadCases(t *testing.T, filename string) []proofreadCase {
-	return loadCasesJSON[proofreadCase](t, filename)
 }
 
 var correctionsSchema = json.RawMessage(`{
@@ -94,9 +85,7 @@ func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofrea
 }
 
 func TestProofreadEval(t *testing.T) {
-	if os.Getenv("GEMINI_API_KEY") == "" {
-		t.Skip("GEMINI_API_KEY not set")
-	}
+	requireGeminiKey(t)
 
 	targetClient, judgeClient := buildEvalClients(t)
 
@@ -105,25 +94,17 @@ func TestProofreadEval(t *testing.T) {
 		t.Fatalf("parse VOX_EVAL_PROOFREAD_THRESHOLD: %v", err)
 	}
 
-	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
-	}
-
-	seed, err := getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
-	}
+	sampleSize, seed := loadSampleParams(t)
 
 	proofreadPrompt, err := eval.LoadPrompt("proofread")
 	if err != nil {
 		t.Fatalf("load proofread prompt: %v", err)
 	}
 
-	judgePrompt := loadJudgePrompt(t)
+	judgePrompt := loadTestdataString(t, "proofread_judge.md")
 
-	regressionCases := loadCases(t, "proofread_regression_cases.json")
-	poolCases := loadCases(t, "proofread_pool_cases.json")
+	regressionCases := loadCasesJSON[proofreadCase](t, "proofread_regression_cases.json")
+	poolCases := loadCasesJSON[proofreadCase](t, "proofread_pool_cases.json")
 
 	sampled := eval.Sample(poolCases, sampleSize, seed)
 	sampledNames := make([]string, len(sampled))
@@ -133,18 +114,13 @@ func TestProofreadEval(t *testing.T) {
 	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
 
 	caseByName := make(map[string]proofreadCase, len(regressionCases)+len(sampled))
-	for _, c := range regressionCases {
-		caseByName[c.Name] = c
-	}
-	for _, c := range sampled {
-		caseByName[c.Name] = c
-	}
-
 	var allCases []harnessCase
 	for _, c := range regressionCases {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "regression"})
 	}
 	for _, c := range sampled {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "generalization"})
 	}
 

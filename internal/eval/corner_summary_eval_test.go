@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -64,9 +63,7 @@ func runCornerSummary(ctx context.Context, t *testing.T, client llm.Client, prom
 }
 
 func TestCornerSummaryEval(t *testing.T) {
-	if os.Getenv("GEMINI_API_KEY") == "" {
-		t.Skip("GEMINI_API_KEY not set")
-	}
+	requireGeminiKey(t)
 
 	targetClient, judgeClient := buildEvalClients(t)
 
@@ -75,15 +72,7 @@ func TestCornerSummaryEval(t *testing.T) {
 		t.Fatalf("parse VOX_EVAL_CORNER_SUMMARY_THRESHOLD: %v", err)
 	}
 
-	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
-	}
-
-	seed, err := getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
-	}
+	sampleSize, seed := loadSampleParams(t)
 
 	cornerSummaryPrompt, err := eval.LoadPrompt("corner_summary")
 	if err != nil {
@@ -103,18 +92,13 @@ func TestCornerSummaryEval(t *testing.T) {
 	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
 
 	caseByName := make(map[string]cornerSummaryCase, len(regressionCases)+len(sampled))
-	for _, c := range regressionCases {
-		caseByName[c.Name] = c
-	}
-	for _, c := range sampled {
-		caseByName[c.Name] = c
-	}
-
 	var allCases []harnessCase
 	for _, c := range regressionCases {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "regression"})
 	}
 	for _, c := range sampled {
+		caseByName[c.Name] = c
 		allCases = append(allCases, harnessCase{c.Name, "generalization"})
 	}
 
