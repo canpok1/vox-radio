@@ -25,6 +25,39 @@
 
 > **注意:** `.devcontainer/.env` には秘密情報が含まれるため、コミットしないこと（`.gitignore` で除外済み）。
 
+## プロンプト品質評価フレームワーク
+
+組み込みプロンプト（`internal/cli/prompts/*.md`）の品質を LLM-as-judge 方式で自動採点します。
+第一弾として `proofread.md`（発音校正プロンプト）を対象にしています。
+
+### 実行方法
+
+```bash
+export GEMINI_API_KEY=<your-api-key>
+make eval
+```
+
+### 主な環境変数
+
+| 変数名 | 説明 | デフォルト |
+|---|---|---|
+| `GEMINI_API_KEY` | Gemini API キー（必須） | — |
+| `VOX_EVAL_MODEL` | 対象実行・judge に使うモデル | `gemini-3.1-flash-lite` |
+| `VOX_EVAL_JUDGE_MODEL` | judge のみモデルを上書き | `VOX_EVAL_MODEL` と同じ |
+| `VOX_EVAL_MIN_INTERVAL_MS` | API 呼び出しの最低間隔（ms） | `4500` |
+| `VOX_EVAL_PROOFREAD_THRESHOLD` | 合否閾値（全体平均スコア） | `4.0` |
+| `VOX_EVAL_SAMPLE_SIZE` | 汎化プールからのサンプル数 | `8` |
+| `VOX_EVAL_SAMPLE_SEED` | サンプリング seed（省略時 = ISO 週番号） | ISO 週番号 |
+
+### 評価の仕組み（二層データセット）
+
+- **回帰セット**（`testdata/proofread_regression_cases.json`）: 連濁・熟字訓など既知の致命的誤読を必ず検出することを保証する固定ケース。毎回全件実行し、`expectation`（正解説明）付きで採点します。
+- **汎化プール**（`testdata/proofread_pool_cases.json`）: 多様な語彙・文型を貯めたプールから週番号 seed でサンプリングし、judge が `original_text` から自律採点します。同一週は再現可能、週またぎで対象が入れ替わり固定データへの過適応を防ぎます。
+
+4 観点（検出網羅性・誤検出抑制・修正正確さ・理由妥当性）を各 1〜5 点で採点し、全ケース×全観点の平均が閾値（デフォルト 4.0）以上で合格です。レートリミット・API エラーは inconclusive（`t.Skip`）扱いで fail にしません。
+
+評価は週次の GitHub Actions ワークフロー（`.github/workflows/prompt-eval.yml`）でも自動実行されます。通常の開発 CI（`build.yml`）は変更せず、実 API を叩きません。
+
 ## リリース設定の検証
 
 `.goreleaser.yaml` を編集した後は、CI を待たずにローカルで構文・設定を検証できます。

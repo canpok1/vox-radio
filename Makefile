@@ -48,6 +48,9 @@ check-samples: build
 release-check:
 	goreleaser check
 
+eval:
+	go test -tags=eval -count=1 -v ./internal/eval/...
+
 all: build
 
-.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check
+.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check eval
