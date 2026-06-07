@@ -1,11 +1,10 @@
 package model_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 const validSlackSpecYAML = `
@@ -19,18 +18,8 @@ slack:
     article: " • <{url}|{title}>"
 `
 
-func writeTempSlackSpec(t *testing.T, content string) string {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "slack-spec.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write yaml: %v", err)
-	}
-	return path
-}
-
 func TestLoadSlackSpec_ValidYAML(t *testing.T) {
-	path := writeTempSlackSpec(t, validSlackSpecYAML)
+	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(validSlackSpecYAML))
 
 	spec, err := model.LoadSlackSpec(path)
 	if err != nil {
@@ -57,7 +46,7 @@ func TestLoadSlackSpec_MissingFile(t *testing.T) {
 
 func TestLoadSlackSpecStrict_UnknownKeyErrors(t *testing.T) {
 	content := validSlackSpecYAML + "\nunknown_key: value\n"
-	path := writeTempSlackSpec(t, content)
+	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
 	_, err := model.LoadSlackSpecStrict(path)
 	if err == nil {
@@ -66,7 +55,7 @@ func TestLoadSlackSpecStrict_UnknownKeyErrors(t *testing.T) {
 }
 
 func TestLoadSlackSpecStrict_ValidYAML_Success(t *testing.T) {
-	path := writeTempSlackSpec(t, validSlackSpecYAML)
+	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(validSlackSpecYAML))
 
 	_, err := model.LoadSlackSpecStrict(path)
 	if err != nil {
@@ -77,7 +66,7 @@ func TestLoadSlackSpecStrict_ValidYAML_Success(t *testing.T) {
 // program_id は SlackSpec から削除されたため、strict モードで unknown key エラーになること
 func TestLoadSlackSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
 	content := "program_id: my-radio\n" + validSlackSpecYAML
-	path := writeTempSlackSpec(t, content)
+	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
 	_, err := model.LoadSlackSpecStrict(path)
 	if err == nil {
@@ -90,7 +79,7 @@ func TestLoadSlackSpec_MessageOmitted_DefaultsToEmpty(t *testing.T) {
 slack:
   channel: "C0123456789"
 `
-	path := writeTempSlackSpec(t, content)
+	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
 	spec, err := model.LoadSlackSpec(path)
 	if err != nil {

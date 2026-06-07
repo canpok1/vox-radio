@@ -1,12 +1,11 @@
 package model_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 const validFeedSpecYAML = `
@@ -20,19 +19,7 @@ output:
   public: public
 `
 
-func writeTempFeedSpec(t *testing.T, content string) string {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "feed-spec.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write yaml: %v", err)
-	}
-	return path
-}
-
 func TestLoadFeedSpec_ValidYAML(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "feed-spec.yaml")
 	content := `
 feed:
   language: ja
@@ -47,9 +34,7 @@ feed:
 output:
   public: public
 `
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write yaml: %v", err)
-	}
+	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(content))
 
 	cfg, err := model.LoadFeedSpec(path)
 	if err != nil {
@@ -115,7 +100,7 @@ func TestFeedSpec_EffectivePublicDir_Custom(t *testing.T) {
 }
 
 func TestLoadFeedSpecStrict_Valid(t *testing.T) {
-	path := writeTempFeedSpec(t, validFeedSpecYAML)
+	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(validFeedSpecYAML))
 	_, err := model.LoadFeedSpecStrict(path)
 	if err != nil {
 		t.Fatalf("LoadFeedSpecStrict: unexpected error: %v", err)
@@ -123,7 +108,7 @@ func TestLoadFeedSpecStrict_Valid(t *testing.T) {
 }
 
 func TestLoadFeedSpecStrict_UnknownKey(t *testing.T) {
-	path := writeTempFeedSpec(t, validFeedSpecYAML+"\nunknown_field: value\n")
+	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(validFeedSpecYAML+"\nunknown_field: value\n"))
 	_, err := model.LoadFeedSpecStrict(path)
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for unknown key, got nil")
@@ -133,7 +118,7 @@ func TestLoadFeedSpecStrict_UnknownKey(t *testing.T) {
 // program_id は FeedSpec から削除されたため、strict モードで unknown key エラーになること
 func TestLoadFeedSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
 	content := "program_id: my-radio\n" + validFeedSpecYAML
-	path := writeTempFeedSpec(t, content)
+	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(content))
 	_, err := model.LoadFeedSpecStrict(path)
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for program_id (unknown key), got nil")
