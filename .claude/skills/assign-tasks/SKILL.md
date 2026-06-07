@@ -11,13 +11,9 @@ argument-hint: "[--count N]"
 ## 手順
 
 1. `mcp__todoist__find-tasks`（`vox-radio` セクション、`labels: ["ready"]`）で未完了かつ `ready` ラベル付きのタスクを取得する。
-2. 以下の条件に該当するタスクを除外する:
-   - `assign-to-claude` または `in-progress` ラベルが付いているタスク
-   - タイトルまたは本文に `.claude/` パスへの参照を含むタスク
-   - `.claude/` ディレクトリの変更を主目的とするタスク（スキル、ルール、フック、CLAUDE.md、自動化関連）
-3. 除外対象のタスクから `ready` ラベルを除去し（`mcp__todoist__update-tasks` で `labels` を更新）、除外理由をログに記録する。
-4. 残りのタスクを `task-assigner` エージェントの優先度基準に従って優先順位付けする。
-5. 上位N件（`$ARGUMENTS` の `--count` で指定、デフォルト: 2件）に `assign-to-claude` ラベルを付与する（`mcp__todoist__update-tasks` で既存 `labels` に追加）。
+2. `assign-to-claude` または `in-progress` ラベルが付いているタスクを除外する（除外したタスクはターミナルへログ出力する）。
+3. 残りのタスクを `task-assigner` エージェントの優先度基準に従って優先順位付けする。
+4. 上位N件（`$ARGUMENTS` の `--count` で指定、デフォルト: 2件）に `assign-to-claude` ラベルを付与する（`mcp__todoist__update-tasks` で既存 `labels` に追加）。
 
 ## 出力
 
