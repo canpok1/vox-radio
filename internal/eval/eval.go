@@ -46,6 +46,13 @@ const (
 	CriterionConsistency      Criterion = "consistency"
 	CriterionArticleAlignment Criterion = "article_alignment"
 	CriterionActionability    Criterion = "actionability"
+
+	// Write-only evaluation criteria.
+	CriterionContentFidelity      Criterion = "content_fidelity"
+	CriterionCharacterConsistency Criterion = "character_consistency"
+	CriterionStructureCompliance  Criterion = "structure_compliance"
+	CriterionNaturalness          Criterion = "naturalness"
+	CriterionSchemaCompliance     Criterion = "schema_compliance"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -94,6 +101,15 @@ var AllFlowCriteria = []Criterion{
 	CriterionConsistency,
 	CriterionArticleAlignment,
 	CriterionActionability,
+}
+
+// AllWriteCriteria lists all write scoring dimensions in canonical order.
+var AllWriteCriteria = []Criterion{
+	CriterionContentFidelity,
+	CriterionCharacterConsistency,
+	CriterionStructureCompliance,
+	CriterionNaturalness,
+	CriterionSchemaCompliance,
 }
 
 // ScoreEntry holds the score and reason for one criterion.

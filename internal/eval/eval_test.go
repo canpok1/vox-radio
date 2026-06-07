@@ -22,7 +22,7 @@ func TestResolveExpectation(t *testing.T) {
 }
 
 func TestCriterionValues(t *testing.T) {
-	all := slices.Concat(AllCriteria, AllSummarizeCriteria, AllCornerSummaryCriteria, AllSummaryCriteria, AllSelectCriteria, AllFlowCriteria)
+	all := slices.Concat(AllCriteria, AllSummarizeCriteria, AllCornerSummaryCriteria, AllSummaryCriteria, AllSelectCriteria, AllFlowCriteria, AllWriteCriteria)
 	for _, c := range all {
 		if c == "" {
 			t.Errorf("criterion should not be empty string")
@@ -94,6 +94,17 @@ func TestAllXxxCriteria(t *testing.T) {
 				CriterionConsistency,
 				CriterionArticleAlignment,
 				CriterionActionability,
+			},
+		},
+		{
+			name: "AllWriteCriteria",
+			got:  AllWriteCriteria,
+			want: []Criterion{
+				CriterionContentFidelity,
+				CriterionCharacterConsistency,
+				CriterionStructureCompliance,
+				CriterionNaturalness,
+				CriterionSchemaCompliance,
 			},
 		},
 	}
