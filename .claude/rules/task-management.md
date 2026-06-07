@@ -24,6 +24,14 @@ projectId / sectionId は名前から特定することもできる（`mcp__todo
 - `assign-to-claude`: Claude が対応する対象
 - `in-progress`: 対応中
 
+### ラベル付与の方針
+
+- **タスク作成時はラベルを一切付与しない** — LLM が新規タスクを作成するとき（`mcp__todoist__add-tasks`）は `labels` を指定せず（空のまま）作成すること。`ready` を含むいかなるラベルも自動付与してはならない。
+- ラベルの付与・除去は、以下の定められたタイミング・担当でのみ行う。タスク作成者が先回りして状態ラベルを付けないこと。
+    - `ready`: 人手で着手可否を判断して付与する。`solve-task` で作業を進められない状況になった場合は除去する（`.claude/skills/solve-task/SKILL.md` を参照）。
+    - `assign-to-claude`: `assign-tasks` スキルが優先度評価のうえ付与する。
+    - `in-progress`: `solve-task`（`solve-task.sh`）が着手時に付与し、終了時に除去する。
+
 ## タスク内容の書き方
 
 - `content`: 何をするかを簡潔・具体的に書く（例: 「`readJSON` / `loadProfile` の重複を共通ヘルパーへ抽出」）。
