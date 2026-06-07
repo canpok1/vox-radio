@@ -49,7 +49,7 @@ type mockDirector struct {
 	err    error
 }
 
-func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog) (model.Script, error) {
+func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, error) {
 	if m.err != nil {
 		return model.Script{}, m.err
 	}
@@ -683,5 +683,43 @@ func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 		if a.CharacterID == "absent_char" {
 			t.Error("absent_char should not appear in assignments (休演リーク防止)")
 		}
+	}
+}
+
+func TestLLMScriptGenerator_Generate_ProgramDirectionPersistedInLinesFile(t *testing.T) {
+	workDir := t.TempDir()
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+	md := &mockDirector{}
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		md,
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+		workDir,
+	)
+
+	program := config.ProgramConfig{Direction: "番組全体の演出方針テスト"}
+	if _, err := gen.Generate(context.Background(), program, rundown, corners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(workDir, fileio.FileLines)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected intermediate file to exist: %v", err)
+	}
+
+	var sl model.ScriptLines
+	if err := json.Unmarshal(data, &sl); err != nil {
+		t.Fatalf("03_lines.json must be valid ScriptLines: %v", err)
+	}
+	if sl.Direction != "番組全体の演出方針テスト" {
+		t.Errorf("ScriptLines.Direction: got %q, want 番組全体の演出方針テスト", sl.Direction)
 	}
 }

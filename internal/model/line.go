@@ -36,7 +36,8 @@ type CornerLines struct {
 
 // ScriptLines is the root structure of 03_lines.json.
 type ScriptLines struct {
-	Corners []CornerLines `json:"corners"`
+	Direction string        `json:"direction,omitempty"` // 番組全体の演出指示（direct専用）
+	Corners   []CornerLines `json:"corners"`
 }
 
 // TotalLines returns the total number of lines across all corners.

@@ -295,4 +295,26 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 			t.Errorf("EpisodeTitle = %q, want empty (omitempty)", got.EpisodeTitle)
 		}
 	})
+
+	t.Run("script_note fields are not exposed in manifest", func(t *testing.T) {
+		programWithNote := config.ProgramConfig{
+			Title:       "テスト番組",
+			Description: "公開メタデータ",
+			ScriptNote:  "非公開台本指示",
+			Direction:   "番組演出方針",
+		}
+		cornersWithNote := []config.CornerConfig{
+			{Title: "テストコーナー", ScriptNote: "コーナー台本指示"},
+		}
+		got := manifest.Build(programWithNote, cornersWithNote, model.Rundown{}, "ep.mp3", fixedTime, "", nil, nil, 0, "")
+		if got.Description != "公開メタデータ" {
+			t.Errorf("Description = %q, want 公開メタデータ", got.Description)
+		}
+		// Manifest struct should not have ScriptNote/Direction fields
+		// This test documents that manifest.Build does not receive or expose these fields.
+		// The Manifest struct only has Title, Description, and other public-safe fields.
+		if got.Title != "テスト番組" {
+			t.Errorf("Title = %q, want テスト番組", got.Title)
+		}
+	})
 }

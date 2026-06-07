@@ -66,7 +66,7 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 		},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestLLMDirector_Direct_StartAudio_Jingle_PrependedFirst(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestLLMDirector_Direct_EndAudio_Jingle_AppendedLast(t *testing.T) {
 		Lines:    []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestLLMDirector_Direct_CornerAllAssets_Jingle_CorrectOrder(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestLLMDirector_Direct_StartAudio_SE_AfterBGM_BGMContinues(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestLLMDirector_Direct_EndAudio_SE_BGMContinues(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestLLMDirector_Direct_NoAssets_OnlySpeech(t *testing.T) {
 		Lines: []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "hello"}},
 	}}
 
-	_, err := d.Direct(context.Background(), corners, emptyCatalog())
+	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestLLMDirector_Direct_BGMDoesNotLeakToNextCorner(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -416,7 +416,7 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "transition"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog)
+	got, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -440,7 +440,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 		model.Line{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -459,7 +459,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, emptyCatalog())
+	_, err := d.Direct(context.Background(), nil, emptyCatalog(), "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -473,7 +473,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 
 	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テストテキスト"})
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -499,7 +499,7 @@ func TestBuildScript_StartPauseSec_InjectedBeforeStartAudio(t *testing.T) {
 		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -528,7 +528,7 @@ func TestBuildScript_EndPauseSec_InjectedAfterEndAudio(t *testing.T) {
 		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -556,7 +556,7 @@ func TestBuildScript_ZeroStartPauseSec_NoInjection(t *testing.T) {
 		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -578,7 +578,7 @@ func TestBuildScript_ZeroEndPauseSec_NoInjection(t *testing.T) {
 		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -607,7 +607,7 @@ func TestBuildScript_AdjacentCorners_BothPausesInjected(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -635,7 +635,7 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
 	}
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -657,7 +657,7 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
 	}
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog)
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -680,7 +680,7 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "応答"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -723,7 +723,7 @@ func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "オチ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -756,7 +756,7 @@ func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -783,7 +783,7 @@ func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -803,7 +803,7 @@ func TestLLMDirector_Direct_PauseNegativeDurationIgnored(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -831,7 +831,7 @@ func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
 
 	got, err := d.Direct(context.Background(), corners, model.AssetCatalog{
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -860,7 +860,7 @@ func TestBuildScript_SameBGM_ContinuousPlay(t *testing.T) {
 		{Title: "C2", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -889,7 +889,7 @@ func TestBuildScript_DifferentBGM_SeamlessSwitch(t *testing.T) {
 		{Title: "C2", BGM: "bgm_b", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -921,7 +921,7 @@ func TestBuildScript_BGMToNoBGM_StopAtBoundary(t *testing.T) {
 		{Title: "C2", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -952,7 +952,7 @@ func TestBuildScript_LastCorner_NoBGMStop(t *testing.T) {
 		{Title: "C1", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -978,7 +978,7 @@ func TestBuildScript_EndAudio_Jingle_ResetsBGM(t *testing.T) {
 		{Title: "C2", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1021,7 +1021,7 @@ func TestLLMDirector_Direct_DirectionInPrompt(t *testing.T) {
 		},
 	}
 
-	_, err := d.Direct(context.Background(), corners, emptyCatalog())
+	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1042,7 +1042,7 @@ func TestLLMDirector_Direct_LineConversionApplied(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "README.md"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1069,7 +1069,7 @@ func TestLLMDirector_Direct_LineConversionFallback_MissingEntry(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "README.md"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1094,7 +1094,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConversions(t *testing.T
 		model.Line{SpeakerRole: "host", Text: "AI"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1117,7 +1117,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConvertedText(t *testing
 		model.Line{SpeakerRole: "host", Text: "AI"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1168,7 +1168,7 @@ func TestLLMDirector_Direct_WithProofread_CorrectsMisreading(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1200,7 +1200,7 @@ func TestLLMDirector_Direct_WithProofread_FallbackOnLLMError(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("pipeline must not stop on proofread error: %v", err)
 	}
@@ -1230,7 +1230,7 @@ func TestLLMDirector_Direct_WithProofread_SkipWhenNotSet(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1264,7 +1264,7 @@ func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "テストテキスト"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog())
+	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1273,5 +1273,39 @@ func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
 	}
 	if got.Segments[0].Text != "てすとてきすと" {
 		t.Errorf("Segment[0].Text: got %q, want てすとてきすと (direct conversion unchanged when no corrections)", got.Segments[0].Text)
+	}
+}
+
+func TestLLMDirector_Direct_ProgramDirectionInPrompt(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
+
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "番組全体の演出方針")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(capturedPrompt, "番組全体の演出方針") {
+		t.Errorf("program_direction should appear in prompt, got: %s", capturedPrompt)
+	}
+}
+
+func TestLLMDirector_Direct_ProgramDirectionEmptyUsesNone(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
+
+	_, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(capturedPrompt, "（なし）") {
+		t.Errorf("empty program_direction should be rendered as （なし）, got: %s", capturedPrompt)
 	}
 }

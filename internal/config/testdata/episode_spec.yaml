@@ -2,6 +2,8 @@ program:
   id: "test-program"
   title: "テストニュース"
   description: "テスト用"
+  direction: "番組全体の演出方針テスト"
+  script_note: "番組台本指示テスト"
 
 casts:
   zundamon:
@@ -12,6 +14,7 @@ corners:
   - title: "オープニング"
     content: "番組の挨拶とトピック紹介"
     direction: "冒頭でオープニングジングルを流す。"
+    script_note: "コーナー台本指示テスト"
     cast:
       zundamon: "元気に挨拶する進行役"
     length_sec: 45

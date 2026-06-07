@@ -279,6 +279,8 @@ type ProgramConfig struct {
 	ID            string `yaml:"id"`
 	Title         string `yaml:"title"`
 	Description   string `yaml:"description"`
+	Direction     string `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
+	ScriptNote    string `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
 	SummaryLength int    `yaml:"summary_length,omitempty"`
 	Timezone      string `yaml:"timezone,omitempty"` // IANA tz名。未設定時は DefaultProgramTimezone
 }
@@ -322,6 +324,7 @@ type CornerConfig struct {
 	Title         string            `yaml:"title"`
 	Content       string            `yaml:"content"`
 	Direction     string            `yaml:"direction,omitempty"`
+	ScriptNote    string            `yaml:"script_note,omitempty"` // コーナー個別の台本指示（write専用・非公開）
 	Cast          map[string]string `yaml:"cast"`
 	LengthSec     int               `yaml:"length_sec"`
 	SummaryLength int               `yaml:"summary_length,omitempty"`

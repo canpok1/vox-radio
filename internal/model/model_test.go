@@ -132,6 +132,40 @@ func TestScriptLines_DirectionOmittedWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestScriptLines_ProgramDirection_RoundTrip(t *testing.T) {
+	original := model.ScriptLines{
+		Direction: "番組全体の演出指示",
+		Corners:   []model.CornerLines{{Title: "C1", Lines: make([]model.Line, 0)}},
+	}
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	if !strings.Contains(string(data), `"direction":"番組全体の演出指示"`) {
+		t.Errorf("direction field should be present, got: %s", string(data))
+	}
+	var got model.ScriptLines
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if got.Direction != "番組全体の演出指示" {
+		t.Errorf("Direction: got %q, want 番組全体の演出指示", got.Direction)
+	}
+}
+
+func TestScriptLines_ProgramDirection_OmittedWhenEmpty(t *testing.T) {
+	sl := model.ScriptLines{
+		Corners: []model.CornerLines{{Title: "C1", Lines: make([]model.Line, 0)}},
+	}
+	data, err := json.Marshal(sl)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	if strings.Contains(string(data), `"direction"`) {
+		t.Errorf("direction field should be omitted when empty, got: %s", string(data))
+	}
+}
+
 func TestScriptLines_TotalLines(t *testing.T) {
 	tests := []struct {
 		name string

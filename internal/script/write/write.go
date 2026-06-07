@@ -32,9 +32,11 @@ type castEntryForPrompt struct {
 
 // cornerForPrompt is the subset of corner data passed to the LLM.
 // TargetChars is computed from LengthSec via config.DurationSecToTargetChars.
+// ScriptNote holds the corner-specific script instruction (write-only, non-public).
 type cornerForPrompt struct {
 	Title       string               `json:"title"`
 	Content     string               `json:"content"`
+	ScriptNote  string               `json:"script_note,omitempty"`
 	Cast        []castEntryForPrompt `json:"cast"`
 	TargetChars int                  `json:"target_chars"`
 }
@@ -124,6 +126,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	promptCorner := cornerForPrompt{
 		Title:       corner.Title,
 		Content:     corner.Content,
+		ScriptNote:  corner.ScriptNote,
 		Cast:        castEntries,
 		TargetChars: config.DurationSecToTargetChars(corner.LengthSec),
 	}
@@ -183,6 +186,8 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	recordedAtStr := stringOrUnknown(w.recordedAt)
 	timezoneStr := stringOrUnknown(w.timezone)
 
+	programScriptNoteStr := stringOrNone(program.ScriptNote)
+
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{corner}}", string(cornerJSON),
@@ -196,6 +201,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{guest_info}}", castOverviewStr,
 		"{{recorded_at}}", recordedAtStr,
 		"{{timezone}}", timezoneStr,
+		"{{program_script_note}}", programScriptNoteStr,
 	).Replace(w.promptTemplate)
 
 	schema := buildLinesSchema(presets)
@@ -341,6 +347,13 @@ func formatCastInfo(casts []model.RundownCast) string {
 func stringOrUnknown(s string) string {
 	if s == "" {
 		return "（不明）"
+	}
+	return s
+}
+
+func stringOrNone(s string) string {
+	if s == "" {
+		return "（なし）"
 	}
 	return s
 }

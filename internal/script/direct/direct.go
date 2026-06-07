@@ -93,7 +93,7 @@ type cornerLLMPayload struct {
 }
 
 type Director interface {
-	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error)
+	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error)
 }
 
 type insertion struct {
@@ -170,7 +170,7 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return d
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog) (model.Script, error) {
+func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error) {
 	payload := make([]cornerLLMPayload, len(corners))
 	for i, c := range corners {
 		payload[i] = cornerLLMPayload{
@@ -193,6 +193,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 	prompt := strings.NewReplacer(
 		"{{corners}}", string(cornersJSON),
 		"{{asset_catalog}}", string(catalogJSON),
+		"{{program_direction}}", stringOrNone(programDirection),
 	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
@@ -275,6 +276,13 @@ func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLi
 	}
 
 	return cr.Corrections, nil
+}
+
+func stringOrNone(s string) string {
+	if s == "" {
+		return "（なし）"
+	}
+	return s
 }
 
 type insertKey struct{ cornerIdx, lineIdx int }
