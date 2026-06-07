@@ -1,0 +1,23 @@
+name: prompt-eval
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # 週次 (UTC 日曜 02:00)
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run prompt evaluation
+        run: make eval

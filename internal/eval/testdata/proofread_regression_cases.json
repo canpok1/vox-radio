@@ -1,0 +1,130 @@
+[
+  {
+    "name": "rendaku_zutuki",
+    "category": "rendaku",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "頭突きを食らいました",
+        "converted_text": "あたまつきをくらいました"
+      }
+    ],
+    "expectation": "「頭突き」は連濁により「ずつき」と読む。converted_text の「あたまつき」は連濁が取りこぼされた誤読であり、corrections に corner_index=0, line_index=0, text=\"ずつきをくらいました\" の修正を含めるべき。"
+  },
+  {
+    "name": "jukujikun_kyou",
+    "category": "jukujikun",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "今日はいい天気ですね",
+        "converted_text": "こんにちはいいてんきですね"
+      }
+    ],
+    "expectation": "「今日」は熟字訓で「きょう」と読む。「こんにち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"きょうはいいてんきですね\" の修正を含めるべき。"
+  },
+  {
+    "name": "compound_azuki",
+    "category": "compound_special_reading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "小豆を炊いてずんだ餅を作ります",
+        "converted_text": "しょうずをたいてずんだもちをつくります"
+      }
+    ],
+    "expectation": "「小豆」は複合語特殊読みで「あずき」と読む。「しょうず」は誤りであり、corrections に corner_index=0, line_index=0, text=\"あずきをたいてずんだもちをつくります\" の修正を含めるべき。"
+  },
+  {
+    "name": "onyomi_kunyomi_mix",
+    "category": "onyomi_kunyomi_mix",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "入場口からお入りください",
+        "converted_text": "はいりばぐちからおはいりください"
+      }
+    ],
+    "expectation": "「入場口」は音訓混在で「にゅうじょうぐち」と読む。「はいりばぐち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"にゅうじょうぐちからおはいりください\" の修正を含めるべき。"
+  },
+  {
+    "name": "homophone_error",
+    "category": "homophone_misreading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "橋を渡ります",
+        "converted_text": "はしをわたります"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "箸で食べます",
+        "converted_text": "はしでたべます"
+      }
+    ],
+    "expectation": "「橋」は「はし」で正しい。「箸」も「はし」で正しい。どちらも corrections に含めるべきではない（VOICEVOX のアクセント処理に委ねる）。"
+  },
+  {
+    "name": "meaningless_conversion",
+    "category": "meaningless",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "ニュースを報告します",
+        "converted_text": "にゅーすをほーこくにちます"
+      }
+    ],
+    "expectation": "「報告します」の converted_text が「ほーこくにちます」となっており日本語として意味不明。corrections に corner_index=0, line_index=0, text=\"にゅーすをほうこくします\" の修正を含めるべき。"
+  },
+  {
+    "name": "normal_no_correction",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "ずんだ餅はおいしいです",
+        "converted_text": "ずんだもちはおいしいです"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "今日もよろしくお願いします",
+        "converted_text": "きょうもよろしくおねがいします"
+      }
+    ],
+    "expectation": "どちらの行も converted_text は正しい読みを表している。corrections は空配列であるべき。"
+  },
+  {
+    "name": "multi_line_mixed",
+    "category": "multi_line_mixed",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "頭突きは痛い",
+        "converted_text": "あたまつきはいたい"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "でも元気です",
+        "converted_text": "でもげんきです"
+      },
+      {
+        "corner_index": 1,
+        "line_index": 0,
+        "original_text": "今日は晴れです",
+        "converted_text": "こんにちははれです"
+      }
+    ],
+    "expectation": "line_index=0 の「あたまつき」は連濁誤り（→ずつき）。line_index=1 の「でもげんきです」は正しい。corner_index=1, line_index=0 の「こんにちは」は熟字訓誤り（→きょう）。2件の修正を corrections に含めるべき。"
+  }
+]

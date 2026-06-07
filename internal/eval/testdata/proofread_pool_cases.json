@@ -1,0 +1,278 @@
+[
+  {
+    "name": "rendaku_kaminari",
+    "category": "rendaku",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "雷雨に注意してください",
+        "converted_text": "かみなりあめにちゅういしてください"
+      }
+    ]
+  },
+  {
+    "name": "rendaku_kobitozu",
+    "category": "rendaku",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "山頂の頂上を目指します",
+        "converted_text": "さんちょうのちょうじょうをめざします"
+      }
+    ]
+  },
+  {
+    "name": "jukujikun_otomodachi",
+    "category": "jukujikun",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "今年の目標を発表します",
+        "converted_text": "ことしのもくひょうをはっぴょうします"
+      }
+    ]
+  },
+  {
+    "name": "jukujikun_ashita",
+    "category": "jukujikun",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "明日の予定を確認しましょう",
+        "converted_text": "あすのよていをかくにんしましょう"
+      }
+    ]
+  },
+  {
+    "name": "jukujikun_otona",
+    "category": "jukujikun",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "大人として責任を持ちます",
+        "converted_text": "おとなとしてせきにんをもちます"
+      }
+    ]
+  },
+  {
+    "name": "compound_hatsumode",
+    "category": "compound_special_reading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "師走に入りました",
+        "converted_text": "しわすにはいりました"
+      }
+    ]
+  },
+  {
+    "name": "compound_kawasemi",
+    "category": "compound_special_reading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "川辺で翡翠を見かけました",
+        "converted_text": "かわべでかわせみをみかけました"
+      }
+    ]
+  },
+  {
+    "name": "onyomi_mix_nyukyo",
+    "category": "onyomi_kunyomi_mix",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "入居者の皆様へお知らせです",
+        "converted_text": "にゅうきょしゃのみなさまへおしらせです"
+      }
+    ]
+  },
+  {
+    "name": "onyomi_mix_shuppatsubi",
+    "category": "onyomi_kunyomi_mix",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "出発日は来週火曜日です",
+        "converted_text": "しゅっぱつびはらいしゅうかようびです"
+      }
+    ]
+  },
+  {
+    "name": "homophone_kikan",
+    "category": "homophone_misreading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "期間限定のキャンペーンです",
+        "converted_text": "きかんげんていのきゃんぺーんです"
+      }
+    ]
+  },
+  {
+    "name": "homophone_kikou",
+    "category": "homophone_misreading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "気候変動に対応します",
+        "converted_text": "きこうへんどうにたいおうします"
+      }
+    ]
+  },
+  {
+    "name": "meaningless_garbled",
+    "category": "meaningless",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "記録を更新しました",
+        "converted_text": "きろくをこうしんました"
+      }
+    ]
+  },
+  {
+    "name": "normal_simple_sentence",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "本日はお越しいただきありがとうございます",
+        "converted_text": "ほんじつはおこしいただきありがとうございます"
+      }
+    ]
+  },
+  {
+    "name": "normal_weather",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "明日は晴れの予報です",
+        "converted_text": "あしたははれのよほうです"
+      }
+    ]
+  },
+  {
+    "name": "normal_news_intro",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "こんにちは、ラジオをお聴きの皆さん",
+        "converted_text": "こんにちは、らじおをおききのみなさん"
+      }
+    ]
+  },
+  {
+    "name": "normal_katakana",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "インターネットを活用しましょう",
+        "converted_text": "いんたーねっとをかつようしましょう"
+      }
+    ]
+  },
+  {
+    "name": "multi_line_all_normal",
+    "category": "multi_line_mixed",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "今週のニュースをお届けします",
+        "converted_text": "こんしゅうのにゅーすをおとどけします"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "まず最初のトピックです",
+        "converted_text": "まずさいしょのとぴっくです"
+      }
+    ]
+  },
+  {
+    "name": "multi_line_partial_error",
+    "category": "multi_line_mixed",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "今日の天気予報をお伝えします",
+        "converted_text": "こんにちのてんきよほうをおつたえします"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "気温は二十度です",
+        "converted_text": "きおんはにじゅうどです"
+      }
+    ]
+  },
+  {
+    "name": "rendaku_shimbun",
+    "category": "rendaku",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "新聞を読みましょう",
+        "converted_text": "しんぶんをよみましょう"
+      }
+    ]
+  },
+  {
+    "name": "jukujikun_kinoo",
+    "category": "jukujikun",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "昨日の出来事を振り返ります",
+        "converted_text": "きのうのできごとをふりかえります"
+      }
+    ]
+  },
+  {
+    "name": "normal_formal_closing",
+    "category": "normal",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "以上でニュースをお届けしました",
+        "converted_text": "いじょうでにゅーすをおとどけしました"
+      }
+    ]
+  },
+  {
+    "name": "compound_sakura",
+    "category": "compound_special_reading",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "桜前線が北上しています",
+        "converted_text": "さくらぜんせんがほくじょうしています"
+      }
+    ]
+  }
+]
