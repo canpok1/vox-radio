@@ -92,17 +92,13 @@ var correctionsSchema = json.RawMessage(`{
 	"additionalProperties": false
 }`)
 
-func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt, linesJSON string) json.RawMessage {
+func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt, linesJSON string) (json.RawMessage, error) {
 	t.Helper()
 	prompt := strings.NewReplacer("{{lines}}", linesJSON).Replace(proofreadPrompt)
-	raw, err := client.Complete(ctx, llm.CompletionRequest{
+	return client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},
 		JSONSchema: correctionsSchema,
 	})
-	if err != nil {
-		return nil
-	}
-	return raw
 }
 
 func getEnvFloat(key string, defaultVal float64) (float64, error) {
@@ -208,9 +204,12 @@ func TestProofreadEval(t *testing.T) {
 		linesJSON := string(linesJSONBytes)
 
 		// Step 1: run proofread.
-		raw := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
-		if raw == nil {
-			t.Skipf("proofread API call failed for case %s (inconclusive)", ec.Name)
+		raw, err := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
+		if err != nil {
+			if eval.IsInconclusive(err) {
+				t.Skipf("proofread API call failed (inconclusive) for case %s: %v", ec.Name, err)
+			}
+			t.Fatalf("proofread failed for case %s: %v", ec.Name, err)
 		}
 
 		// Step 2: judge.
