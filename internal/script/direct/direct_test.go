@@ -4,13 +4,58 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
+
+// captureHandler is a slog.Handler that captures all records for test inspection.
+type captureHandler struct {
+	mu      sync.Mutex
+	records *[]slog.Record
+}
+
+func (h *captureHandler) Enabled(_ context.Context, _ slog.Level) bool { return true }
+func (h *captureHandler) Handle(_ context.Context, r slog.Record) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	*h.records = append(*h.records, r.Clone())
+	return nil
+}
+func (h *captureHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
+func (h *captureHandler) WithGroup(_ string) slog.Handler      { return h }
+
+func recordAttrMap(r slog.Record) map[string]slog.Value {
+	m := make(map[string]slog.Value)
+	r.Attrs(func(a slog.Attr) bool {
+		m[a.Key] = a.Value
+		return true
+	})
+	return m
+}
+
+func captureSlogRecords(t *testing.T) *[]slog.Record {
+	t.Helper()
+	var records []slog.Record
+	orig := slog.Default()
+	slog.SetDefault(slog.New(&captureHandler{records: &records}))
+	t.Cleanup(func() { slog.SetDefault(orig) })
+	return &records
+}
+
+func findSlogRecord(records []slog.Record, msg string) *slog.Record {
+	for i := range records {
+		if records[i].Message == msg {
+			return &records[i]
+		}
+	}
+	return nil
+}
 
 type mockClient struct {
 	response json.RawMessage
@@ -1307,5 +1352,93 @@ func TestLLMDirector_Direct_ProgramDirectionEmptyUsesNone(t *testing.T) {
 	}
 	if !strings.Contains(capturedPrompt, "（なし）") {
 		t.Errorf("empty program_direction should be rendered as （なし）, got: %s", capturedPrompt)
+	}
+}
+
+// TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys verifies that when proofread
+// applies a correction, the log record contains "before" and "after" keys (not "text").
+// before = converted text from direct step; after = corrected text from proofread LLM.
+func TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			// Call 1: direct LLM — returns wrong kana for 頭突き
+			json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"あたまつきするのだ"}]}`),
+			// Call 2: proofread LLM — corrects to the right reading
+			json.RawMessage(`{"corrections":[{"corner_index":0,"line_index":0,"text":"ずつきするのだ","reason":"頭突き→ずつき（連濁の取りこぼし）"}]}`),
+		},
+		errs: []error{nil, nil},
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithProofread("{{lines}}", 0),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
+	)
+
+	records := captureSlogRecords(t)
+
+	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	corrRec := findSlogRecord(*records, "proofread correction")
+	if corrRec == nil {
+		t.Fatal("expected 'proofread correction' log record, got none")
+	}
+
+	attrs := recordAttrMap(*corrRec)
+	if _, ok := attrs["text"]; ok {
+		t.Error("log should NOT have 'text' key (should be replaced by 'after')")
+	}
+	if v, ok := attrs["before"]; !ok {
+		t.Error("log should have 'before' key")
+	} else if got := v.String(); got != "あたまつきするのだ" {
+		t.Errorf("before: got %q, want あたまつきするのだ", got)
+	}
+	if v, ok := attrs["after"]; !ok {
+		t.Error("log should have 'after' key")
+	} else if got := v.String(); got != "ずつきするのだ" {
+		t.Errorf("after: got %q, want ずつきするのだ", got)
+	}
+}
+
+// TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConversion verifies
+// that when proofread corrects a line that had no direct conversion, "before" is the original text.
+func TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConversion(t *testing.T) {
+	mc := &sequentialClient{
+		responses: []json.RawMessage{
+			// Call 1: direct LLM — no line conversions
+			json.RawMessage(`{"insertions":[]}`),
+			// Call 2: proofread LLM — corrects original text directly
+			json.RawMessage(`{"corrections":[{"corner_index":0,"line_index":0,"text":"ずつきするのだ","reason":"頭突き→ずつき"}]}`),
+		},
+		errs: []error{nil, nil},
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithProofread("{{lines}}", 0),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
+	)
+
+	records := captureSlogRecords(t)
+
+	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	corrRec := findSlogRecord(*records, "proofread correction")
+	if corrRec == nil {
+		t.Fatal("expected 'proofread correction' log, got none")
+	}
+	attrs := recordAttrMap(*corrRec)
+	if v, ok := attrs["before"]; !ok {
+		t.Error("log should have 'before' key")
+	} else if got := v.String(); got != "頭突きするのだ" {
+		t.Errorf("before: got %q, want 頭突きするのだ (original text when no direct conversion)", got)
 	}
 }
