@@ -125,6 +125,7 @@ func TestPaths(t *testing.T) {
 		{"SummariesPath", fileio.SummariesPath(outDir), filepath.Join(outDir, "intermediate", "02_summaries.json")},
 		{"RundownPath", fileio.RundownPath(outDir), filepath.Join(outDir, "intermediate", "02_rundown.json")},
 		{"LinesPath", fileio.LinesPath(outDir), filepath.Join(outDir, "intermediate", "03_lines.json")},
+		{"ProofreadPath", fileio.ProofreadPath(outDir), filepath.Join(outDir, "intermediate", "04_proofread.json")},
 		{"ScriptPath", fileio.ScriptPath(outDir), filepath.Join(outDir, "intermediate", "04_script.json")},
 		{"EpisodePath", fileio.EpisodePath(outDir), filepath.Join(outDir, "episode.mp3")},
 	}
