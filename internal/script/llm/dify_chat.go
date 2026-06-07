@@ -39,15 +39,11 @@ func newDifyChatClient(cfg Config) Client {
 		Timeout:   60 * time.Second,
 	})
 
-	t := cfg.SharedThrottler
-	if t == nil {
-		t = &Throttler{minIntervalMS: cfg.MinRequestIntervalMS}
-	}
 	return &difyChatClient{
 		cfg:        cfg,
 		dcCfg:      DifyChatClientConfig{BaseURL: dc.BaseURL, APIKey: dc.APIKey, User: user, Inputs: dc.Inputs},
 		baseClient: bc,
-		t:          t,
+		t:          resolveThrottler(cfg),
 	}
 }
 

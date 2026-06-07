@@ -123,11 +123,10 @@ func buildEvalClients(t *testing.T) (llm.Client, llm.Client) {
 	targetCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
 	targetCfg.MaxRetries = 2
 
-	judgeCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
+	judgeCfg := targetCfg
 	if jm := os.Getenv("VOX_EVAL_JUDGE_MODEL"); jm != "" {
 		judgeCfg.Model = jm
 	}
-	judgeCfg.MaxRetries = 2
 
 	shared := llm.NewThrottler(targetCfg.MinRequestIntervalMS)
 	targetCfg.SharedThrottler = shared

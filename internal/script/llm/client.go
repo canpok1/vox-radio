@@ -55,6 +55,13 @@ func NewThrottler(minIntervalMS int) *Throttler {
 	return &Throttler{minIntervalMS: minIntervalMS}
 }
 
+func resolveThrottler(cfg Config) *Throttler {
+	if cfg.SharedThrottler != nil {
+		return cfg.SharedThrottler
+	}
+	return NewThrottler(cfg.MinRequestIntervalMS)
+}
+
 func (t *Throttler) throttle(ctx context.Context) error {
 	if t.minIntervalMS <= 0 {
 		return nil
@@ -107,15 +114,11 @@ func newOpenAIClient(cfg Config) Client {
 	if cfg.Model == "" {
 		cfg.Model = DefaultModel
 	}
-	t := cfg.SharedThrottler
-	if t == nil {
-		t = &Throttler{minIntervalMS: cfg.MinRequestIntervalMS}
-	}
 	return &openAIClient{
 		cfg:      cfg,
 		hc:       &http.Client{Timeout: 60 * time.Second},
 		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
-		t:        t,
+		t:        resolveThrottler(cfg),
 	}
 }
 
