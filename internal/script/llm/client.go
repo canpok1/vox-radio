@@ -37,16 +37,25 @@ type Config struct {
 	Temperature          float64
 	MinRequestIntervalMS int
 	DifyChat             *DifyChatClientConfig
+	// SharedThrottler, if non-nil, is used instead of creating a new throttler from MinRequestIntervalMS.
+	// Use NewThrottler and share the pointer across multiple clients to enforce a combined rate limit.
+	SharedThrottler *Throttler
 }
 
-// throttler manages rate limiting for LLM API calls.
-type throttler struct {
+// Throttler manages rate limiting for LLM API calls and can be shared across multiple clients.
+type Throttler struct {
 	minIntervalMS int
 	mu            sync.Mutex
 	lastTime      time.Time
 }
 
-func (t *throttler) throttle(ctx context.Context) error {
+// NewThrottler creates a Throttler with the given minimum interval between requests.
+// Pass the returned pointer to Config.SharedThrottler to share it across multiple clients.
+func NewThrottler(minIntervalMS int) *Throttler {
+	return &Throttler{minIntervalMS: minIntervalMS}
+}
+
+func (t *Throttler) throttle(ctx context.Context) error {
 	if t.minIntervalMS <= 0 {
 		return nil
 	}
@@ -77,7 +86,7 @@ type openAIClient struct {
 	cfg      Config
 	hc       *http.Client
 	endpoint string
-	throttler
+	t        *Throttler
 }
 
 // NewClient creates a new LLM client, selecting the implementation based on Config.Provider.
@@ -98,11 +107,15 @@ func newOpenAIClient(cfg Config) Client {
 	if cfg.Model == "" {
 		cfg.Model = DefaultModel
 	}
+	t := cfg.SharedThrottler
+	if t == nil {
+		t = &Throttler{minIntervalMS: cfg.MinRequestIntervalMS}
+	}
 	return &openAIClient{
-		cfg:       cfg,
-		hc:        &http.Client{Timeout: 60 * time.Second},
-		endpoint:  strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
-		throttler: throttler{minIntervalMS: cfg.MinRequestIntervalMS},
+		cfg:      cfg,
+		hc:       &http.Client{Timeout: 60 * time.Second},
+		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
+		t:        t,
 	}
 }
 
@@ -175,7 +188,7 @@ func (c *openAIClient) Complete(ctx context.Context, req CompletionRequest) (jso
 }
 
 func (c *openAIClient) callAPI(ctx context.Context, req CompletionRequest, msgs []Message) (json.RawMessage, error) {
-	if err := c.throttle(ctx); err != nil {
+	if err := c.t.throttle(ctx); err != nil {
 		return nil, err
 	}
 

@@ -294,6 +294,62 @@ func TestComplete_ThrottlesRequests(t *testing.T) {
 	}
 }
 
+func TestNewThrottler_CreatesWithInterval(t *testing.T) {
+	th := llm.NewThrottler(100)
+	if th == nil {
+		t.Fatal("NewThrottler returned nil")
+	}
+}
+
+func TestComplete_SharedThrottler_AcrossClients(t *testing.T) {
+	var receivedAt []time.Time
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAt = append(receivedAt, time.Now())
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(makeAPIResponse(t, `{"value":"hello"}`))
+	}))
+	defer ts.Close()
+
+	const intervalMS = 50
+	shared := llm.NewThrottler(intervalMS)
+
+	c1 := llm.NewClient(llm.Config{
+		BaseURL:         ts.URL,
+		APIKey:          "test-key",
+		Model:           "test-model",
+		SharedThrottler: shared,
+	})
+	c2 := llm.NewClient(llm.Config{
+		BaseURL:         ts.URL,
+		APIKey:          "test-key",
+		Model:           "test-model",
+		SharedThrottler: shared,
+	})
+
+	req := llm.CompletionRequest{
+		Messages: []llm.Message{{Role: "user", Content: "hello"}},
+	}
+
+	_, err := c1.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("c1 request failed: %v", err)
+	}
+	_, err = c2.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("c2 request failed: %v", err)
+	}
+
+	if len(receivedAt) != 2 {
+		t.Fatalf("expected 2 requests, got %d", len(receivedAt))
+	}
+	gap := receivedAt[1].Sub(receivedAt[0])
+	minGap := time.Duration(intervalMS) * time.Millisecond
+	const tolerance = 5 * time.Millisecond
+	if gap < minGap-tolerance {
+		t.Errorf("cross-client requests too close: gap=%v, want >= %v", gap, minGap-tolerance)
+	}
+}
+
 func TestComplete_ThrottleContextCancellation(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

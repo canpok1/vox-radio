@@ -19,7 +19,7 @@ type difyChatClient struct {
 	cfg        Config
 	dcCfg      DifyChatClientConfig
 	baseClient *base.Client
-	throttler
+	t          *Throttler
 }
 
 func newDifyChatClient(cfg Config) Client {
@@ -39,11 +39,15 @@ func newDifyChatClient(cfg Config) Client {
 		Timeout:   60 * time.Second,
 	})
 
+	t := cfg.SharedThrottler
+	if t == nil {
+		t = &Throttler{minIntervalMS: cfg.MinRequestIntervalMS}
+	}
 	return &difyChatClient{
 		cfg:        cfg,
 		dcCfg:      DifyChatClientConfig{BaseURL: dc.BaseURL, APIKey: dc.APIKey, User: user, Inputs: dc.Inputs},
 		baseClient: bc,
-		throttler:  throttler{minIntervalMS: cfg.MinRequestIntervalMS},
+		t:          t,
 	}
 }
 
@@ -94,7 +98,7 @@ func (c *difyChatClient) Complete(ctx context.Context, req CompletionRequest) (j
 }
 
 func (c *difyChatClient) callDify(ctx context.Context, query, conversationID string, inputs map[string]any) (json.RawMessage, string, error) {
-	if err := c.throttle(ctx); err != nil {
+	if err := c.t.throttle(ctx); err != nil {
 		return nil, "", err
 	}
 
