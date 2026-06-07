@@ -183,12 +183,15 @@ func resolveCorners(corners []config.CornerConfig, episodeNumber int) []config.C
 	return config.ResolveCornersForEpisode(corners, episodeNumber)
 }
 
+func programCachePath(programID string) string {
+	return filepath.Join(".vox-radio", "cache", programID+".jsonl")
+}
+
 // loadCacheEntries loads all cache entries for the given program.
 // Returns (entries, nextEpisodeNumber, error). File-not-found is not an error (returns episode 1).
 // program.id is required (validated at load time), so the cache is always consulted.
 func loadCacheEntries(programID string) ([]cache.Entry, int, error) {
-	cachePath := filepath.Join(".vox-radio", "cache", programID+".jsonl")
-	mgr := cache.New(cachePath)
+	mgr := cache.New(programCachePath(programID))
 	entries, err := mgr.Load()
 	if err != nil {
 		return nil, 0, fmt.Errorf("load cache: %w", err)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/assemble"
@@ -76,13 +75,11 @@ func newEpisodegenCmd() *cobra.Command {
 			writer.SetRecordedAt(time.Now(), loc)
 
 			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
-			cachePath := filepath.Join(".vox-radio", "cache", p.Program.ID+".jsonl")
-			cacheMgr := cache.New(cachePath)
-			entries, err := cacheMgr.Load()
+			entries, episodeNumber, err := loadCacheEntries(p.Program.ID)
 			if err != nil {
 				return fmt.Errorf("load cache: %w", err)
 			}
-			episodeNumber := cache.NextEpisodeNumber(entries)
+			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 			excludedURLs := cache.PastURLs(entries)
 			appearanceCounts := cache.AppearanceCounts(entries)

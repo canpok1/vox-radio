@@ -14,6 +14,17 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+func writeCacheRaw(t *testing.T, dir string, programID string, content []byte) {
+	t.Helper()
+	cacheDir := filepath.Join(dir, ".vox-radio", "cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(cacheDir, programID+".jsonl"), content, 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+}
+
 func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache.Entry) {
 	t.Helper()
 	cacheDir := filepath.Join(dir, ".vox-radio", "cache")
@@ -170,14 +181,7 @@ func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
 
 func TestLoadCacheEntries_CorruptedCache(t *testing.T) {
 	tmpDir := chdirTemp(t)
-
-	cacheDir := filepath.Join(tmpDir, ".vox-radio", "cache")
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(cacheDir, "corrupt.jsonl"), []byte("not valid json\n"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	writeCacheRaw(t, tmpDir, "corrupt", []byte("not valid json\n"))
 
 	_, _, err := loadCacheEntries("corrupt")
 	if err == nil {
