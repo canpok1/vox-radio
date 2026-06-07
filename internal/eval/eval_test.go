@@ -29,6 +29,7 @@ func TestCriterionValues(t *testing.T) {
 		CriterionFaithfulness,
 		CriterionCoverage,
 		CriterionConciseness,
+		CriterionSpecificity,
 		CriterionFormatCompliance,
 	}
 	for _, c := range criteria {
