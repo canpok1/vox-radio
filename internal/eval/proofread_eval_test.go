@@ -48,13 +48,24 @@ type proofreadCase struct {
 	Expectation string          `json:"expectation,omitempty"`
 }
 
-func loadCases(t *testing.T, filename string) []proofreadCase {
+// loadTestdataString reads a testdata file and returns its content as a string.
+func loadTestdataString(t *testing.T, filename string) string {
 	t.Helper()
 	data, err := os.ReadFile(testdataPath(filename))
 	if err != nil {
 		t.Fatalf("read %s: %v", filename, err)
 	}
-	var cases []proofreadCase
+	return string(data)
+}
+
+// loadCasesJSON reads a testdata JSON file and unmarshals it into a slice of T.
+func loadCasesJSON[T any](t *testing.T, filename string) []T {
+	t.Helper()
+	data, err := os.ReadFile(testdataPath(filename))
+	if err != nil {
+		t.Fatalf("read %s: %v", filename, err)
+	}
+	var cases []T
 	if err := json.Unmarshal(data, &cases); err != nil {
 		t.Fatalf("parse %s: %v", filename, err)
 	}
@@ -62,12 +73,11 @@ func loadCases(t *testing.T, filename string) []proofreadCase {
 }
 
 func loadJudgePrompt(t *testing.T) string {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath("proofread_judge.md"))
-	if err != nil {
-		t.Fatalf("read judge prompt: %v", err)
-	}
-	return string(data)
+	return loadTestdataString(t, "proofread_judge.md")
+}
+
+func loadCases(t *testing.T, filename string) []proofreadCase {
+	return loadCasesJSON[proofreadCase](t, filename)
 }
 
 var correctionsSchema = json.RawMessage(`{
@@ -238,15 +248,11 @@ func TestProofreadEval(t *testing.T) {
 		}
 
 		// Step 2: judge.
-		expectation := ec.Expectation
-		if expectation == "" {
-			expectation = "（なし）"
-		}
 		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, proofreadJudgeSchema, eval.JudgeInput{
 			Placeholders: map[string]string{
 				"lines":       linesJSON,
 				"corrections": string(raw),
-				"expectation": expectation,
+				"expectation": eval.ResolveExpectation(ec.Expectation),
 			},
 		})
 		if err != nil {

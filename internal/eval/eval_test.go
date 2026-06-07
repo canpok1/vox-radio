@@ -5,12 +5,31 @@ import (
 	"testing"
 )
 
+func TestResolveExpectation(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"", "（なし）"},
+		{"some text", "some text"},
+	}
+	for _, tt := range tests {
+		if got := ResolveExpectation(tt.input); got != tt.want {
+			t.Errorf("ResolveExpectation(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
 func TestCriterionValues(t *testing.T) {
 	criteria := []Criterion{
 		CriterionDetectionRecall,
 		CriterionFalsePositiveSuppression,
 		CriterionCorrectionAccuracy,
 		CriterionReasonValidity,
+		CriterionFaithfulness,
+		CriterionCoverage,
+		CriterionConciseness,
+		CriterionFormatCompliance,
 	}
 	for _, c := range criteria {
 		if c == "" {

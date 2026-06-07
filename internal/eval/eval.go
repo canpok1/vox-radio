@@ -109,6 +109,15 @@ var inconclusivePatterns = []string{
 	"status 5",
 }
 
+// ResolveExpectation returns s if non-empty, or the sentinel "（なし）" used by
+// judge prompts when no expected result is provided.
+func ResolveExpectation(s string) string {
+	if s == "" {
+		return "（なし）"
+	}
+	return s
+}
+
 // IsInconclusive returns true when err represents a transient infrastructure
 // problem (network, rate limit, API outage) rather than a quality failure.
 func IsInconclusive(err error) bool {

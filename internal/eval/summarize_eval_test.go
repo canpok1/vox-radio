@@ -28,28 +28,6 @@ type summarizeCase struct {
 	Expectation string           `json:"expectation,omitempty"`
 }
 
-func loadSummarizeCases(t *testing.T, filename string) []summarizeCase {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath(filename))
-	if err != nil {
-		t.Fatalf("read %s: %v", filename, err)
-	}
-	var cases []summarizeCase
-	if err := json.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("parse %s: %v", filename, err)
-	}
-	return cases
-}
-
-func loadSummarizeJudgePrompt(t *testing.T) string {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath("summarize_judge.md"))
-	if err != nil {
-		t.Fatalf("read summarize judge prompt: %v", err)
-	}
-	return string(data)
-}
-
 // summarizeSchema is the JSON schema for the summarize.md output.
 var summarizeSchema = json.RawMessage(`{
   "type": "object",
@@ -136,11 +114,11 @@ func TestSummarizeEval(t *testing.T) {
 		t.Fatalf("load summarize prompt: %v", err)
 	}
 
-	judgePrompt := loadSummarizeJudgePrompt(t)
+	judgePrompt := loadTestdataString(t, "summarize_judge.md")
 
 	// Load test sets.
-	regressionCases := loadSummarizeCases(t, "summarize_regression_cases.json")
-	poolCases := loadSummarizeCases(t, "summarize_pool_cases.json")
+	regressionCases := loadCasesJSON[summarizeCase](t, "summarize_regression_cases.json")
+	poolCases := loadCasesJSON[summarizeCase](t, "summarize_pool_cases.json")
 
 	sampled := eval.Sample(poolCases, sampleSize, seed)
 	sampledNames := make([]string, len(sampled))
@@ -185,15 +163,11 @@ func TestSummarizeEval(t *testing.T) {
 		}
 
 		// Step 2: judge.
-		expectation := ec.Expectation
-		if expectation == "" {
-			expectation = "（なし）"
-		}
 		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, summarizeJudgeSchema, eval.JudgeInput{
 			Placeholders: map[string]string{
 				"article":        articleJSON,
 				"summary_output": string(raw),
-				"expectation":    expectation,
+				"expectation":    eval.ResolveExpectation(ec.Expectation),
 			},
 		})
 		if err != nil {
