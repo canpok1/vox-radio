@@ -20,6 +20,7 @@
    |--------|------|
    | `GH_TOKEN` | GitHub Personal Access Token |
    | `GEMINI_API_KEY` | Gemini API キー（[Google AI Studio](https://aistudio.google.com/) で取得） |
+   | `TODOIST_API_TOKEN` | Todoist API トークン（[Todoist 設定 > 連携サービス](https://app.todoist.com/app/settings/integrations/developer) で取得） |
 
 3. devcontainer をリビルドして起動する
 
