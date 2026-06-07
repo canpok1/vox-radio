@@ -5,32 +5,13 @@ package eval_test
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/eval"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
-
-// testdataDir is resolved once at init time using runtime.Caller.
-var testdataDir string
-
-func init() {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("runtime.Caller failed")
-	}
-	testdataDir = filepath.Join(filepath.Dir(thisFile), "testdata")
-}
-
-func testdataPath(filename string) string {
-	return filepath.Join(testdataDir, filename)
-}
 
 // proofreadLine mirrors the input format for proofread.md.
 type proofreadLine struct {
@@ -46,38 +27,6 @@ type proofreadCase struct {
 	Category    string          `json:"category"`
 	Lines       []proofreadLine `json:"lines"`
 	Expectation string          `json:"expectation,omitempty"`
-}
-
-// loadTestdataString reads a testdata file and returns its content as a string.
-func loadTestdataString(t *testing.T, filename string) string {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath(filename))
-	if err != nil {
-		t.Fatalf("read %s: %v", filename, err)
-	}
-	return string(data)
-}
-
-// loadCasesJSON reads a testdata JSON file and unmarshals it into a slice of T.
-func loadCasesJSON[T any](t *testing.T, filename string) []T {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath(filename))
-	if err != nil {
-		t.Fatalf("read %s: %v", filename, err)
-	}
-	var cases []T
-	if err := json.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("parse %s: %v", filename, err)
-	}
-	return cases
-}
-
-func loadJudgePrompt(t *testing.T) string {
-	return loadTestdataString(t, "proofread_judge.md")
-}
-
-func loadCases(t *testing.T, filename string) []proofreadCase {
-	return loadCasesJSON[proofreadCase](t, filename)
 }
 
 var correctionsSchema = json.RawMessage(`{
@@ -102,7 +51,6 @@ var correctionsSchema = json.RawMessage(`{
 	"additionalProperties": false
 }`)
 
-// proofreadJudgeSchema is the JSON schema for the proofread judge LLM output.
 var proofreadJudgeSchema = json.RawMessage(`{
   "type": "object",
   "required": ["scores"],
@@ -136,74 +84,27 @@ func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofrea
 	})
 }
 
-func getEnvFloat(key string, defaultVal float64) (float64, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	return strconv.ParseFloat(v, 64)
-}
-
-func getEnvInt(key string, defaultVal int) (int, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	n, err := strconv.Atoi(v)
-	return n, err
-}
-
-func getEnvInt64(key string, defaultVal int64) (int64, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	return strconv.ParseInt(v, 10, 64)
-}
-
 func TestProofreadEval(t *testing.T) {
-	if os.Getenv("GEMINI_API_KEY") == "" {
-		t.Skip("GEMINI_API_KEY not set")
-	}
+	requireGeminiKey(t)
 
-	// Build LLM clients.
-	targetCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
-	targetCfg.MaxRetries = 2
-	targetClient := llm.NewClient(targetCfg)
-
-	// Judge model can be overridden via VOX_EVAL_JUDGE_MODEL.
-	judgeCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
-	if jm := os.Getenv("VOX_EVAL_JUDGE_MODEL"); jm != "" {
-		judgeCfg.Model = jm
-	}
-	judgeCfg.MaxRetries = 2
-	judgeClient := llm.NewClient(judgeCfg)
+	targetClient, judgeClient := buildEvalClients(t)
 
 	threshold, err := getEnvFloat("VOX_EVAL_PROOFREAD_THRESHOLD", 4.0)
 	if err != nil {
 		t.Fatalf("parse VOX_EVAL_PROOFREAD_THRESHOLD: %v", err)
 	}
 
-	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
-	}
-
-	seed, err := getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
-	if err != nil {
-		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
-	}
+	sampleSize, seed := loadSampleParams(t)
 
 	proofreadPrompt, err := eval.LoadPrompt("proofread")
 	if err != nil {
 		t.Fatalf("load proofread prompt: %v", err)
 	}
 
-	judgePrompt := loadJudgePrompt(t)
+	judgePrompt := loadTestdataString(t, "proofread_judge.md")
 
-	// Load test sets.
-	regressionCases := loadCases(t, "proofread_regression_cases.json")
-	poolCases := loadCases(t, "proofread_pool_cases.json")
+	regressionCases := loadCasesJSON[proofreadCase](t, "proofread_regression_cases.json")
+	poolCases := loadCasesJSON[proofreadCase](t, "proofread_pool_cases.json")
 
 	sampled := eval.Sample(poolCases, sampleSize, seed)
 	sampledNames := make([]string, len(sampled))
@@ -212,96 +113,43 @@ func TestProofreadEval(t *testing.T) {
 	}
 	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
 
-	// Bundle all cases: regression (all) + generalization (sampled).
-	type evaluationCase struct {
-		proofreadCase
-		setType string
-	}
-	var allCases []evaluationCase
+	caseByName := make(map[string]proofreadCase, len(regressionCases)+len(sampled))
+	var allCases []harnessCase
 	for _, c := range regressionCases {
-		allCases = append(allCases, evaluationCase{c, "regression"})
+		caseByName[c.Name] = c
+		allCases = append(allCases, harnessCase{c.Name, "regression"})
 	}
 	for _, c := range sampled {
-		allCases = append(allCases, evaluationCase{c, "generalization"})
+		caseByName[c.Name] = c
+		allCases = append(allCases, harnessCase{c.Name, "generalization"})
 	}
 
 	ctx := context.Background()
-	var results []eval.CaseResult
 
-	for _, ec := range allCases {
-		t.Logf("evaluating [%s] %s ...", ec.setType, ec.Name)
-
-		// Marshal lines once; reuse for proofread prompt and judge input.
-		linesJSONBytes, err := json.Marshal(ec.Lines)
-		if err != nil {
-			t.Fatalf("marshal lines for case %s: %v", ec.Name, err)
-		}
-		linesJSON := string(linesJSONBytes)
-
-		// Step 1: run proofread.
-		raw, err := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
-		if err != nil {
-			if eval.IsInconclusive(err) {
-				t.Skipf("proofread API call failed (inconclusive) for case %s: %v", ec.Name, err)
+	runEvalHarness(ctx, t, allCases, harnessConfig{
+		Criteria:    eval.AllCriteria,
+		JudgeClient: judgeClient,
+		JudgePrompt: judgePrompt,
+		JudgeSchema: proofreadJudgeSchema,
+		Threshold:   threshold,
+		RunCase: func(ctx context.Context, t *testing.T, c harnessCase) (map[string]string, error) {
+			ec := caseByName[c.Name]
+			linesJSONBytes, err := json.Marshal(ec.Lines)
+			if err != nil {
+				return nil, fmt.Errorf("marshal lines for case %s: %w", c.Name, err)
 			}
-			t.Fatalf("proofread failed for case %s: %v", ec.Name, err)
-		}
+			linesJSON := string(linesJSONBytes)
 
-		// Step 2: judge.
-		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, proofreadJudgeSchema, eval.JudgeInput{
-			Placeholders: map[string]string{
+			raw, err := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
+			if err != nil {
+				return nil, err
+			}
+
+			return map[string]string{
 				"lines":       linesJSON,
 				"corrections": string(raw),
 				"expectation": eval.ResolveExpectation(ec.Expectation),
-			},
-		})
-		if err != nil {
-			if eval.IsInconclusive(err) {
-				t.Skipf("judge API call failed (inconclusive): %v", err)
-			}
-			t.Fatalf("judge failed for case %s: %v", ec.Name, err)
-		}
-
-		results = append(results, eval.CaseResult{
-			CaseName: ec.Name,
-			SetType:  ec.setType,
-			Scores:   scores,
-		})
-
-		for _, s := range scores {
-			t.Logf("  [%s] %s: %s=%d (%s)", ec.setType, ec.Name, s.Criterion, s.Score, s.Reason)
-		}
-	}
-
-	if len(results) == 0 {
-		t.Skip("no results collected (all cases inconclusive)")
-	}
-
-	// Aggregate.
-	agg := eval.AggregateScores(results)
-
-	t.Logf("=== Aggregated scores ===")
-	t.Logf("overall average: %.2f (threshold: %.2f)", agg.Overall, threshold)
-	for _, c := range eval.AllCriteria {
-		t.Logf("  %s: %.2f", c, agg.ByCriterion[c])
-	}
-
-	// Check for regression failures with emphasis.
-	for _, r := range results {
-		if r.SetType != "regression" {
-			continue
-		}
-		caseAgg := eval.AggregateScores([]eval.CaseResult{r})
-		if caseAgg.Overall < threshold {
-			t.Errorf("*** REGRESSION CASE FAILED *** [%s] overall=%.2f < threshold=%.2f", r.CaseName, caseAgg.Overall, threshold)
-			for _, s := range r.Scores {
-				slog.Warn("regression failure detail", "case", r.CaseName, "criterion", s.Criterion, "score", s.Score, "reason", s.Reason)
-			}
-		}
-	}
-
-	// Overall quality check.
-	if agg.Overall < threshold {
-		t.Errorf("overall average %.2f is below threshold %.2f", agg.Overall, threshold)
-	}
+			}, nil
+		},
+	})
 }
