@@ -91,7 +91,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		if err := g.saveIntermediate(fileio.FileProofread, pr); err != nil {
 			return model.Script{}, err
 		}
-		g.logger.With("step", "script/direct").Info(fmt.Sprintf("校正完了 (%d件修正)", len(pr.Corrections)))
+		g.logger.With("step", "script/direct").Info("校正完了", "count", len(pr.Corrections))
 	}
 
 	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))

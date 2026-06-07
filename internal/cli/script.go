@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/direct"
@@ -186,7 +187,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	}
 
 	if pr != nil {
-		prPath := filepath.Join(workDir, "04_proofread.json")
+		prPath := fileio.ProofreadPath(workDir)
 		if err := writeJSON(prPath, pr); err != nil {
 			return err
 		}
