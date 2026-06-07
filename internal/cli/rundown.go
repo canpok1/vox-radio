@@ -53,14 +53,17 @@ func newRundownCmd() *cobra.Command {
 				return fmt.Errorf("read articles: %w", err)
 			}
 
-			entries, episodeNumber := loadCacheEntries(p.Program.ID)
-			corners := resolveCorners(p.Corners, episodeNumber, logger)
+			entries, episodeNumber, err := loadCacheEntries(p.Program.ID)
+			if err != nil {
+				return fmt.Errorf("load cache: %w", err)
+			}
+			corners := resolveCorners(p.Corners, episodeNumber)
 			appearanceCounts := cache.AppearanceCounts(entries)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
-			casts := selectCasts(p.Casts, episodeNumber, appearanceCounts, logger)
+			casts := selectCasts(p.Casts, episodeNumber, appearanceCounts)
 			selector.SetCasts(casts)
 			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, nil, rundown.WithLogger(logger))
 

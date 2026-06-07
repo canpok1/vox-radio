@@ -89,11 +89,11 @@ func newEpisodegenCmd() *cobra.Command {
 			writer.SetPastEpisodes(recent)
 			writer.SetEpisodeNumber(episodeNumber)
 
-			selectedCasts := selectCasts(p.Casts, episodeNumber, appearanceCounts, logger)
+			selectedCasts := selectCasts(p.Casts, episodeNumber, appearanceCounts)
 			writer.SetCasts(selectedCasts)
 			selector.SetCasts(selectedCasts)
 
-			p.Corners = resolveCorners(p.Corners, episodeNumber, logger)
+			p.Corners = resolveCorners(p.Corners, episodeNumber)
 
 			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))

@@ -63,14 +63,13 @@ func TestResolveCorners_WithEpisodeNumber(t *testing.T) {
 		{Title: "固定", LengthSec: 30},
 		{Title: "条件付き", LengthSec: 60, Condition: cond},
 	}
-	logger := slog.Default()
 
-	got := resolveCorners(corners, 2, logger)
+	got := resolveCorners(corners, 2)
 	if len(got) != 2 {
 		t.Errorf("resolveCorners(_, 2) len = %d, want 2", len(got))
 	}
 
-	got = resolveCorners(corners, 3, logger)
+	got = resolveCorners(corners, 3)
 	if len(got) != 1 || got[0].Title != "固定" {
 		t.Errorf("resolveCorners(_, 3) = %v, want [固定]", got)
 	}
@@ -82,9 +81,8 @@ func TestResolveCorners_UnknownEpisodeReturnsAll(t *testing.T) {
 		{Title: "固定", LengthSec: 30},
 		{Title: "条件付き", LengthSec: 60, Condition: cond},
 	}
-	logger := slog.Default()
 
-	got := resolveCorners(corners, 0, logger)
+	got := resolveCorners(corners, 0)
 	if len(got) != 2 {
 		t.Errorf("resolveCorners(_, 0) len = %d, want 2 (all corners)", len(got))
 	}
@@ -134,7 +132,10 @@ func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
 func TestLoadCacheEntries_NoCacheFile(t *testing.T) {
 	chdirTemp(t)
 
-	entries, n := loadCacheEntries("test_program")
+	entries, n, err := loadCacheEntries("test_program")
+	if err != nil {
+		t.Fatalf("expected no error when no cache file, got: %v", err)
+	}
 	if len(entries) != 0 {
 		t.Errorf("expected empty entries when no cache file, got %d", len(entries))
 	}
@@ -152,7 +153,10 @@ func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
 		}},
 	})
 
-	entries, n := loadCacheEntries("prog")
+	entries, n, err := loadCacheEntries("prog")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
@@ -161,6 +165,23 @@ func TestLoadCacheEntries_ReturnsEntriesAndEpisodeNumber(t *testing.T) {
 	}
 	if len(entries[0].Casts) != 1 {
 		t.Errorf("expected 1 cast, got %d", len(entries[0].Casts))
+	}
+}
+
+func TestLoadCacheEntries_CorruptedCache(t *testing.T) {
+	tmpDir := chdirTemp(t)
+
+	cacheDir := filepath.Join(tmpDir, ".vox-radio", "cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(cacheDir, "corrupt.jsonl"), []byte("not valid json\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	_, _, err := loadCacheEntries("corrupt")
+	if err == nil {
+		t.Error("expected error for corrupted cache, got nil")
 	}
 }
 
@@ -175,9 +196,8 @@ func TestSelectCasts_InjectsAppearanceCount(t *testing.T) {
 		"zundamon": 10,
 		"guest1":   2,
 	}
-	logger := slog.Default()
 
-	selected := selectCasts(casts, 1, counts, logger)
+	selected := selectCasts(casts, 1, counts)
 
 	countByID := make(map[string]int)
 	for _, c := range selected {
@@ -196,9 +216,8 @@ func TestSelectCasts_UnknownCharHasZeroCount(t *testing.T) {
 		"zundamon": {Role: "MC", Type: config.CastTypeRegular},
 	}
 	counts := map[string]int{} // no entry for zundamon
-	logger := slog.Default()
 
-	selected := selectCasts(casts, 1, counts, logger)
+	selected := selectCasts(casts, 1, counts)
 	if len(selected) == 0 {
 		t.Fatal("expected at least one cast member")
 	}

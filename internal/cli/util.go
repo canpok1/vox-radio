@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
@@ -149,20 +148,11 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
-// selectCasts selects cast members for the given episode number, injects appearance counts,
-// and warns when condition-based cast members are configured but the episode number is unknown.
-func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts map[string]int, logger *slog.Logger) []model.RundownCast {
+// selectCasts selects cast members for the given episode number and injects appearance counts.
+func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts map[string]int) []model.RundownCast {
 	selected := cast.Select(casts, episodeNumber)
 	for i, c := range selected {
 		selected[i].AppearanceCount = counts[c.CharacterID] + 1
-	}
-	if episodeNumber == 0 {
-		for _, c := range casts {
-			if c.Condition != nil || c.Type == config.CastTypeGuest {
-				logger.Warn("条件付きキャストが設定されていますが回番号が不明なため、一部のキャストは出演しません")
-				break
-			}
-		}
 	}
 	return selected
 }
@@ -189,25 +179,21 @@ func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([
 }
 
 // resolveCorners は回番号で採用コーナーを絞り込む。
-// 回番号不明（0）の場合は全コーナーを採用し、条件付きコーナーが存在するときは警告を出す。
-func resolveCorners(corners []config.CornerConfig, episodeNumber int, logger *slog.Logger) []config.CornerConfig {
-	if episodeNumber == 0 && slices.ContainsFunc(corners, func(c config.CornerConfig) bool { return c.Condition != nil }) {
-		logger.Warn("回番号が不明なため、条件付きコーナーを含む全コーナーを採用します")
-	}
+func resolveCorners(corners []config.CornerConfig, episodeNumber int) []config.CornerConfig {
 	return config.ResolveCornersForEpisode(corners, episodeNumber)
 }
 
 // loadCacheEntries loads all cache entries for the given program.
-// Returns (entries, nextEpisodeNumber). Both are zero values if the cache fails to load.
+// Returns (entries, nextEpisodeNumber, error). File-not-found is not an error (returns episode 1).
 // program.id is required (validated at load time), so the cache is always consulted.
-func loadCacheEntries(programID string) ([]cache.Entry, int) {
+func loadCacheEntries(programID string) ([]cache.Entry, int, error) {
 	cachePath := filepath.Join(".vox-radio", "cache", programID+".jsonl")
 	mgr := cache.New(cachePath)
 	entries, err := mgr.Load()
 	if err != nil {
-		return make([]cache.Entry, 0), 0
+		return nil, 0, fmt.Errorf("load cache: %w", err)
 	}
-	return entries, cache.NextEpisodeNumber(entries)
+	return entries, cache.NextEpisodeNumber(entries), nil
 }
 
 func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.EpisodeSpec, error) {
