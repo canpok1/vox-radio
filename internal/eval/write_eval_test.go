@@ -273,15 +273,21 @@ func TestWriteEval(t *testing.T) {
 				ec.Program.Corners[len(ec.Program.Corners)-1].Title == ec.Corner.Title
 			isFinalCornerStr := strconv.FormatBool(isFinalCorner)
 
+			previousCornersStr := ec.PreviousCorners
+			if previousCornersStr == "" {
+				previousCornersStr = "（なし）"
+			}
+
 			return map[string]string{
-				"corner":          string(cornerJSON),
-				"articles":        string(articlesJSON),
-				"flow":            ec.Flow,
-				"cast_info":       ec.CastInfo,
-				"program":         string(programJSON),
-				"is_final_corner": isFinalCornerStr,
-				"write_output":    string(outputJSON),
-				"expectation":     eval.ResolveExpectation(ec.Expectation),
+				"corner":           string(cornerJSON),
+				"articles":         string(articlesJSON),
+				"flow":             ec.Flow,
+				"cast_info":        ec.CastInfo,
+				"program":          string(programJSON),
+				"previous_corners": previousCornersStr,
+				"is_final_corner":  isFinalCornerStr,
+				"write_output":     string(outputJSON),
+				"expectation":      eval.ResolveExpectation(ec.Expectation),
 			}, nil
 		},
 	})

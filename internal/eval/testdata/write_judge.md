@@ -31,6 +31,12 @@
 {{cast_info}}
 ```
 
+## 同回の既出セリフ（previous_corners）
+
+同一回の番組でこのコーナーより前に生成されたセリフ列です。`（なし）` の場合はこのコーナーが最初です。
+
+{{previous_corners}}
+
 ## 最終コーナーか
 
 {{is_final_corner}}
