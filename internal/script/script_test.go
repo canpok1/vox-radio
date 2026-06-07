@@ -13,6 +13,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
+	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/write"
 )
 
@@ -45,16 +46,17 @@ func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner con
 }
 
 type mockDirector struct {
-	script model.Script
-	err    error
+	script          model.Script
+	proofreadResult *direct.ProofreadResult
+	err             error
 }
 
-func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, error) {
+func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, *direct.ProofreadResult, error) {
 	if m.err != nil {
-		return model.Script{}, m.err
+		return model.Script{}, nil, m.err
 	}
 	if m.script.Segments != nil {
-		return m.script, nil
+		return m.script, m.proofreadResult, nil
 	}
 	segs := make([]model.ScriptSegment, 0)
 	for _, corner := range corners {
@@ -62,7 +64,7 @@ func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ 
 			segs = append(segs, model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: l.SpeakerRole, Text: l.Text})
 		}
 	}
-	return model.Script{Segments: segs}, nil
+	return model.Script{Segments: segs}, m.proofreadResult, nil
 }
 
 var testChars = map[string]config.CharacterConfig{
@@ -721,5 +723,124 @@ func TestLLMScriptGenerator_Generate_ProgramDirectionPersistedInLinesFile(t *tes
 	}
 	if sl.Direction != "番組全体の演出方針テスト" {
 		t.Errorf("ScriptLines.Direction: got %q, want 番組全体の演出方針テスト", sl.Direction)
+	}
+}
+
+func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T) {
+	workDir := t.TempDir()
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+
+	pr := &direct.ProofreadResult{
+		Corrections: []direct.ProofreadCorrection{
+			{CornerIndex: 0, LineIndex: 0, Before: "まえ", After: "あと", Reason: "理由"},
+		},
+	}
+	md := &mockDirector{proofreadResult: pr}
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		md,
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+		workDir,
+	)
+
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(workDir, fileio.FileProofread)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected %s to exist: %v", fileio.FileProofread, err)
+	}
+
+	var got direct.ProofreadResult
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
+	}
+	if len(got.Corrections) != 1 {
+		t.Fatalf("Corrections: got %d, want 1", len(got.Corrections))
+	}
+	if got.Corrections[0].Before != "まえ" {
+		t.Errorf("Before: got %q, want まえ", got.Corrections[0].Before)
+	}
+	if got.Corrections[0].After != "あと" {
+		t.Errorf("After: got %q, want あと", got.Corrections[0].After)
+	}
+}
+
+func TestGenerate_DoesNotSaveProofreadIntermediate_WhenProofreadDisabled(t *testing.T) {
+	workDir := t.TempDir()
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+
+	// proofreadResult is nil (proofread not set or failed)
+	md := &mockDirector{proofreadResult: nil}
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		md,
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+		workDir,
+	)
+
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(workDir, fileio.FileProofread)
+	if _, err := os.Stat(path); err == nil {
+		t.Errorf("%s should NOT exist when proofread is disabled, but it does", fileio.FileProofread)
+	}
+}
+
+func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
+	workDir := t.TempDir()
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
+	corners := []config.CornerConfig{
+		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+	}
+
+	// proofread ran but found 0 corrections
+	pr := &direct.ProofreadResult{Corrections: make([]direct.ProofreadCorrection, 0)}
+	md := &mockDirector{proofreadResult: pr}
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		md,
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+		workDir,
+	)
+
+	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	path := filepath.Join(workDir, fileio.FileProofread)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected %s to exist even with 0 corrections: %v", fileio.FileProofread, err)
+	}
+
+	var got direct.ProofreadResult
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
+	}
+	if got.Corrections == nil {
+		t.Error("Corrections should be [] not null in JSON output")
+	}
+	if len(got.Corrections) != 0 {
+		t.Errorf("Corrections: got %d, want 0", len(got.Corrections))
 	}
 }

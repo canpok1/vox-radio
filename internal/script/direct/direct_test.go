@@ -4,58 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
-
-// captureHandler is a slog.Handler that captures all records for test inspection.
-type captureHandler struct {
-	mu      sync.Mutex
-	records *[]slog.Record
-}
-
-func (h *captureHandler) Enabled(_ context.Context, _ slog.Level) bool { return true }
-func (h *captureHandler) Handle(_ context.Context, r slog.Record) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	*h.records = append(*h.records, r.Clone())
-	return nil
-}
-func (h *captureHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
-func (h *captureHandler) WithGroup(_ string) slog.Handler      { return h }
-
-func recordAttrMap(r slog.Record) map[string]slog.Value {
-	m := make(map[string]slog.Value)
-	r.Attrs(func(a slog.Attr) bool {
-		m[a.Key] = a.Value
-		return true
-	})
-	return m
-}
-
-func captureSlogRecords(t *testing.T) *[]slog.Record {
-	t.Helper()
-	var records []slog.Record
-	orig := slog.Default()
-	slog.SetDefault(slog.New(&captureHandler{records: &records}))
-	t.Cleanup(func() { slog.SetDefault(orig) })
-	return &records
-}
-
-func findSlogRecord(records []slog.Record, msg string) *slog.Record {
-	for i := range records {
-		if records[i].Message == msg {
-			return &records[i]
-		}
-	}
-	return nil
-}
 
 type mockClient struct {
 	response json.RawMessage
@@ -111,7 +66,7 @@ func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog, "")
+	got, _, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -139,7 +94,7 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog, "")
+	got, _, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +130,7 @@ func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 		},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -203,7 +158,7 @@ func TestLLMDirector_Direct_StartAudio_Jingle_PrependedFirst(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -228,7 +183,7 @@ func TestLLMDirector_Direct_EndAudio_Jingle_AppendedLast(t *testing.T) {
 		Lines:    []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -255,7 +210,7 @@ func TestLLMDirector_Direct_CornerAllAssets_Jingle_CorrectOrder(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -298,7 +253,7 @@ func TestLLMDirector_Direct_StartAudio_SE_AfterBGM_BGMContinues(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -343,7 +298,7 @@ func TestLLMDirector_Direct_EndAudio_SE_BGMContinues(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -378,7 +333,7 @@ func TestLLMDirector_Direct_NoAssets_OnlySpeech(t *testing.T) {
 		Lines: []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -404,7 +359,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 		Lines:      []model.Line{{SpeakerRole: "host", Text: "hello"}},
 	}}
 
-	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	_, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -431,7 +386,7 @@ func TestLLMDirector_Direct_BGMDoesNotLeakToNextCorner(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -461,7 +416,7 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "transition"}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, catalog, "")
+	got, _, err := d.Direct(context.Background(), corners, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -485,7 +440,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 		model.Line{SpeakerRole: "metan", Style: "", Text: "大丈夫？"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -504,7 +459,7 @@ func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
 	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
 
-	_, err := d.Direct(context.Background(), nil, emptyCatalog(), "")
+	_, _, err := d.Direct(context.Background(), nil, emptyCatalog(), "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -518,7 +473,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 
 	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テストテキスト"})
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -544,7 +499,7 @@ func TestBuildScript_StartPauseSec_InjectedBeforeStartAudio(t *testing.T) {
 		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -573,7 +528,7 @@ func TestBuildScript_EndPauseSec_InjectedAfterEndAudio(t *testing.T) {
 		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -601,7 +556,7 @@ func TestBuildScript_ZeroStartPauseSec_NoInjection(t *testing.T) {
 		Lines:         []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -623,7 +578,7 @@ func TestBuildScript_ZeroEndPauseSec_NoInjection(t *testing.T) {
 		Lines:       []model.Line{{SpeakerRole: "host", Text: "話す"}},
 	}}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -652,7 +607,7 @@ func TestBuildScript_AdjacentCorners_BothPausesInjected(t *testing.T) {
 		},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -680,7 +635,7 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
 	}
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
+	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -702,7 +657,7 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
 	}
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
+	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, catalog, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -725,7 +680,7 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "応答"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -768,7 +723,7 @@ func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "オチ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -801,7 +756,7 @@ func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -828,7 +783,7 @@ func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -848,7 +803,7 @@ func TestLLMDirector_Direct_PauseNegativeDurationIgnored(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "B"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -874,7 +829,7 @@ func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
 		}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, model.AssetCatalog{
+	got, _, err := d.Direct(context.Background(), corners, model.AssetCatalog{
 		SE: []model.AssetCatalogEntry{{Name: "chime"}},
 	}, "")
 	if err != nil {
@@ -905,7 +860,7 @@ func TestBuildScript_SameBGM_ContinuousPlay(t *testing.T) {
 		{Title: "C2", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -934,7 +889,7 @@ func TestBuildScript_DifferentBGM_SeamlessSwitch(t *testing.T) {
 		{Title: "C2", BGM: "bgm_b", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -966,7 +921,7 @@ func TestBuildScript_BGMToNoBGM_StopAtBoundary(t *testing.T) {
 		{Title: "C2", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -997,7 +952,7 @@ func TestBuildScript_LastCorner_NoBGMStop(t *testing.T) {
 		{Title: "C1", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー1"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1023,7 +978,7 @@ func TestBuildScript_EndAudio_Jingle_ResetsBGM(t *testing.T) {
 		{Title: "C2", BGM: "talk_bgm", Lines: []model.Line{{SpeakerRole: "host", Text: "コーナー2"}}},
 	}
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1066,7 +1021,7 @@ func TestLLMDirector_Direct_DirectionInPrompt(t *testing.T) {
 		},
 	}
 
-	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	_, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1087,7 +1042,7 @@ func TestLLMDirector_Direct_LineConversionApplied(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "README.md"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1114,7 +1069,7 @@ func TestLLMDirector_Direct_LineConversionFallback_MissingEntry(t *testing.T) {
 		model.Line{SpeakerRole: "guest", Text: "README.md"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1139,7 +1094,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConversions(t *testing.T
 		model.Line{SpeakerRole: "host", Text: "AI"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1162,7 +1117,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConvertedText(t *testing
 		model.Line{SpeakerRole: "host", Text: "AI"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1213,7 +1168,7 @@ func TestLLMDirector_Direct_WithProofread_CorrectsMisreading(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1245,7 +1200,7 @@ func TestLLMDirector_Direct_WithProofread_FallbackOnLLMError(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, pr, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("pipeline must not stop on proofread error: %v", err)
 	}
@@ -1255,6 +1210,10 @@ func TestLLMDirector_Direct_WithProofread_FallbackOnLLMError(t *testing.T) {
 	// Falls back to direct's conversion (not original text)
 	if got.Segments[0].Text != "あたまつきするのだ" {
 		t.Errorf("Segment[0].Text: got %q, want あたまつきするのだ (fallback to direct conversion)", got.Segments[0].Text)
+	}
+	// ProofreadResult is nil when proofread fails
+	if pr != nil {
+		t.Errorf("ProofreadResult should be nil when proofread fails, got %+v", pr)
 	}
 }
 
@@ -1275,7 +1234,7 @@ func TestLLMDirector_Direct_WithProofread_SkipWhenNotSet(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, pr, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1288,6 +1247,10 @@ func TestLLMDirector_Direct_WithProofread_SkipWhenNotSet(t *testing.T) {
 	// Verify only one LLM call was made
 	if mc.callIdx != 1 {
 		t.Errorf("LLM call count: got %d, want 1 (no proofread call when WithProofread not set)", mc.callIdx)
+	}
+	// ProofreadResult is nil when WithProofread is not set
+	if pr != nil {
+		t.Errorf("ProofreadResult should be nil when WithProofread not set, got %+v", pr)
 	}
 }
 
@@ -1309,7 +1272,7 @@ func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "テストテキスト"},
 	)
 
-	got, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	got, pr, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1318,6 +1281,16 @@ func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
 	}
 	if got.Segments[0].Text != "てすとてきすと" {
 		t.Errorf("Segment[0].Text: got %q, want てすとてきすと (direct conversion unchanged when no corrections)", got.Segments[0].Text)
+	}
+	// ProofreadResult is non-nil even with 0 corrections (proofread ran successfully)
+	if pr == nil {
+		t.Fatal("ProofreadResult should be non-nil even when corrections is empty")
+	}
+	if pr.Corrections == nil {
+		t.Error("ProofreadResult.Corrections should be [] (not nil) when empty")
+	}
+	if len(pr.Corrections) != 0 {
+		t.Errorf("Corrections: got %d, want 0", len(pr.Corrections))
 	}
 }
 
@@ -1329,7 +1302,7 @@ func TestLLMDirector_Direct_ProgramDirectionInPrompt(t *testing.T) {
 	}
 	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "番組全体の演出方針")
+	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "番組全体の演出方針")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1346,7 +1319,7 @@ func TestLLMDirector_Direct_ProgramDirectionEmptyUsesNone(t *testing.T) {
 	}
 	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
 
-	_, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "")
+	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1355,10 +1328,9 @@ func TestLLMDirector_Direct_ProgramDirectionEmptyUsesNone(t *testing.T) {
 	}
 }
 
-// TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys verifies that when proofread
-// applies a correction, the log record contains "before" and "after" keys (not "text").
-// before = converted text from direct step; after = corrected text from proofread LLM.
-func TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys(t *testing.T) {
+// TestLLMDirector_Direct_WithProofread_ReturnsProofreadResultWithBeforeAfter verifies that
+// ProofreadResult contains Before (direct conversion) and After (proofread correction) for each correction.
+func TestLLMDirector_Direct_WithProofread_ReturnsProofreadResultWithBeforeAfter(t *testing.T) {
 	mc := &sequentialClient{
 		responses: []json.RawMessage{
 			// Call 1: direct LLM — returns wrong kana for 頭突き
@@ -1376,37 +1348,32 @@ func TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	records := captureSlogRecords(t)
-
-	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	_, pr, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	corrRec := findSlogRecord(*records, "proofread correction")
-	if corrRec == nil {
-		t.Fatal("expected 'proofread correction' log record, got none")
+	if pr == nil {
+		t.Fatal("ProofreadResult should be non-nil when proofread runs successfully")
 	}
-
-	attrs := recordAttrMap(*corrRec)
-	if _, ok := attrs["text"]; ok {
-		t.Error("log should NOT have 'text' key (should be replaced by 'after')")
+	if len(pr.Corrections) != 1 {
+		t.Fatalf("Corrections: got %d, want 1", len(pr.Corrections))
 	}
-	if v, ok := attrs["before"]; !ok {
-		t.Error("log should have 'before' key")
-	} else if got := v.String(); got != "あたまつきするのだ" {
-		t.Errorf("before: got %q, want あたまつきするのだ", got)
+	c := pr.Corrections[0]
+	if c.Before != "あたまつきするのだ" {
+		t.Errorf("Before: got %q, want あたまつきするのだ (direct conversion result)", c.Before)
 	}
-	if v, ok := attrs["after"]; !ok {
-		t.Error("log should have 'after' key")
-	} else if got := v.String(); got != "ずつきするのだ" {
-		t.Errorf("after: got %q, want ずつきするのだ", got)
+	if c.After != "ずつきするのだ" {
+		t.Errorf("After: got %q, want ずつきするのだ (proofread correction)", c.After)
+	}
+	if c.Reason != "頭突き→ずつき（連濁の取りこぼし）" {
+		t.Errorf("Reason: got %q, want 頭突き→ずつき（連濁の取りこぼし）", c.Reason)
 	}
 }
 
-// TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConversion verifies
-// that when proofread corrects a line that had no direct conversion, "before" is the original text.
-func TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConversion(t *testing.T) {
+// TestLLMDirector_Direct_WithProofread_ReturnsBeforeFromOriginalWhenNoDirectConversion verifies
+// that when proofread corrects a line with no direct conversion, Before is the original text.
+func TestLLMDirector_Direct_WithProofread_ReturnsBeforeFromOriginalWhenNoDirectConversion(t *testing.T) {
 	mc := &sequentialClient{
 		responses: []json.RawMessage{
 			// Call 1: direct LLM — no line conversions
@@ -1424,21 +1391,18 @@ func TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConv
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	records := captureSlogRecords(t)
-
-	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	_, pr, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	corrRec := findSlogRecord(*records, "proofread correction")
-	if corrRec == nil {
-		t.Fatal("expected 'proofread correction' log, got none")
+	if pr == nil {
+		t.Fatal("ProofreadResult should be non-nil when proofread runs successfully")
 	}
-	attrs := recordAttrMap(*corrRec)
-	if v, ok := attrs["before"]; !ok {
-		t.Error("log should have 'before' key")
-	} else if got := v.String(); got != "頭突きするのだ" {
-		t.Errorf("before: got %q, want 頭突きするのだ (original text when no direct conversion)", got)
+	if len(pr.Corrections) != 1 {
+		t.Fatalf("Corrections: got %d, want 1", len(pr.Corrections))
+	}
+	if pr.Corrections[0].Before != "頭突きするのだ" {
+		t.Errorf("Before: got %q, want 頭突きするのだ (original text when no direct conversion)", pr.Corrections[0].Before)
 	}
 }

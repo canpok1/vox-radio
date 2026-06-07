@@ -180,9 +180,17 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
 		direct.WithProofread(prompts["proofread"], stepTemp(llmCfg, "proofread")),
 	)
-	scr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog, scriptLines.Direction)
+	scr, pr, err := d.Direct(ctx, scriptLines.Corners, assetCatalog, scriptLines.Direction)
 	if err != nil {
 		return fmt.Errorf("direct: %w", err)
+	}
+
+	if pr != nil {
+		prPath := filepath.Join(workDir, "04_proofread.json")
+		if err := writeJSON(prPath, pr); err != nil {
+			return err
+		}
+		fmt.Printf("proofread %d corrections to %s\n", len(pr.Corrections), prPath)
 	}
 
 	if err := writeJSON(out, scr); err != nil {

@@ -82,9 +82,16 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	}
 
 	g.logger.With("step", "script/direct").Info("開始")
-	scr, err := g.director.Direct(ctx, scriptLines, g.assetCatalog, program.Direction)
+	scr, pr, err := g.director.Direct(ctx, scriptLines, g.assetCatalog, program.Direction)
 	if err != nil {
 		return model.Script{}, fmt.Errorf("direct: %w", err)
+	}
+
+	if pr != nil {
+		if err := g.saveIntermediate(fileio.FileProofread, pr); err != nil {
+			return model.Script{}, err
+		}
+		g.logger.With("step", "script/direct").Info(fmt.Sprintf("校正完了 (%d件修正)", len(pr.Corrections)))
 	}
 
 	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
