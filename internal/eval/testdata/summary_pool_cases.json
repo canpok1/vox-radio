@@ -1,0 +1,170 @@
+[
+  {
+    "name": "weekend_hobby_chat",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今週はTypeScriptの型システムについて勉強したのだ。"},
+      {"speaker": "metan", "text": "あたくしも最近触り始めましたわ。ジェネリクスが便利ですよね。"},
+      {"speaker": "zundamon", "text": "そうなのだ！型推論が賢くて助かるのだ。"},
+      {"speaker": "metan", "text": "ところで、週末にハイキングに行ってきましたの。山頂から富士山が見えて感動しましたわ。"},
+      {"speaker": "zundamon", "text": "それはいいのだ！ボクも行きたいのだ。"},
+      {"speaker": "metan", "text": "ぜひ一緒に行きましょう。では TypeScript の話に戻りますが、interfaceとtypeの使い分けも重要で…"},
+      {"speaker": "zundamon", "text": "そうなのだ。場面によって使い分けるのが大事なのだ。"}
+    ],
+    "summary_length": 200
+  },
+  {
+    "name": "deep_dive_kubernetes",
+    "category": "technical",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今日はKubernetesのPod設計について詳しく解説するのだ。"},
+      {"speaker": "metan", "text": "PodはKubernetesの最小デプロイ単位ですね。"},
+      {"speaker": "zundamon", "text": "1つのPodには複数のコンテナを含められますが、基本は1コンテナが推奨なのだ。"},
+      {"speaker": "metan", "text": "リソースリクエストとリミットの設定も重要ですよね。"},
+      {"speaker": "zundamon", "text": "そうなのだ。設定しないとノードのリソースを使い果たすリスクがあるのだ。"},
+      {"speaker": "metan", "text": "ヘルスチェックのlivenessProbeとreadinessProbsも忘れずに設定すべきです。"},
+      {"speaker": "zundamon", "text": "以上、KubernetesのPod設計のポイントでした。"}
+    ],
+    "summary_length": 200
+  },
+  {
+    "name": "mistake_and_laughter",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はSQLのインデックス最適化について話すのだ。"},
+      {"speaker": "metan", "text": "インデックスはWHERE句で使われるカラムに設定すると効果的ですね。"},
+      {"speaker": "zundamon", "text": "そうなのだ。ただしインデックスを増やしすぎると…えっと、なんだっけ。"},
+      {"speaker": "metan", "text": "書き込みパフォーマンスが落ちますわよ。"},
+      {"speaker": "zundamon", "text": "そうなのだ！言い間違えそうになったのだ。ありがとうのだ。"},
+      {"speaker": "metan", "text": "ふふ、大丈夫ですわ。複合インデックスの列順序も重要ですね。"},
+      {"speaker": "zundamon", "text": "そうなのだ。選択性の高いカラムを先頭に置くのがコツなのだ。"}
+    ],
+    "summary_length": 180
+  },
+  {
+    "name": "news_discussion_episode",
+    "category": "mixed",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今週は注目のAI関連ニュースをピックアップしたのだ。"},
+      {"speaker": "metan", "text": "まず大手クラウド各社が相次いでAI推論サービスを強化していますね。"},
+      {"speaker": "zundamon", "text": "コストが下がってきているのが嬉しいのだ。個人開発者でも使いやすくなってきたのだ。"},
+      {"speaker": "metan", "text": "そうですわね。あたくしも最近個人プロジェクトでAPIを使い始めましたわ。"},
+      {"speaker": "zundamon", "text": "おお、どんなプロジェクトなのだ？"},
+      {"speaker": "metan", "text": "読書記録をまとめてくれるツールを作っていますの。"},
+      {"speaker": "zundamon", "text": "それは面白そうなのだ！完成したら教えてほしいのだ。"},
+      {"speaker": "metan", "text": "もちろんですわ。次のニュースはオープンソースのLLMについてです。"}
+    ],
+    "summary_length": 220
+  },
+  {
+    "name": "short_announcement_episode",
+    "category": "no_banter",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今日はLinuxのプロセス管理コマンドを紹介するのだ。"},
+      {"speaker": "metan", "text": "psコマンドで実行中のプロセスを一覧できます。"},
+      {"speaker": "zundamon", "text": "killコマンドでプロセスを終了できるのだ。シグナル番号を指定して細かく制御もできるのだ。"},
+      {"speaker": "metan", "text": "topコマンドはCPU・メモリ使用率をリアルタイムで確認できて便利ですね。"},
+      {"speaker": "zundamon", "text": "以上でした。"}
+    ],
+    "summary_length": 130
+  },
+  {
+    "name": "listener_question_episode",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はリスナーからの質問コーナーなのだ。"},
+      {"speaker": "metan", "text": "最初の質問は「Goの並行処理とPythonの非同期処理の違いを教えてください」ですね。"},
+      {"speaker": "zundamon", "text": "GoはgoroutineとチャネルでCSPスタイルの並行処理なのだ。"},
+      {"speaker": "metan", "text": "Pythonはイベントループベースの協調的マルチタスクですわね。"},
+      {"speaker": "zundamon", "text": "この質問、ボクも最初に悩んだのだ。懐かしいのだ。"},
+      {"speaker": "metan", "text": "あたくしはGoから入ったので最初はPythonのasyncioが不思議に感じましたわ。"},
+      {"speaker": "zundamon", "text": "次の質問はTypeScriptの型推論について、なのだ。"},
+      {"speaker": "metan", "text": "型推論はコードを読みながら変数の型を自動で決めてくれる機能ですね。"}
+    ],
+    "summary_length": 200
+  },
+  {
+    "name": "book_recommendation_episode",
+    "category": "mixed",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はおすすめの技術書を紹介するのだ。"},
+      {"speaker": "metan", "text": "最初の一冊は「Clean Code」ですね。コードの書き方の基本が学べます。"},
+      {"speaker": "zundamon", "text": "ボクはこの本を読んで変数名の付け方が変わったのだ。"},
+      {"speaker": "metan", "text": "わかりますわ。次は「Designing Data-Intensive Applications」です。"},
+      {"speaker": "zundamon", "text": "分散システムの設計を幅広く学べる名著なのだ！"},
+      {"speaker": "metan", "text": "少し難しいですが読み応えがありますね。あたくしは電子書籍で読みましたわ。"},
+      {"speaker": "zundamon", "text": "どちらもエンジニアなら手元に置いておきたい本なのだ。"}
+    ],
+    "summary_length": 200
+  },
+  {
+    "name": "failure_story_episode",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今日はやらかし話コーナーなのだ。"},
+      {"speaker": "metan", "text": "あたくしの話から始めましょう。本番環境で誤ってDROP TABLEを実行しそうになったことがありますわ。"},
+      {"speaker": "zundamon", "text": "それはヒヤッとしたのだ！"},
+      {"speaker": "metan", "text": "直前でロールバックできましたが、それ以来必ずトランザクション内で確認するようにしていますの。"},
+      {"speaker": "zundamon", "text": "ボクはデプロイしたつもりが間違えてステージング環境に本番データを書き込んだことがあるのだ。"},
+      {"speaker": "metan", "text": "それも大変でしたわね。環境変数の管理は本当に大切ですね。"},
+      {"speaker": "zundamon", "text": "そうなのだ。みんな同じような失敗をするのだ。笑えるのだ。"}
+    ],
+    "summary_length": 220
+  },
+  {
+    "name": "tool_introduction_episode",
+    "category": "technical",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回は開発効率を上げるCLIツールを紹介するのだ。"},
+      {"speaker": "metan", "text": "まずはfzfですね。ファジー検索でファイルやコマンド履歴を素早く探せます。"},
+      {"speaker": "zundamon", "text": "ripgrepも速くて便利なのだ。grepより大幅に速いのだ。"},
+      {"speaker": "metan", "text": "jqはJSONのパースと整形に欠かせませんね。"},
+      {"speaker": "zundamon", "text": "これらを組み合わせるとシェル作業がかなり快適になるのだ。"},
+      {"speaker": "metan", "text": "以上、おすすめCLIツールの紹介でした。"}
+    ],
+    "summary_length": 160
+  },
+  {
+    "name": "project_progress_episode",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今週の作業報告をするのだ。"},
+      {"speaker": "metan", "text": "あたくしはAPIのレート制限実装を完成させましたわ。"},
+      {"speaker": "zundamon", "text": "おお、すごいのだ！どんな実装にしたのだ？"},
+      {"speaker": "metan", "text": "token bucketアルゴリズムを使いましたの。設定から柔軟に調整できるようにしましたわ。"},
+      {"speaker": "zundamon", "text": "ボクはテストカバレッジを80%以上に上げたのだ。"},
+      {"speaker": "metan", "text": "それは良い進捗ですわね。来週はデプロイですか？"},
+      {"speaker": "zundamon", "text": "そうなのだ。いよいよ本番リリースなのだ。少しドキドキするのだ。"},
+      {"speaker": "metan", "text": "一緒に頑張りましょう。"}
+    ],
+    "summary_length": 220
+  },
+  {
+    "name": "trivia_challenge_episode",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今日はプログラミングトリビアクイズをするのだ！"},
+      {"speaker": "metan", "text": "第一問、C言語が開発された年は何年でしょうか？"},
+      {"speaker": "zundamon", "text": "1972年なのだ！"},
+      {"speaker": "metan", "text": "正解ですわ。では第二問、最初のウェブブラウザの名前は？"},
+      {"speaker": "zundamon", "text": "WorldWideWebなのだ！後にNexusに改名されたのだ。"},
+      {"speaker": "metan", "text": "完璧ですわ。ずんだもんさん、意外と物知りですね。"},
+      {"speaker": "zundamon", "text": "ボクはこういう豆知識が大好きなのだ！"},
+      {"speaker": "metan", "text": "次回もクイズコーナーやりたいですわね。"}
+    ],
+    "summary_length": 200
+  },
+  {
+    "name": "architecture_discussion_episode",
+    "category": "technical",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はマイクロサービスとモノリスの比較をするのだ。"},
+      {"speaker": "metan", "text": "モノリスはシンプルで開発初期には適していますね。"},
+      {"speaker": "zundamon", "text": "でもスケールが必要になってきたときにマイクロサービスへの移行を考えるのだ。"},
+      {"speaker": "metan", "text": "マイクロサービスはサービス間通信のオーバーヘッドや運用の複雑さがデメリットですね。"},
+      {"speaker": "zundamon", "text": "最近はモジュラーモノリスという中間的なアーキテクチャも注目されているのだ。"},
+      {"speaker": "metan", "text": "チームの規模やシステムの要件に合わせて選択するのが大切ですね。"}
+    ],
+    "summary_length": 180
+  }
+]

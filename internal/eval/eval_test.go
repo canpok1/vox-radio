@@ -2,6 +2,7 @@ package eval
 
 import (
 	"errors"
+	"slices"
 	"testing"
 )
 
@@ -31,11 +32,63 @@ func TestCriterionValues(t *testing.T) {
 		CriterionConciseness,
 		CriterionSpecificity,
 		CriterionFormatCompliance,
+		CriterionSummaryQuality,
+		CriterionEpisodeTitleQuality,
+		CriterionNotesFaithfulness,
+		CriterionNotesCoverage,
 	}
 	for _, c := range criteria {
 		if c == "" {
 			t.Errorf("criterion should not be empty string")
 		}
+	}
+}
+
+func TestAllCriteria(t *testing.T) {
+	want := []Criterion{
+		CriterionDetectionRecall,
+		CriterionFalsePositiveSuppression,
+		CriterionCorrectionAccuracy,
+		CriterionReasonValidity,
+	}
+	if !slices.Equal(AllCriteria, want) {
+		t.Errorf("AllCriteria = %v, want %v", AllCriteria, want)
+	}
+}
+
+func TestAllSummarizeCriteria(t *testing.T) {
+	want := []Criterion{
+		CriterionFaithfulness,
+		CriterionCoverage,
+		CriterionConciseness,
+		CriterionFormatCompliance,
+	}
+	if !slices.Equal(AllSummarizeCriteria, want) {
+		t.Errorf("AllSummarizeCriteria = %v, want %v", AllSummarizeCriteria, want)
+	}
+}
+
+func TestAllCornerSummaryCriteria(t *testing.T) {
+	want := []Criterion{
+		CriterionFaithfulness,
+		CriterionCoverage,
+		CriterionSpecificity,
+		CriterionFormatCompliance,
+	}
+	if !slices.Equal(AllCornerSummaryCriteria, want) {
+		t.Errorf("AllCornerSummaryCriteria = %v, want %v", AllCornerSummaryCriteria, want)
+	}
+}
+
+func TestAllSummaryCriteria(t *testing.T) {
+	want := []Criterion{
+		CriterionSummaryQuality,
+		CriterionEpisodeTitleQuality,
+		CriterionNotesFaithfulness,
+		CriterionNotesCoverage,
+	}
+	if !slices.Equal(AllSummaryCriteria, want) {
+		t.Errorf("AllSummaryCriteria = %v, want %v", AllSummaryCriteria, want)
 	}
 }
 
