@@ -32,7 +32,7 @@ docs:
 
 run-sample: build
 	./$(BINARY_NAME) init --sample
-	./$(BINARY_NAME) --config sample/vox-radio.yaml episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)"
+	./$(BINARY_NAME) --config sample/vox-radio.yaml episodegen --spec "$(PROFILE)" --out-dir "$(OUT_DIR)" --log-dir "$(OUT_DIR)"
 
 check-samples: build
 	./$(BINARY_NAME) --config internal/cli/templates/vox-radio.yaml config check
