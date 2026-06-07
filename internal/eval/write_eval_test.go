@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/eval"
 	"github.com/canpok1/vox-radio/internal/script/llm"
+	"github.com/canpok1/vox-radio/internal/script/write"
 )
 
 // writeCornerOutline mirrors the program-level corner outline passed to write.md.
@@ -120,44 +120,6 @@ var writeJudgeSchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
-// buildWriteOutputSchema generates a JSON Schema for the write output with preset enum values.
-func buildWriteOutputSchema(validIntonation, validPitch, validSpeed []string) json.RawMessage {
-	sorted := func(s []string) []string {
-		c := make([]string, len(s))
-		copy(c, s)
-		sort.Strings(c)
-		return c
-	}
-	intonationJSON, _ := json.Marshal(sorted(validIntonation))
-	pitchJSON, _ := json.Marshal(sorted(validPitch))
-	speedJSON, _ := json.Marshal(sorted(validSpeed))
-
-	return json.RawMessage(fmt.Sprintf(`{
-  "type": "object",
-  "required": ["lines"],
-  "properties": {
-    "lines": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": ["speaker_role", "text"],
-        "properties": {
-          "speaker_role": {"type": "string"},
-          "style":        {"type": "string"},
-          "intonation":   {"type": "string", "enum": %s},
-          "pitch":        {"type": "string", "enum": %s},
-          "speed":        {"type": "string", "enum": %s},
-          "text":         {"type": "string"}
-        },
-        "additionalProperties": false
-      }
-    }
-  },
-  "additionalProperties": false
-}`, intonationJSON, pitchJSON, speedJSON))
-}
-
 // runWrite calls the write.md LLM with the given case inputs and returns raw JSON output.
 func runWrite(ctx context.Context, t *testing.T, client llm.Client, promptTemplate, programJSON, cornerJSON, articlesJSON string, ec writeCase) (json.RawMessage, error) {
 	t.Helper()
@@ -177,7 +139,7 @@ func runWrite(ctx context.Context, t *testing.T, client llm.Client, promptTempla
 		"{{timezone}}", ec.Timezone,
 	).Replace(promptTemplate)
 
-	schema := buildWriteOutputSchema(ec.ValidIntonation, ec.ValidPitch, ec.ValidSpeed)
+	schema := write.BuildLinesSchema(ec.ValidIntonation, ec.ValidPitch, ec.ValidSpeed)
 
 	return client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},

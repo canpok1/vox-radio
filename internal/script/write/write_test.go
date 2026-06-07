@@ -780,6 +780,40 @@ func TestLLMWriter_Write_ProgramDirectionNotInPrompt(t *testing.T) {
 	}
 }
 
+func TestBuildLinesSchema_EnumValuesMatchInput(t *testing.T) {
+	schema := write.BuildLinesSchema(
+		[]string{"表現豊か", "棒読み"},
+		[]string{"高め", "低め"},
+		[]string{"早口", "ゆっくり"},
+	)
+
+	schemaStr := string(schema)
+	for _, want := range []string{"表現豊か", "棒読み", "高め", "低め", "早口", "ゆっくり"} {
+		if !strings.Contains(schemaStr, want) {
+			t.Errorf("schema should contain %q, got: %s", want, schemaStr)
+		}
+	}
+}
+
+func TestBuildLinesSchema_SortsEnumValues(t *testing.T) {
+	schema := write.BuildLinesSchema(
+		[]string{"z値", "a値"},
+		[]string{"b値"},
+		[]string{"c値"},
+	)
+
+	schemaStr := string(schema)
+	// "a値" must appear before "z値" in the JSON
+	aPos := strings.Index(schemaStr, "a値")
+	zPos := strings.Index(schemaStr, "z値")
+	if aPos == -1 || zPos == -1 {
+		t.Fatalf("schema should contain 'a値' and 'z値', got: %s", schemaStr)
+	}
+	if aPos > zPos {
+		t.Errorf("enum values should be sorted: 'a値' should appear before 'z値', got: %s", schemaStr)
+	}
+}
+
 func TestLLMWriter_Write_CornerDirectionNotInCornerJSON(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
