@@ -53,6 +53,13 @@ const (
 	CriterionStructureCompliance  Criterion = "structure_compliance"
 	CriterionNaturalness          Criterion = "naturalness"
 	CriterionSchemaCompliance     Criterion = "schema_compliance"
+
+	// Direct-only evaluation criteria.
+	CriterionSEPausePlacement       Criterion = "se_pause_placement"
+	CriterionIndexValidity          Criterion = "index_validity"
+	CriterionConversionCompleteness Criterion = "conversion_completeness"
+	CriterionReadingAccuracy        Criterion = "reading_accuracy"
+	CriterionContentPreservation    Criterion = "content_preservation"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -110,6 +117,15 @@ var AllWriteCriteria = []Criterion{
 	CriterionStructureCompliance,
 	CriterionNaturalness,
 	CriterionSchemaCompliance,
+}
+
+// AllDirectCriteria lists all direct scoring dimensions in canonical order.
+var AllDirectCriteria = []Criterion{
+	CriterionSEPausePlacement,
+	CriterionIndexValidity,
+	CriterionConversionCompleteness,
+	CriterionReadingAccuracy,
+	CriterionContentPreservation,
 }
 
 // ScoreEntry holds the score and reason for one criterion.

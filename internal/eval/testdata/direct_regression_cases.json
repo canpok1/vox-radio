@@ -1,0 +1,96 @@
+[
+  {
+    "name": "reading_hard_words",
+    "category": "reading_accuracy",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "技術ニュース",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今日はGitHubの新機能を紹介するのだ"},
+          {"speaker_role": "metan", "text": "昨日公開されたREADME.mdを参照してみましょうか"},
+          {"speaker_role": "zundamon", "text": "小豆色のアイコンが目印なのだ"},
+          {"speaker_role": "metan", "text": "手紙を書くように丁寧に記述するのですわ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "transition", "description": "話題転換に使う効果音"}
+      ]
+    },
+    "expectation": "以下の読み変換が正しく行われること。今日→きょう、GitHub→ぎっとはぶ、昨日→きのう、README.md→リードミードットエムディー、小豆→あずき、手紙→てがみ。全4行（line_index 0〜3）のline_conversionsエントリが揃っていること。SE/pauseは演出指示がないため最小限（0〜1回）に抑えること。"
+  },
+  {
+    "name": "no_se_simple_talk",
+    "category": "se_pause_placement",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "雑談コーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今週末は何をしたのだ？"},
+          {"speaker_role": "metan", "text": "公園でピクニックをしましたわ"},
+          {"speaker_role": "zundamon", "text": "それは楽しそうなのだ"},
+          {"speaker_role": "metan", "text": "天気も良くてよかったですわ"},
+          {"speaker_role": "zundamon", "text": "ボクも次回は行きたいのだ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "drum_roll", "description": "ドラムロール。発表・盛り上げ場面に使う"},
+        {"name": "transition", "description": "話題転換に使う効果音"},
+        {"name": "fanfare", "description": "祝福・発表のファンファーレ"}
+      ]
+    },
+    "expectation": "演出方針も特定の転換点もない雑談なので、SE/pauseは極力使わないこと。使用する場合でも全体でSEは0〜1回、pauseは0回が適切。過剰に挿入しないこと。"
+  },
+  {
+    "name": "direction_guided_se",
+    "category": "se_pause_placement",
+    "program_direction": "各コーナーの締めには必ず転換SEを入れること",
+    "corners": [
+      {
+        "title": "ニュースコーナー",
+        "direction": "最後のセリフの後に転換SEを入れること",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今週のビッグニュースを紹介するのだ"},
+          {"speaker_role": "metan", "text": "新しいプログラミング言語が登場しましたわ"},
+          {"speaker_role": "zundamon", "text": "とても注目を集めているのだ"},
+          {"speaker_role": "metan", "text": "では次のコーナーへ参りましょう"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "transition", "description": "コーナー間の話題転換に使う効果音"}
+      ]
+    },
+    "expectation": "program_directionとcornerのdirectionが両方とも最後に転換SEを入れるよう指示している。最後のセリフ（line_index 3、after_line_index 3）の後にtransition SEが挿入されていること。"
+  },
+  {
+    "name": "all_lines_must_convert",
+    "category": "conversion_completeness",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "情報コーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "本日のテーマはAIなのだ"},
+          {"speaker_role": "metan", "text": "最新のLLMについて話しましょうか"},
+          {"speaker_role": "zundamon", "text": "GPT-4とGeminiを比較するのだ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"}
+      ]
+    },
+    "expectation": "全3行（corner_index 0のline_index 0〜2）すべてにline_conversionsエントリが存在すること。本日→ほんじつ、AI→えーあい、LLM→えるえるえむ、GPT-4→じーぴーてーよん、Gemini→じぇみになどの読み変換が含まれること。"
+  }
+]

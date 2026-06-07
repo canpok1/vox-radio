@@ -1,0 +1,190 @@
+[
+  {
+    "name": "opening_with_greeting",
+    "category": "se_pause_placement",
+    "program_direction": "オープニングは明るくテンポよく進めること",
+    "corners": [
+      {
+        "title": "オープニング",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "こんにちは！テックラジオ第10回なのだ！"},
+          {"speaker_role": "metan", "text": "今日もよろしくお願いしますわ"},
+          {"speaker_role": "zundamon", "text": "今回はAI最新情報をたっぷりお届けするのだ"},
+          {"speaker_role": "metan", "text": "ぜひ最後までお楽しみくださいませ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "fanfare", "description": "番組開始のファンファーレ。明るく賑やかな場面に使う"},
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "transition", "description": "話題転換に使う効果音"}
+      ]
+    }
+  },
+  {
+    "name": "punchline_pause",
+    "category": "se_pause_placement",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "ユーモアコーナー",
+        "direction": "オチの前に間を取ること",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "なぜプログラマーは眼鏡をかけるのかわかるのだ？"},
+          {"speaker_role": "metan", "text": "なぜかしら？"},
+          {"speaker_role": "zundamon", "text": "Cシャープ（視力が悪い）からなのだ！"},
+          {"speaker_role": "metan", "text": "うまいですわね"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "drum_roll", "description": "ドラムロール。発表前の盛り上げに使う"},
+        {"name": "rimshot", "description": "ギャグや笑いの場面に使うドラムの効果音"}
+      ]
+    }
+  },
+  {
+    "name": "technical_terms_reading",
+    "category": "reading_accuracy",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "技術用語解説",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今日はDockerの使い方を説明するのだ"},
+          {"speaker_role": "metan", "text": "Kubernetesとの連携も覚えましょうか"},
+          {"speaker_role": "zundamon", "text": "CI/CDパイプラインで自動化するのだ"},
+          {"speaker_role": "metan", "text": "GitHub ActionsのYAMLファイルを書きましょうですわ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"}
+      ]
+    }
+  },
+  {
+    "name": "multi_corner_se",
+    "category": "index_validity",
+    "program_direction": "各コーナー間に転換SEを入れること",
+    "corners": [
+      {
+        "title": "ニュースコーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "AIの新しい研究が発表されたのだ"},
+          {"speaker_role": "metan", "text": "とても興味深い内容ですわ"}
+        ]
+      },
+      {
+        "title": "レビューコーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今週のおすすめ書籍を紹介するのだ"},
+          {"speaker_role": "metan", "text": "プログラミングの名著ですわね"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "transition", "description": "コーナー間の話題転換に使う効果音"},
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"}
+      ]
+    }
+  },
+  {
+    "name": "difficult_kanji_reading",
+    "category": "reading_accuracy",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "文化トーク",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今日の特集は日本の伝統文化なのだ"},
+          {"speaker_role": "metan", "text": "明日は七夕ですよね"},
+          {"speaker_role": "zundamon", "text": "素人でも楽しめるお祭りなのだ"},
+          {"speaker_role": "metan", "text": "今年は一緒に行きましょうかしら"},
+          {"speaker_role": "zundamon", "text": "彼女も誘うのだ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "bell", "description": "お祭りの鐘の音"},
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"}
+      ]
+    }
+  },
+  {
+    "name": "ending_pause_before_close",
+    "category": "se_pause_placement",
+    "program_direction": "エンディングは余韻を持たせること",
+    "corners": [
+      {
+        "title": "エンディング",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今回の番組はいかがでしたのだ？"},
+          {"speaker_role": "metan", "text": "とても充実した内容でしたわ"},
+          {"speaker_role": "zundamon", "text": "来週もお楽しみなのだ"},
+          {"speaker_role": "metan", "text": "また来週お会いしましょう"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "ending_jingle", "description": "番組終了を告げるジングル"}
+      ]
+    }
+  },
+  {
+    "name": "mixed_content_preservation",
+    "category": "content_preservation",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "特集コーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "今週の特集はWeb開発なのだ"},
+          {"speaker_role": "metan", "text": "ReactとVue.jsを比較しましょうか"},
+          {"speaker_role": "zundamon", "text": "TypeScriptも使えば型安全なのだ"},
+          {"speaker_role": "metan", "text": "APIの設計も重要ですわね"},
+          {"speaker_role": "zundamon", "text": "RESTとGraphQLどちらがいいのだろうのだ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "transition", "description": "話題転換に使う効果音"}
+      ]
+    }
+  },
+  {
+    "name": "long_corner_index_check",
+    "category": "index_validity",
+    "program_direction": "盛り上がりポイントにSEを入れること",
+    "corners": [
+      {
+        "title": "トークコーナー",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "まず最初の話題から始めるのだ"},
+          {"speaker_role": "metan", "text": "はい、お願いしますわ"},
+          {"speaker_role": "zundamon", "text": "新しいプログラミング言語が登場したのだ"},
+          {"speaker_role": "metan", "text": "どんな特徴があるのかしら"},
+          {"speaker_role": "zundamon", "text": "型安全で高速なのだ"},
+          {"speaker_role": "metan", "text": "それは素晴らしいですわね"},
+          {"speaker_role": "zundamon", "text": "ぜひ試してみてほしいのだ"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "fanfare", "description": "発表・祝福のファンファーレ"},
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"},
+        {"name": "transition", "description": "話題転換に使う効果音"}
+      ]
+    }
+  }
+]
