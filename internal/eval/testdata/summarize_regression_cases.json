@@ -1,0 +1,47 @@
+[
+  {
+    "name": "short_infra_article",
+    "category": "infra",
+    "article": {
+      "title": "Kubernetes の Pod 自動スケーリング設定",
+      "body": "Kubernetes の HorizontalPodAutoscaler（HPA）を使うと、CPU 使用率に応じて Pod 数を自動的に増減できます。設定には kubectl apply コマンドでマニフェストを適用します。minReplicas と maxReplicas でスケール範囲を指定し、targetCPUUtilizationPercentage で閾値を設定します。一般的な設定では minReplicas=2、maxReplicas=10、targetCPUUtilizationPercentage=70 が使われます。スケールアウトは約 3 分、スケールインは約 5 分の遅延があります。"
+    },
+    "expectation": "summary は HPA による Pod 自動スケーリングについて一行で述べること。points には HPA の概要・設定方法・minReplicas/maxReplicas/targetCPUUtilizationPercentage の説明・スケール遅延の 4 点前後が含まれるべき。points は 3〜5 個、日本語、技術用語（HPA・kubectl・minReplicas 等）は保持すること。"
+  },
+  {
+    "name": "ai_language_article",
+    "category": "ai",
+    "article": {
+      "title": "大規模言語モデルの量子化技術",
+      "body": "大規模言語モデル（LLM）の量子化は、モデルの重みを低ビット精度（例: INT4、INT8）で表現することでメモリ使用量と推論速度を改善する技術です。代表的な手法として GPTQ（Generative Pre-Training Quantization）と AWQ（Activation-aware Weight Quantization）があります。GPTQ は事後量子化で精度劣化が少なく、AWQ は活性化を考慮して重要な重みを保護します。量子化により 70B パラメータのモデルを一般的な GPU（24GB VRAM）で動作させることが可能になります。ただし量子化による精度低下は避けられず、タスクによっては影響が出る場合があります。"
+    },
+    "expectation": "summary は LLM の量子化技術について一行で述べること。points には量子化の概要・GPTQ と AWQ の説明・メモリ削減効果・精度低下のトレードオフの 4 点前後が含まれるべき。技術用語（LLM・GPTQ・AWQ・INT4・INT8）は保持すること。"
+  },
+  {
+    "name": "programming_language_article",
+    "category": "language",
+    "article": {
+      "title": "Go 言語の goroutine とチャネル",
+      "body": "Go 言語の並行処理は goroutine とチャネルを使って実現します。goroutine は go キーワードで起動する軽量スレッドで、数千〜数百万単位で同時実行できます。チャネルは goroutine 間でデータをやり取りするための型付きパイプで、make(chan T) で作成します。バッファなしチャネルは送受信が同期し、バッファ付きチャネルは指定容量まで非同期に送信できます。select 文を使うと複数チャネルの操作を待機できます。Go のランタイムは goroutine をスケジューリングし、OS スレッドに多重化することで効率的な並行処理を実現します。"
+    },
+    "expectation": "summary は Go の goroutine とチャネルによる並行処理について一行で述べること。points には goroutine の説明・チャネルの種類（バッファあり/なし）・select 文・ランタイムのスケジューリングが含まれるべき。技術用語（goroutine・チャネル・select・go キーワード）は保持すること。"
+  },
+  {
+    "name": "short_article_few_points",
+    "category": "short",
+    "article": {
+      "title": "Git のコミットメッセージのベストプラクティス",
+      "body": "Git のコミットメッセージは、変更の内容と理由を簡潔に伝える必要があります。1行目に要約（50文字以内）を書き、必要に応じて空行を挟んで詳細を記述します。動詞は命令形（Add、Fix、Update）で始めます。"
+    },
+    "expectation": "summary は Git コミットメッセージのベストプラクティスについて一行で述べること。記事が短いため points は 3 個程度（要約の書き方・詳細の記述方法・動詞の形式）が妥当。points が 3〜5 個の範囲に収まっていること。"
+  },
+  {
+    "name": "security_article",
+    "category": "security",
+    "article": {
+      "title": "JWT 認証の仕組みとセキュリティ上の注意点",
+      "body": "JSON Web Token（JWT）は、ヘッダー・ペイロード・署名の 3 部構成で情報を安全に伝達するトークン形式です。署名アルゴリズムには HS256（HMAC-SHA256）や RS256（RSA-SHA256）が広く使われます。JWT はステートレスな認証を実現しますが、トークンの有効期限（exp クレーム）を適切に設定しないとセキュリティリスクになります。また、ペイロードは Base64 でエンコードされているだけで暗号化されていないため、機密情報を含めてはいけません。トークンの無効化にはブロックリストの管理が必要です。"
+    },
+    "expectation": "summary は JWT の仕組みとセキュリティ注意点について一行で述べること。points には JWT の構造・署名アルゴリズム・有効期限の重要性・ペイロードの非暗号化・無効化方法が含まれるべき。技術用語（JWT・HS256・RS256・Base64）は保持すること。"
+  }
+]

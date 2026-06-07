@@ -1,0 +1,98 @@
+[
+  {
+    "name": "docker_container_basics",
+    "category": "infra",
+    "article": {
+      "title": "Docker コンテナの基本概念",
+      "body": "Docker はコンテナ仮想化プラットフォームで、アプリケーションとその依存関係をコンテナとしてパッケージ化します。コンテナは Dockerfile から作成したイメージをもとに起動します。ホスト OS のカーネルを共有するため、VM より軽量で起動が高速です。docker run コマンドでコンテナを起動し、-p オプションでポートマッピング、-v オプションでボリュームマウントを設定します。docker-compose を使うと複数コンテナの構成を YAML で管理できます。"
+    }
+  },
+  {
+    "name": "rust_ownership_system",
+    "category": "language",
+    "article": {
+      "title": "Rust の所有権システムとメモリ安全性",
+      "body": "Rust の所有権システムは、コンパイル時にメモリ安全性を保証する仕組みです。各値には唯一の所有者があり、所有者がスコープを外れると値は自動的に解放されます。参照（借用）を使うと所有権を移動せずに値にアクセスできますが、可変参照は同時に 1 つしか持てません。これによりデータ競合をコンパイル時に防止します。ライフタイムアノテーションは参照の有効期間を明示し、ダングリングポインタを防ぎます。GC（ガベージコレクション）なしで安全なメモリ管理を実現します。"
+    }
+  },
+  {
+    "name": "react_hooks_introduction",
+    "category": "frontend",
+    "article": {
+      "title": "React Hooks の使い方",
+      "body": "React Hooks は関数コンポーネントで状態管理や副作用を扱うための API です。useState フックで状態変数と更新関数を定義し、useEffect フックでコンポーネントのマウント・更新・アンマウント時の処理を記述します。useContext はコンポーネントツリーを超えてデータを共有し、useReducer は複雑な状態管理を Redux ライクなパターンで実現します。カスタムフックを作ることでロジックを再利用できます。Hooks 登場前はクラスコンポーネントで実装していた機能を、より簡潔に関数コンポーネントで実現できます。"
+    }
+  },
+  {
+    "name": "postgres_index_optimization",
+    "category": "database",
+    "article": {
+      "title": "PostgreSQL インデックスのチューニング",
+      "body": "PostgreSQL のインデックスはクエリの検索速度を大幅に改善します。B-tree インデックスは等値検索・範囲検索に適し、GiST インデックスは全文検索・空間データに使われます。EXPLAIN ANALYZE コマンドでクエリの実行計画とコストを確認できます。複合インデックスは列の順序が重要で、WHERE 句の先頭列に合わせて設計します。インデックスが多すぎると INSERT/UPDATE/DELETE のオーバーヘッドが増えるため、使われていないインデックスは削除すべきです。pg_stat_user_indexes ビューでインデックスの使用状況を監視できます。"
+    }
+  },
+  {
+    "name": "terraform_infrastructure_as_code",
+    "category": "infra",
+    "article": {
+      "title": "Terraform によるインフラのコード管理",
+      "body": "Terraform は HashiCorp が開発した Infrastructure as Code ツールです。HCL（HashiCorp Configuration Language）でインフラ構成を宣言的に記述し、terraform apply コマンドで実際のリソースを作成します。terraform plan でリソースの変更差分を事前確認でき、意図しない変更を防止できます。tfstate ファイルで現在のインフラ状態を管理しますが、チーム開発では S3 や Terraform Cloud でリモート管理します。モジュール機能を使うと再利用可能なインフラコンポーネントを作成できます。"
+    }
+  },
+  {
+    "name": "python_type_hints",
+    "category": "language",
+    "article": {
+      "title": "Python 型ヒントの活用",
+      "body": "Python 3.5 以降で利用可能な型ヒントは、変数・引数・戻り値の型を注釈として記述する機能です。mypy や pyright などの静的型チェッカーでバグを早期発見できます。typing モジュールの List、Dict、Optional、Union などを使って複雑な型を表現します。Python 3.10 以降では X | Y 構文で Union を簡潔に書けます。型ヒントはランタイムには影響せず、あくまでドキュメントと静的解析のためのものです。dataclass デコレータと組み合わせるとボイラープレートを削減できます。"
+    }
+  },
+  {
+    "name": "grpc_vs_rest",
+    "category": "api",
+    "article": {
+      "title": "gRPC と REST API の比較",
+      "body": "gRPC は Google が開発した RPC フレームワークで、Protocol Buffers（protobuf）をデータ形式に使います。HTTP/2 を使うため双方向ストリーミングが可能で、JSON より小さいバイナリ形式のため転送効率が高いです。REST は HTTP/1.1 と JSON が主流で、ブラウザとの互換性が高くデバッグが容易です。gRPC はマイクロサービス間の通信に適し、REST はパブリック API や Web フロントエンドとの連携に向いています。スキーマ定義（.proto ファイル）から多言語のクライアント/サーバーコードを自動生成できる点が gRPC の利点です。"
+    }
+  },
+  {
+    "name": "linux_cgroups_namespaces",
+    "category": "os",
+    "article": {
+      "title": "Linux の cgroups と namespaces によるリソース分離",
+      "body": "cgroups（コントロールグループ）は Linux カーネルの機能で、プロセスグループに CPU・メモリ・I/O などのリソース制限を設定します。namespaces はプロセスが見えるシステムリソース（PID・ネットワーク・ファイルシステム等）を分離します。Docker などのコンテナランタイムは cgroups と namespaces を組み合わせてコンテナの隔離を実現しています。cgroups v2 では統一された階層構造でリソース管理が改善されました。systemd も内部で cgroups を使ってサービスのリソースを管理します。"
+    }
+  },
+  {
+    "name": "ci_cd_pipeline_design",
+    "category": "devops",
+    "article": {
+      "title": "CI/CD パイプラインの設計原則",
+      "body": "CI（継続的インテグレーション）はコードの変更を頻繁にマージし、自動テストで品質を確保するプラクティスです。CD（継続的デリバリー/デプロイ）はテスト済みコードを本番環境に自動的にデプロイします。効果的なパイプラインは高速なフィードバック（5 分以内）を目指し、並列実行で時間を短縮します。失敗時の通知と原因特定のしやすさも重要です。GitHub Actions、GitLab CI、Jenkins などのツールが広く使われています。セキュリティスキャン（SAST/DAST）をパイプラインに組み込むことで DevSecOps を実現できます。"
+    }
+  },
+  {
+    "name": "redis_data_structures",
+    "category": "database",
+    "article": {
+      "title": "Redis のデータ構造と活用パターン",
+      "body": "Redis はインメモリデータストアで、String・Hash・List・Set・Sorted Set・Stream などのデータ構造を持ちます。String はキャッシュやカウンターに、Hash はオブジェクトの保存に、Sorted Set はランキング機能に使われます。TTL（有効期限）を設定してキャッシュとして活用するのが一般的です。Pub/Sub 機能でリアルタイム通知を実装でき、Lua スクリプトでアトミックな操作が可能です。Redis Cluster で水平スケーリング、Redis Sentinel で高可用性を実現します。永続化は RDB（スナップショット）と AOF（追記ログ）の 2 方式があります。"
+    }
+  },
+  {
+    "name": "opentelemetry_observability",
+    "category": "observability",
+    "article": {
+      "title": "OpenTelemetry によるオブザーバビリティ",
+      "body": "OpenTelemetry は分散システムのオブザーバビリティを実現するオープンスタンダードです。トレース・メトリクス・ログの 3 つのシグナルを統一的に収集します。SDK でアプリケーションをインストルメント化し、OpenTelemetry Collector でデータを収集・変換・エクスポートします。Jaeger や Zipkin でトレースを可視化し、Prometheus でメトリクスを監視します。自動インストルメンテーションを使うと HTTP・データベース・メッセージキューへのアクセスを自動的にトレースできます。ベンダーロックインを避けつつ複数のバックエンドにデータを送れる点が特徴です。"
+    }
+  },
+  {
+    "name": "wasm_browser_performance",
+    "category": "frontend",
+    "article": {
+      "title": "WebAssembly によるブラウザ上の高速処理",
+      "body": "WebAssembly（Wasm）はブラウザ上でネイティブに近い速度で動作するバイナリ形式の命令セットです。C/C++・Rust・Go などのコードをコンパイルして Wasm モジュールを生成し、JavaScript から呼び出せます。画像処理・音声処理・3D レンダリング・暗号処理など計算コストの高い処理に適しています。WASI（WebAssembly System Interface）によりブラウザ外でも実行可能で、エッジコンピューティングへの応用が進んでいます。JavaScript との相互運用は可能ですが、DOM 操作は現時点では JavaScript を経由する必要があります。"
+    }
+  }
+]

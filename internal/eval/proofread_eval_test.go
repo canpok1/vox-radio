@@ -48,13 +48,24 @@ type proofreadCase struct {
 	Expectation string          `json:"expectation,omitempty"`
 }
 
-func loadCases(t *testing.T, filename string) []proofreadCase {
+// loadTestdataString reads a testdata file and returns its content as a string.
+func loadTestdataString(t *testing.T, filename string) string {
 	t.Helper()
 	data, err := os.ReadFile(testdataPath(filename))
 	if err != nil {
 		t.Fatalf("read %s: %v", filename, err)
 	}
-	var cases []proofreadCase
+	return string(data)
+}
+
+// loadCasesJSON reads a testdata JSON file and unmarshals it into a slice of T.
+func loadCasesJSON[T any](t *testing.T, filename string) []T {
+	t.Helper()
+	data, err := os.ReadFile(testdataPath(filename))
+	if err != nil {
+		t.Fatalf("read %s: %v", filename, err)
+	}
+	var cases []T
 	if err := json.Unmarshal(data, &cases); err != nil {
 		t.Fatalf("parse %s: %v", filename, err)
 	}
@@ -62,12 +73,11 @@ func loadCases(t *testing.T, filename string) []proofreadCase {
 }
 
 func loadJudgePrompt(t *testing.T) string {
-	t.Helper()
-	data, err := os.ReadFile(testdataPath("proofread_judge.md"))
-	if err != nil {
-		t.Fatalf("read judge prompt: %v", err)
-	}
-	return string(data)
+	return loadTestdataString(t, "proofread_judge.md")
+}
+
+func loadCases(t *testing.T, filename string) []proofreadCase {
+	return loadCasesJSON[proofreadCase](t, filename)
 }
 
 var correctionsSchema = json.RawMessage(`{
@@ -90,6 +100,31 @@ var correctionsSchema = json.RawMessage(`{
 		}
 	},
 	"additionalProperties": false
+}`)
+
+// proofreadJudgeSchema is the JSON schema for the proofread judge LLM output.
+var proofreadJudgeSchema = json.RawMessage(`{
+  "type": "object",
+  "required": ["scores"],
+  "properties": {
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "score", "reason"],
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "enum": ["detection_recall", "false_positive_suppression", "correction_accuracy", "reason_validity"]
+          },
+          "score": {"type": "integer", "minimum": 1, "maximum": 5},
+          "reason": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
 }`)
 
 func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt, linesJSON string) (json.RawMessage, error) {
@@ -213,10 +248,12 @@ func TestProofreadEval(t *testing.T) {
 		}
 
 		// Step 2: judge.
-		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, eval.JudgeInput{
-			LinesJSON:       linesJSON,
-			CorrectionsJSON: string(raw),
-			Expectation:     ec.Expectation,
+		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, proofreadJudgeSchema, eval.JudgeInput{
+			Placeholders: map[string]string{
+				"lines":       linesJSON,
+				"corrections": string(raw),
+				"expectation": eval.ResolveExpectation(ec.Expectation),
+			},
 		})
 		if err != nil {
 			if eval.IsInconclusive(err) {

@@ -13,18 +13,33 @@ import (
 type Criterion string
 
 const (
+	// Proofread evaluation criteria.
 	CriterionDetectionRecall          Criterion = "detection_recall"
 	CriterionFalsePositiveSuppression Criterion = "false_positive_suppression"
 	CriterionCorrectionAccuracy       Criterion = "correction_accuracy"
 	CriterionReasonValidity           Criterion = "reason_validity"
+
+	// Summarize evaluation criteria.
+	CriterionFaithfulness     Criterion = "faithfulness"
+	CriterionCoverage         Criterion = "coverage"
+	CriterionConciseness      Criterion = "conciseness"
+	CriterionFormatCompliance Criterion = "format_compliance"
 )
 
-// AllCriteria lists all scoring dimensions in canonical order.
+// AllCriteria lists all proofread scoring dimensions in canonical order.
 var AllCriteria = []Criterion{
 	CriterionDetectionRecall,
 	CriterionFalsePositiveSuppression,
 	CriterionCorrectionAccuracy,
 	CriterionReasonValidity,
+}
+
+// AllSummarizeCriteria lists all summarize scoring dimensions in canonical order.
+var AllSummarizeCriteria = []Criterion{
+	CriterionFaithfulness,
+	CriterionCoverage,
+	CriterionConciseness,
+	CriterionFormatCompliance,
 }
 
 // ScoreEntry holds the score and reason for one criterion.
@@ -92,6 +107,15 @@ var inconclusivePatterns = []string{
 	"EOF",
 	"no such host",
 	"status 5",
+}
+
+// ResolveExpectation returns s if non-empty, or the sentinel "（なし）" used by
+// judge prompts when no expected result is provided.
+func ResolveExpectation(s string) string {
+	if s == "" {
+		return "（なし）"
+	}
+	return s
 }
 
 // IsInconclusive returns true when err represents a transient infrastructure
