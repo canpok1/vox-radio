@@ -28,3 +28,13 @@ func writeFeedSpecForTest(t *testing.T, content []byte) string {
 	}
 	return path
 }
+
+func writeSlackSpecRawForTest(t *testing.T, content []byte) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "slack-spec.yaml")
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("write slack spec: %v", err)
+	}
+	return path
+}

@@ -88,14 +88,9 @@ func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 }
 
 func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
-	dir := t.TempDir()
-	content := `slack:
+	specPath := writeSlackSpecRawForTest(t, []byte(`slack:
   channel: ""
-`
-	specPath := filepath.Join(dir, "slack-spec.yaml")
-	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write spec: %v", err)
-	}
+`))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
@@ -105,15 +100,10 @@ func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
 }
 
 func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
-	dir := t.TempDir()
-	content := `slack:
+	specPath := writeSlackSpecRawForTest(t, []byte(`slack:
   channel: "C0123456789"
 unknown_key: value
-`
-	specPath := filepath.Join(dir, "slack-spec.yaml")
-	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write spec: %v", err)
-	}
+`))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
@@ -124,15 +114,10 @@ unknown_key: value
 
 // program_id は SlackSpec から削除されたため、slackpost check で unknown key エラーになること
 func TestSlackpostCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
-	dir := t.TempDir()
-	content := `program_id: my-radio
+	specPath := writeSlackSpecRawForTest(t, []byte(`program_id: my-radio
 slack:
   channel: "C0123456789"
-`
-	specPath := filepath.Join(dir, "slack-spec.yaml")
-	if err := os.WriteFile(specPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write spec: %v", err)
-	}
+`))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
