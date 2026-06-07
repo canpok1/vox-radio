@@ -19,11 +19,16 @@ const (
 	CriterionCorrectionAccuracy       Criterion = "correction_accuracy"
 	CriterionReasonValidity           Criterion = "reason_validity"
 
-	// Summarize evaluation criteria.
+	// Shared evaluation criteria (used by multiple prompts).
 	CriterionFaithfulness     Criterion = "faithfulness"
 	CriterionCoverage         Criterion = "coverage"
-	CriterionConciseness      Criterion = "conciseness"
 	CriterionFormatCompliance Criterion = "format_compliance"
+
+	// Summarize-only evaluation criteria.
+	CriterionConciseness Criterion = "conciseness"
+
+	// CornerSummary-only evaluation criteria.
+	CriterionSpecificity Criterion = "specificity"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -39,6 +44,14 @@ var AllSummarizeCriteria = []Criterion{
 	CriterionFaithfulness,
 	CriterionCoverage,
 	CriterionConciseness,
+	CriterionFormatCompliance,
+}
+
+// AllCornerSummaryCriteria lists all corner_summary scoring dimensions in canonical order.
+var AllCornerSummaryCriteria = []Criterion{
+	CriterionFaithfulness,
+	CriterionCoverage,
+	CriterionSpecificity,
 	CriterionFormatCompliance,
 }
 
