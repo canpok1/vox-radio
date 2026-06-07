@@ -2,8 +2,6 @@ package cli_test
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -34,18 +32,13 @@ func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 }
 
 func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
-	dir := t.TempDir()
-	specPath := filepath.Join(dir, "feed-spec.yaml")
 	// feed.language が欠落した feed-spec.yaml
-	content := []byte(`feed:
+	specPath := writeFeedSpecForTest(t, []byte(`feed:
   author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
-`)
-	if err := os.WriteFile(specPath, content, 0o644); err != nil {
-		t.Fatalf("write spec: %v", err)
-	}
+`))
 
 	cmd := cli.NewRootCmd()
 	errBuf := &bytes.Buffer{}
@@ -59,19 +52,14 @@ func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 
 // program_id は FeedSpec から削除されたため、feedgen check で unknown key エラーになること
 func TestFeedgenCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
-	dir := t.TempDir()
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	content := []byte(`program_id: my-radio
+	specPath := writeFeedSpecForTest(t, []byte(`program_id: my-radio
 feed:
   language: ja
   author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
-`)
-	if err := os.WriteFile(specPath, content, 0o644); err != nil {
-		t.Fatalf("write spec: %v", err)
-	}
+`))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"feedgen", "check", specPath})
