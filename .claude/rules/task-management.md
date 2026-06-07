@@ -30,6 +30,14 @@ projectId / sectionId は名前から特定することもできる（`mcp__todo
 - `description`: 背景・根拠を Markdown で記載する。「どのメモ / PR のどの指摘か」を必ず明記し、後から再調査コストがかからないようにする。受け入れ条件があればチェックリストで含める。
 - **重複登録を避ける** — 作成前に `find-tasks` で同種タスクの有無を確認し、あれば新規作成せず既存タスクへ追記する。
 
+## ワークフロースクリプト（td CLI）
+
+`workflow-scripts/` の自動化スクリプト（auto-assign / auto-solve / solve-task など）は、MCP ではなく Todoist CLI（`td` = `@doist/todoist-cli`）でタスクを参照・更新する。
+
+- devcontainer で `npm install -g @doist/todoist-cli` により導入される。
+- 認証は環境変数 `TODOIST_API_TOKEN` を使う。
+- 対象タスクの絞り込みはフィルタクエリ `#dev & /vox-radio`（プロジェクト dev・セクション vox-radio）を使う。
+
 ## 注意
 
 - Todoist タスクには `🤖 Generated with [Claude Code]...` フッターは不要（フッターは GitHub の PR・コメント向けの規約）。

@@ -30,7 +30,13 @@ if ! [[ "$ASSIGN_COUNT" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-REPO="$(gh repo view --json nameWithOwner -q '.nameWithOwner')"
+if [[ -z "${TODOIST_API_TOKEN:-}" ]]; then
+  echo "Error: TODOIST_API_TOKEN is not set" >&2
+  exit 1
+fi
+
+# 対象: Todoist プロジェクト dev / セクション vox-radio
+TODOIST_FILTER="#dev & /vox-radio"
 
 # 多重起動防止
 LOCK_DIR="${WORKSPACE_DIR}/.tmp/locks"
@@ -46,19 +52,14 @@ fi
 RUNNING=true
 trap 'RUNNING=false; echo ""; echo "Shutting down..."; exit 0' SIGINT SIGTERM
 
-echo "Watching queue in ${REPO} (min-queue: ${MIN_QUEUE})..."
+echo "Watching queue in dev/vox-radio (min-queue: ${MIN_QUEUE})..."
 
 cd "$WORKSPACE_DIR"
 PREV_STATE=""
 
 while $RUNNING; do
-  # assign-to-claudeラベル付きのopen Issue数をカウント
-  QUEUE_COUNT=$(gh issue list \
-    --repo "$REPO" \
-    --state open \
-    --label "assign-to-claude" \
-    --json number \
-    --jq 'length')
+  # assign-to-claudeラベル付きの未完了タスク数をカウント
+  QUEUE_COUNT=$(td task list --filter "${TODOIST_FILTER} & @assign-to-claude" --json | jq '.results | length')
 
   if [[ "$QUEUE_COUNT" -ge "$MIN_QUEUE" ]]; then
     CURRENT_STATE="queue_sufficient"
@@ -69,22 +70,14 @@ while $RUNNING; do
       printf "."
     fi
   else
-    # readyラベル付き + assign-to-claude/in-progress-by-claude 未付与のIssueをカウント
-    ISSUE_COUNT=$(gh issue list \
-      --repo "$REPO" \
-      --state open \
-      --label "ready" \
-      --json labels,number \
-      --jq '[.[] | select(
-        (.labels | map(.name) | index("assign-to-claude") | not) and
-        (.labels | map(.name) | index("in-progress-by-claude") | not)
-      )] | length')
+    # readyラベル付き + assign-to-claude/in-progress 未付与のタスクをカウント
+    TASK_COUNT=$(td task list --filter "${TODOIST_FILTER} & @ready & !@assign-to-claude & !@in-progress" --json | jq '.results | length')
 
-    if [[ "$ISSUE_COUNT" -eq 0 ]]; then
-      CURRENT_STATE="no_issues"
+    if [[ "$TASK_COUNT" -eq 0 ]]; then
+      CURRENT_STATE="no_tasks"
       if [[ "$PREV_STATE" != "$CURRENT_STATE" ]]; then
         echo ""
-        echo "No issues to assign, waiting..."
+        echo "No tasks to assign, waiting..."
       else
         printf "."
       fi
@@ -93,7 +86,7 @@ while $RUNNING; do
       echo ""
       echo "Queue: ${QUEUE_COUNT} (< ${MIN_QUEUE}), assigning..."
 
-      "${SCRIPT_DIR}/claude-stream.sh" -p "/base-tools:assign-issues --count ${ASSIGN_COUNT}"
+      "${SCRIPT_DIR}/claude-stream.sh" -p "/assign-tasks --count ${ASSIGN_COUNT}"
     fi
   fi
 
