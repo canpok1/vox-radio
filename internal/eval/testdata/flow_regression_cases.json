@@ -1,0 +1,224 @@
+[
+  {
+    "name": "opening_with_articles",
+    "category": "position_role",
+    "position": "opening",
+    "corner": {
+      "title": "今週のテックニュース",
+      "content": "最新の技術ニュースを3〜4本紹介するコーナー。AI・クラウド・プログラミング言語などITエンジニア向けの話題を扱う。",
+      "target_duration_seconds": 300
+    },
+    "articles": [
+      {
+        "url": "https://example.com/ai-chip-perf",
+        "title": "最新AIチップの性能が従来比3倍に向上",
+        "summary": "新世代のAIチップが発表され、従来品と比較して推論速度が3倍向上した。",
+        "points": ["推論速度が従来比3倍に向上", "消費電力は20%削減", "主要クラウドで今四半期中に提供開始"]
+      },
+      {
+        "url": "https://example.com/rust-async",
+        "title": "Rustの非同期処理入門：async/awaitの使い方",
+        "summary": "Rustの非同期プログラミングの基礎と実践的な使い方を解説する記事。",
+        "points": ["async/awaitの基本構文を解説", "tokioランタイムの使い方", "エラーハンドリングのパターン紹介"]
+      }
+    ],
+    "selection_reason": "AIと開発言語という2軸でエンジニア読者に響く記事を選択。AIチップはトレンド性が高く、Rust非同期は実用性が高い。",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のテックニュース",
+          "selection_reason": "AIと開発言語という2軸でエンジニア読者に響く記事を選択。",
+          "articles": [
+            {"url": "https://example.com/ai-chip-perf", "title": "最新AIチップの性能が従来比3倍に向上", "summary": "新世代のAIチップが発表された。", "points": ["推論速度が従来比3倍に向上"]},
+            {"url": "https://example.com/rust-async", "title": "Rustの非同期処理入門：async/awaitの使い方", "summary": "Rustの非同期プログラミングの解説。", "points": ["async/awaitの基本構文を解説"]}
+          ]
+        },
+        {
+          "title": "AI最前線",
+          "selection_reason": "大規模言語モデルの最新動向を扱う。",
+          "articles": [
+            {"url": "https://example.com/llm-new", "title": "新しいLLMが公開", "summary": "最新のLLMがベンチマークで最高性能を達成。", "points": ["ベンチマーク最高性能", "マルチモーダル対応"]}
+          ]
+        },
+        {
+          "title": "今週の一言",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 10},
+        {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 8}
+      ]
+    },
+    "expectation": "opening として番組全体の導入となる flow であること。リスナーを引き込む出だしで、今回のコーナーで扱うAIチップとRustの話題を簡潔に予告しつつ、詳細は当該コーナーに委ねること。番組を締める表現は含まないこと。"
+  },
+  {
+    "name": "middle_with_articles",
+    "category": "position_role",
+    "position": "middle",
+    "corner": {
+      "title": "AI最前線",
+      "content": "人工知能・機械学習・大規模言語モデルに特化したニュースを2本程度紹介するコーナー。深掘り解説を重視する。",
+      "target_duration_seconds": 240
+    },
+    "articles": [
+      {
+        "url": "https://example.com/llm-new-model",
+        "title": "新しい大規模言語モデルが公開、ベンチマークで最高性能",
+        "summary": "最新のLLMが公開され、主要ベンチマークで最高性能を達成した。",
+        "points": ["主要ベンチマーク全項目で最高スコア", "オープンソースで公開", "推論コストが前世代比40%削減"]
+      },
+      {
+        "url": "https://example.com/llm-rag",
+        "title": "RAGアーキテクチャによるLLMの精度改善手法",
+        "summary": "検索拡張生成（RAG）を活用してLLMの出力精度を高める手法を解説。",
+        "points": ["RAGの基本アーキテクチャを解説", "ハルシネーション削減効果", "実装コードサンプルあり"]
+      }
+    ],
+    "selection_reason": "最新モデルの公開とRAGによる精度改善という、LLMの「進化」と「実用化」の両面を扱う。",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のテックニュース",
+          "selection_reason": "AIと開発言語の話題を紹介。",
+          "articles": [
+            {"url": "https://example.com/ai-chip-perf", "title": "最新AIチップの性能が従来比3倍に向上", "summary": "新世代のAIチップが発表された。", "points": ["推論速度が従来比3倍に向上"]}
+          ]
+        },
+        {
+          "title": "AI最前線",
+          "selection_reason": "最新モデルの公開とRAGによる精度改善。",
+          "articles": [
+            {"url": "https://example.com/llm-new-model", "title": "新しい大規模言語モデルが公開、ベンチマークで最高性能", "summary": "最新のLLMが公開された。", "points": ["主要ベンチマーク全項目で最高スコア"]},
+            {"url": "https://example.com/llm-rag", "title": "RAGアーキテクチャによるLLMの精度改善手法", "summary": "RAGを活用した精度改善手法を解説。", "points": ["RAGの基本アーキテクチャを解説"]}
+          ]
+        },
+        {
+          "title": "今週の一言",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 10},
+        {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 8}
+      ]
+    },
+    "expectation": "middle として前のコーナー（テックニュース）の話題を受けて自然につなぎ、LLMの最新モデル→RAGという順で紹介し、次のコーナー（今週の一言）へ渡す flow であること。番組を締める表現は含まないこと。"
+  },
+  {
+    "name": "ending_no_articles",
+    "category": "position_role",
+    "position": "ending",
+    "corner": {
+      "title": "今週の一言",
+      "content": "MCが今週の技術トレンドを振り返り、一言コメントで締めるコーナー。記事は使用しない。",
+      "target_duration_seconds": 60
+    },
+    "articles": [],
+    "selection_reason": "",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のテックニュース",
+          "selection_reason": "AIと開発言語の話題を紹介。",
+          "articles": [
+            {"url": "https://example.com/ai-chip-perf", "title": "最新AIチップの性能が従来比3倍に向上", "summary": "新世代のAIチップが発表された。", "points": ["推論速度が従来比3倍に向上"]}
+          ]
+        },
+        {
+          "title": "AI最前線",
+          "selection_reason": "最新モデルの公開とRAGによる精度改善。",
+          "articles": [
+            {"url": "https://example.com/llm-new-model", "title": "新しい大規模言語モデルが公開、ベンチマークで最高性能", "summary": "最新のLLMが公開された。", "points": ["主要ベンチマーク全項目で最高スコア"]}
+          ]
+        },
+        {
+          "title": "今週の一言",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 10},
+        {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 8}
+      ]
+    },
+    "expectation": "ending として番組全体（AIチップ・LLM・RAGの話題）を踏まえた一言コメントで自然に締める flow であること。記事がないため記事の紹介順などは不要で、番組全体の振り返りと締めの構成になっていること。"
+  },
+  {
+    "name": "opening_no_articles_corner",
+    "category": "no_articles",
+    "position": "opening",
+    "corner": {
+      "title": "オープニングトーク",
+      "content": "番組の冒頭で今回の内容を予告し、リスナーを引き込むトークコーナー。記事は使用しない。",
+      "target_duration_seconds": 90
+    },
+    "articles": [],
+    "selection_reason": "",
+    "program": {
+      "corners": [
+        {
+          "title": "オープニングトーク",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "セキュリティニュース",
+          "selection_reason": "ランサムウェアとゼロトラストの2記事でセキュリティの脅威と対策を両面紹介。",
+          "articles": [
+            {"url": "https://example.com/ransomware", "title": "ランサムウェア攻撃が増加", "summary": "ランサムウェア被害が過去最高を更新。", "points": ["被害額が過去最高を更新"]},
+            {"url": "https://example.com/zero-trust", "title": "ゼロトラスト導入事例", "summary": "ゼロトラストアーキテクチャの導入事例。", "points": ["中小企業でも実装可能"]}
+          ]
+        },
+        {
+          "title": "クロージングトーク",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zunko", "role": "MC", "type": "regular", "appearance_count": 5}
+      ]
+    },
+    "expectation": "opening として番組の冒頭にふさわしい導入 flow であること。今回のセキュリティニュースコーナーの内容（ランサムウェア・ゼロトラスト）を先取りせず、リスナーへの期待を高める予告に留めること。番組を締める表現は含まないこと。"
+  },
+  {
+    "name": "middle_all_no_articles",
+    "category": "no_articles",
+    "position": "middle",
+    "corner": {
+      "title": "フリートーク",
+      "content": "MCが最近の気になるトピックについて自由に話すコーナー。記事は使用しない。",
+      "target_duration_seconds": 120
+    },
+    "articles": [],
+    "selection_reason": "",
+    "program": {
+      "corners": [
+        {
+          "title": "オープニングトーク",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "フリートーク",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "クロージングトーク",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 3},
+        {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 3}
+      ]
+    },
+    "expectation": "全コーナーに記事がない回の middle として、オープニングトークを受けてフリートークへ自然につなぎ、その後クロージングトークへ渡す flow であること。記事紹介の要素は不要で、会話の流れとしての構成になっていること。"
+  }
+]

@@ -1,0 +1,266 @@
+[
+  {
+    "name": "ending_with_articles",
+    "category": "position_role",
+    "position": "ending",
+    "corner": {
+      "title": "今週の注目OSS",
+      "content": "今週注目のオープンソースプロジェクトを1〜2本紹介して締めるコーナー。",
+      "target_duration_seconds": 180
+    },
+    "articles": [
+      {
+        "url": "https://example.com/valkey-fork",
+        "title": "Redis代替のValkey：Linux Foundation主導でフォーク開始",
+        "summary": "Redisのライセンス変更を受けてLinux Foundationが主導するValkeyプロジェクトが始動。",
+        "points": ["Linux Foundation主導でフォーク", "BSDライセンスを維持", "主要クラウドが既に支持表明"]
+      }
+    ],
+    "selection_reason": "Redisのライセンス問題は業界全体に影響し、Valkeyの登場は注目のOSSニュース。番組の締めにふさわしいトレンド記事。",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のテックニュース",
+          "selection_reason": "クラウドとセキュリティの話題。",
+          "articles": [
+            {"url": "https://example.com/aws-lambda", "title": "AWS Lambdaが新機能追加", "summary": "AWS Lambdaの実行時間制限が延長された。", "points": ["実行時間制限が最大15分に延長"]}
+          ]
+        },
+        {
+          "title": "今週の注目OSS",
+          "selection_reason": "Redisのライセンス問題を受けてValkeyを紹介。",
+          "articles": [
+            {"url": "https://example.com/valkey-fork", "title": "Redis代替のValkey：Linux Foundation主導でフォーク開始", "summary": "ValkeyプロジェクトがLinux Foundationの下で開始。", "points": ["Linux Foundation主導でフォーク", "BSDライセンスを維持"]}
+          ]
+        }
+      ],
+      "casts": [
+        {"character_id": "metan", "role": "MC", "type": "regular", "appearance_count": 6}
+      ]
+    }
+  },
+  {
+    "name": "middle_single_article",
+    "category": "edge_case",
+    "position": "middle",
+    "corner": {
+      "title": "速報コーナー",
+      "content": "本日の最も注目すべき速報ニュースを1本だけ深掘りするコーナー。",
+      "target_duration_seconds": 120
+    },
+    "articles": [
+      {
+        "url": "https://example.com/major-vuln",
+        "title": "主要ブラウザに深刻な脆弱性、即時アップデートを推奨",
+        "summary": "主要ブラウザに任意コード実行を可能にする深刻な脆弱性が発見され、緊急パッチが公開された。",
+        "points": ["任意コード実行が可能な脆弱性", "全主要ブラウザが影響", "緊急パッチを即時適用を推奨"]
+      }
+    ],
+    "selection_reason": "影響範囲が広く緊急性が高い脆弱性情報のため最優先で取り上げる。",
+    "program": {
+      "corners": [
+        {
+          "title": "オープニング",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "速報コーナー",
+          "selection_reason": "影響範囲が広く緊急性が高い脆弱性情報のため最優先で取り上げる。",
+          "articles": [
+            {"url": "https://example.com/major-vuln", "title": "主要ブラウザに深刻な脆弱性、即時アップデートを推奨", "summary": "深刻な脆弱性が発見され緊急パッチが公開。", "points": ["任意コード実行が可能な脆弱性", "緊急パッチを即時適用を推奨"]}
+          ]
+        },
+        {
+          "title": "今週の深掘り",
+          "selection_reason": "セキュリティの深掘り解説。",
+          "articles": [
+            {"url": "https://example.com/zero-trust-impl", "title": "ゼロトラスト実装の実践", "summary": "ゼロトラストアーキテクチャの実装方法を解説。", "points": ["導入ステップを解説"]}
+          ]
+        }
+      ],
+      "casts": [
+        {"character_id": "zunko", "role": "解説", "type": "regular", "appearance_count": 8},
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 12}
+      ]
+    }
+  },
+  {
+    "name": "opening_guest_first_appearance",
+    "category": "edge_case",
+    "position": "opening",
+    "corner": {
+      "title": "オープニング",
+      "content": "ゲストを迎えて番組の冒頭でリスナーに自己紹介と今回の見どころを伝えるコーナー。記事は使用しない。",
+      "target_duration_seconds": 120
+    },
+    "articles": [],
+    "selection_reason": "",
+    "program": {
+      "corners": [
+        {
+          "title": "オープニング",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "フロントエンド最新動向",
+          "selection_reason": "React 19とChrome更新という2本でフロントエンドの最新トレンドを網羅。",
+          "articles": [
+            {"url": "https://example.com/react-19", "title": "React 19リリース", "summary": "React 19が正式リリース。", "points": ["Server Componentsが正式対応"]},
+            {"url": "https://example.com/chrome-update", "title": "Chrome 124アップデート", "summary": "Chrome 124の新機能。", "points": ["Web標準の新機能を追加"]}
+          ]
+        },
+        {
+          "title": "エンディング",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "metan", "role": "ホスト", "type": "regular", "appearance_count": 15},
+        {"character_id": "kiritan", "role": "ゲスト", "type": "guest", "appearance_count": 0}
+      ]
+    }
+  },
+  {
+    "name": "ending_all_no_articles",
+    "category": "no_articles",
+    "position": "ending",
+    "corner": {
+      "title": "クロージングトーク",
+      "content": "番組の締めとして今回の振り返りと次回予告を行うコーナー。記事は使用しない。",
+      "target_duration_seconds": 90
+    },
+    "articles": [],
+    "selection_reason": "",
+    "program": {
+      "corners": [
+        {
+          "title": "オープニングトーク",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "フリートーク",
+          "selection_reason": "",
+          "articles": []
+        },
+        {
+          "title": "クロージングトーク",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 3},
+        {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 3}
+      ]
+    }
+  },
+  {
+    "name": "middle_many_articles",
+    "category": "article_selection",
+    "position": "middle",
+    "corner": {
+      "title": "OSSコミュニティニュース",
+      "content": "オープンソースソフトウェアのリリース・コミュニティ動向・ライセンス問題などを3〜4本紹介するコーナー。",
+      "target_duration_seconds": 360
+    },
+    "articles": [
+      {
+        "url": "https://example.com/linux-kernel",
+        "title": "Linux Kernel 6.9リリース：主要変更点まとめ",
+        "summary": "Linux Kernel 6.9がリリースされ、新機能と性能改善が含まれる。",
+        "points": ["ファイルシステムの改善", "セキュリティ強化", "新ハードウェアサポート"]
+      },
+      {
+        "url": "https://example.com/redis-license",
+        "title": "RedisのライセンスをBSDからSSPLへ変更",
+        "summary": "Redisがオープンソースライセンスからビジネスソースライセンスへ変更し、コミュニティが反発。",
+        "points": ["SSPLライセンスに変更", "コミュニティが反発", "フォーク計画が浮上"]
+      },
+      {
+        "url": "https://example.com/apache-arrow",
+        "title": "Apache Arrowの採用が加速：データエンジニアリングでの活用事例",
+        "summary": "Apache Arrowがデータエンジニアリング分野での採用を拡大している。",
+        "points": ["データ交換フォーマットとして標準化が進む", "主要ツールが対応", "パフォーマンス向上が評価される"]
+      }
+    ],
+    "selection_reason": "OSSの主要ニュース3本：カーネルリリース・ライセンス問題・データ基盤ツール。Redisライセンス問題はコミュニティへの影響が大きく中心的に取り上げる。",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のテックニュース",
+          "selection_reason": "クラウドの話題を紹介。",
+          "articles": [
+            {"url": "https://example.com/aws-update", "title": "AWS新機能発表", "summary": "AWSの新機能が発表された。", "points": ["新機能の概要"]}
+          ]
+        },
+        {
+          "title": "OSSコミュニティニュース",
+          "selection_reason": "OSSの主要ニュース3本を紹介。",
+          "articles": [
+            {"url": "https://example.com/linux-kernel", "title": "Linux Kernel 6.9リリース", "summary": "Linuxカーネルの新バージョンがリリース。", "points": ["ファイルシステムの改善"]},
+            {"url": "https://example.com/redis-license", "title": "RedisのライセンスをBSDからSSPLへ変更", "summary": "Redisがライセンスを変更。", "points": ["SSPLライセンスに変更"]},
+            {"url": "https://example.com/apache-arrow", "title": "Apache Arrowの採用が加速", "summary": "Apache Arrowの採用が拡大。", "points": ["データ交換フォーマットとして標準化が進む"]}
+          ]
+        },
+        {
+          "title": "エンディング",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "metan", "role": "MC", "type": "regular", "appearance_count": 6}
+      ]
+    }
+  },
+  {
+    "name": "opening_with_two_corners_after",
+    "category": "article_selection",
+    "position": "opening",
+    "corner": {
+      "title": "今週のハイライト",
+      "content": "今週のテクノロジーニュースの中から最も重要なトピックを1本取り上げて番組の冒頭を飾るコーナー。",
+      "target_duration_seconds": 150
+    },
+    "articles": [
+      {
+        "url": "https://example.com/openai-gpt-new",
+        "title": "OpenAIが次世代モデルを発表：性能と価格を公開",
+        "summary": "OpenAIが次世代の大規模言語モデルを発表し、前世代比で大幅な性能向上と価格引き下げを実現。",
+        "points": ["前世代比で性能2倍向上", "API料金が40%削減", "マルチモーダル機能を強化"]
+      }
+    ],
+    "selection_reason": "業界全体に影響するOpenAIの新モデル発表は今週最大のニュース。番組冒頭として視聴者の注目を集めやすい。",
+    "program": {
+      "corners": [
+        {
+          "title": "今週のハイライト",
+          "selection_reason": "業界全体に影響するOpenAIの新モデル発表を紹介。",
+          "articles": [
+            {"url": "https://example.com/openai-gpt-new", "title": "OpenAIが次世代モデルを発表：性能と価格を公開", "summary": "OpenAIが次世代LLMを発表。", "points": ["前世代比で性能2倍向上", "API料金が40%削減"]}
+          ]
+        },
+        {
+          "title": "セキュリティ深掘り",
+          "selection_reason": "脆弱性情報と対策を解説。",
+          "articles": [
+            {"url": "https://example.com/vuln-patch", "title": "重要なセキュリティパッチが公開", "summary": "複数の重要な脆弱性に対するパッチが公開。", "points": ["リモートコード実行の脆弱性を修正"]}
+          ]
+        },
+        {
+          "title": "クロージング",
+          "selection_reason": "",
+          "articles": []
+        }
+      ],
+      "casts": [
+        {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 20},
+        {"character_id": "ankomon", "role": "アシスタント", "type": "guest", "appearance_count": 0}
+      ]
+    }
+  }
+]
