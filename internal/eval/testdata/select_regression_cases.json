@@ -1,0 +1,62 @@
+[
+  {
+    "name": "tech_news_corner_basic",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 5},
+      {"character_id": "metan", "role": "アシスタント", "type": "regular", "appearance_count": 3}
+    ],
+    "corner": {
+      "title": "今週のテックニュース",
+      "content": "最新の技術ニュースを3〜4本紹介するコーナー。AI・クラウド・プログラミング言語などITエンジニア向けの話題を扱う。",
+      "target_duration_seconds": 300
+    },
+    "articles": [
+      {"url": "https://example.com/ai-chip-perf", "title": "最新AIチップの性能が従来比3倍に向上"},
+      {"url": "https://example.com/cloud-cost", "title": "クラウドコスト削減の新戦略：スポットインスタンス活用ガイド"},
+      {"url": "https://example.com/cooking-recipe", "title": "時短料理レシピ特集：忙しいエンジニアのための夕食10選"},
+      {"url": "https://example.com/rust-async", "title": "Rustの非同期処理入門：async/awaitの使い方"},
+      {"url": "https://example.com/travel-guide", "title": "ゴールデンウィーク国内旅行おすすめスポット"}
+    ],
+    "expectation": "selected_urls にはテック系記事（AIチップ・クラウドコスト・Rust非同期）の URL が含まれ、料理・旅行の記事は含まれないこと。コーナー趣旨に合った3本程度を選ぶのが妥当。selection_reason にはコーナー趣旨（ITエンジニア向け技術ニュース）に基づく選別理由が述べられていること。"
+  },
+  {
+    "name": "single_candidate_must_select",
+    "category": "edge_case",
+    "casts": [
+      {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 10}
+    ],
+    "corner": {
+      "title": "セキュリティニュース",
+      "content": "セキュリティに関するニュースを紹介するコーナー。脆弱性情報・対策方法・業界動向などを扱う。",
+      "target_duration_seconds": 180
+    },
+    "articles": [
+      {"url": "https://example.com/vuln-patch", "title": "主要Linuxディストリビューションに影響するゼロデイ脆弱性にパッチ公開"}
+    ],
+    "expectation": "候補が1件のみのため、selected_urls には必ずその URL が含まれること。最低1件選ぶ制約を守ること。selection_reason には1件しか候補がなかった旨が記されているか、その記事の内容に基づく選択理由が述べられていること。"
+  },
+  {
+    "name": "narrow_corner_many_articles",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "zunko", "role": "解説", "type": "regular", "appearance_count": 8},
+      {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 12}
+    ],
+    "corner": {
+      "title": "AI最前線",
+      "content": "人工知能・機械学習・大規模言語モデルに特化したニュースを2本程度紹介するコーナー。深掘り解説を重視する。",
+      "target_duration_seconds": 240
+    },
+    "articles": [
+      {"url": "https://example.com/llm-new-model", "title": "新しい大規模言語モデルが公開、ベンチマークで最高性能"},
+      {"url": "https://example.com/ml-framework", "title": "機械学習フレームワークの最新バージョンリリース"},
+      {"url": "https://example.com/k8s-update", "title": "Kubernetes 1.30リリース：新機能まとめ"},
+      {"url": "https://example.com/go-generics", "title": "Go言語のジェネリクス活用パターン集"},
+      {"url": "https://example.com/ai-regulation", "title": "EU AI法が施行：企業が知っておくべき規制の概要"},
+      {"url": "https://example.com/database-perf", "title": "PostgreSQLのパフォーマンスチューニング実践"},
+      {"url": "https://example.com/llm-rag", "title": "RAGアーキテクチャによるLLMの精度改善手法"}
+    ],
+    "expectation": "selected_urls にはAI・LLM・機械学習に直接関連する記事（llm-new-model・ml-framework・ai-regulation・llm-rag）の中から2本程度が選ばれること。KubernetesやGo・PostgreSQLはAI専門コーナーの趣旨から外れるため含まれないことが望ましい。target_duration_seconds=240（4分）に対して2本が適切。selection_reason にはAI専門コーナーとしての絞り込み理由が述べられていること。"
+  }
+]
