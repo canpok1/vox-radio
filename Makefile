@@ -49,7 +49,7 @@ release-check:
 	goreleaser check
 
 eval:
-	go test -tags=eval -count=1 -v ./internal/eval/...
+	go test -tags=eval -count=1 -v -timeout 30m ./internal/eval/...
 
 all: build
 

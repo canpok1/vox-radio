@@ -2,8 +2,13 @@ name: prompt-eval
 
 on:
   schedule:
-    - cron: '0 2 * * 0'  # 週次 (UTC 日曜 02:00)
+    - cron: '0 2 * * *'  # 毎日 02:00 UTC（曜日によって実行するプロンプトを切り替え）
   workflow_dispatch:
+    inputs:
+      run_filter:
+        description: 'テストフィルタ (例: TestProofreadEval)。空の場合は曜日フィルタを適用'
+        required: false
+        default: ''
 
 jobs:
   eval:
@@ -19,5 +24,28 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Determine test filter
+        id: filter
+        run: |
+          MANUAL_FILTER="${{ inputs.run_filter }}"
+          if [ -n "$MANUAL_FILTER" ]; then
+            echo "run=$MANUAL_FILTER" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 曜日ベースで分散実行 (date +%u: 1=月, 2=火, ..., 7=日)
+          case "$(date +%u)" in
+            1) echo "run=TestProofreadEval|TestSummarizeEval" >> "$GITHUB_OUTPUT" ;;
+            2) echo "run=TestCornerSummaryEval" >> "$GITHUB_OUTPUT" ;;
+            3) echo "run=TestSummaryEval" >> "$GITHUB_OUTPUT" ;;
+            4) echo "run=TestSelectEval" >> "$GITHUB_OUTPUT" ;;
+            5) echo "run=TestFlowEval" >> "$GITHUB_OUTPUT" ;;
+            6) echo "run=TestWriteEval" >> "$GITHUB_OUTPUT" ;;
+            7) echo "run=TestDirectEval" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       - name: Run prompt evaluation
-        run: make eval
+        if: steps.filter.outputs.run != ''
+        run: |
+          go test -tags=eval -count=1 -v -timeout 30m \
+            -run '${{ steps.filter.outputs.run }}' \
+            ./internal/eval/...

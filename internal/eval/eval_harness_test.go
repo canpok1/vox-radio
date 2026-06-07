@@ -116,21 +116,20 @@ func loadSampleParams(t *testing.T) (sampleSize int, seed int64) {
 }
 
 // buildEvalClients creates target and judge LLM clients from env vars.
+// Both clients share a single Throttler so their combined request rate stays within API RPM limits.
 func buildEvalClients(t *testing.T) (llm.Client, llm.Client) {
 	t.Helper()
 
 	targetCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
 	targetCfg.MaxRetries = 2
-	targetClient := llm.NewClient(targetCfg)
+	targetCfg.SharedThrottler = llm.NewThrottler(targetCfg.MinRequestIntervalMS)
 
-	judgeCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
+	judgeCfg := targetCfg // inherits SharedThrottler; override model if specified
 	if jm := os.Getenv("VOX_EVAL_JUDGE_MODEL"); jm != "" {
 		judgeCfg.Model = jm
 	}
-	judgeCfg.MaxRetries = 2
-	judgeClient := llm.NewClient(judgeCfg)
 
-	return targetClient, judgeClient
+	return llm.NewClient(targetCfg), llm.NewClient(judgeCfg)
 }
 
 // harnessCase holds the per-case info needed by the eval harness.
