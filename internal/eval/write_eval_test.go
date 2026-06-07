@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -255,14 +257,7 @@ func TestWriteEval(t *testing.T) {
 				}
 				if line.Style != "" {
 					validStylesForChar := ec.ValidStyles[line.SpeakerRole]
-					styleValid := false
-					for _, s := range validStylesForChar {
-						if s == line.Style {
-							styleValid = true
-							break
-						}
-					}
-					if !styleValid {
+					if !slices.Contains(validStylesForChar, line.Style) {
 						t.Errorf("*** CONSTRAINT VIOLATION *** [%s] lines[%d].style=%q is not valid for speaker %q (valid: %v)",
 							c.Name, i, line.Style, line.SpeakerRole, validStylesForChar)
 					}
@@ -276,10 +271,7 @@ func TestWriteEval(t *testing.T) {
 
 			isFinalCorner := len(ec.Program.Corners) > 0 &&
 				ec.Program.Corners[len(ec.Program.Corners)-1].Title == ec.Corner.Title
-			isFinalCornerStr := "false"
-			if isFinalCorner {
-				isFinalCornerStr = "true"
-			}
+			isFinalCornerStr := strconv.FormatBool(isFinalCorner)
 
 			return map[string]string{
 				"corner":          string(cornerJSON),
