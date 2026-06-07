@@ -7,9 +7,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -17,83 +14,58 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
-// testdataDir is resolved once at init time using runtime.Caller.
-var testdataDir string
-
-func init() {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("runtime.Caller failed")
-	}
-	testdataDir = filepath.Join(filepath.Dir(thisFile), "testdata")
+// summarizeArticle mirrors the input format for summarize.md.
+type summarizeArticle struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
-func testdataPath(filename string) string {
-	return filepath.Join(testdataDir, filename)
+// summarizeCase is one entry in the summarize testdata files.
+type summarizeCase struct {
+	Name        string           `json:"name"`
+	Category    string           `json:"category"`
+	Article     summarizeArticle `json:"article"`
+	Expectation string           `json:"expectation,omitempty"`
 }
 
-// proofreadLine mirrors the input format for proofread.md.
-type proofreadLine struct {
-	CornerIndex   int    `json:"corner_index"`
-	LineIndex     int    `json:"line_index"`
-	OriginalText  string `json:"original_text"`
-	ConvertedText string `json:"converted_text"`
-}
-
-// proofreadCase is one entry in the testdata files.
-type proofreadCase struct {
-	Name        string          `json:"name"`
-	Category    string          `json:"category"`
-	Lines       []proofreadLine `json:"lines"`
-	Expectation string          `json:"expectation,omitempty"`
-}
-
-func loadCases(t *testing.T, filename string) []proofreadCase {
+func loadSummarizeCases(t *testing.T, filename string) []summarizeCase {
 	t.Helper()
 	data, err := os.ReadFile(testdataPath(filename))
 	if err != nil {
 		t.Fatalf("read %s: %v", filename, err)
 	}
-	var cases []proofreadCase
+	var cases []summarizeCase
 	if err := json.Unmarshal(data, &cases); err != nil {
 		t.Fatalf("parse %s: %v", filename, err)
 	}
 	return cases
 }
 
-func loadJudgePrompt(t *testing.T) string {
+func loadSummarizeJudgePrompt(t *testing.T) string {
 	t.Helper()
-	data, err := os.ReadFile(testdataPath("proofread_judge.md"))
+	data, err := os.ReadFile(testdataPath("summarize_judge.md"))
 	if err != nil {
-		t.Fatalf("read judge prompt: %v", err)
+		t.Fatalf("read summarize judge prompt: %v", err)
 	}
 	return string(data)
 }
 
-var correctionsSchema = json.RawMessage(`{
-	"type": "object",
-	"required": ["corrections"],
-	"properties": {
-		"corrections": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["corner_index", "line_index", "text"],
-				"properties": {
-					"corner_index": {"type": "integer", "minimum": 0},
-					"line_index":   {"type": "integer", "minimum": 0},
-					"text":         {"type": "string"},
-					"reason":       {"type": "string"}
-				},
-				"additionalProperties": false
-			}
-		}
-	},
-	"additionalProperties": false
+// summarizeSchema is the JSON schema for the summarize.md output.
+var summarizeSchema = json.RawMessage(`{
+  "type": "object",
+  "required": ["summary", "points"],
+  "properties": {
+    "summary": {"type": "string"},
+    "points": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
 }`)
 
-// proofreadJudgeSchema is the JSON schema for the proofread judge LLM output.
-var proofreadJudgeSchema = json.RawMessage(`{
+// summarizeJudgeSchema is the JSON schema for the summarize judge LLM output.
+var summarizeJudgeSchema = json.RawMessage(`{
   "type": "object",
   "required": ["scores"],
   "properties": {
@@ -105,7 +77,7 @@ var proofreadJudgeSchema = json.RawMessage(`{
         "properties": {
           "criterion": {
             "type": "string",
-            "enum": ["detection_recall", "false_positive_suppression", "correction_accuracy", "reason_validity"]
+            "enum": ["faithfulness", "coverage", "conciseness", "format_compliance"]
           },
           "score": {"type": "integer", "minimum": 1, "maximum": 5},
           "reason": {"type": "string"}
@@ -117,41 +89,16 @@ var proofreadJudgeSchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
-func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt, linesJSON string) (json.RawMessage, error) {
+func runSummarize(ctx context.Context, t *testing.T, client llm.Client, summarizePrompt string, articleJSON string) (json.RawMessage, error) {
 	t.Helper()
-	prompt := strings.NewReplacer("{{lines}}", linesJSON).Replace(proofreadPrompt)
+	prompt := strings.NewReplacer("{{article}}", articleJSON).Replace(summarizePrompt)
 	return client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema: correctionsSchema,
+		JSONSchema: summarizeSchema,
 	})
 }
 
-func getEnvFloat(key string, defaultVal float64) (float64, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	return strconv.ParseFloat(v, 64)
-}
-
-func getEnvInt(key string, defaultVal int) (int, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	n, err := strconv.Atoi(v)
-	return n, err
-}
-
-func getEnvInt64(key string, defaultVal int64) (int64, error) {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultVal, nil
-	}
-	return strconv.ParseInt(v, 10, 64)
-}
-
-func TestProofreadEval(t *testing.T) {
+func TestSummarizeEval(t *testing.T) {
 	if os.Getenv("GEMINI_API_KEY") == "" {
 		t.Skip("GEMINI_API_KEY not set")
 	}
@@ -169,9 +116,9 @@ func TestProofreadEval(t *testing.T) {
 	judgeCfg.MaxRetries = 2
 	judgeClient := llm.NewClient(judgeCfg)
 
-	threshold, err := getEnvFloat("VOX_EVAL_PROOFREAD_THRESHOLD", 4.0)
+	threshold, err := getEnvFloat("VOX_EVAL_SUMMARIZE_THRESHOLD", 4.0)
 	if err != nil {
-		t.Fatalf("parse VOX_EVAL_PROOFREAD_THRESHOLD: %v", err)
+		t.Fatalf("parse VOX_EVAL_SUMMARIZE_THRESHOLD: %v", err)
 	}
 
 	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
@@ -184,16 +131,16 @@ func TestProofreadEval(t *testing.T) {
 		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
 	}
 
-	proofreadPrompt, err := eval.LoadPrompt("proofread")
+	summarizePrompt, err := eval.LoadPrompt("summarize")
 	if err != nil {
-		t.Fatalf("load proofread prompt: %v", err)
+		t.Fatalf("load summarize prompt: %v", err)
 	}
 
-	judgePrompt := loadJudgePrompt(t)
+	judgePrompt := loadSummarizeJudgePrompt(t)
 
 	// Load test sets.
-	regressionCases := loadCases(t, "proofread_regression_cases.json")
-	poolCases := loadCases(t, "proofread_pool_cases.json")
+	regressionCases := loadSummarizeCases(t, "summarize_regression_cases.json")
+	poolCases := loadSummarizeCases(t, "summarize_pool_cases.json")
 
 	sampled := eval.Sample(poolCases, sampleSize, seed)
 	sampledNames := make([]string, len(sampled))
@@ -204,7 +151,7 @@ func TestProofreadEval(t *testing.T) {
 
 	// Bundle all cases: regression (all) + generalization (sampled).
 	type evaluationCase struct {
-		proofreadCase
+		summarizeCase
 		setType string
 	}
 	var allCases []evaluationCase
@@ -221,20 +168,20 @@ func TestProofreadEval(t *testing.T) {
 	for _, ec := range allCases {
 		t.Logf("evaluating [%s] %s ...", ec.setType, ec.Name)
 
-		// Marshal lines once; reuse for proofread prompt and judge input.
-		linesJSONBytes, err := json.Marshal(ec.Lines)
+		// Marshal article for use in summarize prompt and judge input.
+		articleJSONBytes, err := json.Marshal(ec.Article)
 		if err != nil {
-			t.Fatalf("marshal lines for case %s: %v", ec.Name, err)
+			t.Fatalf("marshal article for case %s: %v", ec.Name, err)
 		}
-		linesJSON := string(linesJSONBytes)
+		articleJSON := string(articleJSONBytes)
 
-		// Step 1: run proofread.
-		raw, err := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
+		// Step 1: run summarize.
+		raw, err := runSummarize(ctx, t, targetClient, summarizePrompt, articleJSON)
 		if err != nil {
 			if eval.IsInconclusive(err) {
-				t.Skipf("proofread API call failed (inconclusive) for case %s: %v", ec.Name, err)
+				t.Skipf("summarize API call failed (inconclusive) for case %s: %v", ec.Name, err)
 			}
-			t.Fatalf("proofread failed for case %s: %v", ec.Name, err)
+			t.Fatalf("summarize failed for case %s: %v", ec.Name, err)
 		}
 
 		// Step 2: judge.
@@ -242,11 +189,11 @@ func TestProofreadEval(t *testing.T) {
 		if expectation == "" {
 			expectation = "（なし）"
 		}
-		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, proofreadJudgeSchema, eval.JudgeInput{
+		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, summarizeJudgeSchema, eval.JudgeInput{
 			Placeholders: map[string]string{
-				"lines":       linesJSON,
-				"corrections": string(raw),
-				"expectation": expectation,
+				"article":        articleJSON,
+				"summary_output": string(raw),
+				"expectation":    expectation,
 			},
 		})
 		if err != nil {
@@ -276,7 +223,7 @@ func TestProofreadEval(t *testing.T) {
 
 	t.Logf("=== Aggregated scores ===")
 	t.Logf("overall average: %.2f (threshold: %.2f)", agg.Overall, threshold)
-	for _, c := range eval.AllCriteria {
+	for _, c := range eval.AllSummarizeCriteria {
 		t.Logf("  %s: %.2f", c, agg.ByCriterion[c])
 	}
 

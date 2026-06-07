@@ -19,6 +19,25 @@ func (m *mockLLMClient) Complete(_ context.Context, _ llm.CompletionRequest) (js
 	return m.response, m.err
 }
 
+var testSchema = json.RawMessage(`{
+  "type": "object",
+  "required": ["scores"],
+  "properties": {
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "score", "reason"],
+        "properties": {
+          "criterion": {"type": "string"},
+          "score": {"type": "integer", "minimum": 1, "maximum": 5},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}`)
+
 func TestJudge_ParsesScores(t *testing.T) {
 	resp := json.RawMessage(`{"scores":[
 		{"criterion":"detection_recall","score":5,"reason":"全て検出"},
@@ -28,10 +47,12 @@ func TestJudge_ParsesScores(t *testing.T) {
 	]}`)
 	client := &mockLLMClient{response: resp}
 
-	scores, err := Judge(context.Background(), client, "{{lines}} {{corrections}} {{expectation}}", JudgeInput{
-		LinesJSON:       `[]`,
-		CorrectionsJSON: `{"corrections":[]}`,
-		Expectation:     "corrections は空であるべき",
+	scores, err := Judge(context.Background(), client, "{{lines}} {{corrections}} {{expectation}}", testSchema, JudgeInput{
+		Placeholders: map[string]string{
+			"lines":       `[]`,
+			"corrections": `{"corrections":[]}`,
+			"expectation": "corrections は空であるべき",
+		},
 	})
 	if err != nil {
 		t.Fatalf("Judge: %v", err)
@@ -47,37 +68,49 @@ func TestJudge_ParsesScores(t *testing.T) {
 	}
 }
 
-func TestJudge_EmptyExpectationFilled(t *testing.T) {
-	client := &mockLLMClient{
-		response: json.RawMessage(`{"scores":[
-			{"criterion":"detection_recall","score":5,"reason":"ok"},
-			{"criterion":"false_positive_suppression","score":5,"reason":"ok"},
-			{"criterion":"correction_accuracy","score":5,"reason":"ok"},
-			{"criterion":"reason_validity","score":5,"reason":"ok"}
-		]}`),
+func TestJudge_PlaceholderReplacement(t *testing.T) {
+	var capturedPrompt string
+	client := &capturingClient{
+		response: json.RawMessage(`{"scores":[]}`),
+		onComplete: func(req llm.CompletionRequest) {
+			capturedPrompt = req.Messages[0].Content
+		},
 	}
 
-	// Empty Expectation should use "（なし）" as fallback without error.
-	scores, err := Judge(context.Background(), client, "{{expectation}}", JudgeInput{
-		LinesJSON:       `[]`,
-		CorrectionsJSON: `{}`,
-		Expectation:     "",
+	_, err := Judge(context.Background(), client, "input={{article}} expectation={{expectation}}", testSchema, JudgeInput{
+		Placeholders: map[string]string{
+			"article":     `{"title":"test"}`,
+			"expectation": "良い要約であるべき",
+		},
 	})
 	if err != nil {
-		t.Fatalf("Judge with empty expectation: %v", err)
+		t.Fatalf("Judge: %v", err)
 	}
-	if len(scores) == 0 {
-		t.Error("expected scores from judge")
+	if want := `input={"title":"test"} expectation=良い要約であるべき`; capturedPrompt != want {
+		t.Errorf("prompt = %q, want %q", capturedPrompt, want)
 	}
 }
 
 func TestJudge_LLMError(t *testing.T) {
 	client := &mockLLMClient{err: errors.New("http do: connection refused")}
-	_, err := Judge(context.Background(), client, "prompt", JudgeInput{
-		LinesJSON:       `[]`,
-		CorrectionsJSON: `{}`,
+	_, err := Judge(context.Background(), client, "prompt", testSchema, JudgeInput{
+		Placeholders: map[string]string{},
 	})
 	if err == nil {
 		t.Fatal("expected error from Judge when LLM fails")
 	}
+}
+
+// capturingClient captures the CompletionRequest for inspection in tests.
+type capturingClient struct {
+	response   json.RawMessage
+	err        error
+	onComplete func(llm.CompletionRequest)
+}
+
+func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
+	if c.onComplete != nil {
+		c.onComplete(req)
+	}
+	return c.response, c.err
 }
