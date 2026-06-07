@@ -22,73 +22,75 @@ func TestResolveExpectation(t *testing.T) {
 }
 
 func TestCriterionValues(t *testing.T) {
-	criteria := []Criterion{
-		CriterionDetectionRecall,
-		CriterionFalsePositiveSuppression,
-		CriterionCorrectionAccuracy,
-		CriterionReasonValidity,
-		CriterionFaithfulness,
-		CriterionCoverage,
-		CriterionConciseness,
-		CriterionSpecificity,
-		CriterionFormatCompliance,
-		CriterionSummaryQuality,
-		CriterionEpisodeTitleQuality,
-		CriterionNotesFaithfulness,
-		CriterionNotesCoverage,
-	}
-	for _, c := range criteria {
+	all := slices.Concat(AllCriteria, AllSummarizeCriteria, AllCornerSummaryCriteria, AllSummaryCriteria, AllSelectCriteria)
+	for _, c := range all {
 		if c == "" {
 			t.Errorf("criterion should not be empty string")
 		}
 	}
 }
 
-func TestAllCriteria(t *testing.T) {
-	want := []Criterion{
-		CriterionDetectionRecall,
-		CriterionFalsePositiveSuppression,
-		CriterionCorrectionAccuracy,
-		CriterionReasonValidity,
+func TestAllXxxCriteria(t *testing.T) {
+	tests := []struct {
+		name string
+		got  []Criterion
+		want []Criterion
+	}{
+		{
+			name: "AllCriteria",
+			got:  AllCriteria,
+			want: []Criterion{
+				CriterionDetectionRecall,
+				CriterionFalsePositiveSuppression,
+				CriterionCorrectionAccuracy,
+				CriterionReasonValidity,
+			},
+		},
+		{
+			name: "AllSummarizeCriteria",
+			got:  AllSummarizeCriteria,
+			want: []Criterion{
+				CriterionFaithfulness,
+				CriterionCoverage,
+				CriterionConciseness,
+				CriterionFormatCompliance,
+			},
+		},
+		{
+			name: "AllCornerSummaryCriteria",
+			got:  AllCornerSummaryCriteria,
+			want: []Criterion{
+				CriterionFaithfulness,
+				CriterionCoverage,
+				CriterionSpecificity,
+				CriterionFormatCompliance,
+			},
+		},
+		{
+			name: "AllSummaryCriteria",
+			got:  AllSummaryCriteria,
+			want: []Criterion{
+				CriterionSummaryQuality,
+				CriterionEpisodeTitleQuality,
+				CriterionNotesFaithfulness,
+				CriterionNotesCoverage,
+			},
+		},
+		{
+			name: "AllSelectCriteria",
+			got:  AllSelectCriteria,
+			want: []Criterion{
+				CriterionRelevance,
+				CriterionConstraintCompliance,
+				CriterionOrderingQuality,
+				CriterionReasonValidity,
+			},
+		},
 	}
-	if !slices.Equal(AllCriteria, want) {
-		t.Errorf("AllCriteria = %v, want %v", AllCriteria, want)
-	}
-}
-
-func TestAllSummarizeCriteria(t *testing.T) {
-	want := []Criterion{
-		CriterionFaithfulness,
-		CriterionCoverage,
-		CriterionConciseness,
-		CriterionFormatCompliance,
-	}
-	if !slices.Equal(AllSummarizeCriteria, want) {
-		t.Errorf("AllSummarizeCriteria = %v, want %v", AllSummarizeCriteria, want)
-	}
-}
-
-func TestAllCornerSummaryCriteria(t *testing.T) {
-	want := []Criterion{
-		CriterionFaithfulness,
-		CriterionCoverage,
-		CriterionSpecificity,
-		CriterionFormatCompliance,
-	}
-	if !slices.Equal(AllCornerSummaryCriteria, want) {
-		t.Errorf("AllCornerSummaryCriteria = %v, want %v", AllCornerSummaryCriteria, want)
-	}
-}
-
-func TestAllSummaryCriteria(t *testing.T) {
-	want := []Criterion{
-		CriterionSummaryQuality,
-		CriterionEpisodeTitleQuality,
-		CriterionNotesFaithfulness,
-		CriterionNotesCoverage,
-	}
-	if !slices.Equal(AllSummaryCriteria, want) {
-		t.Errorf("AllSummaryCriteria = %v, want %v", AllSummaryCriteria, want)
+	for _, tt := range tests {
+		if !slices.Equal(tt.got, tt.want) {
+			t.Errorf("%s = %v, want %v", tt.name, tt.got, tt.want)
+		}
 	}
 }
 

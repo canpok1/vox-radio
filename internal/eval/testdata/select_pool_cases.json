@@ -1,0 +1,122 @@
+[
+  {
+    "name": "infra_corner_mixed_articles",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "metan", "role": "MC", "type": "regular", "appearance_count": 7},
+      {"character_id": "zundamon", "role": "アシスタント", "type": "regular", "appearance_count": 7}
+    ],
+    "corner": {
+      "title": "インフラ・クラウドニュース",
+      "content": "クラウドインフラ・DevOps・コンテナ技術に関するニュースを2〜3本紹介するコーナー。",
+      "target_duration_seconds": 240
+    },
+    "articles": [
+      {"url": "https://example.com/docker-security", "title": "Dockerコンテナのセキュリティ強化：最新ベストプラクティス"},
+      {"url": "https://example.com/aws-lambda-update", "title": "AWS Lambdaが新機能追加：実行時間制限が最大15分に延長"},
+      {"url": "https://example.com/frontend-css", "title": "CSSコンテナクエリの使い方：レスポンシブデザインの新手法"},
+      {"url": "https://example.com/terraform-module", "title": "Terraformモジュールの設計パターン：再利用性を高める方法"},
+      {"url": "https://example.com/nodejs-update", "title": "Node.js 22リリース：パフォーマンス改善と新API"},
+      {"url": "https://example.com/gcp-bigquery", "title": "BigQueryの新料金体系発表：コスト最適化のポイント"}
+    ]
+  },
+  {
+    "name": "security_corner_diverse",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "kiritan", "role": "MC", "type": "guest", "appearance_count": 1},
+      {"character_id": "metan", "role": "ホスト", "type": "regular", "appearance_count": 15}
+    ],
+    "corner": {
+      "title": "サイバーセキュリティ最前線",
+      "content": "サイバーセキュリティに関する最新ニュースを2〜3本紹介する。脆弱性・攻撃手法・防御対策を扱う。",
+      "target_duration_seconds": 270
+    },
+    "articles": [
+      {"url": "https://example.com/ransomware-trend", "title": "2024年ランサムウェア攻撃の動向：被害額が過去最高を更新"},
+      {"url": "https://example.com/zero-trust", "title": "ゼロトラストアーキテクチャ導入事例：中小企業での実装"},
+      {"url": "https://example.com/python-update", "title": "Python 3.13リリース：型ヒントの改善とパフォーマンス向上"},
+      {"url": "https://example.com/oauth-vuln", "title": "OAuth 2.0実装の脆弱性：フィッシング攻撃への悪用リスク"},
+      {"url": "https://example.com/game-dev", "title": "インディーゲーム開発のビジネスモデル：Steam成功事例分析"}
+    ]
+  },
+  {
+    "name": "beginner_friendly_corner",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 20},
+      {"character_id": "ankomon", "role": "アシスタント", "type": "guest", "appearance_count": 0}
+    ],
+    "corner": {
+      "title": "はじめてのプログラミング",
+      "content": "プログラミング初心者向けの情報を紹介するコーナー。入門記事・学習方法・ツール紹介などを2本程度紹介する。",
+      "target_duration_seconds": 200
+    },
+    "articles": [
+      {"url": "https://example.com/python-beginner", "title": "Python完全入門：ゼロから始めるプログラミング学習"},
+      {"url": "https://example.com/microservices-adv", "title": "マイクロサービス設計の落とし穴：大規模システムの失敗事例"},
+      {"url": "https://example.com/scratch-kids", "title": "Scratchで学ぶプログラミング的思考：小学生でも楽しめる"},
+      {"url": "https://example.com/kubernetes-adv", "title": "本番Kubernetesクラスターの運用：SREが教えるベストプラクティス"},
+      {"url": "https://example.com/vscode-tips", "title": "VSCode初心者向けおすすめ拡張機能10選"}
+    ]
+  },
+  {
+    "name": "oss_community_corner",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "metan", "role": "MC", "type": "regular", "appearance_count": 6}
+    ],
+    "corner": {
+      "title": "OSSコミュニティニュース",
+      "content": "オープンソースソフトウェアのリリース・コミュニティ動向・ライセンス問題などを3〜4本紹介するコーナー。",
+      "target_duration_seconds": 360
+    },
+    "articles": [
+      {"url": "https://example.com/linux-kernel-update", "title": "Linux Kernel 6.9リリース：主要変更点まとめ"},
+      {"url": "https://example.com/redis-license", "title": "RedisのライセンスをBSDからSSPLへ変更：コミュニティの反応"},
+      {"url": "https://example.com/valkey-fork", "title": "Redis代替のValkey：Linux Foundation主導でフォーク開始"},
+      {"url": "https://example.com/stock-market", "title": "日本株式市場の動向：テック株に注目集まる"},
+      {"url": "https://example.com/apache-arrow", "title": "Apache Arrowの採用が加速：データエンジニアリングでの活用事例"},
+      {"url": "https://example.com/sports-news", "title": "プロ野球開幕戦：各球団の戦力分析"}
+    ]
+  },
+  {
+    "name": "short_duration_corner",
+    "category": "edge_case",
+    "casts": [
+      {"character_id": "zundamon", "role": "MC", "type": "regular", "appearance_count": 4},
+      {"character_id": "zunko", "role": "アシスタント", "type": "regular", "appearance_count": 4}
+    ],
+    "corner": {
+      "title": "速報ニュース",
+      "content": "本日の速報技術ニュースを1本だけ紹介するコーナー。最も注目度の高い1件に絞る。",
+      "target_duration_seconds": 90
+    },
+    "articles": [
+      {"url": "https://example.com/chatgpt-outage", "title": "ChatGPTが大規模障害：世界中で数時間アクセス不能に"},
+      {"url": "https://example.com/github-actions", "title": "GitHub Actionsに新機能：ジョブの一時停止と再開が可能に"},
+      {"url": "https://example.com/openai-new-model", "title": "OpenAIが次世代モデル発表：GPT-5の性能と価格を公開"},
+      {"url": "https://example.com/fashion-trends", "title": "2024年春夏ファッショントレンド：シンプルが鍵"}
+    ]
+  },
+  {
+    "name": "first_appearance_guest_corner",
+    "category": "article_selection",
+    "casts": [
+      {"character_id": "metan", "role": "MC", "type": "regular", "appearance_count": 9},
+      {"character_id": "itako", "role": "ゲスト", "type": "guest", "appearance_count": 0}
+    ],
+    "corner": {
+      "title": "週刊Webフロントエンド",
+      "content": "Webフロントエンド開発に関するニュース・ライブラリ更新・ブラウザ新機能などを2〜3本紹介するコーナー。",
+      "target_duration_seconds": 270
+    },
+    "articles": [
+      {"url": "https://example.com/react-19", "title": "React 19リリース：Server ComponentsとActionsが正式対応"},
+      {"url": "https://example.com/chrome-update", "title": "Chrome 124：Web標準の新機能とパフォーマンス改善"},
+      {"url": "https://example.com/backend-go", "title": "GoでのAPIサーバー実装：gRPC vs REST比較"},
+      {"url": "https://example.com/css-houdini", "title": "CSS Houdini APIの実用化：カスタムペイントの活用例"},
+      {"url": "https://example.com/database-orm", "title": "TypeScript向けORMの比較：Prisma vs Drizzle"}
+    ]
+  }
+]

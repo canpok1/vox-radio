@@ -13,13 +13,13 @@ import (
 type Criterion string
 
 const (
-	// Proofread evaluation criteria.
+	// Proofread-only evaluation criteria.
 	CriterionDetectionRecall          Criterion = "detection_recall"
 	CriterionFalsePositiveSuppression Criterion = "false_positive_suppression"
 	CriterionCorrectionAccuracy       Criterion = "correction_accuracy"
-	CriterionReasonValidity           Criterion = "reason_validity"
 
 	// Shared evaluation criteria (used by multiple prompts).
+	CriterionReasonValidity   Criterion = "reason_validity"
 	CriterionFaithfulness     Criterion = "faithfulness"
 	CriterionCoverage         Criterion = "coverage"
 	CriterionFormatCompliance Criterion = "format_compliance"
@@ -35,6 +35,11 @@ const (
 	CriterionEpisodeTitleQuality Criterion = "episode_title_quality"
 	CriterionNotesFaithfulness   Criterion = "notes_faithfulness"
 	CriterionNotesCoverage       Criterion = "notes_coverage"
+
+	// Select-only evaluation criteria.
+	CriterionRelevance            Criterion = "relevance"
+	CriterionConstraintCompliance Criterion = "constraint_compliance"
+	CriterionOrderingQuality      Criterion = "ordering_quality"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -67,6 +72,14 @@ var AllSummaryCriteria = []Criterion{
 	CriterionEpisodeTitleQuality,
 	CriterionNotesFaithfulness,
 	CriterionNotesCoverage,
+}
+
+// AllSelectCriteria lists all select scoring dimensions in canonical order.
+var AllSelectCriteria = []Criterion{
+	CriterionRelevance,
+	CriterionConstraintCompliance,
+	CriterionOrderingQuality,
+	CriterionReasonValidity,
 }
 
 // ScoreEntry holds the score and reason for one criterion.
