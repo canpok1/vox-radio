@@ -804,3 +804,60 @@ func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestProofreadResult_RoundTrip(t *testing.T) {
+	pr := model.ProofreadResult{
+		Corrections: []model.ProofreadCorrection{
+			{CornerIndex: 0, LineIndex: 1, Before: "まえ", After: "あと", Reason: "理由"},
+		},
+	}
+	data, err := json.Marshal(pr)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var got model.ProofreadResult
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(got.Corrections) != 1 {
+		t.Fatalf("Corrections: got %d, want 1", len(got.Corrections))
+	}
+	c := got.Corrections[0]
+	if c.CornerIndex != 0 {
+		t.Errorf("CornerIndex: got %d, want 0", c.CornerIndex)
+	}
+	if c.LineIndex != 1 {
+		t.Errorf("LineIndex: got %d, want 1", c.LineIndex)
+	}
+	if c.Before != "まえ" {
+		t.Errorf("Before: got %q, want まえ", c.Before)
+	}
+	if c.After != "あと" {
+		t.Errorf("After: got %q, want あと", c.After)
+	}
+	if c.Reason != "理由" {
+		t.Errorf("Reason: got %q, want 理由", c.Reason)
+	}
+}
+
+func TestProofreadResult_EmptyCorrections_NotNull(t *testing.T) {
+	pr := model.ProofreadResult{Corrections: make([]model.ProofreadCorrection, 0)}
+	data, err := json.Marshal(pr)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if !strings.Contains(string(data), `"corrections":[]`) {
+		t.Errorf("corrections should be [] not null: %s", string(data))
+	}
+}
+
+func TestProofreadCorrection_ReasonOmittedWhenEmpty(t *testing.T) {
+	c := model.ProofreadCorrection{CornerIndex: 0, LineIndex: 0, Before: "a", After: "b"}
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if strings.Contains(string(data), `"reason"`) {
+		t.Errorf("reason should be omitted when empty: %s", string(data))
+	}
+}

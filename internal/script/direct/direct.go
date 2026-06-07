@@ -92,23 +92,8 @@ type cornerLLMPayload struct {
 	Lines     []model.Line `json:"lines"`
 }
 
-// ProofreadCorrection represents a single correction made by the proofreading pass.
-type ProofreadCorrection struct {
-	CornerIndex int    `json:"corner_index"`
-	LineIndex   int    `json:"line_index"`
-	Before      string `json:"before"`
-	After       string `json:"after"`
-	Reason      string `json:"reason,omitempty"`
-}
-
-// ProofreadResult holds the result of a proofreading pass, including all corrections applied.
-// Non-nil means the proofreading LLM ran successfully (even if Corrections is empty).
-type ProofreadResult struct {
-	Corrections []ProofreadCorrection `json:"corrections"`
-}
-
 type Director interface {
-	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *ProofreadResult, error)
+	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *model.ProofreadResult, error)
 }
 
 type insertion struct {
@@ -185,7 +170,7 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return d
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *ProofreadResult, error) {
+func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *model.ProofreadResult, error) {
 	payload := make([]cornerLLMPayload, len(corners))
 	for i, c := range corners {
 		payload[i] = cornerLLMPayload{
@@ -226,14 +211,14 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 	}
 
 	lineConversions := resp.LineConversions
-	var pr *ProofreadResult
+	var pr *model.ProofreadResult
 
 	if d.proofread != nil {
 		corrections, beforeMap, err := d.runProofread(ctx, corners, lineConversions)
 		if err != nil {
 			slog.Default().Warn("proofread failed, using direct conversion", "err", err)
 		} else {
-			cs := make([]ProofreadCorrection, 0, len(corrections))
+			cs := make([]model.ProofreadCorrection, 0, len(corrections))
 			for _, c := range corrections {
 				lineConversions = append(lineConversions, lineConversion{
 					CornerIndex: c.CornerIndex,
@@ -241,7 +226,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 					Text:        c.Text,
 				})
 				before := beforeMap[insertKey{c.CornerIndex, c.LineIndex}]
-				cs = append(cs, ProofreadCorrection{
+				cs = append(cs, model.ProofreadCorrection{
 					CornerIndex: c.CornerIndex,
 					LineIndex:   c.LineIndex,
 					Before:      before,
@@ -249,7 +234,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 					Reason:      c.Reason,
 				})
 			}
-			pr = &ProofreadResult{Corrections: cs}
+			pr = &model.ProofreadResult{Corrections: cs}
 		}
 	}
 

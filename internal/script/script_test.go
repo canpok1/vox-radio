@@ -13,7 +13,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
-	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/write"
 )
 
@@ -47,11 +46,11 @@ func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner con
 
 type mockDirector struct {
 	script          model.Script
-	proofreadResult *direct.ProofreadResult
+	proofreadResult *model.ProofreadResult
 	err             error
 }
 
-func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, *direct.ProofreadResult, error) {
+func (m *mockDirector) Direct(_ context.Context, corners []model.CornerLines, _ model.AssetCatalog, _ string) (model.Script, *model.ProofreadResult, error) {
 	if m.err != nil {
 		return model.Script{}, nil, m.err
 	}
@@ -736,8 +735,8 @@ func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T)
 		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 
-	pr := &direct.ProofreadResult{
-		Corrections: []direct.ProofreadCorrection{
+	pr := &model.ProofreadResult{
+		Corrections: []model.ProofreadCorrection{
 			{CornerIndex: 0, LineIndex: 0, Before: "まえ", After: "あと", Reason: "理由"},
 		},
 	}
@@ -759,7 +758,7 @@ func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T)
 		t.Fatalf("expected %s to exist: %v", fileio.FileProofread, err)
 	}
 
-	var got direct.ProofreadResult
+	var got model.ProofreadResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
 	}
@@ -814,7 +813,7 @@ func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
 	}
 
 	// proofread ran but found 0 corrections
-	pr := &direct.ProofreadResult{Corrections: make([]direct.ProofreadCorrection, 0)}
+	pr := &model.ProofreadResult{Corrections: make([]model.ProofreadCorrection, 0)}
 	md := &mockDirector{proofreadResult: pr}
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
@@ -833,7 +832,7 @@ func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
 		t.Fatalf("expected %s to exist even with 0 corrections: %v", fileio.FileProofread, err)
 	}
 
-	var got direct.ProofreadResult
+	var got model.ProofreadResult
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
 	}
