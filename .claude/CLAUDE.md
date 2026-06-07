@@ -27,4 +27,5 @@
     ---
     🤖 Generated with [Claude Code](https://claude.ai/claude-code)
     ```
+  - 対応する Todoist タスクがある場合は、PR本文にそのタスクへのリンクを記載すること
   - 作成内容に不備がないか作成後に確認すること（例: レイアウトが崩れている、フッターが付与されていないなど）
