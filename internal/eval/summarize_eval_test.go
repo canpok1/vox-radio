@@ -5,7 +5,7 @@ package eval_test
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -81,18 +81,7 @@ func TestSummarizeEval(t *testing.T) {
 		t.Skip("GEMINI_API_KEY not set")
 	}
 
-	// Build LLM clients.
-	targetCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
-	targetCfg.MaxRetries = 2
-	targetClient := llm.NewClient(targetCfg)
-
-	// Judge model can be overridden via VOX_EVAL_JUDGE_MODEL.
-	judgeCfg := eval.BuildLLMConfig("GEMINI_API_KEY", "VOX_EVAL_MODEL", "VOX_EVAL_MIN_INTERVAL_MS")
-	if jm := os.Getenv("VOX_EVAL_JUDGE_MODEL"); jm != "" {
-		judgeCfg.Model = jm
-	}
-	judgeCfg.MaxRetries = 2
-	judgeClient := llm.NewClient(judgeCfg)
+	targetClient, judgeClient := buildEvalClients(t)
 
 	threshold, err := getEnvFloat("VOX_EVAL_SUMMARIZE_THRESHOLD", 4.0)
 	if err != nil {
@@ -116,7 +105,6 @@ func TestSummarizeEval(t *testing.T) {
 
 	judgePrompt := loadTestdataString(t, "summarize_judge.md")
 
-	// Load test sets.
 	regressionCases := loadCasesJSON[summarizeCase](t, "summarize_regression_cases.json")
 	poolCases := loadCasesJSON[summarizeCase](t, "summarize_pool_cases.json")
 
@@ -127,96 +115,48 @@ func TestSummarizeEval(t *testing.T) {
 	}
 	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
 
-	// Bundle all cases: regression (all) + generalization (sampled).
-	type evaluationCase struct {
-		summarizeCase
-		setType string
-	}
-	var allCases []evaluationCase
+	caseByName := make(map[string]summarizeCase, len(regressionCases)+len(sampled))
 	for _, c := range regressionCases {
-		allCases = append(allCases, evaluationCase{c, "regression"})
+		caseByName[c.Name] = c
 	}
 	for _, c := range sampled {
-		allCases = append(allCases, evaluationCase{c, "generalization"})
+		caseByName[c.Name] = c
+	}
+
+	var allCases []harnessCase
+	for _, c := range regressionCases {
+		allCases = append(allCases, harnessCase{c.Name, "regression"})
+	}
+	for _, c := range sampled {
+		allCases = append(allCases, harnessCase{c.Name, "generalization"})
 	}
 
 	ctx := context.Background()
-	var results []eval.CaseResult
 
-	for _, ec := range allCases {
-		t.Logf("evaluating [%s] %s ...", ec.setType, ec.Name)
-
-		// Marshal article for use in summarize prompt and judge input.
-		articleJSONBytes, err := json.Marshal(ec.Article)
-		if err != nil {
-			t.Fatalf("marshal article for case %s: %v", ec.Name, err)
-		}
-		articleJSON := string(articleJSONBytes)
-
-		// Step 1: run summarize.
-		raw, err := runSummarize(ctx, t, targetClient, summarizePrompt, articleJSON)
-		if err != nil {
-			if eval.IsInconclusive(err) {
-				t.Skipf("summarize API call failed (inconclusive) for case %s: %v", ec.Name, err)
+	runEvalHarness(ctx, t, allCases, harnessConfig{
+		Criteria:    eval.AllSummarizeCriteria,
+		JudgeClient: judgeClient,
+		JudgePrompt: judgePrompt,
+		JudgeSchema: summarizeJudgeSchema,
+		Threshold:   threshold,
+		RunCase: func(ctx context.Context, t *testing.T, c harnessCase) (map[string]string, error) {
+			ec := caseByName[c.Name]
+			articleJSONBytes, err := json.Marshal(ec.Article)
+			if err != nil {
+				return nil, fmt.Errorf("marshal article for case %s: %w", c.Name, err)
 			}
-			t.Fatalf("summarize failed for case %s: %v", ec.Name, err)
-		}
+			articleJSON := string(articleJSONBytes)
 
-		// Step 2: judge.
-		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, summarizeJudgeSchema, eval.JudgeInput{
-			Placeholders: map[string]string{
+			raw, err := runSummarize(ctx, t, targetClient, summarizePrompt, articleJSON)
+			if err != nil {
+				return nil, err
+			}
+
+			return map[string]string{
 				"article":        articleJSON,
 				"summary_output": string(raw),
 				"expectation":    eval.ResolveExpectation(ec.Expectation),
-			},
-		})
-		if err != nil {
-			if eval.IsInconclusive(err) {
-				t.Skipf("judge API call failed (inconclusive): %v", err)
-			}
-			t.Fatalf("judge failed for case %s: %v", ec.Name, err)
-		}
-
-		results = append(results, eval.CaseResult{
-			CaseName: ec.Name,
-			SetType:  ec.setType,
-			Scores:   scores,
-		})
-
-		for _, s := range scores {
-			t.Logf("  [%s] %s: %s=%d (%s)", ec.setType, ec.Name, s.Criterion, s.Score, s.Reason)
-		}
-	}
-
-	if len(results) == 0 {
-		t.Skip("no results collected (all cases inconclusive)")
-	}
-
-	// Aggregate.
-	agg := eval.AggregateScores(results)
-
-	t.Logf("=== Aggregated scores ===")
-	t.Logf("overall average: %.2f (threshold: %.2f)", agg.Overall, threshold)
-	for _, c := range eval.AllSummarizeCriteria {
-		t.Logf("  %s: %.2f", c, agg.ByCriterion[c])
-	}
-
-	// Check for regression failures with emphasis.
-	for _, r := range results {
-		if r.SetType != "regression" {
-			continue
-		}
-		caseAgg := eval.AggregateScores([]eval.CaseResult{r})
-		if caseAgg.Overall < threshold {
-			t.Errorf("*** REGRESSION CASE FAILED *** [%s] overall=%.2f < threshold=%.2f", r.CaseName, caseAgg.Overall, threshold)
-			for _, s := range r.Scores {
-				slog.Warn("regression failure detail", "case", r.CaseName, "criterion", s.Criterion, "score", s.Score, "reason", s.Reason)
-			}
-		}
-	}
-
-	// Overall quality check.
-	if agg.Overall < threshold {
-		t.Errorf("overall average %.2f is below threshold %.2f", agg.Overall, threshold)
-	}
+			}, nil
+		},
+	})
 }
