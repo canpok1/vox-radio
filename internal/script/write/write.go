@@ -204,7 +204,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{program_script_note}}", programScriptNoteStr,
 	).Replace(w.promptTemplate)
 
-	schema := buildLinesSchema(presets)
+	schema := BuildLinesSchema(sortedKeys(presets.Intonation), sortedKeys(presets.Pitch), sortedKeys(presets.Speed))
 
 	raw, err := w.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
@@ -230,16 +230,18 @@ func (w *LLMWriter) effectivePresets() config.VoicevoxPresets {
 	return w.config.Voicevox.EffectivePresets()
 }
 
-// buildLinesSchema generates a JSON Schema for the lines response, with intonation/pitch/speed
-// enum values derived from the given presets.
-func buildLinesSchema(presets config.VoicevoxPresets) json.RawMessage {
-	intonationEnum := sortedKeys(presets.Intonation)
-	pitchEnum := sortedKeys(presets.Pitch)
-	speedEnum := sortedKeys(presets.Speed)
-
-	intonationEnumJSON, _ := json.Marshal(intonationEnum)
-	pitchEnumJSON, _ := json.Marshal(pitchEnum)
-	speedEnumJSON, _ := json.Marshal(speedEnum)
+// BuildLinesSchema generates a JSON Schema for the lines response, with intonation/pitch/speed
+// enum values derived from the given slices. Input slices are sorted before embedding.
+func BuildLinesSchema(intonation, pitch, speed []string) json.RawMessage {
+	copyAndSort := func(s []string) []string {
+		c := make([]string, len(s))
+		copy(c, s)
+		sort.Strings(c)
+		return c
+	}
+	intonationEnumJSON, _ := json.Marshal(copyAndSort(intonation))
+	pitchEnumJSON, _ := json.Marshal(copyAndSort(pitch))
+	speedEnumJSON, _ := json.Marshal(copyAndSort(speed))
 
 	return json.RawMessage(fmt.Sprintf(`{
   "type": "object",
