@@ -1,0 +1,62 @@
+[
+  {
+    "name": "rich_banter_episode",
+    "category": "banter_rich",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今日はPythonの非同期処理について話すのだ。"},
+      {"speaker": "metan", "text": "asyncioですね。最近あたくしもよく使います。"},
+      {"speaker": "zundamon", "text": "async/awaitで書くとコードがすっきりするよね。"},
+      {"speaker": "metan", "text": "ところで、昨日カフェで作業してたんですが、隣の人のPCの壁紙がうちの番組のキャラクターで驚きましたわ。"},
+      {"speaker": "zundamon", "text": "え、それはびっくりなのだ！リスナーさんかな？"},
+      {"speaker": "metan", "text": "声をかけようか迷って結局かけられなかったんです。"},
+      {"speaker": "zundamon", "text": "それは惜しかったのだ〜。次は勇気出して声かけてほしいのだ。"},
+      {"speaker": "metan", "text": "そうですわね！では本題に戻りますが、asyncioのイベントループの仕組みも重要で…"},
+      {"speaker": "zundamon", "text": "そうなのだ。タスクを並列で走らせるとパフォーマンスが上がるのだ。"}
+    ],
+    "summary_length": 200,
+    "expectation": "summaryはPythonのasyncio・async/await・イベントループによる非同期処理について200文字程度で具体的に述べること。episode_titleは「Pythonの非同期処理」等この回固有の内容を15〜30文字で表すこと（番組名や「第○回」は含まない）。conversation_notesには「めたんがカフェでリスナーと思われる人を見かけたが声をかけられなかった」というエピソードが含まれていること。character_idsはzundamonおよびmetanのみで存在しないIDを創作しないこと。"
+  },
+  {
+    "name": "factual_only_episode",
+    "category": "no_banter",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はDockerの基礎について解説します。"},
+      {"speaker": "metan", "text": "DockerはコンテナによってアプリをOSから分離して動かす技術です。"},
+      {"speaker": "zundamon", "text": "Dockerfileにイメージの構成を記述し、docker buildでイメージを作成します。"},
+      {"speaker": "metan", "text": "docker runでコンテナを起動します。-pオプションでポートをマッピングできます。"},
+      {"speaker": "zundamon", "text": "docker-composeを使えば複数のコンテナを一括管理できます。"},
+      {"speaker": "metan", "text": "以上、Dockerの基礎でした。"}
+    ],
+    "summary_length": 150,
+    "expectation": "summaryはDockerのコンテナ技術・Dockerfile・docker run・docker-composeについて150文字程度で具体的に述べること。episode_titleはDockerに関する15〜30文字のこの回固有のサブタイトル。conversation_notesは空配列（[]）が正解。セリフが事実の解説のみで個人的な会話要素がないため。"
+  },
+  {
+    "name": "known_speakers_episode",
+    "category": "speaker_check",
+    "script_lines": [
+      {"speaker": "host_a", "text": "今日はRustのメモリ安全性について話しましょう。"},
+      {"speaker": "host_b", "text": "Rustは所有権システムでメモリ管理をコンパイル時に保証するのが大きな特徴ですね。"},
+      {"speaker": "host_a", "text": "借用チェッカーがあることでnullポインタやデータ競合を防げます。"},
+      {"speaker": "host_b", "text": "先週Rustでコマンドラインツールを書いてみたんですが、最初はエラーだらけで大変でした。"},
+      {"speaker": "host_a", "text": "慣れるまでが大変ですよね。でも一度慣れると安心感が全然違います。"},
+      {"speaker": "host_b", "text": "確かに。パフォーマンスもCに近い速度が出るのが魅力です。"}
+    ],
+    "summary_length": 180,
+    "expectation": "summaryはRustの所有権システム・借用チェッカー・メモリ安全性について180文字程度で述べること。character_idsはhost_aおよびhost_bのみ使用し、それ以外のIDを創作しないこと。conversation_notesにはhost_bが先週Rustで開発した体験談が含まれていること。"
+  },
+  {
+    "name": "empty_notes_minimal_chat",
+    "category": "no_banter",
+    "script_lines": [
+      {"speaker": "zundamon", "text": "今回はGitのブランチ戦略を解説するのだ。"},
+      {"speaker": "metan", "text": "Git FlowとGitHub Flowの二つが代表的です。"},
+      {"speaker": "zundamon", "text": "Git Flowはmain・develop・feature・release・hotfixの5種類のブランチを使います。"},
+      {"speaker": "metan", "text": "GitHub Flowはシンプルで、mainブランチとfeatureブランチだけで運用できます。"},
+      {"speaker": "zundamon", "text": "小規模チームにはGitHub Flowが合っていることが多いのだ。"},
+      {"speaker": "metan", "text": "大規模リリース管理が必要な場合はGit Flowが向いていますね。"},
+      {"speaker": "zundamon", "text": "ありがとうございました、以上でした。"}
+    ],
+    "summary_length": 150,
+    "expectation": "summaryはGitのブランチ戦略（Git Flow・GitHub Flow）について150文字程度で具体的に述べること。episode_titleは15〜30文字のこの回固有のサブタイトル。conversation_notesは空配列が正解。セリフが純粋な技術解説のみで個人的な会話要素がない。"
+  }
+]

@@ -29,6 +29,12 @@ const (
 
 	// CornerSummary-only evaluation criteria.
 	CriterionSpecificity Criterion = "specificity"
+
+	// Summary-only evaluation criteria.
+	CriterionSummaryQuality      Criterion = "summary_quality"
+	CriterionEpisodeTitleQuality Criterion = "episode_title_quality"
+	CriterionNotesFaithfulness   Criterion = "notes_faithfulness"
+	CriterionNotesCoverage       Criterion = "notes_coverage"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -53,6 +59,14 @@ var AllCornerSummaryCriteria = []Criterion{
 	CriterionCoverage,
 	CriterionSpecificity,
 	CriterionFormatCompliance,
+}
+
+// AllSummaryCriteria lists all summary scoring dimensions in canonical order.
+var AllSummaryCriteria = []Criterion{
+	CriterionSummaryQuality,
+	CriterionEpisodeTitleQuality,
+	CriterionNotesFaithfulness,
+	CriterionNotesCoverage,
 }
 
 // ScoreEntry holds the score and reason for one criterion.

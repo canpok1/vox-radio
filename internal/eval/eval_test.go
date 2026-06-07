@@ -31,10 +31,31 @@ func TestCriterionValues(t *testing.T) {
 		CriterionConciseness,
 		CriterionSpecificity,
 		CriterionFormatCompliance,
+		CriterionSummaryQuality,
+		CriterionEpisodeTitleQuality,
+		CriterionNotesFaithfulness,
+		CriterionNotesCoverage,
 	}
 	for _, c := range criteria {
 		if c == "" {
 			t.Errorf("criterion should not be empty string")
+		}
+	}
+}
+
+func TestAllSummaryCriteria(t *testing.T) {
+	if len(AllSummaryCriteria) != 4 {
+		t.Errorf("AllSummaryCriteria length = %d, want 4", len(AllSummaryCriteria))
+	}
+	want := []Criterion{
+		CriterionSummaryQuality,
+		CriterionEpisodeTitleQuality,
+		CriterionNotesFaithfulness,
+		CriterionNotesCoverage,
+	}
+	for i, c := range want {
+		if AllSummaryCriteria[i] != c {
+			t.Errorf("AllSummaryCriteria[%d] = %q, want %q", i, AllSummaryCriteria[i], c)
 		}
 	}
 }
