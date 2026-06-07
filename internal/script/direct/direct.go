@@ -128,6 +128,7 @@ type correction struct {
 	LineIndex   int    `json:"line_index"`
 	Text        string `json:"text"`
 	Reason      string `json:"reason,omitempty"`
+	Before      string `json:"-"` // populated by runProofread from ConvertedText, not from LLM
 }
 
 type correctionsResponse struct {
@@ -222,7 +223,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 					LineIndex:   c.LineIndex,
 					Text:        c.Text,
 				})
-				slog.Default().Info("proofread correction", "corner_index", c.CornerIndex, "line_index", c.LineIndex, "text", c.Text, "reason", c.Reason)
+				slog.Default().Info("proofread correction", "corner_index", c.CornerIndex, "line_index", c.LineIndex, "before", c.Before, "after", c.Text, "reason", c.Reason)
 			}
 			slog.Default().Info("proofread: applied corrections", "count", len(corrections))
 		}
@@ -273,6 +274,14 @@ func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLi
 	var cr correctionsResponse
 	if err := json.Unmarshal(raw, &cr); err != nil {
 		return nil, fmt.Errorf("unmarshal corrections: %w", err)
+	}
+
+	beforeMap := make(map[insertKey]string, len(lines))
+	for _, pl := range lines {
+		beforeMap[insertKey{pl.CornerIndex, pl.LineIndex}] = pl.ConvertedText
+	}
+	for i := range cr.Corrections {
+		cr.Corrections[i].Before = beforeMap[insertKey{cr.Corrections[i].CornerIndex, cr.Corrections[i].LineIndex}]
 	}
 
 	return cr.Corrections, nil
