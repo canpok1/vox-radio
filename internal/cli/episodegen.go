@@ -77,7 +77,7 @@ func newEpisodegenCmd() *cobra.Command {
 			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
 			entries, episodeNumber, err := loadCacheEntries(p.Program.ID)
 			if err != nil {
-				return fmt.Errorf("load cache: %w", err)
+				return err
 			}
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
