@@ -39,6 +39,24 @@ func recordAttrMap(r slog.Record) map[string]slog.Value {
 	return m
 }
 
+func captureSlogRecords(t *testing.T) *[]slog.Record {
+	t.Helper()
+	var records []slog.Record
+	orig := slog.Default()
+	slog.SetDefault(slog.New(&captureHandler{records: &records}))
+	t.Cleanup(func() { slog.SetDefault(orig) })
+	return &records
+}
+
+func findSlogRecord(records []slog.Record, msg string) *slog.Record {
+	for i := range records {
+		if records[i].Message == msg {
+			return &records[i]
+		}
+	}
+	return nil
+}
+
 type mockClient struct {
 	response json.RawMessage
 	err      error
@@ -1358,23 +1376,14 @@ func TestLLMDirector_Direct_WithProofread_LogsBeforeAndAfterKeys(t *testing.T) {
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	var records []slog.Record
-	origLogger := slog.Default()
-	slog.SetDefault(slog.New(&captureHandler{records: &records}))
-	defer slog.SetDefault(origLogger)
+	records := captureSlogRecords(t)
 
 	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var corrRec *slog.Record
-	for i := range records {
-		if records[i].Message == "proofread correction" {
-			corrRec = &records[i]
-			break
-		}
-	}
+	corrRec := findSlogRecord(*records, "proofread correction")
 	if corrRec == nil {
 		t.Fatal("expected 'proofread correction' log record, got none")
 	}
@@ -1415,27 +1424,21 @@ func TestLLMDirector_Direct_WithProofread_LogsBeforeFromOriginalWhenNoDirectConv
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
 	)
 
-	var records []slog.Record
-	origLogger := slog.Default()
-	slog.SetDefault(slog.New(&captureHandler{records: &records}))
-	defer slog.SetDefault(origLogger)
+	records := captureSlogRecords(t)
 
 	_, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, r := range records {
-		if r.Message != "proofread correction" {
-			continue
-		}
-		attrs := recordAttrMap(r)
-		if v, ok := attrs["before"]; !ok {
-			t.Error("log should have 'before' key")
-		} else if got := v.String(); got != "頭突きするのだ" {
-			t.Errorf("before: got %q, want 頭突きするのだ (original text when no direct conversion)", got)
-		}
-		return
+	corrRec := findSlogRecord(*records, "proofread correction")
+	if corrRec == nil {
+		t.Fatal("expected 'proofread correction' log, got none")
 	}
-	t.Fatal("expected 'proofread correction' log, got none")
+	attrs := recordAttrMap(*corrRec)
+	if v, ok := attrs["before"]; !ok {
+		t.Error("log should have 'before' key")
+	} else if got := v.String(); got != "頭突きするのだ" {
+		t.Errorf("before: got %q, want 頭突きするのだ (original text when no direct conversion)", got)
+	}
 }
