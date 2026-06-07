@@ -15,6 +15,15 @@ projectId / sectionId は名前から特定することもできる（`mcp__todo
 - **参照・重複確認**: `mcp__todoist__find-tasks`（`projectId` / `sectionId` で絞り込む）
 - **更新**: `mcp__todoist__update-tasks` ／ **完了**: `mcp__todoist__complete-tasks`
 
+## ラベル運用
+
+タスクの状態管理には以下のラベルを使う（GitHub Issue 運用から引き継いだもの）。
+
+- `vox-radio`: 対象プロジェクトを示す
+- `ready`: 着手してよい（対応可能）状態
+- `assign-to-claude`: Claude が対応する対象
+- `in-progress`: 対応中
+
 ## タスク内容の書き方
 
 - `content`: 何をするかを簡潔・具体的に書く（例: 「`readJSON` / `loadProfile` の重複を共通ヘルパーへ抽出」）。
