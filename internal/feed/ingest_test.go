@@ -24,6 +24,14 @@ func writeFeedSpecYAML(t *testing.T, path string, cfg model.FeedSpec) {
 	}
 }
 
+func setupIngestDirs(t *testing.T) (cachePath, specPath, publicDir string) {
+	t.Helper()
+	dir := t.TempDir()
+	return filepath.Join(dir, "cache.jsonl"),
+		filepath.Join(dir, "feed-spec.yaml"),
+		filepath.Join(dir, "public")
+}
+
 func writeCacheJSONL(t *testing.T, path string, entries []cache.Entry) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -43,10 +51,7 @@ func writeCacheJSONL(t *testing.T, path string, entries []cache.Entry) {
 }
 
 func TestRun_GeneratesFeedXML(t *testing.T) {
-	dir := t.TempDir()
-	cachePath := filepath.Join(dir, "cache.jsonl")
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	publicDir := filepath.Join(dir, "public")
+	cachePath, specPath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -98,10 +103,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 
 // program_id フィルタが廃止されたため、cache の全エントリが対象になること
 func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
-	dir := t.TempDir()
-	cachePath := filepath.Join(dir, "cache.jsonl")
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	publicDir := filepath.Join(dir, "public")
+	cachePath, specPath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -145,10 +147,7 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 }
 
 func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
-	dir := t.TempDir()
-	cachePath := filepath.Join(dir, "cache.jsonl")
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	publicDir := filepath.Join(dir, "public")
+	cachePath, specPath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -179,10 +178,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 }
 
 func TestRun_EmptyCache(t *testing.T) {
-	dir := t.TempDir()
-	cachePath := filepath.Join(dir, "cache.jsonl")
-	specPath := filepath.Join(dir, "feed-spec.yaml")
-	publicDir := filepath.Join(dir, "public")
+	cachePath, specPath, publicDir := setupIngestDirs(t)
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
