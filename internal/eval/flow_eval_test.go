@@ -13,13 +13,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
-// flowCorner mirrors the CornerForPrompt passed to flow.md.
-type flowCorner struct {
-	Title                 string `json:"title"`
-	Content               string `json:"content"`
-	TargetDurationSeconds int    `json:"target_duration_seconds"`
-}
-
 // flowArticle mirrors the RundownArticle passed to flow.md.
 type flowArticle struct {
 	URL     string   `json:"url"`
@@ -35,18 +28,10 @@ type flowCornerForProgram struct {
 	Articles        []flowArticle `json:"articles"`
 }
 
-// flowCast mirrors the RundownCast (LLM-facing) passed as part of {{program}}.
-type flowCast struct {
-	CharacterID     string `json:"character_id"`
-	Role            string `json:"role"`
-	Type            string `json:"type"`
-	AppearanceCount int    `json:"appearance_count"`
-}
-
 // flowProgram mirrors the programForPrompt passed to flow.md.
 type flowProgram struct {
 	Corners []flowCornerForProgram `json:"corners"`
-	Casts   []flowCast             `json:"casts"`
+	Casts   []evalCast             `json:"casts"`
 }
 
 // flowCase is one entry in the flow testdata files.
@@ -54,7 +39,7 @@ type flowCase struct {
 	Name            string        `json:"name"`
 	Category        string        `json:"category"`
 	Position        string        `json:"position"`
-	Corner          flowCorner    `json:"corner"`
+	Corner          evalCorner    `json:"corner"`
 	Articles        []flowArticle `json:"articles"`
 	SelectionReason string        `json:"selection_reason"`
 	Program         flowProgram   `json:"program"`

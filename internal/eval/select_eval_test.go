@@ -13,21 +13,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
 
-// selectCast mirrors the cast element passed to select.md.
-type selectCast struct {
-	CharacterID     string `json:"character_id"`
-	Role            string `json:"role"`
-	Type            string `json:"type"`
-	AppearanceCount int    `json:"appearance_count"`
-}
-
-// selectCorner mirrors the CornerForPrompt passed to select.md.
-type selectCorner struct {
-	Title                 string `json:"title"`
-	Content               string `json:"content"`
-	TargetDurationSeconds int    `json:"target_duration_seconds"`
-}
-
 // selectArticle mirrors the articleForPrompt passed to select.md.
 type selectArticle struct {
 	URL   string `json:"url"`
@@ -38,8 +23,8 @@ type selectArticle struct {
 type selectCase struct {
 	Name        string          `json:"name"`
 	Category    string          `json:"category"`
-	Casts       []selectCast    `json:"casts"`
-	Corner      selectCorner    `json:"corner"`
+	Casts       []evalCast      `json:"casts"`
+	Corner      evalCorner      `json:"corner"`
 	Articles    []selectArticle `json:"articles"`
 	Expectation string          `json:"expectation,omitempty"`
 }
