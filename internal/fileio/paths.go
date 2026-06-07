@@ -14,6 +14,7 @@ const (
 	FileSummaries = "02_summaries.json"
 	FileRundown   = "02_rundown.json"
 	FileLines     = "03_lines.json"
+	FileProofread = "04_proofread.json"
 	FileScript    = "04_script.json"
 	FileEpisode   = "episode.mp3"
 	FileManifest  = "manifest.json"
@@ -42,6 +43,7 @@ func ArticlesPath(outDir string) string  { return intermediatePath(outDir, FileA
 func SummariesPath(outDir string) string { return intermediatePath(outDir, FileSummaries) }
 func RundownPath(outDir string) string   { return intermediatePath(outDir, FileRundown) }
 func LinesPath(outDir string) string     { return intermediatePath(outDir, FileLines) }
+func ProofreadPath(outDir string) string { return intermediatePath(outDir, FileProofread) }
 func ScriptPath(outDir string) string    { return intermediatePath(outDir, FileScript) }
 
 func EpisodePath(outDir string) string {

@@ -92,8 +92,23 @@ type cornerLLMPayload struct {
 	Lines     []model.Line `json:"lines"`
 }
 
+// ProofreadCorrection represents a single correction made by the proofreading pass.
+type ProofreadCorrection struct {
+	CornerIndex int    `json:"corner_index"`
+	LineIndex   int    `json:"line_index"`
+	Before      string `json:"before"`
+	After       string `json:"after"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+// ProofreadResult holds the result of a proofreading pass, including all corrections applied.
+// Non-nil means the proofreading LLM ran successfully (even if Corrections is empty).
+type ProofreadResult struct {
+	Corrections []ProofreadCorrection `json:"corrections"`
+}
+
 type Director interface {
-	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error)
+	Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *ProofreadResult, error)
 }
 
 type insertion struct {
@@ -170,7 +185,7 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 	return d
 }
 
-func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, error) {
+func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *ProofreadResult, error) {
 	payload := make([]cornerLLMPayload, len(corners))
 	for i, c := range corners {
 		payload[i] = cornerLLMPayload{
@@ -182,12 +197,12 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 
 	cornersJSON, err := json.Marshal(payload)
 	if err != nil {
-		return model.Script{}, fmt.Errorf("marshal corners: %w", err)
+		return model.Script{}, nil, fmt.Errorf("marshal corners: %w", err)
 	}
 
 	catalogJSON, err := json.Marshal(catalog)
 	if err != nil {
-		return model.Script{}, fmt.Errorf("marshal asset catalog: %w", err)
+		return model.Script{}, nil, fmt.Errorf("marshal asset catalog: %w", err)
 	}
 
 	prompt := strings.NewReplacer(
@@ -202,20 +217,23 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		Temperature: d.temperature,
 	})
 	if err != nil {
-		return model.Script{}, fmt.Errorf("llm complete: %w", err)
+		return model.Script{}, nil, fmt.Errorf("llm complete: %w", err)
 	}
 
 	var resp insertionsResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
-		return model.Script{}, fmt.Errorf("unmarshal insertions: %w", err)
+		return model.Script{}, nil, fmt.Errorf("unmarshal insertions: %w", err)
 	}
 
 	lineConversions := resp.LineConversions
+	var pr *ProofreadResult
+
 	if d.proofread != nil {
 		corrections, beforeMap, err := d.runProofread(ctx, corners, lineConversions)
 		if err != nil {
 			slog.Default().Warn("proofread failed, using direct conversion", "err", err)
-		} else if len(corrections) > 0 {
+		} else {
+			cs := make([]ProofreadCorrection, 0, len(corrections))
 			for _, c := range corrections {
 				lineConversions = append(lineConversions, lineConversion{
 					CornerIndex: c.CornerIndex,
@@ -223,13 +241,19 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 					Text:        c.Text,
 				})
 				before := beforeMap[insertKey{c.CornerIndex, c.LineIndex}]
-				slog.Default().Info("proofread correction", "corner_index", c.CornerIndex, "line_index", c.LineIndex, "before", before, "after", c.Text, "reason", c.Reason)
+				cs = append(cs, ProofreadCorrection{
+					CornerIndex: c.CornerIndex,
+					LineIndex:   c.LineIndex,
+					Before:      before,
+					After:       c.Text,
+					Reason:      c.Reason,
+				})
 			}
-			slog.Default().Info("proofread: applied corrections", "count", len(corrections))
+			pr = &ProofreadResult{Corrections: cs}
 		}
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), pr, nil
 }
 
 func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, map[insertKey]string, error) {
