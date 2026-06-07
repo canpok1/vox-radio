@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/cli"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 func writeSlackSpecForTest(t *testing.T, dir, channel string) string {
@@ -88,7 +89,7 @@ func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 }
 
 func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
-	specPath := writeSlackSpecRawForTest(t, []byte(`slack:
+	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`slack:
   channel: ""
 `))
 
@@ -100,7 +101,7 @@ func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
 }
 
 func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
-	specPath := writeSlackSpecRawForTest(t, []byte(`slack:
+	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`slack:
   channel: "C0123456789"
 unknown_key: value
 `))
@@ -114,7 +115,7 @@ unknown_key: value
 
 // program_id は SlackSpec から削除されたため、slackpost check で unknown key エラーになること
 func TestSlackpostCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
-	specPath := writeSlackSpecRawForTest(t, []byte(`program_id: my-radio
+	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`program_id: my-radio
 slack:
   channel: "C0123456789"
 `))

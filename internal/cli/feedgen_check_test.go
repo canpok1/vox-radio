@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/cli"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 func TestFeedgenCheck_ValidSpec_Success(t *testing.T) {
@@ -33,7 +34,7 @@ func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 
 func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 	// feed.language が欠落した feed-spec.yaml
-	specPath := writeFeedSpecForTest(t, []byte(`feed:
+	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`feed:
   author: Test Author
   email: test@example.com
   site_url: https://example.com/
@@ -52,7 +53,7 @@ func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 
 // program_id は FeedSpec から削除されたため、feedgen check で unknown key エラーになること
 func TestFeedgenCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
-	specPath := writeFeedSpecForTest(t, []byte(`program_id: my-radio
+	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`program_id: my-radio
 feed:
   language: ja
   author: Test Author
