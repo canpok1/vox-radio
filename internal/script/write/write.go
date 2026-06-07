@@ -233,15 +233,9 @@ func (w *LLMWriter) effectivePresets() config.VoicevoxPresets {
 // BuildLinesSchema generates a JSON Schema for the lines response, with intonation/pitch/speed
 // enum values derived from the given slices. Input slices are sorted before embedding.
 func BuildLinesSchema(intonation, pitch, speed []string) json.RawMessage {
-	copyAndSort := func(s []string) []string {
-		c := make([]string, len(s))
-		copy(c, s)
-		sort.Strings(c)
-		return c
-	}
-	intonationEnumJSON, _ := json.Marshal(copyAndSort(intonation))
-	pitchEnumJSON, _ := json.Marshal(copyAndSort(pitch))
-	speedEnumJSON, _ := json.Marshal(copyAndSort(speed))
+	intonationEnumJSON, _ := json.Marshal(sortedStringsCopy(intonation))
+	pitchEnumJSON, _ := json.Marshal(sortedStringsCopy(pitch))
+	speedEnumJSON, _ := json.Marshal(sortedStringsCopy(speed))
 
 	return json.RawMessage(fmt.Sprintf(`{
   "type": "object",
@@ -367,4 +361,11 @@ func sortedKeys(m map[string]float64) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func sortedStringsCopy(s []string) []string {
+	c := make([]string, len(s))
+	copy(c, s)
+	sort.Strings(c)
+	return c
 }
