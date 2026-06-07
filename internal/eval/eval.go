@@ -40,6 +40,12 @@ const (
 	CriterionRelevance            Criterion = "relevance"
 	CriterionConstraintCompliance Criterion = "constraint_compliance"
 	CriterionOrderingQuality      Criterion = "ordering_quality"
+
+	// Flow-only evaluation criteria.
+	CriterionPositionRoleFit  Criterion = "position_role_fit"
+	CriterionConsistency      Criterion = "consistency"
+	CriterionArticleAlignment Criterion = "article_alignment"
+	CriterionActionability    Criterion = "actionability"
 )
 
 // AllCriteria lists all proofread scoring dimensions in canonical order.
@@ -80,6 +86,14 @@ var AllSelectCriteria = []Criterion{
 	CriterionConstraintCompliance,
 	CriterionOrderingQuality,
 	CriterionReasonValidity,
+}
+
+// AllFlowCriteria lists all flow scoring dimensions in canonical order.
+var AllFlowCriteria = []Criterion{
+	CriterionPositionRoleFit,
+	CriterionConsistency,
+	CriterionArticleAlignment,
+	CriterionActionability,
 }
 
 // ScoreEntry holds the score and reason for one criterion.

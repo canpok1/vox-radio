@@ -18,6 +18,21 @@ import (
 
 var testdataDir string
 
+// evalCorner mirrors the CornerForPrompt shared across prompt eval tests.
+type evalCorner struct {
+	Title                 string `json:"title"`
+	Content               string `json:"content"`
+	TargetDurationSeconds int    `json:"target_duration_seconds"`
+}
+
+// evalCast mirrors the RundownCast (LLM-facing) shared across prompt eval tests.
+type evalCast struct {
+	CharacterID     string `json:"character_id"`
+	Role            string `json:"role"`
+	Type            string `json:"type"`
+	AppearanceCount int    `json:"appearance_count"`
+}
+
 func init() {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
