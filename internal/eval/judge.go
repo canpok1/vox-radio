@@ -48,7 +48,8 @@ type JudgeInput struct {
 
 // Judge calls the LLM with the judge prompt and returns scored criteria.
 // judgePrompt may contain {{lines}}, {{corrections}}, and {{expectation}} placeholders.
-func Judge(ctx context.Context, client llm.Client, judgePrompt string, input JudgeInput, model string) ([]ScoreEntry, error) {
+// The model is determined by the client's configuration.
+func Judge(ctx context.Context, client llm.Client, judgePrompt string, input JudgeInput) ([]ScoreEntry, error) {
 	expectation := input.Expectation
 	if expectation == "" {
 		expectation = "（なし）"
@@ -60,15 +61,10 @@ func Judge(ctx context.Context, client llm.Client, judgePrompt string, input Jud
 		"{{expectation}}", expectation,
 	).Replace(judgePrompt)
 
-	req := llm.CompletionRequest{
+	raw, err := client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},
 		JSONSchema: judgeSchema,
-	}
-	if model != "" {
-		req.Model = model
-	}
-
-	raw, err := client.Complete(ctx, req)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("judge llm: %w", err)
 	}

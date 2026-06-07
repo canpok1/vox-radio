@@ -5,17 +5,32 @@ package eval_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/eval"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
+
+// testdataDir is resolved once at init time using runtime.Caller.
+var testdataDir string
+
+func init() {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("runtime.Caller failed")
+	}
+	testdataDir = filepath.Join(filepath.Dir(thisFile), "testdata")
+}
+
+func testdataPath(filename string) string {
+	return filepath.Join(testdataDir, filename)
+}
 
 // proofreadLine mirrors the input format for proofread.md.
 type proofreadLine struct {
@@ -35,12 +50,7 @@ type proofreadCase struct {
 
 func loadCases(t *testing.T, filename string) []proofreadCase {
 	t.Helper()
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	path := filepath.Join(filepath.Dir(thisFile), "testdata", filename)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(testdataPath(filename))
 	if err != nil {
 		t.Fatalf("read %s: %v", filename, err)
 	}
@@ -53,73 +63,75 @@ func loadCases(t *testing.T, filename string) []proofreadCase {
 
 func loadJudgePrompt(t *testing.T) string {
 	t.Helper()
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	path := filepath.Join(filepath.Dir(thisFile), "testdata", "proofread_judge.md")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(testdataPath("proofread_judge.md"))
 	if err != nil {
 		t.Fatalf("read judge prompt: %v", err)
 	}
 	return string(data)
 }
 
-func mustJSONString(t *testing.T, v any) string {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	return string(b)
-}
-
-func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt string, lines []proofreadLine, model string) json.RawMessage {
-	t.Helper()
-
-	linesJSON := mustJSONString(t, lines)
-	prompt := strings.NewReplacer("{{lines}}", linesJSON).Replace(proofreadPrompt)
-
-	correctionsSchema := json.RawMessage(`{
-		"type": "object",
-		"required": ["corrections"],
-		"properties": {
-			"corrections": {
-				"type": "array",
-				"items": {
-					"type": "object",
-					"required": ["corner_index", "line_index", "text"],
-					"properties": {
-						"corner_index": {"type": "integer", "minimum": 0},
-						"line_index":   {"type": "integer", "minimum": 0},
-						"text":         {"type": "string"},
-						"reason":       {"type": "string"}
-					},
-					"additionalProperties": false
-				}
+var correctionsSchema = json.RawMessage(`{
+	"type": "object",
+	"required": ["corrections"],
+	"properties": {
+		"corrections": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["corner_index", "line_index", "text"],
+				"properties": {
+					"corner_index": {"type": "integer", "minimum": 0},
+					"line_index":   {"type": "integer", "minimum": 0},
+					"text":         {"type": "string"},
+					"reason":       {"type": "string"}
+				},
+				"additionalProperties": false
 			}
-		},
-		"additionalProperties": false
-	}`)
+		}
+	},
+	"additionalProperties": false
+}`)
 
-	req := llm.CompletionRequest{
+func runProofread(ctx context.Context, t *testing.T, client llm.Client, proofreadPrompt, linesJSON string) json.RawMessage {
+	t.Helper()
+	prompt := strings.NewReplacer("{{lines}}", linesJSON).Replace(proofreadPrompt)
+	raw, err := client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},
 		JSONSchema: correctionsSchema,
-	}
-	if model != "" {
-		req.Model = model
-	}
-
-	raw, err := client.Complete(ctx, req)
+	})
 	if err != nil {
 		return nil
 	}
 	return raw
 }
 
+func getEnvFloat(key string, defaultVal float64) (float64, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal, nil
+	}
+	return strconv.ParseFloat(v, 64)
+}
+
+func getEnvInt(key string, defaultVal int) (int, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal, nil
+	}
+	n, err := strconv.Atoi(v)
+	return n, err
+}
+
+func getEnvInt64(key string, defaultVal int64) (int64, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal, nil
+	}
+	return strconv.ParseInt(v, 10, 64)
+}
+
 func TestProofreadEval(t *testing.T) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
+	if os.Getenv("GEMINI_API_KEY") == "" {
 		t.Skip("GEMINI_API_KEY not set")
 	}
 
@@ -136,28 +148,19 @@ func TestProofreadEval(t *testing.T) {
 	judgeCfg.MaxRetries = 2
 	judgeClient := llm.NewClient(judgeCfg)
 
-	// Threshold.
-	threshold := 4.0
-	if v := os.Getenv("VOX_EVAL_PROOFREAD_THRESHOLD"); v != "" {
-		if _, err := fmt.Sscanf(v, "%f", &threshold); err != nil {
-			t.Fatalf("parse VOX_EVAL_PROOFREAD_THRESHOLD: %v", err)
-		}
+	threshold, err := getEnvFloat("VOX_EVAL_PROOFREAD_THRESHOLD", 4.0)
+	if err != nil {
+		t.Fatalf("parse VOX_EVAL_PROOFREAD_THRESHOLD: %v", err)
 	}
 
-	// Sample size.
-	sampleSize := 8
-	if v := os.Getenv("VOX_EVAL_SAMPLE_SIZE"); v != "" {
-		if _, err := fmt.Sscanf(v, "%d", &sampleSize); err != nil {
-			t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
-		}
+	sampleSize, err := getEnvInt("VOX_EVAL_SAMPLE_SIZE", 8)
+	if err != nil {
+		t.Fatalf("parse VOX_EVAL_SAMPLE_SIZE: %v", err)
 	}
 
-	// Seed.
-	seed := eval.DefaultSeed()
-	if v := os.Getenv("VOX_EVAL_SAMPLE_SEED"); v != "" {
-		if _, err := fmt.Sscanf(v, "%d", &seed); err != nil {
-			t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
-		}
+	seed, err := getEnvInt64("VOX_EVAL_SAMPLE_SEED", eval.DefaultSeed())
+	if err != nil {
+		t.Fatalf("parse VOX_EVAL_SAMPLE_SEED: %v", err)
 	}
 
 	proofreadPrompt, err := eval.LoadPrompt("proofread")
@@ -171,7 +174,7 @@ func TestProofreadEval(t *testing.T) {
 	regressionCases := loadCases(t, "proofread_regression_cases.json")
 	poolCases := loadCases(t, "proofread_pool_cases.json")
 
-	sampled := eval.Sample(poolCases, sampleSize, seed, func(c proofreadCase) string { return c.Name })
+	sampled := eval.Sample(poolCases, sampleSize, seed)
 	sampledNames := make([]string, len(sampled))
 	for i, c := range sampled {
 		sampledNames[i] = c.Name
@@ -197,28 +200,25 @@ func TestProofreadEval(t *testing.T) {
 	for _, ec := range allCases {
 		t.Logf("evaluating [%s] %s ...", ec.setType, ec.Name)
 
+		// Marshal lines once; reuse for proofread prompt and judge input.
+		linesJSONBytes, err := json.Marshal(ec.Lines)
+		if err != nil {
+			t.Fatalf("marshal lines for case %s: %v", ec.Name, err)
+		}
+		linesJSON := string(linesJSONBytes)
+
 		// Step 1: run proofread.
-		raw := runProofread(ctx, t, targetClient, proofreadPrompt, ec.Lines, targetCfg.Model)
+		raw := runProofread(ctx, t, targetClient, proofreadPrompt, linesJSON)
 		if raw == nil {
-			// runProofread logged the error; check if inconclusive.
 			t.Skipf("proofread API call failed for case %s (inconclusive)", ec.Name)
 		}
 
-		correctionsJSON := string(raw)
-
 		// Step 2: judge.
-		linesJSON := mustJSONString(t, ec.Lines)
-		judgeInput := eval.JudgeInput{
+		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, eval.JudgeInput{
 			LinesJSON:       linesJSON,
-			CorrectionsJSON: correctionsJSON,
+			CorrectionsJSON: string(raw),
 			Expectation:     ec.Expectation,
-		}
-
-		judgeModel := ""
-		if v := os.Getenv("VOX_EVAL_JUDGE_MODEL"); v != "" {
-			judgeModel = v
-		}
-		scores, err := eval.Judge(ctx, judgeClient, judgePrompt, judgeInput, judgeModel)
+		})
 		if err != nil {
 			if eval.IsInconclusive(err) {
 				t.Skipf("judge API call failed (inconclusive): %v", err)
@@ -232,7 +232,6 @@ func TestProofreadEval(t *testing.T) {
 			Scores:   scores,
 		})
 
-		// Log per-case scores.
 		for _, s := range scores {
 			t.Logf("  [%s] %s: %s=%d (%s)", ec.setType, ec.Name, s.Criterion, s.Score, s.Reason)
 		}

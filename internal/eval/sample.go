@@ -6,9 +6,8 @@ import (
 )
 
 // Sample selects n items from pool using a reproducible shuffle seeded by seed.
-// nameFunc extracts a display name for each item (used for logging by callers).
 // If n >= len(pool), all items are returned in shuffled order.
-func Sample[T any](pool []T, n int, seed int64, _ func(T) string) []T {
+func Sample[T any](pool []T, n int, seed int64) []T {
 	if n >= len(pool) {
 		n = len(pool)
 	}

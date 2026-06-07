@@ -14,7 +14,7 @@ func TestSample_Count(t *testing.T) {
 	pool := []testCase{
 		{Name: "a"}, {Name: "b"}, {Name: "c"}, {Name: "d"}, {Name: "e"},
 	}
-	got := Sample(pool, 3, 42, func(c testCase) string { return c.Name })
+	got := Sample(pool, 3, 42)
 	if len(got) != 3 {
 		t.Errorf("len = %d, want 3", len(got))
 	}
@@ -22,7 +22,7 @@ func TestSample_Count(t *testing.T) {
 
 func TestSample_CountExceedsPool(t *testing.T) {
 	pool := []testCase{{Name: "a"}, {Name: "b"}}
-	got := Sample(pool, 5, 42, func(c testCase) string { return c.Name })
+	got := Sample(pool, 5, 42)
 	if len(got) != 2 {
 		t.Errorf("len = %d, want 2 (pool size)", len(got))
 	}
@@ -33,8 +33,8 @@ func TestSample_Reproducible(t *testing.T) {
 	for i := range pool {
 		pool[i] = testCase{Name: string(rune('A' + i))}
 	}
-	got1 := Sample(pool, 8, 100, func(c testCase) string { return c.Name })
-	got2 := Sample(pool, 8, 100, func(c testCase) string { return c.Name })
+	got1 := Sample(pool, 8, 100)
+	got2 := Sample(pool, 8, 100)
 
 	for i := range got1 {
 		if got1[i].Name != got2[i].Name {
@@ -48,8 +48,8 @@ func TestSample_DifferentSeeds(t *testing.T) {
 	for i := range pool {
 		pool[i] = testCase{Name: string(rune('A' + i))}
 	}
-	got1 := Sample(pool, 8, 1, func(c testCase) string { return c.Name })
-	got2 := Sample(pool, 8, 2, func(c testCase) string { return c.Name })
+	got1 := Sample(pool, 8, 1)
+	got2 := Sample(pool, 8, 2)
 
 	same := true
 	for i := range got1 {
@@ -64,7 +64,6 @@ func TestSample_DifferentSeeds(t *testing.T) {
 }
 
 func TestISOWeekSeed(t *testing.T) {
-	// Verify that ISOWeekSeed returns a deterministic value for the same week.
 	now := time.Date(2026, 6, 7, 0, 0, 0, 0, time.UTC)
 	seed1 := isoWeekSeed(now)
 	seed2 := isoWeekSeed(now.Add(12 * time.Hour))
@@ -72,7 +71,6 @@ func TestISOWeekSeed(t *testing.T) {
 		t.Errorf("same week should give same seed: %d vs %d", seed1, seed2)
 	}
 
-	// Different week → different seed (almost certainly)
 	nextWeek := now.Add(7 * 24 * time.Hour)
 	seed3 := isoWeekSeed(nextWeek)
 	if seed1 == seed3 {
