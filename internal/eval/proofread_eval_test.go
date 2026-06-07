@@ -106,23 +106,7 @@ func TestProofreadEval(t *testing.T) {
 	regressionCases := loadCasesJSON[proofreadCase](t, "proofread_regression_cases.json")
 	poolCases := loadCasesJSON[proofreadCase](t, "proofread_pool_cases.json")
 
-	sampled := eval.Sample(poolCases, sampleSize, seed)
-	sampledNames := make([]string, len(sampled))
-	for i, c := range sampled {
-		sampledNames[i] = c.Name
-	}
-	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
-
-	caseByName := make(map[string]proofreadCase, len(regressionCases)+len(sampled))
-	var allCases []harnessCase
-	for _, c := range regressionCases {
-		caseByName[c.Name] = c
-		allCases = append(allCases, harnessCase{c.Name, "regression"})
-	}
-	for _, c := range sampled {
-		caseByName[c.Name] = c
-		allCases = append(allCases, harnessCase{c.Name, "generalization"})
-	}
+	allCases, caseByName := buildHarnessCases(t, regressionCases, poolCases, sampleSize, seed, func(c proofreadCase) string { return c.Name })
 
 	ctx := context.Background()
 

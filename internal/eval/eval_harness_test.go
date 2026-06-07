@@ -136,6 +136,90 @@ type harnessConfig struct {
 	RunCase func(ctx context.Context, t *testing.T, c harnessCase) (map[string]string, error)
 }
 
+// buildHarnessCases samples from pool, logs sampled names, and returns the combined
+// harness case list and a lookup map keyed by name.
+// Regression cases come first, followed by sampled generalization cases.
+func buildHarnessCases[T any](t *testing.T, regression, pool []T, sampleSize int, seed int64, getName func(T) string) ([]harnessCase, map[string]T) {
+	t.Helper()
+
+	sampled := eval.Sample(pool, sampleSize, seed)
+	sampledNames := make([]string, len(sampled))
+	for i, c := range sampled {
+		sampledNames[i] = getName(c)
+	}
+	t.Logf("seed=%d, sampled generalization cases: %v", seed, sampledNames)
+
+	caseByName := make(map[string]T, len(regression)+len(sampled))
+	var allCases []harnessCase
+	for _, c := range regression {
+		name := getName(c)
+		caseByName[name] = c
+		allCases = append(allCases, harnessCase{name, "regression"})
+	}
+	for _, c := range sampled {
+		name := getName(c)
+		caseByName[name] = c
+		allCases = append(allCases, harnessCase{name, "generalization"})
+	}
+
+	return allCases, caseByName
+}
+
+// TestBuildHarnessCases verifies that buildHarnessCases correctly labels regression
+// and generalization cases and populates the lookup map.
+func TestBuildHarnessCases(t *testing.T) {
+	type item struct {
+		Name string
+		Val  int
+	}
+	getName := func(c item) string { return c.Name }
+
+	regression := []item{{Name: "r1", Val: 1}, {Name: "r2", Val: 2}}
+	pool := []item{{Name: "p1", Val: 10}, {Name: "p2", Val: 20}, {Name: "p3", Val: 30}}
+
+	allCases, caseByName := buildHarnessCases(t, regression, pool, 10, 42, getName)
+
+	// Regression cases come first, labeled "regression".
+	if len(allCases) < 2 {
+		t.Fatalf("allCases len = %d, want >= 2", len(allCases))
+	}
+	for i, c := range allCases[:2] {
+		if c.SetType != "regression" {
+			t.Errorf("allCases[%d].SetType = %q, want regression", i, c.SetType)
+		}
+	}
+	if allCases[0].Name != "r1" {
+		t.Errorf("allCases[0].Name = %q, want r1", allCases[0].Name)
+	}
+	if allCases[1].Name != "r2" {
+		t.Errorf("allCases[1].Name = %q, want r2", allCases[1].Name)
+	}
+
+	// Generalization cases follow, labeled "generalization".
+	for i := 2; i < len(allCases); i++ {
+		if allCases[i].SetType != "generalization" {
+			t.Errorf("allCases[%d].SetType = %q, want generalization", i, allCases[i].SetType)
+		}
+	}
+
+	// caseByName contains all regression cases.
+	for _, name := range []string{"r1", "r2"} {
+		if _, ok := caseByName[name]; !ok {
+			t.Errorf("caseByName missing regression case %q", name)
+		}
+	}
+	if caseByName["r1"].Val != 1 {
+		t.Errorf("caseByName[r1].Val = %d, want 1", caseByName["r1"].Val)
+	}
+
+	// caseByName contains sampled pool cases (sampleSize > len(pool), so all pool items appear).
+	for _, name := range []string{"p1", "p2", "p3"} {
+		if _, ok := caseByName[name]; !ok {
+			t.Errorf("caseByName missing pool case %q", name)
+		}
+	}
+}
+
 // runEvalHarness runs the common eval loop: invoke target → judge → aggregate → check.
 func runEvalHarness(ctx context.Context, t *testing.T, cases []harnessCase, cfg harnessConfig) {
 	t.Helper()
