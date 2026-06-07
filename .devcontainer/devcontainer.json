@@ -7,6 +7,7 @@
 	"features": {
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/go:1": {},
+		"ghcr.io/devcontainers/features/node:2": {},
 		"ghcr.io/meaningful-ooo/devcontainer-features/homebrew:2": {}
 	},
 	"remoteUser": "vscode",

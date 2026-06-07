@@ -7,28 +7,31 @@ if [[ $# -gt 0 ]]; then
   echo "Usage: $0" >&2; exit 1
 fi
 
-REPO="$(gh repo view --json nameWithOwner -q '.nameWithOwner')"
+if [[ -z "${TODOIST_API_TOKEN:-}" ]]; then
+  echo "Error: TODOIST_API_TOKEN is not set" >&2
+  exit 1
+fi
+
+# 対象: Todoist プロジェクト dev / セクション vox-radio
+TODOIST_FILTER="#dev & /vox-radio"
 
 RUNNING=true
 trap 'RUNNING=false; echo ""; echo "Shutting down..."; exit 0' SIGINT SIGTERM
 
-echo "Watching queued issues in ${REPO}..."
+echo "Watching queued tasks in dev/vox-radio..."
 
 while $RUNNING; do
-  # assign-to-claudeラベル付き + in-progress-by-claude未付与のIssueを検索
-  ISSUE=$(gh issue list \
-    --repo "$REPO" \
-    --state open \
-    --label "assign-to-claude" \
-    --json number,title,labels \
-    --jq '[.[] | select(.labels | map(.name) | index("in-progress-by-claude") | not)] | sort_by(.number) | first // empty')
+  # assign-to-claudeラベル付き + in-progress未付与のタスクを検索（作成が古い順に先頭1件）
+  # addedAt は --full 指定時のみ JSON に含まれるため付与する
+  TASK=$(td task list --filter "${TODOIST_FILTER} & @assign-to-claude & !@in-progress" --json --full \
+    | jq -c '.results | sort_by(.addedAt) | first // empty')
 
-  if [[ -n "$ISSUE" ]]; then
-    ISSUE_NUMBER=$(echo "$ISSUE" | jq -r '.number')
-    ISSUE_TITLE=$(echo "$ISSUE" | jq -r '.title')
+  if [[ -n "$TASK" ]]; then
+    TASK_ID=$(echo "$TASK" | jq -r '.id')
+    TASK_TITLE=$(echo "$TASK" | jq -r '.content')
     echo ""
-    echo "#${ISSUE_NUMBER} ${ISSUE_TITLE}"
-    "${SCRIPT_DIR}/solve-issue.sh" -p "$ISSUE_NUMBER"
+    echo "${TASK_ID} ${TASK_TITLE}"
+    "${SCRIPT_DIR}/solve-task.sh" -p "$TASK_ID"
   else
     printf "."
   fi
