@@ -3,6 +3,8 @@ package slack_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +19,29 @@ func writeTestManifest(t *testing.T, dir string) string {
 		"title":          "ずんだもんテックラジオ",
 		"episode_number": 42,
 		"episode_title":  "テストエピソード",
-		"summary":        "今回はテストです。",
+		"summary":        "",
+		"audio_file":     "episode42.mp3",
+		"corners":        []any{},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	path := filepath.Join(dir, "manifest.json")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	return path
+}
+
+// writeTestManifestWithSummary creates a manifest that generates non-empty thread blocks.
+func writeTestManifestWithSummary(t *testing.T, dir string) string {
+	t.Helper()
+	manifest := map[string]any{
+		"title":          "ずんだもんテックラジオ",
+		"episode_number": 42,
+		"episode_title":  "テストエピソード",
+		"summary":        "今回はLLMについてです。",
 		"audio_file":     "episode42.mp3",
 		"corners":        []any{},
 	}
@@ -120,9 +144,9 @@ func TestRun_DryRun_NoAPICallMade(t *testing.T) {
 
 	posterCalled := false
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
 			posterCalled = true
-			return "FILE123", "TS123", nil
+			return "FILE123", nil
 		},
 	}
 
@@ -192,15 +216,10 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
 
 	uploadCalled := false
-	threadCalled := false
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
 			uploadCalled = true
-			return "FILE123", "TS123", nil
-		},
-		postThreadReplyFn: func(_ context.Context, _ slack.ReplyParams) error {
-			threadCalled = true
-			return nil
+			return "FILE123", nil
 		},
 	}
 
@@ -218,8 +237,6 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 	if !uploadCalled {
 		t.Error("Poster.UploadAudio should be called in post mode")
 	}
-	// thread reply is skipped because manifest has empty summary and no corners
-	_ = threadCalled
 
 	out := buf.String()
 	if out == "" {
@@ -255,8 +272,11 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 
 	threadCalled := false
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
-			return "FILE123", "TS123", nil
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			return "FILE123", nil
+		},
+		resolveThreadTSFn: func(_ context.Context, _, _ string) (string, error) {
+			return "TS123", nil
 		},
 		postThreadReplyFn: func(_ context.Context, _ slack.ReplyParams) error {
 			threadCalled = true
@@ -279,7 +299,7 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	}
 }
 
-func TestRun_TsEmpty_ReturnsError(t *testing.T) {
+func TestRun_ResolveThreadTSFails_SavesStateAndReturnsError(t *testing.T) {
 	dir := t.TempDir()
 
 	manifest := map[string]any{
@@ -299,8 +319,11 @@ func TestRun_TsEmpty_ReturnsError(t *testing.T) {
 	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
 
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
-			return "FILE123", "", nil // empty ts
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			return "FILE123", nil
+		},
+		resolveThreadTSFn: func(_ context.Context, _, _ string) (string, error) {
+			return "", errors.New("poll timeout")
 		},
 	}
 
@@ -312,6 +335,252 @@ func TestRun_TsEmpty_ReturnsError(t *testing.T) {
 		Out:          os.Stdout,
 	}, mock)
 	if err == nil {
-		t.Fatal("Run should return error when ts is empty and thread blocks are present")
+		t.Fatal("Run should return error when ResolveThreadTS fails")
+	}
+
+	// State file should exist with fileID saved for resume
+	statePath := slack.DefaultStatePath(manifestPath)
+	stateData, err2 := os.ReadFile(statePath)
+	if err2 != nil {
+		t.Fatalf("state file should exist after upload: %v", err2)
+	}
+	var state map[string]any
+	if err2 := json.Unmarshal(stateData, &state); err2 != nil {
+		t.Fatalf("parse state file: %v", err2)
+	}
+	if state["file_id"] != "FILE123" {
+		t.Errorf("state file should have file_id=FILE123, got %v", state)
+	}
+	if replied, _ := state["replied"].(bool); replied {
+		t.Error("state file should have replied=false when ts resolution failed")
+	}
+}
+
+// ① 正常系で replied:true まで進む
+func TestRun_StateFile_HappyPath_RepliedTrue(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeTestManifestWithSummary(t, dir)
+	writeTestAudio(t, dir)
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	mock := &mockPoster{
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			return "FILE123", nil
+		},
+		resolveThreadTSFn: func(_ context.Context, _, _ string) (string, error) {
+			return "TS123", nil
+		},
+		postThreadReplyFn: func(_ context.Context, _ slack.ReplyParams) error {
+			return nil
+		},
+	}
+
+	err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          io.Discard,
+	}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	statePath := slack.DefaultStatePath(manifestPath)
+	stateData, err := os.ReadFile(statePath)
+	if err != nil {
+		t.Fatalf("state file should exist after successful run: %v", err)
+	}
+	var state map[string]any
+	if err := json.Unmarshal(stateData, &state); err != nil {
+		t.Fatalf("parse state file: %v", err)
+	}
+	if replied, _ := state["replied"].(bool); !replied {
+		t.Errorf("state file should have replied=true, got %v", state)
+	}
+}
+
+// ② ts タイムアウト後の再実行で再アップロードせず返信が投稿
+func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeTestManifestWithSummary(t, dir)
+	writeTestAudio(t, dir)
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	uploadCount := 0
+	resolveCount := 0
+	threadCount := 0
+
+	mock := &mockPoster{
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			uploadCount++
+			return "FILE123", nil
+		},
+		resolveThreadTSFn: func(_ context.Context, _, _ string) (string, error) {
+			resolveCount++
+			if resolveCount == 1 {
+				return "", errors.New("poll timeout")
+			}
+			return "TS123", nil
+		},
+		postThreadReplyFn: func(_ context.Context, _ slack.ReplyParams) error {
+			threadCount++
+			return nil
+		},
+	}
+
+	// First run: upload succeeds, ts resolution fails
+	err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          io.Discard,
+	}, mock)
+	if err == nil {
+		t.Error("expected error on first run (ts timeout)")
+	}
+	if uploadCount != 1 {
+		t.Errorf("UploadAudio should be called once on first run, got %d", uploadCount)
+	}
+	if threadCount != 0 {
+		t.Errorf("PostThreadReply should not be called on first run, got %d", threadCount)
+	}
+
+	// Second run: resume from state file, skip upload
+	err = slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          io.Discard,
+	}, mock)
+	if err != nil {
+		t.Fatalf("expected no error on second run: %v", err)
+	}
+	if uploadCount != 1 {
+		t.Errorf("UploadAudio should NOT be called on second run (resume), still got %d", uploadCount)
+	}
+	if threadCount != 1 {
+		t.Errorf("PostThreadReply should be called exactly once on second run, got %d", threadCount)
+	}
+}
+
+// ③ replied:true 状態での再実行が何も投稿しない
+func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeTestManifestWithSummary(t, dir)
+	writeTestAudio(t, dir)
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	// Write state file with replied=true
+	statePath := slack.DefaultStatePath(manifestPath)
+	stateJSON := `{"audio_file":"episode42.mp3","episode_number":42,"channel":"C0123456789","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
+	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
+
+	uploadCalled := false
+	threadCalled := false
+	mock := &mockPoster{
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			uploadCalled = true
+			return "FILE_NEW", nil
+		},
+		postThreadReplyFn: func(_ context.Context, _ slack.ReplyParams) error {
+			threadCalled = true
+			return nil
+		},
+	}
+
+	var buf strings.Builder
+	err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          &buf,
+	}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if uploadCalled {
+		t.Error("UploadAudio should not be called when already replied")
+	}
+	if threadCalled {
+		t.Error("PostThreadReply should not be called when already replied")
+	}
+
+	// Output should contain the state values
+	out := buf.String()
+	if !strings.Contains(out, "FILE_OLD") {
+		t.Errorf("output should contain file_id from state, got: %q", out)
+	}
+}
+
+// ④ audio_file 不一致の古い状態を無視
+func TestRun_IgnoresStateMismatch(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeTestManifest(t, dir) // audio_file = "episode42.mp3"
+	writeTestAudio(t, dir)
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	// Write state file with different audio_file
+	statePath := slack.DefaultStatePath(manifestPath)
+	stateJSON := `{"audio_file":"different-episode.mp3","file_id":"FILE_OLD","replied":false}`
+	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
+
+	uploadCalled := false
+	mock := &mockPoster{
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			uploadCalled = true
+			return "FILE_NEW", nil
+		},
+	}
+
+	err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          io.Discard,
+	}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !uploadCalled {
+		t.Error("UploadAudio should be called when state audio_file doesn't match")
+	}
+}
+
+// ⑥ dry-run で状態ファイル不介入
+func TestRun_DryRun_NoStateFile(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeTestManifest(t, dir)
+	writeTestAudio(t, dir)
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		DryRun:       true,
+		Out:          io.Discard,
+	}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	statePath := slack.DefaultStatePath(manifestPath)
+	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
+		t.Error("state file should not exist after dry-run")
 	}
 }

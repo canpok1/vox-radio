@@ -18,6 +18,7 @@ type Options struct {
 	ConfigPath   string
 	ManifestPath string
 	SpecPath     string
+	StatePath    string // optional: override state file path (default: derived from ManifestPath)
 	DryRun       bool
 	Out          io.Writer
 }
@@ -77,35 +78,75 @@ func Run(opts Options, poster Poster) error {
 	}
 
 	ctx := context.Background()
+	channel := spec.Slack.Channel
 
-	fileID, ts, err := poster.UploadAudio(ctx, UploadParams{
-		Channel:        spec.Slack.Channel,
-		FilePath:       audioPath,
-		Title:          audioTitle,
-		Filename:       manifest.AudioFile,
-		InitialComment: header,
-	})
-	if err != nil {
-		return fmt.Errorf("upload audio: %w", err)
+	statePath := opts.StatePath
+	if statePath == "" {
+		statePath = DefaultStatePath(opts.ManifestPath)
+	}
+
+	// Build a base state from the current manifest; update fields progressively as each
+	// phase completes and write a checkpoint so re-runs can resume from where they left off.
+	state := PostState{
+		AudioFile:     manifest.AudioFile,
+		EpisodeNumber: manifest.EpisodeNumber,
+		Channel:       channel,
+	}
+	needUpload := true
+
+	if loaded, err := loadState(statePath); err == nil && loaded.AudioFile == manifest.AudioFile {
+		if loaded.Replied {
+			writeResult(opts.Out, loaded.Channel, loaded.FileID, loaded.ThreadTS)
+			return nil
+		}
+		if loaded.FileID != "" {
+			state = *loaded
+			needUpload = false
+		}
+	}
+
+	if needUpload {
+		state.FileID, err = poster.UploadAudio(ctx, UploadParams{
+			Channel:        channel,
+			FilePath:       audioPath,
+			Title:          audioTitle,
+			Filename:       manifest.AudioFile,
+			InitialComment: header,
+		})
+		if err != nil {
+			return fmt.Errorf("upload audio: %w", err)
+		}
+		_ = saveState(statePath, state)
+	}
+
+	if len(blocks) > 0 && state.ThreadTS == "" {
+		state.ThreadTS, err = poster.ResolveThreadTS(ctx, state.FileID, channel)
+		if err != nil {
+			return err
+		}
+		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 {
-		if ts == "" {
-			return fmt.Errorf("cannot post thread reply: ts is empty (file_id=%s); %s", fileID, doublePostWarning)
-		}
-		replyParams := ReplyParams{
-			Channel:  spec.Slack.Channel,
-			ThreadTS: ts,
+		if err := poster.PostThreadReply(ctx, ReplyParams{
+			Channel:  channel,
+			ThreadTS: state.ThreadTS,
 			Blocks:   blocks,
 			Text:     fallback,
-		}
-		if err := poster.PostThreadReply(ctx, replyParams); err != nil {
+		}); err != nil {
 			return fmt.Errorf("post thread reply: %w", err)
 		}
 	}
 
-	_, _ = fmt.Fprintf(opts.Out, "channel: %s\n", spec.Slack.Channel)
-	_, _ = fmt.Fprintf(opts.Out, "file_id: %s\n", fileID)
-	_, _ = fmt.Fprintf(opts.Out, "thread_ts: %s\n", ts)
+	state.Replied = true
+	_ = saveState(statePath, state)
+
+	writeResult(opts.Out, channel, state.FileID, state.ThreadTS)
 	return nil
+}
+
+func writeResult(w io.Writer, channel, fileID, ts string) {
+	_, _ = fmt.Fprintf(w, "channel: %s\n", channel)
+	_, _ = fmt.Fprintf(w, "file_id: %s\n", fileID)
+	_, _ = fmt.Fprintf(w, "thread_ts: %s\n", ts)
 }

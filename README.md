@@ -149,7 +149,7 @@ collect → rundown → script → synth → assemble → manifest
 | `episodegen manifest` | 番組内容（タイトル・概要・要約・コーナー・コーナー会話要約・記事・会話メモ）を記した `manifest.json` を MP3 と並べて出力する。コーナー記事は `02_rundown.json`（選別済み）から取得する。`--lines` で番組全体要約・会話メモ（`conversation_notes`）・コーナー単位の会話要約を LLM で生成して付加する（`03_lines.json`（元表記）を入力とするため manifest の文字列は英字・漢字のまま出力される）|
 | `feedgen` | キャッシュ（`.jsonl`）と `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成する。manifest・mp3 は不要。エピソード状態は cache を正とする |
 | `feedgen check` | `feed-spec.yaml` を strict モードでパースし、必須フィールド・URL/email 形式・プレースホルダを検証する。意味検証エラーは全件まとめて報告する |
-| `slackpost` | `manifest.json` と `slack-spec.yaml` を入力に、mp3 を Slack へアップロードして配信する（Slack 配信版）。親メッセージ（mp3 + 初期コメント）とスレッド返信（要約 + コーナー）の 2 段構成 |
+| `slackpost` | `manifest.json` と `slack-spec.yaml` を入力に、mp3 を Slack へアップロードして配信する（Slack 配信版）。親メッセージ（mp3 + 初期コメント）とスレッド返信（要約 + コーナー）の 2 段構成。実行進捗を状態ファイルに記録し、タイムアウト後の再実行で音声二重投稿なしに返信のみ再開できる（`--state` で状態ファイルパスを指定可） |
 | `slackpost check` | `slack-spec.yaml` を strict モードでパースし、必須フィールド（`slack.channel`）を検証する |
 | `config check` | 共通設定ファイルを strict モードでパースし、未知キー（typo）や設定値の不整合をエラーとして報告する（パスは `--config` で指定、省略時は `vox-radio.yaml`） |
 | `episodegen check` | エピソード仕様 YAML を strict モードでパースし、アセット参照・キャラ参照の整合性を検証する（共通設定は `--config` で指定、省略時は `vox-radio.yaml`） |

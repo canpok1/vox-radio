@@ -12,15 +12,23 @@ import (
 
 // mockPoster is a test double for the Poster interface.
 type mockPoster struct {
-	uploadAudioFn     func(ctx context.Context, u slack.UploadParams) (string, string, error)
+	uploadAudioFn     func(ctx context.Context, u slack.UploadParams) (string, error)
+	resolveThreadTSFn func(ctx context.Context, fileID, channel string) (string, error)
 	postThreadReplyFn func(ctx context.Context, p slack.ReplyParams) error
 }
 
-func (m *mockPoster) UploadAudio(ctx context.Context, u slack.UploadParams) (string, string, error) {
+func (m *mockPoster) UploadAudio(ctx context.Context, u slack.UploadParams) (string, error) {
 	if m.uploadAudioFn != nil {
 		return m.uploadAudioFn(ctx, u)
 	}
-	return "FILE123", "1234567890.123456", nil
+	return "FILE123", nil
+}
+
+func (m *mockPoster) ResolveThreadTS(ctx context.Context, fileID, channel string) (string, error) {
+	if m.resolveThreadTSFn != nil {
+		return m.resolveThreadTSFn(ctx, fileID, channel)
+	}
+	return "1234567890.123456", nil
 }
 
 func (m *mockPoster) PostThreadReply(ctx context.Context, p slack.ReplyParams) error {
@@ -74,14 +82,14 @@ func TestReplyParams_Fields(t *testing.T) {
 	}
 }
 
-func TestMockPoster_UploadAudio_ReturnsIDAndTS(t *testing.T) {
+func TestMockPoster_UploadAudio_ReturnsID(t *testing.T) {
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
-			return "FILE_ID_123", "TS_123", nil
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			return "FILE_ID_123", nil
 		},
 	}
 
-	fileID, ts, err := mock.UploadAudio(context.Background(), slack.UploadParams{
+	fileID, err := mock.UploadAudio(context.Background(), slack.UploadParams{
 		Channel:  "C0123456789",
 		FilePath: "/path/to/ep.mp3",
 	})
@@ -91,21 +99,34 @@ func TestMockPoster_UploadAudio_ReturnsIDAndTS(t *testing.T) {
 	if fileID != "FILE_ID_123" {
 		t.Errorf("fileID = %q, want %q", fileID, "FILE_ID_123")
 	}
-	if ts != "TS_123" {
-		t.Errorf("ts = %q, want %q", ts, "TS_123")
-	}
 }
 
 func TestMockPoster_UploadAudio_Error(t *testing.T) {
 	mock := &mockPoster{
-		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, string, error) {
-			return "", "", errors.New("upload failed")
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			return "", errors.New("upload failed")
 		},
 	}
 
-	_, _, err := mock.UploadAudio(context.Background(), slack.UploadParams{})
+	_, err := mock.UploadAudio(context.Background(), slack.UploadParams{})
 	if err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestMockPoster_ResolveThreadTS_ReturnsTS(t *testing.T) {
+	mock := &mockPoster{
+		resolveThreadTSFn: func(_ context.Context, _, _ string) (string, error) {
+			return "TS_123", nil
+		},
+	}
+
+	ts, err := mock.ResolveThreadTS(context.Background(), "FILE_ID", "C0123456789")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ts != "TS_123" {
+		t.Errorf("ts = %q, want %q", ts, "TS_123")
 	}
 }
 
