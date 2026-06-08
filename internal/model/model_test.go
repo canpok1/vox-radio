@@ -769,6 +769,26 @@ func TestCastsForLLM_ConvertsAppearanceCount(t *testing.T) {
 	}
 }
 
+func TestCastsForLLM_PropagatesLastEpisodeNumber(t *testing.T) {
+	// LastEpisodeNumber は絶対回番号なので境界変換せずそのまま伝播する（コーナーと同じ思想）。
+	original := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 4, LastEpisodeNumber: 7},
+		{CharacterID: "guest2", Role: "ゲスト", Type: "guest", AppearanceCount: 1, LastEpisodeNumber: 0},
+	}
+
+	got := model.CastsForLLM(original)
+
+	if got[0].LastEpisodeNumber != 7 {
+		t.Errorf("got[0].LastEpisodeNumber = %d, want 7 (変換せず伝播)", got[0].LastEpisodeNumber)
+	}
+	if got[0].AppearanceCount != 3 {
+		t.Errorf("got[0].AppearanceCount = %d, want 3 (4-1)", got[0].AppearanceCount)
+	}
+	if got[1].LastEpisodeNumber != 0 {
+		t.Errorf("got[1].LastEpisodeNumber = %d, want 0", got[1].LastEpisodeNumber)
+	}
+}
+
 func TestCastsForLLM_DoesNotModifyOriginal(t *testing.T) {
 	original := []model.RundownCast{
 		{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 5},

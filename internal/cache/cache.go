@@ -246,16 +246,56 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 	}
 }
 
-// AppearanceCounts returns a map from character ID to the number of entries they appeared in.
-// Entries without Casts (legacy entries) are ignored.
-func AppearanceCounts(entries []Entry) map[string]int {
-	counts := make(map[string]int)
+// aggregateAppearances walks entries in chronological order and aggregates appearance stats per ID.
+// idsOf extracts the relevant IDs from a single entry; empty IDs are skipped (legacy entries with
+// no ID). For each occurrence, the running count is incremented and lastEpisode is set to the
+// entry's EpisodeNumber (so the most recent appearance wins). build converts the aggregated
+// (count, lastEpisode) pair into the caller's result type. Shared by CornerAppearances and
+// CastAppearances, which differ only in which IDs they extract and which type they return.
+func aggregateAppearances[T any](entries []Entry, idsOf func(Entry) []string, build func(count, lastEpisode int) T) map[string]T {
+	type stats struct {
+		count       int
+		lastEpisode int
+	}
+	acc := make(map[string]stats)
 	for _, e := range entries {
-		for _, c := range e.Casts {
-			counts[c.CharacterID]++
+		for _, id := range idsOf(e) {
+			if id == "" {
+				continue
+			}
+			s := acc[id]
+			s.count++
+			s.lastEpisode = e.EpisodeNumber
+			acc[id] = s
 		}
 	}
-	return counts
+	result := make(map[string]T, len(acc))
+	for id, s := range acc {
+		result[id] = build(s.count, s.lastEpisode)
+	}
+	return result
+}
+
+// CastAppearance holds aggregated appearance stats for a single cast member across history.
+type CastAppearance struct {
+	Count             int // number of past episodes the cast member appeared in (excluding the current episode)
+	LastEpisodeNumber int // episode_number of the most recent past appearance (0 if none/unknown)
+}
+
+// CastAppearances returns a map from character ID to its aggregated appearance stats.
+// Entries are walked in chronological order; for each character ID, Count is incremented and
+// LastEpisodeNumber is set to the entry's EpisodeNumber (so the last appearance wins).
+// Entries without Casts (legacy entries) contribute nothing.
+func CastAppearances(entries []Entry) map[string]CastAppearance {
+	return aggregateAppearances(entries, func(e Entry) []string {
+		ids := make([]string, len(e.Casts))
+		for i, c := range e.Casts {
+			ids[i] = c.CharacterID
+		}
+		return ids
+	}, func(count, lastEpisode int) CastAppearance {
+		return CastAppearance{Count: count, LastEpisodeNumber: lastEpisode}
+	})
 }
 
 // CornerAppearance holds aggregated appearance stats for a single corner across history.
@@ -269,19 +309,15 @@ type CornerAppearance struct {
 // LastEpisodeNumber is set to the entry's EpisodeNumber (so the last appearance wins).
 // Corners without an ID (legacy entries) are ignored (0 appearances = treated as new corner).
 func CornerAppearances(entries []Entry) map[string]CornerAppearance {
-	result := make(map[string]CornerAppearance)
-	for _, e := range entries {
-		for _, c := range e.Corners {
-			if c.ID == "" {
-				continue
-			}
-			a := result[c.ID]
-			a.Count++
-			a.LastEpisodeNumber = e.EpisodeNumber
-			result[c.ID] = a
+	return aggregateAppearances(entries, func(e Entry) []string {
+		ids := make([]string, len(e.Corners))
+		for i, c := range e.Corners {
+			ids[i] = c.ID
 		}
-	}
-	return result
+		return ids
+	}, func(count, lastEpisode int) CornerAppearance {
+		return CornerAppearance{Count: count, LastEpisodeNumber: lastEpisode}
+	})
 }
 
 // NextEpisodeNumber returns the episode number to assign to the next episode.

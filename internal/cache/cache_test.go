@@ -719,46 +719,52 @@ func TestCompact_PreservesCasts(t *testing.T) {
 	}
 }
 
-func TestAppearanceCounts_EmptyEntries(t *testing.T) {
-	counts := cache.AppearanceCounts([]cache.Entry{})
-	if len(counts) != 0 {
-		t.Errorf("AppearanceCounts(empty): got %d entries, want 0", len(counts))
+func TestCastAppearances_EmptyEntries(t *testing.T) {
+	got := cache.CastAppearances([]cache.Entry{})
+	if len(got) != 0 {
+		t.Errorf("CastAppearances(empty): got %d entries, want 0", len(got))
 	}
 }
 
-func TestAppearanceCounts_LegacyEntriesWithNoCasts(t *testing.T) {
+func TestCastAppearances_LegacyEntriesWithNoCasts(t *testing.T) {
 	entries := []cache.Entry{
 		{Title: "e1"}, // legacy: no Casts field
 		{Title: "e2"},
 	}
-	counts := cache.AppearanceCounts(entries)
+	got := cache.CastAppearances(entries)
 	// legacy entries contribute nothing, map should be empty
-	if len(counts) != 0 {
-		t.Errorf("AppearanceCounts(legacy): got %d entries, want 0", len(counts))
+	if len(got) != 0 {
+		t.Errorf("CastAppearances(legacy): got %d entries, want 0", len(got))
 	}
 }
 
-func TestAppearanceCounts_CountsPerCharacter(t *testing.T) {
+func TestCastAppearances_CountsAndLastEpisodeNumber(t *testing.T) {
 	entries := []cache.Entry{
-		{Title: "e1", Casts: []cache.CastEntry{
+		{EpisodeNumber: 1, Casts: []cache.CastEntry{
 			{CharacterID: "zundamon", Type: "regular"},
 			{CharacterID: "guest1", Type: "guest"},
 		}},
-		{Title: "e2", Casts: []cache.CastEntry{
+		{EpisodeNumber: 2, Casts: []cache.CastEntry{
 			{CharacterID: "zundamon", Type: "regular"},
 		}},
-		{Title: "e3", Casts: []cache.CastEntry{
+		{EpisodeNumber: 5, Casts: []cache.CastEntry{
 			{CharacterID: "zundamon", Type: "regular"},
 			{CharacterID: "guest1", Type: "guest"},
 		}},
 	}
-	counts := cache.AppearanceCounts(entries)
+	got := cache.CastAppearances(entries)
 
-	if counts["zundamon"] != 3 {
-		t.Errorf("AppearanceCounts: zundamon: got %d, want 3", counts["zundamon"])
+	if got["zundamon"].Count != 3 {
+		t.Errorf("zundamon.Count: got %d, want 3", got["zundamon"].Count)
 	}
-	if counts["guest1"] != 2 {
-		t.Errorf("AppearanceCounts: guest1: got %d, want 2", counts["guest1"])
+	if got["zundamon"].LastEpisodeNumber != 5 {
+		t.Errorf("zundamon.LastEpisodeNumber: got %d, want 5", got["zundamon"].LastEpisodeNumber)
+	}
+	if got["guest1"].Count != 2 {
+		t.Errorf("guest1.Count: got %d, want 2", got["guest1"].Count)
+	}
+	if got["guest1"].LastEpisodeNumber != 5 {
+		t.Errorf("guest1.LastEpisodeNumber: got %d, want 5", got["guest1"].LastEpisodeNumber)
 	}
 }
 

@@ -148,11 +148,15 @@ func newLLMClient(cfg *config.Config) llm.Client {
 	return llm.NewClient(llmCfg)
 }
 
-// selectCasts selects cast members for the given episode number and injects appearance counts.
-func selectCasts(casts map[string]config.CastConfig, episodeNumber int, counts map[string]int) []model.RundownCast {
+// selectCasts selects cast members for the given episode number and injects appearance stats.
+// AppearanceCount includes the current episode (past count + 1); LastEpisodeNumber is the most
+// recent past appearance (0 if none).
+func selectCasts(casts map[string]config.CastConfig, episodeNumber int, appearances map[string]cache.CastAppearance) []model.RundownCast {
 	selected := cast.Select(casts, episodeNumber)
 	for i, c := range selected {
-		selected[i].AppearanceCount = counts[c.CharacterID] + 1
+		a := appearances[c.CharacterID]
+		selected[i].AppearanceCount = a.Count + 1
+		selected[i].LastEpisodeNumber = a.LastEpisodeNumber
 	}
 	return selected
 }

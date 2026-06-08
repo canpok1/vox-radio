@@ -189,45 +189,56 @@ func TestLoadCacheEntries_CorruptedCache(t *testing.T) {
 	}
 }
 
-func TestSelectCasts_InjectsAppearanceCount(t *testing.T) {
+func TestSelectCasts_InjectsAppearanceCountAndLastEpisodeNumber(t *testing.T) {
 	// guest は condition が必要（cast.Select の仕様）
 	guestCond := &config.EpisodeCondition{Episodes: []int{1}}
 	casts := map[string]config.CastConfig{
 		"zundamon": {Role: "MC", Type: config.CastTypeRegular},
 		"guest1":   {Role: "ゲスト", Type: config.CastTypeGuest, Condition: guestCond},
 	}
-	counts := map[string]int{
-		"zundamon": 10,
-		"guest1":   2,
+	appearances := map[string]cache.CastAppearance{
+		"zundamon": {Count: 10, LastEpisodeNumber: 12},
+		"guest1":   {Count: 2, LastEpisodeNumber: 7},
 	}
 
-	selected := selectCasts(casts, 1, counts)
+	selected := selectCasts(casts, 1, appearances)
 
-	countByID := make(map[string]int)
+	byID := make(map[string]model.RundownCast)
 	for _, c := range selected {
-		countByID[c.CharacterID] = c.AppearanceCount
+		byID[c.CharacterID] = c
 	}
-	if countByID["zundamon"] != 11 {
-		t.Errorf("zundamon AppearanceCount: got %d, want 11 (counts[id]+1)", countByID["zundamon"])
+	if byID["zundamon"].AppearanceCount != 11 {
+		t.Errorf("zundamon AppearanceCount: got %d, want 11 (Count+1)", byID["zundamon"].AppearanceCount)
 	}
-	if countByID["guest1"] != 3 {
-		t.Errorf("guest1 AppearanceCount: got %d, want 3 (counts[id]+1)", countByID["guest1"])
+	if byID["zundamon"].LastEpisodeNumber != 12 {
+		t.Errorf("zundamon LastEpisodeNumber: got %d, want 12", byID["zundamon"].LastEpisodeNumber)
+	}
+	if byID["guest1"].AppearanceCount != 3 {
+		t.Errorf("guest1 AppearanceCount: got %d, want 3 (Count+1)", byID["guest1"].AppearanceCount)
+	}
+	if byID["guest1"].LastEpisodeNumber != 7 {
+		t.Errorf("guest1 LastEpisodeNumber: got %d, want 7", byID["guest1"].LastEpisodeNumber)
 	}
 }
 
-func TestSelectCasts_UnknownCharHasZeroCount(t *testing.T) {
+func TestSelectCasts_UnknownCharHasZeroAppearance(t *testing.T) {
 	casts := map[string]config.CastConfig{
 		"zundamon": {Role: "MC", Type: config.CastTypeRegular},
 	}
-	counts := map[string]int{} // no entry for zundamon
+	appearances := map[string]cache.CastAppearance{} // no entry for zundamon
 
-	selected := selectCasts(casts, 1, counts)
+	selected := selectCasts(casts, 1, appearances)
 	if len(selected) == 0 {
 		t.Fatal("expected at least one cast member")
 	}
 	for _, c := range selected {
-		if c.CharacterID == "zundamon" && c.AppearanceCount != 1 {
-			t.Errorf("zundamon AppearanceCount: got %d, want 1 (not in counts: 0+1)", c.AppearanceCount)
+		if c.CharacterID == "zundamon" {
+			if c.AppearanceCount != 1 {
+				t.Errorf("zundamon AppearanceCount: got %d, want 1 (not in appearances: 0+1)", c.AppearanceCount)
+			}
+			if c.LastEpisodeNumber != 0 {
+				t.Errorf("zundamon LastEpisodeNumber: got %d, want 0", c.LastEpisodeNumber)
+			}
 		}
 	}
 }

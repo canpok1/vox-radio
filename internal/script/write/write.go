@@ -352,7 +352,11 @@ func formatCastInfo(casts []model.RundownCast) string {
 	for _, g := range guests {
 		appearanceInfo := "（今回が初出演）"
 		if past := g.PastAppearanceCount(); past > 0 {
-			appearanceInfo = fmt.Sprintf("（過去%d回出演）", past)
+			if g.LastEpisodeNumber > 0 {
+				appearanceInfo = fmt.Sprintf("（過去%d回出演・前回は第%d回）", past, g.LastEpisodeNumber)
+			} else {
+				appearanceInfo = fmt.Sprintf("（過去%d回出演）", past)
+			}
 		}
 		fmt.Fprintf(&sb, "- %s（役割: %s）%s\n", g.CharacterID, g.Role, appearanceInfo)
 	}
