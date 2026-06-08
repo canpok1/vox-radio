@@ -1,8 +1,9 @@
 // Package httpretry provides an http.RoundTripper that retries requests which
 // fail with retryable HTTP status codes (5xx and 429) using exponential backoff.
 //
-// Wrap any http.Client's Transport with NewTransport to make its requests
-// resilient to transient upstream failures without changing call sites.
+// Use NewClient to build a retry-enabled *http.Client, or wrap an existing
+// client's Transport with NewTransport. Either way requests become resilient
+// to transient upstream failures without changing call sites.
 package httpretry
 
 import (
