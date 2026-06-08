@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/httpretry"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -32,10 +33,11 @@ func WithLocation(loc *time.Location) Option {
 	return func(c *Collector) { c.loc = loc }
 }
 
-// New creates a Collector. If client is nil, http.DefaultClient is used.
+// New creates a Collector. If client is nil, a client with retry-enabled
+// transport (exponential backoff on 5xx/429) is used.
 func New(client *http.Client, opts ...Option) *Collector {
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{Transport: httpretry.NewTransport(nil)}
 	}
 	c := &Collector{
 		client: client,

@@ -384,8 +384,8 @@ func TestComplete_ThrottleContextCancellation(t *testing.T) {
 
 func TestComplete_APIError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"error":{"message":"internal error","type":"server_error"}}`))
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"message":"bad request","type":"invalid_request_error"}}`))
 	}))
 	defer ts.Close()
 
