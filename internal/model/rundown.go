@@ -22,10 +22,11 @@ type RundownCorner struct {
 
 // RundownCast は出演確定したキャスト1人分の情報。
 type RundownCast struct {
-	CharacterID     string `json:"character_id"`
-	Role            string `json:"role"`
-	Type            string `json:"type"`             // "regular" | "guest"
-	AppearanceCount int    `json:"appearance_count"` // その回を含めた出演回数。1 = 初登場（その回に初めて出演）
+	CharacterID       string `json:"character_id"`
+	Role              string `json:"role"`
+	Type              string `json:"type"`                          // "regular" | "guest"
+	AppearanceCount   int    `json:"appearance_count"`              // その回を含めた出演回数。1 = 初登場（その回に初めて出演）
+	LastEpisodeNumber int    `json:"last_episode_number,omitempty"` // 前回出演した回番号。0 = 過去に出演なし
 }
 
 // PastAppearanceCount returns the number of past appearances (excluding this episode).
@@ -36,6 +37,8 @@ func (c RundownCast) PastAppearanceCount() int {
 
 // CastsForLLM returns a copy of casts with AppearanceCount replaced by PastAppearanceCount()
 // for each element, converting from the persisted definition to the LLM-facing definition.
+// LastEpisodeNumber is an absolute episode number and is propagated unchanged (no boundary
+// conversion), mirroring how corners expose last_episode_number.
 func CastsForLLM(casts []RundownCast) []RundownCast {
 	result := make([]RundownCast, len(casts))
 	for i, c := range casts {

@@ -40,6 +40,31 @@ func TestFormatCastInfo_GuestReturningAppearance(t *testing.T) {
 	}
 }
 
+func TestFormatCastInfo_GuestReturning_IncludesLastEpisodeNumber(t *testing.T) {
+	// AppearanceCount: 4 → 過去3回出演、LastEpisodeNumber: 9 → 前回は第9回
+	casts := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 4, LastEpisodeNumber: 9},
+	}
+	got := formatCastInfo(casts)
+	if !strings.Contains(got, "過去3回出演・前回は第9回") {
+		t.Errorf("formatCastInfo: expected '過去3回出演・前回は第9回', got: %s", got)
+	}
+}
+
+func TestFormatCastInfo_GuestReturning_NoLastEpisodeNumber_OmitsItem(t *testing.T) {
+	// 過去出演ありだが LastEpisodeNumber 不明（0）の場合は前回表記を出さない
+	casts := []model.RundownCast{
+		{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 4, LastEpisodeNumber: 0},
+	}
+	got := formatCastInfo(casts)
+	if !strings.Contains(got, "過去3回出演") {
+		t.Errorf("formatCastInfo: expected '過去3回出演', got: %s", got)
+	}
+	if strings.Contains(got, "前回は第") {
+		t.Errorf("formatCastInfo: should not contain '前回は第' when LastEpisodeNumber is 0, got: %s", got)
+	}
+}
+
 func TestFormatCastInfo_NoDirectionRules(t *testing.T) {
 	// 演出ルールは追加しない
 	casts := []model.RundownCast{

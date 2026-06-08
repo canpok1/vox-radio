@@ -82,12 +82,12 @@ func newEpisodegenCmd() *cobra.Command {
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 			excludedURLs := cache.PastURLs(entries)
-			appearanceCounts := cache.AppearanceCounts(entries)
+			castAppearances := cache.CastAppearances(entries)
 			cornerAppearances := cache.CornerAppearances(entries)
 			writer.SetPastEpisodes(recent)
 			writer.SetEpisodeNumber(episodeNumber)
 
-			selectedCasts := selectCasts(p.Casts, episodeNumber, appearanceCounts)
+			selectedCasts := selectCasts(p.Casts, episodeNumber, castAppearances)
 			writer.SetCasts(selectedCasts)
 			selector.SetCasts(selectedCasts)
 

@@ -58,13 +58,13 @@ func newRundownCmd() *cobra.Command {
 				return err
 			}
 			corners := resolveCorners(p.Corners, episodeNumber)
-			appearanceCounts := cache.AppearanceCounts(entries)
+			castAppearances := cache.CastAppearances(entries)
 			cornerAppearances := cache.CornerAppearances(entries)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
-			casts := selectCasts(p.Casts, episodeNumber, appearanceCounts)
+			casts := selectCasts(p.Casts, episodeNumber, castAppearances)
 			selector.SetCasts(casts)
 			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, nil, rundown.WithLogger(logger))
 			rd.SetCornerAppearances(cornerAppearances)
