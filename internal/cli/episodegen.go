@@ -83,6 +83,7 @@ func newEpisodegenCmd() *cobra.Command {
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 			excludedURLs := cache.PastURLs(entries)
 			appearanceCounts := cache.AppearanceCounts(entries)
+			cornerAppearances := cache.CornerAppearances(entries)
 			writer.SetPastEpisodes(recent)
 			writer.SetEpisodeNumber(episodeNumber)
 
@@ -95,6 +96,7 @@ func newEpisodegenCmd() *cobra.Command {
 			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedURLs, rundown.WithLogger(logger))
+			rundowner.SetCornerAppearances(cornerAppearances)
 
 			scripter := script.NewLLMScriptGenerator(
 				writer,

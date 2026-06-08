@@ -4,7 +4,8 @@ program:
   description: "テスト用"
 
 corners:
-  - title: "オープニング"
+  - id: "opening"
+    title: "オープニング"
     content: "番組の挨拶とトピック紹介"
     cast:
       zundamon: "元気に挨拶する進行役"

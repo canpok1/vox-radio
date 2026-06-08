@@ -18,13 +18,14 @@ func TestBuild(t *testing.T) {
 	}
 
 	corners := []config.CornerConfig{
-		{Title: "オープニング"},
-		{Title: "今日のテックニュース"},
+		{ID: "opening", Title: "オープニング"},
+		{ID: "tech", Title: "今日のテックニュース"},
 	}
 
 	rundown := model.Rundown{
 		Corners: []model.RundownCorner{
 			{
+				ID:    "tech",
 				Title: "今日のテックニュース",
 				Flow:  "最新記事を紹介",
 				Articles: []model.RundownArticle{
@@ -132,6 +133,7 @@ func TestBuild(t *testing.T) {
 		rundownWithTwo := model.Rundown{
 			Corners: []model.RundownCorner{
 				{
+					ID:    "tech",
 					Title: "今日のテックニュース",
 					Articles: []model.RundownArticle{
 						{URL: "https://example.com/1", Title: "選別記事1"},

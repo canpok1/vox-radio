@@ -21,6 +21,7 @@ type ArticleEntry struct {
 
 // CornerEntry holds corner data for a single episode history entry.
 type CornerEntry struct {
+	ID       string         `json:"id"`
 	Title    string         `json:"title"`
 	Summary  string         `json:"summary"`
 	Points   []string       `json:"points"`
@@ -125,8 +126,20 @@ func (m *Manager) write(entries []Entry) error {
 	return nil
 }
 
-// Compact keeps all entries but empties heavy fields (Corners, ConversationNotes) for entries
-// outside the detailed window (most recent maxEntries entries that are within retentionDays).
+// stripCornerHeavyFields returns a copy of corners with only identity fields (ID, Title) kept,
+// dropping heavy fields (Summary, Points, Articles). Corner IDs must survive compaction so that
+// CornerAppearances can count appearances across the full history (mirrors how Casts are kept).
+func stripCornerHeavyFields(corners []CornerEntry) []CornerEntry {
+	stripped := make([]CornerEntry, len(corners))
+	for i, c := range corners {
+		stripped[i] = CornerEntry{ID: c.ID, Title: c.Title}
+	}
+	return stripped
+}
+
+// Compact keeps all entries but drops heavy corner fields (Summary, Points, Articles) and
+// ConversationNotes for entries outside the detailed window (most recent maxEntries entries that
+// are within retentionDays). Corner identity (ID, Title) is preserved so appearance counting works.
 func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
@@ -152,7 +165,7 @@ func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 	result := make([]Entry, len(entries))
 	for i, e := range entries {
 		if !detailed[i] {
-			e.Corners = make([]CornerEntry, 0)
+			e.Corners = stripCornerHeavyFields(e.Corners)
 			e.ConversationNotes = make([]model.ConversationNote, 0)
 		}
 		result[i] = e
@@ -203,7 +216,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		if points == nil {
 			points = make([]string, 0)
 		}
-		corners[i] = CornerEntry{Title: mc.Title, Summary: mc.Summary, Points: points, Articles: articles}
+		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: points, Articles: articles}
 	}
 
 	notes := m.ConversationNotes
@@ -243,6 +256,32 @@ func AppearanceCounts(entries []Entry) map[string]int {
 		}
 	}
 	return counts
+}
+
+// CornerAppearance holds aggregated appearance stats for a single corner across history.
+type CornerAppearance struct {
+	Count             int // number of past episodes the corner appeared in (excluding the current episode)
+	LastEpisodeNumber int // episode_number of the most recent past appearance (0 if none/unknown)
+}
+
+// CornerAppearances returns a map from corner ID to its aggregated appearance stats.
+// Entries are walked in chronological order; for each corner ID, Count is incremented and
+// LastEpisodeNumber is set to the entry's EpisodeNumber (so the last appearance wins).
+// Corners without an ID (legacy entries) are ignored (0 appearances = treated as new corner).
+func CornerAppearances(entries []Entry) map[string]CornerAppearance {
+	result := make(map[string]CornerAppearance)
+	for _, e := range entries {
+		for _, c := range e.Corners {
+			if c.ID == "" {
+				continue
+			}
+			a := result[c.ID]
+			a.Count++
+			a.LastEpisodeNumber = e.EpisodeNumber
+			result[c.ID] = a
+		}
+	}
+	return result
 }
 
 // NextEpisodeNumber returns the episode number to assign to the next episode.

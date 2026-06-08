@@ -11,7 +11,8 @@ casts:
     role: "MC。進行役。"
 
 corners:
-  - title: "オープニング"
+  - id: "opening"
+    title: "オープニング"
     content: "番組の挨拶とトピック紹介"
     direction: "冒頭でオープニングジングルを流す。"
     script_note: "コーナー台本指示テスト"
@@ -21,7 +22,8 @@ corners:
     start_audio:
       type: jingle
       id: opening
-  - title: "ニュースコーナー"
+  - id: "news"
+    title: "ニュースコーナー"
     content: "テック記事を紹介"
     cast:
       zundamon: "司会"

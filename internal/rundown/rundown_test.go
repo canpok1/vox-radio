@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -31,6 +32,24 @@ func (m *mockSelector) Select(_ context.Context, _ config.CornerConfig, articles
 	m.receivedArticles = articles
 	return m.result, m.err
 }
+
+// appearanceCapturingSelector records the corner appearance values set via SetCornerAppearance.
+type appearanceCapturingSelector struct {
+	result        sel.SelectResult
+	capturedCount []int
+	capturedLast  []int
+}
+
+func (m *appearanceCapturingSelector) SetCornerAppearance(count, last int) {
+	m.capturedCount = append(m.capturedCount, count)
+	m.capturedLast = append(m.capturedLast, last)
+}
+
+func (m *appearanceCapturingSelector) Select(_ context.Context, _ config.CornerConfig, _ []model.Article) (sel.SelectResult, error) {
+	return m.result, nil
+}
+
+var _ sel.CornerAppearanceSetter = (*appearanceCapturingSelector)(nil)
 
 type mockSummarizer struct {
 	byURL          map[string]model.Summary
@@ -111,6 +130,74 @@ func (d *positionCapturingDesigner) DesignFlow(_ context.Context, _ config.Corne
 
 func defaultCorner(title string) config.CornerConfig {
 	return config.CornerConfig{Title: title, Content: "内容", LengthSec: 60}
+}
+
+func TestLLMRundowner_Run_BakesCornerAppearance(t *testing.T) {
+	ms := &mockSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, SelectionReason: "理由"}}
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd.SetCornerAppearances(map[string]cache.CornerAppearance{
+		"tech": {Count: 2, LastEpisodeNumber: 3}, // 過去2回・前回は第3回 → 今回含め3回目
+	})
+
+	corners := []config.CornerConfig{
+		{ID: "tech", Title: "テック", Content: "内容", LengthSec: 60},       // 記事ありコーナー
+		{ID: "opening", Title: "オープニング", Content: "導入", LengthSec: 30}, // 記事なし・新コーナー
+	}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "テック", Articles: []model.Article{{URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "オープニング", Articles: []model.Article{}},
+		},
+	}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tech := got.Corners[0]
+	if tech.ID != "tech" {
+		t.Errorf("Corners[0].ID: got %q, want tech", tech.ID)
+	}
+	if tech.AppearanceCount != 3 {
+		t.Errorf("Corners[0].AppearanceCount: got %d, want 3 (past 2 + current)", tech.AppearanceCount)
+	}
+	if tech.LastEpisodeNumber != 3 {
+		t.Errorf("Corners[0].LastEpisodeNumber: got %d, want 3", tech.LastEpisodeNumber)
+	}
+	opening := got.Corners[1]
+	if opening.AppearanceCount != 1 {
+		t.Errorf("Corners[1].AppearanceCount: got %d, want 1 (new corner)", opening.AppearanceCount)
+	}
+	if opening.LastEpisodeNumber != 0 {
+		t.Errorf("Corners[1].LastEpisodeNumber: got %d, want 0 (new corner)", opening.LastEpisodeNumber)
+	}
+}
+
+func TestLLMRundowner_Run_PassesCornerAppearanceToSelector(t *testing.T) {
+	ms := &appearanceCapturingSelector{result: sel.SelectResult{SelectedURLs: []string{"u1"}, SelectionReason: "理由"}}
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, mfd, nil, nil)
+	rd.SetCornerAppearances(map[string]cache.CornerAppearance{
+		"tech": {Count: 4, LastEpisodeNumber: 5},
+	})
+
+	corners := []config.CornerConfig{{ID: "tech", Title: "テック", Content: "内容", LengthSec: 60}}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "テック", Articles: []model.Article{{URL: "u1", Title: "t", Body: "b"}}},
+		},
+	}
+
+	if _, err := rd.Run(context.Background(), corners, articles, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(ms.capturedCount) != 1 || ms.capturedCount[0] != 5 {
+		t.Errorf("selector should receive appearanceCount 5 (4+1), got %v", ms.capturedCount)
+	}
+	if len(ms.capturedLast) != 1 || ms.capturedLast[0] != 5 {
+		t.Errorf("selector should receive lastEpisodeNumber 5, got %v", ms.capturedLast)
+	}
 }
 
 func article(url string) model.Article {

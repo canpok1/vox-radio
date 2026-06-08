@@ -11,10 +11,13 @@ type RundownArticle struct {
 }
 
 type RundownCorner struct {
-	Title           string           `json:"title"`
-	Flow            string           `json:"flow"`             // フェーズ2で全コーナー分を生成
-	SelectionReason string           `json:"selection_reason"` // フェーズ1の選別理由（記事なしコーナーは空）
-	Articles        []RundownArticle `json:"articles"`
+	ID                string           `json:"id"`
+	Title             string           `json:"title"`
+	Flow              string           `json:"flow"`             // フェーズ2で全コーナー分を生成
+	SelectionReason   string           `json:"selection_reason"` // フェーズ1の選別理由（記事なしコーナーは空）
+	Articles          []RundownArticle `json:"articles"`
+	AppearanceCount   int              `json:"appearance_count"`              // その回を含めた扱い回数。1 = 新コーナー（その回が初出）
+	LastEpisodeNumber int              `json:"last_episode_number,omitempty"` // 前回このコーナーを扱った回番号。0 = 過去に扱いなし
 }
 
 // RundownCast は出演確定したキャスト1人分の情報。
@@ -47,11 +50,11 @@ type Rundown struct {
 	Casts   []RundownCast   `json:"casts"` // その回の出演者（キャラID昇順、0件でも null でなく []）
 }
 
-// CornerMap returns a map from corner title to its RundownCorner.
+// CornerMap returns a map from corner ID to its RundownCorner.
 func (r Rundown) CornerMap() map[string]RundownCorner {
 	m := make(map[string]RundownCorner, len(r.Corners))
 	for _, c := range r.Corners {
-		m[c.Title] = c
+		m[c.ID] = c
 	}
 	return m
 }

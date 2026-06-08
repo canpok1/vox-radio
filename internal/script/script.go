@@ -104,8 +104,11 @@ func WriteAll(ctx context.Context, w write.Writer, program config.ProgramConfig,
 	result := make([][]model.Line, len(corners))
 	previous := make([]model.CornerLines, 0, len(corners))
 	for i, corner := range corners {
-		rc := cornerMap[corner.Title]
+		rc := cornerMap[corner.ID]
 		a := assignments[i]
+		if cas, ok := w.(write.CornerAppearanceSetter); ok {
+			cas.SetCornerAppearance(rc.AppearanceCount, rc.LastEpisodeNumber)
+		}
 		lines, err := w.Write(ctx, program, corner, a, corners, previous, rc.Articles, rc.Flow, chars)
 		if err != nil {
 			return nil, fmt.Errorf("write corner %q: %w", corner.Title, err)
@@ -183,8 +186,11 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	}
 
 	corner := corners[worstIdx]
-	rc := cornerMap[corner.Title]
+	rc := cornerMap[corner.ID]
 	previous := buildPreviousCorners(corners, cornerLines, worstIdx)
+	if cas, ok := g.writer.(write.CornerAppearanceSetter); ok {
+		cas.SetCornerAppearance(rc.AppearanceCount, rc.LastEpisodeNumber)
+	}
 	if newLines, err := g.writer.Write(ctx, program, corner, allAssignments[worstIdx], corners, previous, rc.Articles, rc.Flow, chars); err == nil {
 		cornerLines[worstIdx] = newLines
 	}

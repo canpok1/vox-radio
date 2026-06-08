@@ -101,14 +101,14 @@ func TestResolveCorners_UnknownEpisodeReturnsAll(t *testing.T) {
 
 func TestResolveCornersByRundown(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "A", LengthSec: 30},
-		{Title: "B", LengthSec: 60},
-		{Title: "C", LengthSec: 90},
+		{ID: "a", Title: "A", LengthSec: 30},
+		{ID: "b", Title: "B", LengthSec: 60},
+		{ID: "c", Title: "C", LengthSec: 90},
 	}
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{
-			{Title: "C"},
-			{Title: "A"},
+			{ID: "c", Title: "C"},
+			{ID: "a", Title: "A"},
 		},
 	}
 
@@ -124,19 +124,19 @@ func TestResolveCornersByRundown(t *testing.T) {
 	}
 }
 
-func TestResolveCornersByRundown_UnknownTitle(t *testing.T) {
+func TestResolveCornersByRundown_UnknownID(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "A", LengthSec: 30},
+		{ID: "a", Title: "A", LengthSec: 30},
 	}
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{
-			{Title: "X"},
+			{ID: "x", Title: "X"},
 		},
 	}
 
 	_, err := resolveCornersByRundown(corners, rd)
 	if err == nil {
-		t.Error("expected error for unknown title, got nil")
+		t.Error("expected error for unknown id, got nil")
 	}
 }
 

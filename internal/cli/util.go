@@ -168,14 +168,14 @@ func resolveLocation(program config.ProgramConfig, logger *slog.Logger) *time.Lo
 	return loc
 }
 
-// resolveCornersByRundown は rundown のコーナータイトル順に spec のコーナーを再構成する。
-// script 系で採用コーナーを再現するために使う（回番号不要・再実行で不変）。
+// resolveCornersByRundown は rundown のコーナー id 順に spec のコーナーを再構成する。
+// script 系で採用コーナーを再現するために使う（回番号不要・再実行で不変・タイトル変更に頑健）。
 func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([]config.CornerConfig, error) {
-	titles := make([]string, len(rd.Corners))
+	ids := make([]string, len(rd.Corners))
 	for i, c := range rd.Corners {
-		titles[i] = c.Title
+		ids[i] = c.ID
 	}
-	return config.ResolveCornersByTitles(corners, titles)
+	return config.ResolveCornersByIDs(corners, ids)
 }
 
 // resolveCorners は回番号で採用コーナーを絞り込む。

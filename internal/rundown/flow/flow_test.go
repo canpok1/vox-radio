@@ -70,6 +70,38 @@ func TestLLMDesigner_DesignFlow_Success(t *testing.T) {
 	}
 }
 
+func TestLLMDesigner_DesignFlow_PromptContainsCornerAppearance(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"flow":"フロー"}`)}
+	d := flow.NewLLMDesigner(mc, "コーナー: {{corner}} 番組: {{program}}", 0)
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
+	target := model.RundownCorner{Title: "テック", AppearanceCount: 3, LastEpisodeNumber: 2}
+	rd := model.Rundown{
+		Corners: []model.RundownCorner{
+			target,
+			{Title: "別コーナー", AppearanceCount: 1}, // 番組内の別コーナー（新コーナー）
+		},
+		Casts: make([]model.RundownCast, 0),
+	}
+
+	_, err := d.DesignFlow(context.Background(), corner, flow.PositionOpening, target, rd)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	// 対象コーナー（{{corner}}）に扱い回数・前回出演回番号が出る
+	if !strings.Contains(prompt, `"appearance_count":3`) {
+		t.Errorf("corner prompt should contain appearance_count:3, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"last_episode_number":2`) {
+		t.Errorf("corner prompt should contain last_episode_number:2, got: %s", prompt)
+	}
+	// 番組構成全体（{{program}}）にも各コーナーの扱い回数が出る
+	if !strings.Contains(prompt, `"appearance_count":1`) {
+		t.Errorf("program prompt should contain other corner appearance_count:1, got: %s", prompt)
+	}
+}
+
 func TestLLMDesigner_DesignFlow_PromptContainsCorner(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"flow":"フロー"}`),

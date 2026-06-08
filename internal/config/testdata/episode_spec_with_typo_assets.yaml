@@ -4,7 +4,8 @@ program:
   description: "typoアセット参照テスト用"
 
 corners:
-  - title: "コーナー1"
+  - id: "corner1"
+    title: "コーナー1"
     content: "内容"
     cast:
       zundamon: "進行"

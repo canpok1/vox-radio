@@ -15,19 +15,19 @@ func ResolveCornersForEpisode(corners []CornerConfig, episodeNumber int) []Corne
 	return result
 }
 
-// ResolveCornersByTitles は titles に含まれるタイトルのコーナーだけを titles の順序で返す。
-// rundown.Corners のタイトル順を渡し、script 系で採用コーナーを再構成するために使う（回番号不要）。
-// titles にあるが spec に存在しないタイトルがあればエラー。
-func ResolveCornersByTitles(corners []CornerConfig, titles []string) ([]CornerConfig, error) {
+// ResolveCornersByIDs は ids に含まれる id のコーナーだけを ids の順序で返す。
+// rundown.Corners の id 順を渡し、script 系で採用コーナーを再構成するために使う（回番号不要）。
+// ids にあるが spec に存在しない id があればエラー。
+func ResolveCornersByIDs(corners []CornerConfig, ids []string) ([]CornerConfig, error) {
 	cornerMap := make(map[string]CornerConfig, len(corners))
 	for _, c := range corners {
-		cornerMap[c.Title] = c
+		cornerMap[c.ID] = c
 	}
-	result := make([]CornerConfig, 0, len(titles))
-	for _, title := range titles {
-		c, ok := cornerMap[title]
+	result := make([]CornerConfig, 0, len(ids))
+	for _, id := range ids {
+		c, ok := cornerMap[id]
 		if !ok {
-			return nil, fmt.Errorf("corner %q not found in spec", title)
+			return nil, fmt.Errorf("corner id %q not found in spec", id)
 		}
 		result = append(result, c)
 	}

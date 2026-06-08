@@ -48,10 +48,13 @@ type Designer interface {
 }
 
 // cornerForProgram はプロンプトに渡す番組全体コーナー情報。
+// AppearanceCount は今回を含む扱い回数（1 = 新コーナー）。LastEpisodeNumber は前回扱った回番号（0 = 過去になし）。
 type cornerForProgram struct {
-	Title           string                 `json:"title"`
-	SelectionReason string                 `json:"selection_reason"`
-	Articles        []model.RundownArticle `json:"articles"`
+	Title             string                 `json:"title"`
+	SelectionReason   string                 `json:"selection_reason"`
+	Articles          []model.RundownArticle `json:"articles"`
+	AppearanceCount   int                    `json:"appearance_count,omitempty"`
+	LastEpisodeNumber int                    `json:"last_episode_number,omitempty"`
 }
 
 // programForPrompt はプロンプトに渡す番組全体情報。
@@ -77,6 +80,8 @@ func NewLLMDesigner(client llm.Client, promptTemplate string, temperature float6
 
 func (d *LLMDesigner) DesignFlow(ctx context.Context, corner config.CornerConfig, position Position, target model.RundownCorner, rundown model.Rundown) (string, error) {
 	cp := prompt.NewCornerForPrompt(corner)
+	cp.AppearanceCount = target.AppearanceCount
+	cp.LastEpisodeNumber = target.LastEpisodeNumber
 	cornerJSON, err := json.Marshal(cp)
 	if err != nil {
 		return "", fmt.Errorf("marshal corner: %w", err)
@@ -90,9 +95,11 @@ func (d *LLMDesigner) DesignFlow(ctx context.Context, corner config.CornerConfig
 	programCorners := make([]cornerForProgram, len(rundown.Corners))
 	for i, c := range rundown.Corners {
 		programCorners[i] = cornerForProgram{
-			Title:           c.Title,
-			SelectionReason: c.SelectionReason,
-			Articles:        c.Articles,
+			Title:             c.Title,
+			SelectionReason:   c.SelectionReason,
+			Articles:          c.Articles,
+			AppearanceCount:   c.AppearanceCount,
+			LastEpisodeNumber: c.LastEpisodeNumber,
 		}
 	}
 	prog := programForPrompt{

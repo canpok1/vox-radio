@@ -26,12 +26,23 @@ type mockWriter struct {
 	receivedPrevious    [][]model.CornerLines
 	receivedCorners     []config.CornerConfig
 	receivedAssignments [][]write.CastAssignment
+	receivedAppearance  []int // appearanceCount per Write call (via SetCornerAppearance)
+	receivedLastEpisode []int // lastEpisodeNumber per Write call
+	pendingAppearance   int
+	pendingLastEpisode  int
+}
+
+func (m *mockWriter) SetCornerAppearance(appearanceCount, lastEpisodeNumber int) {
+	m.pendingAppearance = appearanceCount
+	m.pendingLastEpisode = lastEpisodeNumber
 }
 
 func (m *mockWriter) Write(_ context.Context, _ config.ProgramConfig, corner config.CornerConfig, assignments []write.CastAssignment, _ []config.CornerConfig, previousCorners []model.CornerLines, _ []model.RundownArticle, _ string, _ map[string]config.CharacterConfig) ([]model.Line, error) {
 	m.receivedPrevious = append(m.receivedPrevious, previousCorners)
 	m.receivedCorners = append(m.receivedCorners, corner)
 	m.receivedAssignments = append(m.receivedAssignments, assignments)
+	m.receivedAppearance = append(m.receivedAppearance, m.pendingAppearance)
+	m.receivedLastEpisode = append(m.receivedLastEpisode, m.pendingLastEpisode)
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -478,14 +489,14 @@ func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing
 
 func TestWriteAll(t *testing.T) {
 	corners := []config.CornerConfig{
-		{Title: "C1", Content: "内容1", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
-		{Title: "C2", Content: "内容2", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
-		{Title: "C3", Content: "内容3", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{ID: "c1", Title: "C1", Content: "内容1", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{ID: "c2", Title: "C2", Content: "内容2", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
+		{ID: "c3", Title: "C3", Content: "内容3", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 	cornerMap := map[string]model.RundownCorner{
-		"C1": {Title: "C1", Flow: "フロー1", Articles: []model.RundownArticle{{URL: "https://example.com/1"}}},
-		"C2": {Title: "C2", Flow: "フロー2", Articles: []model.RundownArticle{{URL: "https://example.com/2"}}},
-		"C3": {Title: "C3", Flow: "フロー3", Articles: []model.RundownArticle{{URL: "https://example.com/3"}}},
+		"c1": {ID: "c1", Title: "C1", Flow: "フロー1", Articles: []model.RundownArticle{{URL: "https://example.com/1"}}, AppearanceCount: 1},
+		"c2": {ID: "c2", Title: "C2", Flow: "フロー2", Articles: []model.RundownArticle{{URL: "https://example.com/2"}}, AppearanceCount: 3, LastEpisodeNumber: 4},
+		"c3": {ID: "c3", Title: "C3", Flow: "フロー3", Articles: []model.RundownArticle{{URL: "https://example.com/3"}}, AppearanceCount: 2},
 	}
 	c1Lines := []model.Line{{SpeakerRole: "zundamon", Text: "C1のセリフ"}}
 	c2Lines := []model.Line{{SpeakerRole: "metan", Text: "C2のセリフ"}}
@@ -513,6 +524,13 @@ func TestWriteAll(t *testing.T) {
 	}
 	if len(mw.receivedPrevious[2]) != 2 {
 		t.Fatalf("C3 should receive 2 previousCorners, got %d", len(mw.receivedPrevious[2]))
+	}
+	// 各 Write 呼び出し前に rc の扱い回数が writer へ伝わること
+	if mw.receivedAppearance[1] != 3 || mw.receivedLastEpisode[1] != 4 {
+		t.Errorf("C2 appearance: got count=%d last=%d, want 3/4", mw.receivedAppearance[1], mw.receivedLastEpisode[1])
+	}
+	if mw.receivedAppearance[0] != 1 {
+		t.Errorf("C1 appearance count: got %d, want 1", mw.receivedAppearance[0])
 	}
 }
 
