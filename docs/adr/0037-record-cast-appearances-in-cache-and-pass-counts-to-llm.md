@@ -11,7 +11,7 @@
 
 ## 決定
 
-- **実績ベースで記録する**: 出演キャストを `Manifest.Casts` → `cache.Entry.Casts` へ転記し、過去エントリの集計（`cache.AppearanceCounts`）で参加回数を導出する。
+- **実績ベースで記録する**: 出演キャストを `Manifest.Casts` → `cache.Entry.Casts` へ転記し、過去エントリの集計（`cache.CastAppearances`）で参加回数を導出する。
 - **rundown へ焼き込む**: 過去出演回数を出演確定時に `RundownCast.AppearanceCount`（今回含まず、0 = 初登場）として `02_rundown.json` に永続化し、下流は rundown を読むだけにする。
 - flow には `{{program}}` 内 casts の JSON マーシャルで自動的に、write には既存 `{{guest_info}}` への回数付記で渡す。演出ルールは明記せず情報提供にとどめる。select（記事選別）への配線は行わない。
 - `Compact()` では `Casts` を保持する（軽量で、全履歴の回数集計に必要）。
