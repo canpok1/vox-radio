@@ -2,9 +2,11 @@ package fileio
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -79,7 +81,8 @@ func ReadJSON(path string, v any) error {
 func DecodeYAML(path string, dest any, strict bool) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("open %s: %w", path, err)
+		// os.Open already includes "open <path>: <err>"; no additional wrapping needed.
+		return err
 	}
 	defer func() { _ = f.Close() }()
 	dec := yaml.NewDecoder(f)
@@ -87,9 +90,23 @@ func DecodeYAML(path string, dest any, strict bool) error {
 		dec.KnownFields(true)
 	}
 	if err := dec.Decode(dest); err != nil {
+		var typeErr *yaml.TypeError
+		if errors.As(err, &typeErr) {
+			return fmt.Errorf("decode %s: %w", path, stripGoTypeNames(typeErr))
+		}
 		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
+}
+
+// stripGoTypeNames removes the " in type pkg.TypeName" suffix from yaml.TypeError
+// error messages so that internal Go type names are not exposed to users.
+func stripGoTypeNames(e *yaml.TypeError) *yaml.TypeError {
+	msgs := make([]string, len(e.Errors))
+	for i, msg := range e.Errors {
+		msgs[i], _, _ = strings.Cut(msg, " in type ")
+	}
+	return &yaml.TypeError{Errors: msgs}
 }
 
 // WriteJSON marshals v to indented JSON and writes it to path,
