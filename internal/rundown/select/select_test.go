@@ -50,6 +50,47 @@ func TestLLMSelector_Select_Success(t *testing.T) {
 	}
 }
 
+func TestLLMSelector_Select_PromptContainsCornerAppearance(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+	}
+	s := sel.NewLLMSelector(mc, "コーナー: {{corner}}", 0)
+	s.SetCornerAppearance(4, 1) // 今回含め4回目・前回は第1回
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
+	_, _ = s.Select(context.Background(), corner, []model.Article{{URL: "https://example.com/1", Title: "記事1"}})
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, `"appearance_count":4`) {
+		t.Errorf("prompt should contain appearance_count, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"last_episode_number":1`) {
+		t.Errorf("prompt should contain last_episode_number, got: %s", prompt)
+	}
+}
+
+func TestLLMSelector_Select_NewCorner_OmitsLastEpisodeNumber(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+	}
+	s := sel.NewLLMSelector(mc, "コーナー: {{corner}}", 0)
+	s.SetCornerAppearance(1, 0) // 新コーナー（今回が初出）
+
+	corner := config.CornerConfig{Title: "テック", Content: "内容", LengthSec: 60}
+	_, _ = s.Select(context.Background(), corner, []model.Article{{URL: "https://example.com/1", Title: "記事1"}})
+
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, `"appearance_count":1`) {
+		t.Errorf("new corner should still show appearance_count:1, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "last_episode_number") {
+		t.Errorf("new corner should omit last_episode_number (0), got: %s", prompt)
+	}
+}
+
 func TestLLMSelector_Select_PromptContainsCornerAndArticles(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),

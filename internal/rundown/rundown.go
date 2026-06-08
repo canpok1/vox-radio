@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/rundown/flow"
@@ -32,12 +33,20 @@ func WithLogger(l *slog.Logger) Option {
 
 // LLMRundowner uses Selector + Summarizer + FlowDesigner to produce a Rundown.
 type LLMRundowner struct {
-	selector     sel.Selector
-	summarizer   summarize.Summarizer
-	flowDesigner flow.Designer
-	fetcher      ArticleFetcher
-	excludedURLs map[string]struct{}
-	logger       *slog.Logger
+	selector          sel.Selector
+	summarizer        summarize.Summarizer
+	flowDesigner      flow.Designer
+	fetcher           ArticleFetcher
+	excludedURLs      map[string]struct{}
+	cornerAppearances map[string]cache.CornerAppearance
+	logger            *slog.Logger
+}
+
+// SetCornerAppearances configures per-corner appearance stats (keyed by corner ID) aggregated from
+// cache history. Run bakes the count (including this episode) and last episode number into each
+// RundownCorner and passes them to the selector. nil/missing IDs are treated as new corners.
+func (r *LLMRundowner) SetCornerAppearances(m map[string]cache.CornerAppearance) {
+	r.cornerAppearances = m
 }
 
 // NewLLMRundowner creates a LLMRundowner.
@@ -71,6 +80,12 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	for _, corner := range corners {
 		cornerArticles := articleMap[corner.Title]
 
+		// 扱い回数文脈（今回含む・初回=1）と前回出演回番号を算出。
+		// キャスト（ADR-0040）と異なり LLM へは -1 の境界変換をせず生値のまま渡す（ADR-0052）。
+		appearance := r.cornerAppearances[corner.ID]
+		appearanceCount := appearance.Count + 1
+		lastEpisodeNumber := appearance.LastEpisodeNumber
+
 		filtered := make([]model.Article, 0, len(cornerArticles))
 		for _, a := range cornerArticles {
 			if _, excluded := r.excludedURLs[a.URL]; !excluded {
@@ -84,10 +99,18 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 
 		if len(cornerArticles) == 0 {
 			rundownCorners = append(rundownCorners, model.RundownCorner{
-				Title:    corner.Title,
-				Articles: make([]model.RundownArticle, 0),
+				ID:                corner.ID,
+				Title:             corner.Title,
+				Articles:          make([]model.RundownArticle, 0),
+				AppearanceCount:   appearanceCount,
+				LastEpisodeNumber: lastEpisodeNumber,
 			})
 			continue
+		}
+
+		// 選別 LLM にこのコーナーの扱い回数文脈を渡す（supplementary interface）
+		if s, ok := r.selector.(sel.CornerAppearanceSetter); ok {
+			s.SetCornerAppearance(appearanceCount, lastEpisodeNumber)
 		}
 
 		selected, err := r.selector.Select(ctx, corner, cornerArticles)
@@ -136,9 +159,12 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 		}
 
 		rundownCorners = append(rundownCorners, model.RundownCorner{
-			Title:           corner.Title,
-			SelectionReason: selected.SelectionReason,
-			Articles:        rdArticles,
+			ID:                corner.ID,
+			Title:             corner.Title,
+			SelectionReason:   selected.SelectionReason,
+			Articles:          rdArticles,
+			AppearanceCount:   appearanceCount,
+			LastEpisodeNumber: lastEpisodeNumber,
 		})
 	}
 

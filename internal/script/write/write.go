@@ -34,11 +34,13 @@ type castEntryForPrompt struct {
 // TargetChars is computed from LengthSec via config.DurationSecToTargetChars.
 // ScriptNote holds the corner-specific script instruction (write-only, non-public).
 type cornerForPrompt struct {
-	Title       string               `json:"title"`
-	Content     string               `json:"content"`
-	ScriptNote  string               `json:"script_note,omitempty"`
-	Cast        []castEntryForPrompt `json:"cast"`
-	TargetChars int                  `json:"target_chars"`
+	Title             string               `json:"title"`
+	Content           string               `json:"content"`
+	ScriptNote        string               `json:"script_note,omitempty"`
+	Cast              []castEntryForPrompt `json:"cast"`
+	TargetChars       int                  `json:"target_chars"`
+	AppearanceCount   int                  `json:"appearance_count,omitempty"`
+	LastEpisodeNumber int                  `json:"last_episode_number,omitempty"`
 }
 
 // cornerOutline is the program-level outline of a corner (title only).
@@ -73,6 +75,13 @@ type Writer interface {
 	Write(ctx context.Context, program config.ProgramConfig, corner config.CornerConfig, assignments []CastAssignment, allCorners []config.CornerConfig, previousCorners []model.CornerLines, articles []model.RundownArticle, flow string, chars map[string]config.CharacterConfig) ([]model.Line, error)
 }
 
+// CornerAppearanceSetter is an optional supplementary interface for writers that accept the
+// current corner's appearance context (count including this episode, last episode number).
+// WriteAll sets these per corner before each Write so the value reflects the corner in hand.
+type CornerAppearanceSetter interface {
+	SetCornerAppearance(appearanceCount, lastEpisodeNumber int)
+}
+
 type LLMWriter struct {
 	client         llm.Client
 	promptTemplate string
@@ -83,6 +92,9 @@ type LLMWriter struct {
 	casts          []model.RundownCast
 	recordedAt     string // RFC3339 in program timezone; empty means unknown
 	timezone       string // IANA timezone name; empty means unknown
+
+	cornerAppearanceCount   int // current corner: appearance count including this episode (1 = new corner)
+	cornerLastEpisodeNumber int // current corner: most recent past episode it appeared in (0 = none)
 }
 
 // NewLLMWriter creates an LLMWriter. Pass nil for cfg to use default presets.
@@ -106,6 +118,15 @@ func (w *LLMWriter) SetCasts(casts []model.RundownCast) {
 	w.casts = casts
 }
 
+// SetCornerAppearance configures the current corner's appearance context injected into the
+// script generation prompt. appearanceCount includes this episode (1 = new corner);
+// lastEpisodeNumber is the most recent past episode in which the corner appeared (0 = none).
+// WriteAll sets this per corner before each Write.
+func (w *LLMWriter) SetCornerAppearance(appearanceCount, lastEpisodeNumber int) {
+	w.cornerAppearanceCount = appearanceCount
+	w.cornerLastEpisodeNumber = lastEpisodeNumber
+}
+
 // SetRecordedAt configures the recording time to inject into the script generation prompt.
 // t is formatted as RFC3339 in loc; loc.String() is used as the timezone name.
 func (w *LLMWriter) SetRecordedAt(t time.Time, loc *time.Location) {
@@ -124,11 +145,13 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	}
 
 	promptCorner := cornerForPrompt{
-		Title:       corner.Title,
-		Content:     corner.Content,
-		ScriptNote:  corner.ScriptNote,
-		Cast:        castEntries,
-		TargetChars: config.DurationSecToTargetChars(corner.LengthSec),
+		Title:             corner.Title,
+		Content:           corner.Content,
+		ScriptNote:        corner.ScriptNote,
+		Cast:              castEntries,
+		TargetChars:       config.DurationSecToTargetChars(corner.LengthSec),
+		AppearanceCount:   w.cornerAppearanceCount,
+		LastEpisodeNumber: w.cornerLastEpisodeNumber,
 	}
 	cornerJSON, err := json.Marshal(promptCorner)
 	if err != nil {

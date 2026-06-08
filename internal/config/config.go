@@ -321,6 +321,7 @@ type AudioRef struct {
 
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
+	ID            string            `yaml:"id"` // コーナーを回をまたいで同定する安定キー（必須・番組内で一意）
 	Title         string            `yaml:"title"`
 	Content       string            `yaml:"content"`
 	Direction     string            `yaml:"direction,omitempty"`
@@ -597,14 +598,23 @@ func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) 
 	return nil
 }
 
-// ValidateEpisodeSpecCorners は corners の出現条件を検証する（キャラ不要・spec 内部整合のみ）。
+// ValidateEpisodeSpecCorners は corners の id・出現条件を検証する（キャラ不要・spec 内部整合のみ）。
+// id は必須かつ番組内で一意。title もユーザー向け表示用に重複を禁止する。
 func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
-	seen := make(map[string]bool, len(p.Corners))
+	seenID := make(map[string]bool, len(p.Corners))
+	seenTitle := make(map[string]bool, len(p.Corners))
 	for i, c := range p.Corners {
-		if seen[c.Title] {
+		if c.ID == "" {
+			return fmt.Errorf("corners[%d]: id is required", i)
+		}
+		if seenID[c.ID] {
+			return fmt.Errorf("corners[%d]: id %q is duplicated", i, c.ID)
+		}
+		seenID[c.ID] = true
+		if seenTitle[c.Title] {
 			return fmt.Errorf("corners[%d]: title %q is duplicated", i, c.Title)
 		}
-		seen[c.Title] = true
+		seenTitle[c.Title] = true
 		if c.Condition != nil {
 			if err := validateEpisodeCondition(*c.Condition, fmt.Sprintf("corners[%d].condition", i)); err != nil {
 				return err

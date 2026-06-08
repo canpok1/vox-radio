@@ -149,15 +149,15 @@ func TestResolveCornersForEpisode_PreservesOrder(t *testing.T) {
 	}
 }
 
-func TestResolveCornersByTitles(t *testing.T) {
+func TestResolveCornersByIDs(t *testing.T) {
 	corners := []CornerConfig{
-		{Title: "A", LengthSec: 30},
-		{Title: "B", LengthSec: 60},
-		{Title: "C", LengthSec: 90},
+		{ID: "a", Title: "A", LengthSec: 30},
+		{ID: "b", Title: "B", LengthSec: 60},
+		{ID: "c", Title: "C", LengthSec: 90},
 	}
 
-	t.Run("タイトル順にコーナーを返す", func(t *testing.T) {
-		got, err := ResolveCornersByTitles(corners, []string{"C", "A"})
+	t.Run("id順にコーナーを返す", func(t *testing.T) {
+		got, err := ResolveCornersByIDs(corners, []string{"c", "a"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -169,15 +169,15 @@ func TestResolveCornersByTitles(t *testing.T) {
 		}
 	})
 
-	t.Run("存在しないタイトルはエラー", func(t *testing.T) {
-		_, err := ResolveCornersByTitles(corners, []string{"A", "X"})
+	t.Run("存在しないidはエラー", func(t *testing.T) {
+		_, err := ResolveCornersByIDs(corners, []string{"a", "x"})
 		if err == nil {
-			t.Error("expected error for unknown title, got nil")
+			t.Error("expected error for unknown id, got nil")
 		}
 	})
 
-	t.Run("空のtitlesは空スライスを返す", func(t *testing.T) {
-		got, err := ResolveCornersByTitles(corners, []string{})
+	t.Run("空のidsは空スライスを返す", func(t *testing.T) {
+		got, err := ResolveCornersByIDs(corners, []string{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -195,40 +195,40 @@ func TestValidateEpisodeSpecCorners_Valid(t *testing.T) {
 		{
 			name: "conditionなし（固定コーナー）のみ",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30},
-				{Title: "B", LengthSec: 60},
+				{ID: "a", Title: "A", LengthSec: 30},
+				{ID: "b", Title: "B", LengthSec: 60},
 			},
 		},
 		{
 			name: "episodes指定の条件コーナー",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30},
-				{Title: "B", LengthSec: 60, Condition: &EpisodeCondition{Episodes: []int{1, 3}}},
+				{ID: "a", Title: "A", LengthSec: 30},
+				{ID: "b", Title: "B", LengthSec: 60, Condition: &EpisodeCondition{Episodes: []int{1, 3}}},
 			},
 		},
 		{
 			name: "every指定の条件コーナー",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30},
-				{Title: "B", LengthSec: 60, Condition: &EpisodeCondition{Every: 2}},
+				{ID: "a", Title: "A", LengthSec: 30},
+				{ID: "b", Title: "B", LengthSec: 60, Condition: &EpisodeCondition{Every: 2}},
 			},
 		},
 		{
 			name: "episodes+every両方指定",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{1}, Every: 3}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{1}, Every: 3}},
 			},
 		},
 		{
 			name: "not のみ指定",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{Every: 5}}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{Every: 5}}},
 			},
 		},
 		{
 			name: "every + not 指定",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Every: 2, Not: &EpisodeCondition{Episodes: []int{6}}}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Every: 2, Not: &EpisodeCondition{Episodes: []int{6}}}},
 			},
 		},
 	}
@@ -249,40 +249,53 @@ func TestValidateEpisodeSpecCorners_Error(t *testing.T) {
 		corners []CornerConfig
 	}{
 		{
-			name: "タイトルが重複",
+			name: "idが未設定",
 			corners: []CornerConfig{
 				{Title: "A", LengthSec: 30},
-				{Title: "A", LengthSec: 60},
+			},
+		},
+		{
+			name: "idが重複",
+			corners: []CornerConfig{
+				{ID: "a", Title: "A", LengthSec: 30},
+				{ID: "a", Title: "B", LengthSec: 60},
+			},
+		},
+		{
+			name: "タイトルが重複",
+			corners: []CornerConfig{
+				{ID: "a", Title: "A", LengthSec: 30},
+				{ID: "b", Title: "A", LengthSec: 60},
 			},
 		},
 		{
 			name: "conditionがあるがepisodesもeveryもnotも未設定",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{}},
 			},
 		},
 		{
 			name: "not の中身が空",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{}}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Not: &EpisodeCondition{}}},
 			},
 		},
 		{
 			name: "episodesの値が0",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{0}}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{0}}},
 			},
 		},
 		{
 			name: "episodesの値が負数",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{-1}}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Episodes: []int{-1}}},
 			},
 		},
 		{
 			name: "everyが負数",
 			corners: []CornerConfig{
-				{Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Every: -1}},
+				{ID: "a", Title: "A", LengthSec: 30, Condition: &EpisodeCondition{Every: -1}},
 			},
 		},
 	}

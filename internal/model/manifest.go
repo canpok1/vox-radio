@@ -30,6 +30,7 @@ type ProgramSummary struct {
 
 // ManifestCorner represents a corner in the manifest with its articles.
 type ManifestCorner struct {
+	ID       string       `json:"id"`
 	Title    string       `json:"title"`
 	Summary  string       `json:"summary"`
 	Points   []string     `json:"points"`

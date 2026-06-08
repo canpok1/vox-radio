@@ -145,12 +145,18 @@ func TestManager_Append_CompactsWhenExceedsMaxEntries(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("got %d entries after compacting maxEntries=2, want 3 (all kept)", len(got))
 	}
-	// oldest entry should have corners/notes compacted (emptied)
+	// oldest entry should have heavy corner fields stripped but identity (Title) preserved
 	if got[0].Title != "古い1" {
 		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "古い1")
 	}
-	if len(got[0].Corners) != 0 {
-		t.Errorf("Entry[0].Corners: got %d corners, want 0 (compacted)", len(got[0].Corners))
+	if len(got[0].Corners) != 1 {
+		t.Fatalf("Entry[0].Corners: got %d corners, want 1 (identity kept for appearance counting)", len(got[0].Corners))
+	}
+	if got[0].Corners[0].Title != "コーナー" {
+		t.Errorf("Entry[0].Corners[0].Title: got %q, want コーナー (kept)", got[0].Corners[0].Title)
+	}
+	if got[0].Corners[0].Summary != "" || len(got[0].Corners[0].Articles) != 0 {
+		t.Errorf("Entry[0].Corners[0] heavy fields should be stripped, got Summary=%q Articles=%d", got[0].Corners[0].Summary, len(got[0].Corners[0].Articles))
 	}
 	// newer entries should keep full data
 	if got[1].Title != "古い2" {
@@ -198,12 +204,15 @@ func TestManager_Append_CompactsOldEntriesByRetentionDays(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("got %d entries (retention_days=90 should compact but not delete entry 100 days old), want 3", len(got))
 	}
-	// oldest entry should have corners/notes compacted
+	// oldest entry should have heavy corner fields stripped but identity (Title) preserved
 	if got[0].Title != "古すぎる" {
 		t.Errorf("Entry[0].Title: got %q, want %q", got[0].Title, "古すぎる")
 	}
-	if len(got[0].Corners) != 0 {
-		t.Errorf("Entry[0].Corners: got %d corners, want 0 (compacted)", len(got[0].Corners))
+	if len(got[0].Corners) != 1 {
+		t.Fatalf("Entry[0].Corners: got %d corners, want 1 (identity kept for appearance counting)", len(got[0].Corners))
+	}
+	if got[0].Corners[0].Summary != "" || len(got[0].Corners[0].Articles) != 0 {
+		t.Errorf("Entry[0].Corners[0] heavy fields should be stripped, got Summary=%q Articles=%d", got[0].Corners[0].Summary, len(got[0].Corners[0].Articles))
 	}
 	// recent entries should keep full data
 	if got[1].Title != "最近" {
@@ -581,8 +590,8 @@ func TestCompact_KeepsAllEntries(t *testing.T) {
 	}
 }
 
-func TestCompact_EmptiesCornersAndNotes_ForEntriesOutsideMaxEntries(t *testing.T) {
-	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+func TestCompact_StripsCornerHeavyFieldsAndEmptiesNotes_ForEntriesOutsideMaxEntries(t *testing.T) {
+	corner := cache.CornerEntry{ID: "c1", Title: "コーナー", Summary: "要約", Points: []string{"p"}, Articles: []cache.ArticleEntry{{URL: "u"}}}
 	note := model.ConversationNote{Category: "近況", Note: "メモ"}
 	entries := []cache.Entry{
 		{Datetime: "2026-01-01T00:00:00Z", Title: "e1", Corners: []cache.CornerEntry{corner}, ConversationNotes: []model.ConversationNote{note}},
@@ -592,24 +601,30 @@ func TestCompact_EmptiesCornersAndNotes_ForEntriesOutsideMaxEntries(t *testing.T
 
 	got := cache.Compact(entries, 2, 9999)
 
-	// entry[0] is outside maxEntries=2 window, should be compacted
-	if len(got[0].Corners) != 0 {
-		t.Errorf("Compact: entry[0].Corners should be empty (compacted), got %d", len(got[0].Corners))
+	// entry[0] is outside maxEntries=2 window: identity kept, heavy fields stripped
+	if len(got[0].Corners) != 1 {
+		t.Fatalf("Compact: entry[0].Corners should keep identity (1), got %d", len(got[0].Corners))
+	}
+	if got[0].Corners[0].ID != "c1" || got[0].Corners[0].Title != "コーナー" {
+		t.Errorf("Compact: entry[0].Corners[0] identity should be kept, got %+v", got[0].Corners[0])
+	}
+	if got[0].Corners[0].Summary != "" || len(got[0].Corners[0].Points) != 0 || len(got[0].Corners[0].Articles) != 0 {
+		t.Errorf("Compact: entry[0].Corners[0] heavy fields should be stripped, got %+v", got[0].Corners[0])
 	}
 	if len(got[0].ConversationNotes) != 0 {
 		t.Errorf("Compact: entry[0].ConversationNotes should be empty (compacted), got %d", len(got[0].ConversationNotes))
 	}
 	// entries[1,2] are within window, should keep full data
-	if len(got[1].Corners) != 1 {
-		t.Errorf("Compact: entry[1].Corners should have 1 (kept), got %d", len(got[1].Corners))
+	if len(got[1].Corners) != 1 || got[1].Corners[0].Summary != "要約" {
+		t.Errorf("Compact: entry[1].Corners should keep full data, got %+v", got[1].Corners)
 	}
-	if len(got[2].Corners) != 1 {
-		t.Errorf("Compact: entry[2].Corners should have 1 (kept), got %d", len(got[2].Corners))
+	if len(got[2].Corners) != 1 || got[2].Corners[0].Summary != "要約" {
+		t.Errorf("Compact: entry[2].Corners should keep full data, got %+v", got[2].Corners)
 	}
 }
 
-func TestCompact_EmptiesCornersAndNotes_ForOldEntries(t *testing.T) {
-	corner := cache.CornerEntry{Title: "コーナー", Summary: "要約"}
+func TestCompact_StripsCornerHeavyFields_ForOldEntries(t *testing.T) {
+	corner := cache.CornerEntry{ID: "c1", Title: "コーナー", Summary: "要約"}
 	oldDatetime := time.Now().AddDate(0, 0, -100).Format(time.RFC3339)
 	recentDatetime := time.Now().AddDate(0, 0, -1).Format(time.RFC3339)
 
@@ -620,13 +635,16 @@ func TestCompact_EmptiesCornersAndNotes_ForOldEntries(t *testing.T) {
 
 	got := cache.Compact(entries, 100, 90)
 
-	// old entry should be compacted (outside retention_days=90)
-	if len(got[0].Corners) != 0 {
-		t.Errorf("Compact: old entry.Corners should be empty (compacted), got %d", len(got[0].Corners))
+	// old entry (outside retention_days=90): identity kept, heavy fields stripped
+	if len(got[0].Corners) != 1 || got[0].Corners[0].ID != "c1" {
+		t.Fatalf("Compact: old entry.Corners should keep identity, got %+v", got[0].Corners)
+	}
+	if got[0].Corners[0].Summary != "" {
+		t.Errorf("Compact: old entry.Corners[0].Summary should be stripped, got %q", got[0].Corners[0].Summary)
 	}
 	// recent entry should keep full data
-	if len(got[1].Corners) != 1 {
-		t.Errorf("Compact: recent entry.Corners should have 1 (kept), got %d", len(got[1].Corners))
+	if len(got[1].Corners) != 1 || got[1].Corners[0].Summary != "要約" {
+		t.Errorf("Compact: recent entry.Corners should keep full data, got %+v", got[1].Corners)
 	}
 }
 
@@ -669,8 +687,12 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 	if e0.DurationSec != 600 {
 		t.Errorf("Compact: entry[0].DurationSec: got %d, want 600", e0.DurationSec)
 	}
-	if len(e0.Corners) != 0 {
-		t.Errorf("Compact: entry[0].Corners should be empty (compacted), got %d", len(e0.Corners))
+	// corner identity is kept (for appearance counting) but heavy fields are stripped
+	if len(e0.Corners) != 1 {
+		t.Fatalf("Compact: entry[0].Corners should keep identity (1), got %d", len(e0.Corners))
+	}
+	if e0.Corners[0].Summary != "" {
+		t.Errorf("Compact: entry[0].Corners[0].Summary should be stripped, got %q", e0.Corners[0].Summary)
 	}
 }
 
@@ -737,6 +759,66 @@ func TestAppearanceCounts_CountsPerCharacter(t *testing.T) {
 	}
 	if counts["guest1"] != 2 {
 		t.Errorf("AppearanceCounts: guest1: got %d, want 2", counts["guest1"])
+	}
+}
+
+func TestCornerAppearances_EmptyEntries(t *testing.T) {
+	got := cache.CornerAppearances([]cache.Entry{})
+	if len(got) != 0 {
+		t.Errorf("CornerAppearances(empty): got %d, want 0", len(got))
+	}
+}
+
+func TestCornerAppearances_IgnoresCornersWithoutID(t *testing.T) {
+	entries := []cache.Entry{
+		{EpisodeNumber: 1, Corners: []cache.CornerEntry{{Title: "レガシー"}}}, // no ID
+		{EpisodeNumber: 2, Corners: []cache.CornerEntry{{ID: "", Title: "空ID"}}},
+	}
+	got := cache.CornerAppearances(entries)
+	if len(got) != 0 {
+		t.Errorf("CornerAppearances(no-id): got %d, want 0 (ID-less corners ignored)", len(got))
+	}
+}
+
+func TestCornerAppearances_CountsAndLastEpisodeNumber(t *testing.T) {
+	entries := []cache.Entry{
+		{EpisodeNumber: 1, Corners: []cache.CornerEntry{{ID: "opening"}, {ID: "weather"}}},
+		{EpisodeNumber: 2, Corners: []cache.CornerEntry{{ID: "opening"}}},
+		{EpisodeNumber: 5, Corners: []cache.CornerEntry{{ID: "opening"}, {ID: "weather"}}},
+	}
+	got := cache.CornerAppearances(entries)
+
+	if got["opening"].Count != 3 {
+		t.Errorf("opening.Count: got %d, want 3", got["opening"].Count)
+	}
+	if got["opening"].LastEpisodeNumber != 5 {
+		t.Errorf("opening.LastEpisodeNumber: got %d, want 5", got["opening"].LastEpisodeNumber)
+	}
+	if got["weather"].Count != 2 {
+		t.Errorf("weather.Count: got %d, want 2", got["weather"].Count)
+	}
+	if got["weather"].LastEpisodeNumber != 5 {
+		t.Errorf("weather.LastEpisodeNumber: got %d, want 5", got["weather"].LastEpisodeNumber)
+	}
+}
+
+func TestBuildEntryFromManifest_CornerIDCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Corners: []model.ManifestCorner{
+			{ID: "opening", Title: "オープニング", Summary: "概要"},
+		},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+
+	if len(got.Corners) != 1 {
+		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
+	}
+	if got.Corners[0].ID != "opening" {
+		t.Errorf("Corners[0].ID: got %q, want opening", got.Corners[0].ID)
 	}
 }
 

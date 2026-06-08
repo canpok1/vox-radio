@@ -23,7 +23,8 @@
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `title` | string | 必須 | コーナータイトル |
+| `id` | string | 必須 | コーナーを回をまたいで同定する安定キー（番組内で一意）。過去回の扱い回数（新コーナー/久しぶりの復活コーナー）の集計・演出に使う。`title` を変更しても `id` で履歴を追える。未設定・重複はバリデーションエラー |
+| `title` | string | 必須 | コーナータイトル（番組内で一意） |
 | `content` | string | 任意 | コーナーの内容説明（台本生成 LLM への指示に使用） |
 | `direction` | string | 任意 | コーナーの演出方針（direct ステップのみに渡る）。SE の挿入タイミングなど。台本生成 LLM へは渡されない |
 | `script_note` | string | 任意 | コーナー個別の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。このコーナーのやり取りの細かい指示を記述する |
@@ -44,19 +45,22 @@
 
 ```yaml
 corners:
-  - title: "オープニング"       # condition なし → 毎回必須
+  - id: "opening"
+    title: "オープニング"       # condition なし → 毎回必須
     content: "挨拶と自己紹介"
     cast: { zundamon: "MC" }
     length_sec: 30
 
-  - title: "月いちスペシャル"
+  - id: "monthly-special"
+    title: "月いちスペシャル"
     content: "5回に1回だけやるスペシャル企画"
     cast: { zundamon: "MC", metan: "MC" }
     length_sec: 120
     condition:
       every: 5                  # 5の倍数回（5,10,15,…）に採用
 
-  - title: "通常トーク"
+  - id: "normal-talk"
+    title: "通常トーク"
     content: "月いちスペシャルを行わない回の通常コーナー"
     cast: { zundamon: "MC", metan: "MC" }
     length_sec: 120
@@ -64,7 +68,8 @@ corners:
       not:
         every: 5               # 5の倍数でない回（1,2,3,4,6,…）に採用
 
-  - title: "今週の一冊"
+  - id: "weekly-book"
+    title: "今週の一冊"
     content: "おすすめの本を紹介"
     cast: { zundamon: "ボケ", metan: "解説" }
     length_sec: 120
@@ -73,7 +78,8 @@ corners:
       not:
         episodes: [6]           # ただし第6回は除く（2,4,8,10,…）
 
-  - title: "エンディング"        # condition なし → 毎回必須
+  - id: "ending"
+    title: "エンディング"        # condition なし → 毎回必須
     content: "締めの挨拶"
     cast: { zundamon: "MC" }
     length_sec: 30
@@ -97,11 +103,14 @@ corners:
 
 ```yaml
 corners:
-  - title: "コーナーA"
+  - id: "corner-a"
+    title: "コーナーA"
     condition: { every: 3, offset: 1 }   # 1,4,7,… 回に採用
-  - title: "コーナーB"
+  - id: "corner-b"
+    title: "コーナーB"
     condition: { every: 3, offset: 2 }   # 2,5,8,… 回に採用
-  - title: "コーナーC"
+  - id: "corner-c"
+    title: "コーナーC"
     condition: { every: 3, offset: 0 }   # 3,6,9,… 回に採用
 ```
 

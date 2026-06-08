@@ -337,8 +337,8 @@ func TestRundown_CornerMap(t *testing.T) {
 	art2 := model.RundownArticle{URL: "https://example.com/2", Title: "T2", Summary: "S2", Points: []string{"p2"}}
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{
-			{Title: "ニュース", Flow: "最新ニュースを紹介", Articles: []model.RundownArticle{art1}},
-			{Title: "エンディング", Flow: "締めの言葉", Articles: []model.RundownArticle{art2}},
+			{ID: "news", Title: "ニュース", Flow: "最新ニュースを紹介", Articles: []model.RundownArticle{art1}},
+			{ID: "ending", Title: "エンディング", Flow: "締めの言葉", Articles: []model.RundownArticle{art2}},
 		},
 	}
 
@@ -347,15 +347,15 @@ func TestRundown_CornerMap(t *testing.T) {
 	if len(m) != 2 {
 		t.Fatalf("map length: got %d, want 2", len(m))
 	}
-	news, ok := m["ニュース"]
+	news, ok := m["news"]
 	if !ok {
-		t.Fatal("key ニュース not found")
+		t.Fatal("key news not found")
 	}
 	if len(news.Articles) != 1 || news.Articles[0].URL != art1.URL {
-		t.Errorf("CornerMap[\"ニュース\"].Articles: got %v, want [%v]", news.Articles, art1)
+		t.Errorf("CornerMap[\"news\"].Articles: got %v, want [%v]", news.Articles, art1)
 	}
 	if news.Flow != "最新ニュースを紹介" {
-		t.Errorf("CornerMap[\"ニュース\"].Flow: got %q, want %q", news.Flow, "最新ニュースを紹介")
+		t.Errorf("CornerMap[\"news\"].Flow: got %q, want %q", news.Flow, "最新ニュースを紹介")
 	}
 	if _, ok := m["存在しないコーナー"]; ok {
 		t.Error("missing key should not exist in map")

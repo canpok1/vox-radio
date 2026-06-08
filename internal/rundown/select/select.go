@@ -33,6 +33,13 @@ type Selector interface {
 	Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error)
 }
 
+// CornerAppearanceSetter is an optional supplementary interface for selectors that accept
+// the current corner's appearance context (count including this episode, last episode number).
+// rundown.Run sets these per corner before each Select so the value reflects the corner in hand.
+type CornerAppearanceSetter interface {
+	SetCornerAppearance(appearanceCount, lastEpisodeNumber int)
+}
+
 // articleForPrompt is the subset of article data passed to the LLM (body excluded to save tokens).
 type articleForPrompt struct {
 	URL   string `json:"url"`
@@ -46,10 +53,12 @@ type selectResponse struct {
 
 // LLMSelector uses an LLM to select articles and design a talk flow.
 type LLMSelector struct {
-	client         llm.Client
-	promptTemplate string
-	temperature    float64
-	casts          []model.RundownCast
+	client                  llm.Client
+	promptTemplate          string
+	temperature             float64
+	casts                   []model.RundownCast
+	cornerAppearanceCount   int
+	cornerLastEpisodeNumber int
 }
 
 func NewLLMSelector(client llm.Client, promptTemplate string, temperature float64) *LLMSelector {
@@ -61,8 +70,18 @@ func (s *LLMSelector) SetCasts(casts []model.RundownCast) {
 	s.casts = casts
 }
 
+// SetCornerAppearance configures the current corner's appearance context injected into the
+// selection prompt. appearanceCount includes this episode (1 = new corner); lastEpisodeNumber is
+// the most recent past episode in which the corner appeared (0 = none).
+func (s *LLMSelector) SetCornerAppearance(appearanceCount, lastEpisodeNumber int) {
+	s.cornerAppearanceCount = appearanceCount
+	s.cornerLastEpisodeNumber = lastEpisodeNumber
+}
+
 func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, articles []model.Article) (SelectResult, error) {
 	cp := prompt.NewCornerForPrompt(corner)
+	cp.AppearanceCount = s.cornerAppearanceCount
+	cp.LastEpisodeNumber = s.cornerLastEpisodeNumber
 	cornerJSON, err := json.Marshal(cp)
 	if err != nil {
 		return SelectResult{}, fmt.Errorf("marshal corner: %w", err)

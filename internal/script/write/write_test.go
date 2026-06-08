@@ -67,6 +67,25 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 	}
 }
 
+func TestLLMWriter_Write_PromptContainsCornerAppearance(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "corner={{corner}}", 0, nil)
+	w.SetCornerAppearance(5, 2) // 今回含め5回目・前回は第2回
+
+	corner := config.CornerConfig{Title: "コーナー1", Content: "内容", LengthSec: 14}
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, `"appearance_count":5`) {
+		t.Errorf("prompt should contain appearance_count:5, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"last_episode_number":2`) {
+		t.Errorf("prompt should contain last_episode_number:2, got: %s", prompt)
+	}
+}
+
 func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "c={{corner}} a={{articles}} f={{flow}} cast={{cast_info}}", 0, nil)

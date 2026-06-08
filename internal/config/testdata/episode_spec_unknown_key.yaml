@@ -5,7 +5,8 @@ program:
   typo_unknown_field: should_cause_strict_error
 
 corners:
-  - title: "オープニング"
+  - id: "opening"
+    title: "オープニング"
     content: "番組の挨拶とトピック紹介"
     direction: "冒頭でオープニングジングルを流す。"
     cast:

@@ -4,6 +4,9 @@
 
 ## 対象コーナー
 
+`appearance_count` は今回を含むこのコーナーの扱い回数（`1` = 今回が初めて = 新コーナー）。
+`last_episode_number` は前回このコーナーを扱った回番号（省略時は過去に扱いなし）。
+
 ```json
 {{corner}}
 ```
@@ -25,6 +28,7 @@
 ## 番組構成全体（全コーナーの title・summary・選別理由・キャスト一覧）
 
 `casts[].appearance_count` は過去の出演エピソード数（今回含まず）。`0` = 今回が初登場。
+各コーナーの `appearance_count` は今回を含む扱い回数（`1` = 新コーナー）、`last_episode_number` は前回扱った回番号（省略時は過去に扱いなし）。
 
 ```json
 {{program}}
