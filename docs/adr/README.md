@@ -57,3 +57,4 @@
 | [0049](0049-prompt-eval-llm-as-judge-framework.md) | 組み込みプロンプトの品質を LLM-as-judge で評価するフレームワークを導入する | 採用 | 2026-06-07 |
 | [0050](0050-fail-on-cache-corruption-instead-of-degraded-mode.md) | キャッシュ破損時は degraded mode ではなくエラー停止する | 採用 | 2026-06-07 |
 | [0051](0051-http-retry-with-exponential-backoff.md) | 外部 HTTP API 呼び出しに指数バックオフのリトライを導入する | 採用 | 2026-06-08 |
+| [0052](0052-corner-id-and-appearance-context-to-llm.md) | コーナーに ID を導入し扱い回数・前回出演回番号を生成 LLM に渡す | 採用 | 2026-06-08 |
