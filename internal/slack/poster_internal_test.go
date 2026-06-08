@@ -57,6 +57,22 @@ func newUploadTestServer(t *testing.T, filesInfoHandler func(n int32) any) *http
 	return srv
 }
 
+// newFilesInfoServer creates a test server that only handles files.info requests.
+func newFilesInfoServer(t *testing.T, filesInfoHandler func(n int32) any) *httptest.Server {
+	t.Helper()
+	var callCount int32
+
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "files.info") {
+			n := atomic.AddInt32(&callCount, 1)
+			_ = json.NewEncoder(w).Encode(filesInfoHandler(n))
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+}
+
 func filesInfoResp(channel, ts string, isPrivate bool) map[string]any {
 	public := map[string]any{}
 	private := map[string]any{}
@@ -86,13 +102,37 @@ func newTestRealPoster(apiURL string, pollInterval, pollTimeout time.Duration) *
 	}
 }
 
-func TestRealPoster_UploadAudio_SuccessOnNthPoll(t *testing.T) {
+func TestRealPoster_UploadAudio_ReturnsFileID(t *testing.T) {
+	srv := newUploadTestServer(t, func(_ int32) any {
+		// files.info not called during UploadAudio
+		return nil
+	})
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
+	filePath := writeTempAudioFile(t)
+
+	fileID, err := poster.UploadAudio(context.Background(), UploadParams{
+		Channel:  "C0123456789",
+		FilePath: filePath,
+		Filename: "test.mp3",
+	})
+
+	if err != nil {
+		t.Fatalf("UploadAudio should succeed: %v", err)
+	}
+	if fileID != "FTEST123" {
+		t.Errorf("fileID = %q, want %q", fileID, "FTEST123")
+	}
+}
+
+func TestRealPoster_ResolveThreadTS_SuccessOnNthPoll(t *testing.T) {
 	const (
 		channel = "C0123456789"
 		wantTS  = "1234567890.123456"
 	)
 
-	srv := newUploadTestServer(t, func(n int32) any {
+	srv := newFilesInfoServer(t, func(n int32) any {
 		if n < 3 {
 			return filesInfoResp(channel, "", false)
 		}
@@ -101,72 +141,54 @@ func TestRealPoster_UploadAudio_SuccessOnNthPoll(t *testing.T) {
 	defer srv.Close()
 
 	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
-	filePath := writeTempAudioFile(t)
 
-	fileID, ts, err := poster.UploadAudio(context.Background(), UploadParams{
-		Channel:  channel,
-		FilePath: filePath,
-		Filename: "test.mp3",
-	})
+	ts, err := poster.ResolveThreadTS(context.Background(), "FTEST123", channel)
 
 	if err != nil {
-		t.Fatalf("UploadAudio should succeed after retries: %v", err)
-	}
-	if fileID != "FTEST123" {
-		t.Errorf("fileID = %q, want %q", fileID, "FTEST123")
+		t.Fatalf("ResolveThreadTS should succeed after retries: %v", err)
 	}
 	if ts != wantTS {
 		t.Errorf("ts = %q, want %q", ts, wantTS)
 	}
 }
 
-func TestRealPoster_UploadAudio_PrivateChannel_Success(t *testing.T) {
+func TestRealPoster_ResolveThreadTS_PrivateChannel_Success(t *testing.T) {
 	const (
 		channel = "C9876543210"
 		wantTS  = "9999999999.999999"
 	)
 
-	srv := newUploadTestServer(t, func(_ int32) any {
+	srv := newFilesInfoServer(t, func(_ int32) any {
 		return filesInfoResp(channel, wantTS, true)
 	})
 	defer srv.Close()
 
 	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
-	filePath := writeTempAudioFile(t)
 
-	_, ts, err := poster.UploadAudio(context.Background(), UploadParams{
-		Channel:  channel,
-		FilePath: filePath,
-		Filename: "test.mp3",
-	})
+	ts, err := poster.ResolveThreadTS(context.Background(), "FTEST123", channel)
 
 	if err != nil {
-		t.Fatalf("UploadAudio should succeed for private channel: %v", err)
+		t.Fatalf("ResolveThreadTS should succeed for private channel: %v", err)
 	}
 	if ts != wantTS {
 		t.Errorf("ts = %q, want %q", ts, wantTS)
 	}
 }
 
-func TestRealPoster_UploadAudio_PollTimeout_ReturnsError(t *testing.T) {
+func TestRealPoster_ResolveThreadTS_PollTimeout_ReturnsError(t *testing.T) {
 	const channel = "C0123456789"
 
-	srv := newUploadTestServer(t, func(_ int32) any {
+	srv := newFilesInfoServer(t, func(_ int32) any {
 		return filesInfoResp(channel, "", false)
 	})
 	defer srv.Close()
 
 	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 100*time.Millisecond)
-	filePath := writeTempAudioFile(t)
 
-	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
-		Channel:  channel,
-		FilePath: filePath,
-		Filename: "test.mp3",
-	})
+	_, err := poster.ResolveThreadTS(context.Background(), "FTEST123", channel)
 
 	if err == nil {
-		t.Fatal("UploadAudio should return error on poll timeout")
+		t.Fatal("ResolveThreadTS should return error on poll timeout")
 	}
 	if !strings.Contains(err.Error(), "FTEST123") {
 		t.Errorf("error should contain fileID, got: %v", err)
@@ -176,26 +198,20 @@ func TestRealPoster_UploadAudio_PollTimeout_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestRealPoster_UploadAudio_RetryableError_WrapsOnTimeout(t *testing.T) {
+func TestRealPoster_ResolveThreadTS_RetryableError_WrapsOnTimeout(t *testing.T) {
 	const channel = "C0123456789"
 
-	// service_error is not in the non-retryable list — polling should continue until timeout.
-	srv := newUploadTestServer(t, func(_ int32) any {
+	srv := newFilesInfoServer(t, func(_ int32) any {
 		return map[string]any{"ok": false, "error": "service_error"}
 	})
 	defer srv.Close()
 
 	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 100*time.Millisecond)
-	filePath := writeTempAudioFile(t)
 
-	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
-		Channel:  channel,
-		FilePath: filePath,
-		Filename: "test.mp3",
-	})
+	_, err := poster.ResolveThreadTS(context.Background(), "FTEST123", channel)
 
 	if err == nil {
-		t.Fatal("UploadAudio should return error on poll timeout")
+		t.Fatal("ResolveThreadTS should return error on poll timeout")
 	}
 	if !strings.Contains(err.Error(), "FTEST123") {
 		t.Errorf("error should contain fileID, got: %v", err)
@@ -208,27 +224,22 @@ func TestRealPoster_UploadAudio_RetryableError_WrapsOnTimeout(t *testing.T) {
 	}
 }
 
-func TestRealPoster_UploadAudio_NonRetryableError_ImmediateFailure(t *testing.T) {
+func TestRealPoster_ResolveThreadTS_NonRetryableError_ImmediateFailure(t *testing.T) {
 	const channel = "C0123456789"
 
 	var infoCallCount int32
-	srv := newUploadTestServer(t, func(n int32) any {
+	srv := newFilesInfoServer(t, func(n int32) any {
 		atomic.StoreInt32(&infoCallCount, n)
 		return map[string]any{"ok": false, "error": "missing_scope"}
 	})
 	defer srv.Close()
 
 	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 200*time.Millisecond)
-	filePath := writeTempAudioFile(t)
 
-	_, _, err := poster.UploadAudio(context.Background(), UploadParams{
-		Channel:  channel,
-		FilePath: filePath,
-		Filename: "test.mp3",
-	})
+	_, err := poster.ResolveThreadTS(context.Background(), "FTEST123", channel)
 
 	if err == nil {
-		t.Fatal("UploadAudio should return error for non-retryable Slack error")
+		t.Fatal("ResolveThreadTS should return error for non-retryable Slack error")
 	}
 	if !strings.Contains(err.Error(), "FTEST123") {
 		t.Errorf("error should contain fileID, got: %v", err)

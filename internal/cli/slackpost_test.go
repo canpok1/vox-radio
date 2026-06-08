@@ -198,3 +198,35 @@ func TestRootHelp_ContainsSlackpost(t *testing.T) {
 		t.Errorf("root help should contain slackpost, got: %s", out)
 	}
 }
+
+// ⑤ --state 上書きが効く
+func TestSlackpost_StateFlagAccepted_DryRunNoStateFile(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForTest(t, dir)
+	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	configPath := writeConfigForSlackTest(t, dir)
+	t.Setenv("TEST_SLACKPOST_TOKEN", "xoxb-test")
+
+	customStatePath := filepath.Join(dir, "custom.slackpost-state.json")
+
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{
+		"--config", configPath,
+		"slackpost",
+		"--manifest", manifestPath,
+		"--spec", specPath,
+		"--dry-run",
+		"--state", customStatePath,
+	})
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error with --state flag: %v", err)
+	}
+
+	// dry-run では --state 指定があっても状態ファイルを作成しない
+	if _, err := os.Stat(customStatePath); !os.IsNotExist(err) {
+		t.Error("state file should not exist in dry-run mode even when --state is specified")
+	}
+}

@@ -11,9 +11,13 @@ mp3 ファイルは manifest と同じディレクトリの audio_file から自
 
 Bot トークンは共通設定の slack.bot_token_env で指定した環境変数から取得します。
 
+実行進捗は状態ファイルに記録されます。タイムアウト後に再実行すると、音声の二重投稿なしに
+未完了の返信投稿から再開します。状態ファイルの既定パスは manifest と同じディレクトリです。
+
 例:
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --dry-run
+  vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --state /tmp/state.json
 
 ```
 vox-radio slackpost [flags]
@@ -26,6 +30,7 @@ vox-radio slackpost [flags]
   -h, --help              help for slackpost
       --manifest string   manifest.json ファイルのパス（必須）
       --spec string       slack-spec.yaml ファイルのパス（必須）
+      --state string      状態ファイルのパス（省略時は manifest と同じディレクトリ）
 ```
 
 ### Options inherited from parent commands

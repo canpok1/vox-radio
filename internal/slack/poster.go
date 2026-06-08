@@ -31,8 +31,10 @@ type ReplyParams struct {
 
 // Poster is an interface for sending Slack messages.
 type Poster interface {
-	// UploadAudio uploads an mp3 file as the parent message and returns the file ID and thread ts.
-	UploadAudio(ctx context.Context, u UploadParams) (fileID, ts string, err error)
+	// UploadAudio uploads an mp3 file as the parent message and returns the file ID.
+	UploadAudio(ctx context.Context, u UploadParams) (fileID string, err error)
+	// ResolveThreadTS polls files.info until the thread ts is available for the given file.
+	ResolveThreadTS(ctx context.Context, fileID, channel string) (ts string, err error)
 	// PostThreadReply posts a thread reply with Block Kit blocks.
 	PostThreadReply(ctx context.Context, p ReplyParams) error
 }
@@ -53,16 +55,16 @@ func NewPoster(token string) Poster {
 	}
 }
 
-func (r *realPoster) UploadAudio(ctx context.Context, u UploadParams) (string, string, error) {
+func (r *realPoster) UploadAudio(ctx context.Context, u UploadParams) (string, error) {
 	f, err := os.Open(u.FilePath)
 	if err != nil {
-		return "", "", fmt.Errorf("open audio file: %w", err)
+		return "", fmt.Errorf("open audio file: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
 	info, err := f.Stat()
 	if err != nil {
-		return "", "", fmt.Errorf("stat audio file: %w", err)
+		return "", fmt.Errorf("stat audio file: %w", err)
 	}
 
 	summary, err := r.client.UploadFileContext(ctx, slackgo.UploadFileParameters{
@@ -74,15 +76,13 @@ func (r *realPoster) UploadAudio(ctx context.Context, u UploadParams) (string, s
 		InitialComment: u.InitialComment,
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("upload audio: %w", err)
+		return "", fmt.Errorf("upload audio: %w", err)
 	}
-	fileID := summary.ID
+	return summary.ID, nil
+}
 
-	ts, err := r.pollForTS(ctx, fileID, u.Channel)
-	if err != nil {
-		return fileID, "", err
-	}
-	return fileID, ts, nil
+func (r *realPoster) ResolveThreadTS(ctx context.Context, fileID, channel string) (string, error) {
+	return r.pollForTS(ctx, fileID, channel)
 }
 
 // nonRetryableCodes is the set of Slack API error codes that will never resolve on retry.
