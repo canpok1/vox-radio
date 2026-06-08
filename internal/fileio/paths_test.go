@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/fileio"
@@ -14,7 +15,10 @@ func TestDecodeYAML_MissingFile(t *testing.T) {
 	var v any
 	err := fileio.DecodeYAML(filepath.Join(t.TempDir(), "nonexistent.yaml"), &v, false)
 	if err == nil {
-		t.Error("expected error for missing file, got nil")
+		t.Fatal("expected error for missing file, got nil")
+	}
+	if strings.Count(err.Error(), "open ") > 1 {
+		t.Errorf("error message contains duplicate 'open': %v", err)
 	}
 }
 
@@ -77,8 +81,12 @@ func TestDecodeYAML(t *testing.T) {
 			content: "name: foo\nunknown_key: bar\n",
 			checkResult: func(t *testing.T, path string) {
 				var got nameOnly
-				if err := fileio.DecodeYAML(path, &got, true); err == nil {
-					t.Error("expected error for unknown field, got nil")
+				err := fileio.DecodeYAML(path, &got, true)
+				if err == nil {
+					t.Fatal("expected error for unknown field, got nil")
+				}
+				if strings.Contains(err.Error(), " in type ") {
+					t.Errorf("error should not expose Go type names, got: %v", err)
 				}
 			},
 		},

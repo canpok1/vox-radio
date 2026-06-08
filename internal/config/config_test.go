@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1758,6 +1759,50 @@ func TestBGMEntry_Validate(t *testing.T) {
 			err := c.entry.Validate()
 			if (err != nil) != c.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, c.wantErr)
+			}
+		})
+	}
+}
+
+// TestLoadConfigStrict_UnknownKey_NoGoTypeName verifies that strict-mode errors
+// do not expose internal Go type names (e.g. "in type config.LLMConfig").
+func TestLoadConfigStrict_UnknownKey_NoGoTypeName(t *testing.T) {
+	_, err := config.LoadConfigStrict("testdata/config_unknown_key.yaml")
+	if err == nil {
+		t.Fatal("expected error for unknown key in strict mode")
+	}
+	if strings.Contains(err.Error(), " in type ") {
+		t.Errorf("error should not expose Go type names, got: %v", err)
+	}
+}
+
+// TestLoadConfig_ValidationError_FieldPathPresent verifies that validation
+// errors include the relevant YAML field path so users can locate the problem.
+func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
+	cases := []struct {
+		name        string
+		file        string
+		wantInError string
+	}{
+		{
+			name:        "default_style not in styles",
+			file:        "testdata/config_invalid_default_style.yaml",
+			wantInError: "default_style",
+		},
+		{
+			name:        "preset out of range",
+			file:        "testdata/config_invalid_preset_range.yaml",
+			wantInError: "voicevox.presets",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := config.LoadConfig(c.file)
+			if err == nil {
+				t.Fatalf("expected validation error for %s", c.file)
+			}
+			if !strings.Contains(err.Error(), c.wantInError) {
+				t.Errorf("error should contain %q, got: %v", c.wantInError, err)
 			}
 		})
 	}
