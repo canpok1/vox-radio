@@ -104,11 +104,7 @@ func DecodeYAML(path string, dest any, strict bool) error {
 func stripGoTypeNames(e *yaml.TypeError) *yaml.TypeError {
 	msgs := make([]string, len(e.Errors))
 	for i, msg := range e.Errors {
-		if idx := strings.Index(msg, " in type "); idx >= 0 {
-			msgs[i] = msg[:idx]
-		} else {
-			msgs[i] = msg
-		}
+		msgs[i], _, _ = strings.Cut(msg, " in type ")
 	}
 	return &yaml.TypeError{Errors: msgs}
 }
