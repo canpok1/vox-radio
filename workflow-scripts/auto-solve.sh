@@ -3,6 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# shellcheck source=workflow-scripts/lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
 if [[ $# -gt 0 ]]; then
   echo "Usage: $0" >&2; exit 1
 fi
@@ -36,5 +39,5 @@ while $RUNNING; do
     printf "."
   fi
 
-  sleep 60
+  poll_sleep
 done

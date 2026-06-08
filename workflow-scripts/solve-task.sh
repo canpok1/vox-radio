@@ -4,6 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=workflow-scripts/lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
 PRINT_MODE=false
 
 while [[ $# -gt 0 ]]; do

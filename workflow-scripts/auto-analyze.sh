@@ -4,6 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=workflow-scripts/lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
 if [[ $# -ne 1 ]] || ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -eq 0 ]]; then
   echo "Usage: $0 <min-count>" >&2
   exit 1
@@ -53,5 +56,5 @@ while true; do
   fi
 
   PREV_STATE="$CURRENT_STATE"
-  sleep 60
+  poll_sleep
 done
