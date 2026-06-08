@@ -116,6 +116,12 @@ func (r *realPoster) pollForTS(ctx context.Context, fileID, channel string) (str
 
 	var lastErr error
 	for {
+		select {
+		case <-pollCtx.Done():
+			return "", r.timeoutError(fileID, lastErr)
+		default:
+		}
+
 		fileInfo, _, _, err := r.client.GetFileInfoContext(pollCtx, fileID, 0, 0)
 		if err != nil {
 			if isNonRetryable(err) {

@@ -85,25 +85,28 @@ func Run(opts Options, poster Poster) error {
 		statePath = DefaultStatePath(opts.ManifestPath)
 	}
 
-	// Try to resume from an existing state file with matching audio_file.
-	fileID, ts := "", ""
+	// Build a base state from the current manifest; update fields progressively as each
+	// phase completes and write a checkpoint so re-runs can resume from where they left off.
+	state := PostState{
+		AudioFile:     manifest.AudioFile,
+		EpisodeNumber: manifest.EpisodeNumber,
+		Channel:       channel,
+	}
 	needUpload := true
-	if state, err := loadState(statePath); err == nil && state.AudioFile == manifest.AudioFile {
-		if state.Replied {
-			_, _ = fmt.Fprintf(opts.Out, "channel: %s\n", state.Channel)
-			_, _ = fmt.Fprintf(opts.Out, "file_id: %s\n", state.FileID)
-			_, _ = fmt.Fprintf(opts.Out, "thread_ts: %s\n", state.ThreadTS)
+
+	if loaded, err := loadState(statePath); err == nil && loaded.AudioFile == manifest.AudioFile {
+		if loaded.Replied {
+			writeResult(opts.Out, loaded.Channel, loaded.FileID, loaded.ThreadTS)
 			return nil
 		}
-		if state.FileID != "" {
-			fileID = state.FileID
-			ts = state.ThreadTS
+		if loaded.FileID != "" {
+			state = *loaded
 			needUpload = false
 		}
 	}
 
 	if needUpload {
-		fileID, err = poster.UploadAudio(ctx, UploadParams{
+		state.FileID, err = poster.UploadAudio(ctx, UploadParams{
 			Channel:        channel,
 			FilePath:       audioPath,
 			Title:          audioTitle,
@@ -113,53 +116,37 @@ func Run(opts Options, poster Poster) error {
 		if err != nil {
 			return fmt.Errorf("upload audio: %w", err)
 		}
-		_ = saveState(statePath, PostState{
-			AudioFile:     manifest.AudioFile,
-			EpisodeNumber: manifest.EpisodeNumber,
-			Channel:       channel,
-			FileID:        fileID,
-			Replied:       false,
-		})
+		_ = saveState(statePath, state)
 	}
 
-	if len(blocks) > 0 && ts == "" {
-		ts, err = poster.ResolveThreadTS(ctx, fileID, channel)
+	if len(blocks) > 0 && state.ThreadTS == "" {
+		state.ThreadTS, err = poster.ResolveThreadTS(ctx, state.FileID, channel)
 		if err != nil {
 			return err
 		}
-		_ = saveState(statePath, PostState{
-			AudioFile:     manifest.AudioFile,
-			EpisodeNumber: manifest.EpisodeNumber,
-			Channel:       channel,
-			FileID:        fileID,
-			ThreadTS:      ts,
-			Replied:       false,
-		})
+		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 {
-		replyParams := ReplyParams{
+		if err := poster.PostThreadReply(ctx, ReplyParams{
 			Channel:  channel,
-			ThreadTS: ts,
+			ThreadTS: state.ThreadTS,
 			Blocks:   blocks,
 			Text:     fallback,
-		}
-		if err := poster.PostThreadReply(ctx, replyParams); err != nil {
+		}); err != nil {
 			return fmt.Errorf("post thread reply: %w", err)
 		}
 	}
 
-	_ = saveState(statePath, PostState{
-		AudioFile:     manifest.AudioFile,
-		EpisodeNumber: manifest.EpisodeNumber,
-		Channel:       channel,
-		FileID:        fileID,
-		ThreadTS:      ts,
-		Replied:       true,
-	})
+	state.Replied = true
+	_ = saveState(statePath, state)
 
-	_, _ = fmt.Fprintf(opts.Out, "channel: %s\n", channel)
-	_, _ = fmt.Fprintf(opts.Out, "file_id: %s\n", fileID)
-	_, _ = fmt.Fprintf(opts.Out, "thread_ts: %s\n", ts)
+	writeResult(opts.Out, channel, state.FileID, state.ThreadTS)
 	return nil
+}
+
+func writeResult(w io.Writer, channel, fileID, ts string) {
+	_, _ = fmt.Fprintf(w, "channel: %s\n", channel)
+	_, _ = fmt.Fprintf(w, "file_id: %s\n", fileID)
+	_, _ = fmt.Fprintf(w, "thread_ts: %s\n", ts)
 }
