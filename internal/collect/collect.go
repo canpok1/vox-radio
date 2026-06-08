@@ -37,7 +37,7 @@ func WithLocation(loc *time.Location) Option {
 // transport (exponential backoff on 5xx/429) is used.
 func New(client *http.Client, opts ...Option) *Collector {
 	if client == nil {
-		client = &http.Client{Transport: httpretry.NewTransport(nil)}
+		client = httpretry.NewClient(0)
 	}
 	c := &Collector{
 		client: client,

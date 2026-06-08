@@ -44,24 +44,37 @@ func NewTransport(base http.RoundTripper) *Transport {
 	}
 }
 
+// NewClient returns an *http.Client whose Transport retries 5xx/429 responses
+// with exponential backoff. If timeout > 0 it is set as the client's timeout.
+// Use this so every retry-enabled client is constructed the same way.
+func NewClient(timeout time.Duration) *http.Client {
+	c := &http.Client{Transport: NewTransport(nil)}
+	if timeout > 0 {
+		c.Timeout = timeout
+	}
+	return c
+}
+
 // RoundTrip implements http.RoundTripper. It retries the request while the
 // response status is retryable and attempts remain, waiting with exponential
 // backoff between tries. A non-nil transport error is returned immediately
 // (the underlying transport already handles connection-level retries).
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	for attempt := 0; ; attempt++ {
+		reqToSend := req
 		if attempt > 0 {
 			if err := t.wait(req, attempt); err != nil {
 				return nil, err
 			}
+			// Rebuild the body for the retry; the first attempt sends req as-is.
+			clone, err := cloneRequest(req)
+			if err != nil {
+				return nil, err
+			}
+			reqToSend = clone
 		}
 
-		reqCopy, err := cloneRequest(req)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := t.base.RoundTrip(reqCopy)
+		resp, err := t.base.RoundTrip(reqToSend)
 		if err != nil {
 			return nil, err
 		}

@@ -27,7 +27,7 @@ type httpVoicevoxClient struct {
 func NewClient(baseURL string) VoicevoxClient {
 	return &httpVoicevoxClient{
 		baseURL:    baseURL,
-		httpClient: &http.Client{Transport: httpretry.NewTransport(nil)},
+		httpClient: httpretry.NewClient(0),
 	}
 }
 

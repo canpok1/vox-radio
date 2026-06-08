@@ -118,7 +118,7 @@ func newOpenAIClient(cfg Config) Client {
 	}
 	return &openAIClient{
 		cfg:      cfg,
-		hc:       &http.Client{Timeout: 60 * time.Second, Transport: httpretry.NewTransport(nil)},
+		hc:       httpretry.NewClient(60 * time.Second),
 		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
 		t:        resolveThrottler(cfg),
 	}

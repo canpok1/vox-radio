@@ -199,6 +199,20 @@ func TestRoundTrip_ContextCancelledDuringBackoff(t *testing.T) {
 	}
 }
 
+func TestNewClient_AttachesRetryTransportAndTimeout(t *testing.T) {
+	c := NewClient(5 * time.Second)
+	if c.Timeout != 5*time.Second {
+		t.Fatalf("timeout = %v, want 5s", c.Timeout)
+	}
+	if _, ok := c.Transport.(*Transport); !ok {
+		t.Fatalf("transport type = %T, want *Transport", c.Transport)
+	}
+
+	if c0 := NewClient(0); c0.Timeout != 0 {
+		t.Fatalf("timeout = %v, want 0 (unset)", c0.Timeout)
+	}
+}
+
 func TestIsRetryable(t *testing.T) {
 	cases := map[int]bool{
 		http.StatusOK:                  false,
