@@ -4,6 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=workflow-scripts/lib.sh
+source "${SCRIPT_DIR}/lib.sh"
+
 ASSIGN_COUNT=1
 
 while [[ $# -gt 0 ]]; do
@@ -91,5 +94,5 @@ while $RUNNING; do
   fi
 
   PREV_STATE="$CURRENT_STATE"
-  sleep 60
+  poll_sleep
 done
