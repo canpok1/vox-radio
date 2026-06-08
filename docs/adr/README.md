@@ -58,3 +58,4 @@
 | [0050](0050-fail-on-cache-corruption-instead-of-degraded-mode.md) | キャッシュ破損時は degraded mode ではなくエラー停止する | 採用 | 2026-06-07 |
 | [0051](0051-http-retry-with-exponential-backoff.md) | 外部 HTTP API 呼び出しに指数バックオフのリトライを導入する | 採用 | 2026-06-08 |
 | [0052](0052-corner-id-and-appearance-context-to-llm.md) | コーナーに ID を導入し扱い回数・前回出演回番号を生成 LLM に渡す | 採用 | 2026-06-08 |
+| [0053](0053-slackpost-idempotent-resume-via-state-file.md) | slackpost に状態ファイルによる冪等な再投稿を導入する（ADR-0035 の二重投稿方針を改訂） | 採用 | 2026-06-08 |
