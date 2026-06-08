@@ -56,3 +56,4 @@
 | [0048](0048-program-level-direction-and-non-public-script-note.md) | 番組全体の演出指示（direct専用）と台本指示 script_note（write専用・非公開、番組/コーナー両レベル）を追加する | 採用 | 2026-06-06 |
 | [0049](0049-prompt-eval-llm-as-judge-framework.md) | 組み込みプロンプトの品質を LLM-as-judge で評価するフレームワークを導入する | 採用 | 2026-06-07 |
 | [0050](0050-fail-on-cache-corruption-instead-of-degraded-mode.md) | キャッシュ破損時は degraded mode ではなくエラー停止する | 採用 | 2026-06-07 |
+| [0051](0051-http-retry-with-exponential-backoff.md) | 外部 HTTP API 呼び出しに指数バックオフのリトライを導入する | 採用 | 2026-06-08 |

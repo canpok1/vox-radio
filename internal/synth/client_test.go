@@ -76,7 +76,7 @@ func TestHTTPVoicevoxClient_AudioQuery_ParsesResponse(t *testing.T) {
 
 func TestHTTPVoicevoxClient_AudioQuery_ReturnsErrorOnNonOK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "engine error", http.StatusInternalServerError)
+		http.Error(w, "bad request", http.StatusBadRequest)
 	}))
 	defer server.Close()
 
@@ -142,7 +142,7 @@ func TestHTTPVoicevoxClient_Synthesis_ReturnsWAVBytes(t *testing.T) {
 
 func TestHTTPVoicevoxClient_Synthesis_ReturnsErrorOnNonOK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "engine error", http.StatusInternalServerError)
+		http.Error(w, "bad request", http.StatusBadRequest)
 	}))
 	defer server.Close()
 

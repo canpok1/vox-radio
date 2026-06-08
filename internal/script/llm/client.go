@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
+
+	"github.com/canpok1/vox-radio/internal/httpretry"
 )
 
 const (
@@ -116,7 +118,7 @@ func newOpenAIClient(cfg Config) Client {
 	}
 	return &openAIClient{
 		cfg:      cfg,
-		hc:       &http.Client{Timeout: 60 * time.Second},
+		hc:       httpretry.NewClient(60 * time.Second),
 		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/chat/completions",
 		t:        resolveThrottler(cfg),
 	}

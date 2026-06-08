@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/canpok1/vox-radio/internal/httpretry"
 )
 
 // VoicevoxClient is the interface for the VOICEVOX HTTP API
@@ -25,7 +27,7 @@ type httpVoicevoxClient struct {
 func NewClient(baseURL string) VoicevoxClient {
 	return &httpVoicevoxClient{
 		baseURL:    baseURL,
-		httpClient: &http.Client{},
+		httpClient: httpretry.NewClient(0),
 	}
 }
 
