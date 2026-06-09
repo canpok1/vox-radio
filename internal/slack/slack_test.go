@@ -558,6 +558,68 @@ func TestRun_IgnoresStateMismatch(t *testing.T) {
 	}
 }
 
+// ⑤ episode_number が異なる場合は前の状態を無視して新規投稿
+func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
+	dir := t.TempDir()
+
+	// manifest: episode_number=14, audio_file="episode.mp3"
+	manifest := map[string]any{
+		"title":          "ずんだもんテックラジオ",
+		"episode_number": 14,
+		"episode_title":  "エピソード14",
+		"summary":        "",
+		"audio_file":     "episode.mp3",
+		"corners":        []any{},
+	}
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	manifestPath := filepath.Join(dir, "manifest.json")
+	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "episode.mp3"), []byte("fake mp3"), 0o644); err != nil {
+		t.Fatalf("write audio: %v", err)
+	}
+
+	specPath := writeTestSlackSpec(t, dir)
+	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+
+	// state: episode_number=13（異なる）, replied=true, audio_file は同名
+	statePath := slack.DefaultStatePath(manifestPath)
+	stateJSON := `{"audio_file":"episode.mp3","episode_number":13,"channel":"C_OLD","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
+	if err := os.WriteFile(statePath, []byte(stateJSON), 0o644); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+
+	uploadCalled := false
+	mock := &mockPoster{
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			uploadCalled = true
+			return "FILE_NEW", nil
+		},
+	}
+
+	var buf strings.Builder
+	if err := slack.Run(slack.Options{
+		ConfigPath:   configPath,
+		ManifestPath: manifestPath,
+		SpecPath:     specPath,
+		Out:          &buf,
+	}, mock); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !uploadCalled {
+		t.Error("UploadAudio should be called when episode_number differs from state")
+	}
+	out := buf.String()
+	if strings.Contains(out, "FILE_OLD") {
+		t.Errorf("output should not contain old file_id from mismatched state, got: %q", out)
+	}
+}
+
 // ⑥ dry-run で状態ファイル不介入
 func TestRun_DryRun_NoStateFile(t *testing.T) {
 	dir := t.TempDir()
