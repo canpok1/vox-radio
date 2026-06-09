@@ -149,7 +149,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		Content:           corner.Content,
 		ScriptNote:        corner.ScriptNote,
 		Cast:              castEntries,
-		TargetChars:       config.DurationSecToTargetChars(corner.LengthSec),
+		TargetChars:       config.DurationSecToTargetChars(corner.LengthSec, program.EffectiveCharsPerMinute()),
 		AppearanceCount:   w.cornerAppearanceCount,
 		LastEpisodeNumber: w.cornerLastEpisodeNumber,
 	}

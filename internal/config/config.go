@@ -13,17 +13,17 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
-// CharsPerSec is the approximate number of characters spoken per second,
-// used to convert length_sec to a target character count.
-const CharsPerSec = 7
+// DefaultCharsPerMinute is the default number of characters spoken per minute (= 7文字/秒×60),
+// used to convert length_sec to a target character count when chars_per_minute is not configured.
+const DefaultCharsPerMinute = 420
 
 // DefaultMinRequestIntervalMS is the default minimum interval (ms) between LLM API requests.
 // Based on gemini-3.1-flash-lite free tier (15 RPM) with ~10% safety margin: 60000/15 * 1.1 ≈ 4500.
 const DefaultMinRequestIntervalMS = 4500
 
 // DurationSecToTargetChars converts a duration in seconds to an approximate target character count.
-func DurationSecToTargetChars(sec int) int {
-	return sec * CharsPerSec
+func DurationSecToTargetChars(sec, charsPerMinute int) int {
+	return sec * charsPerMinute / 60
 }
 
 type FeedEntry struct {
@@ -276,13 +276,14 @@ func (c CacheConfig) EffectiveLLMContextEntries() int {
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
 	// ID is required: it is the cache key (episodes are stored per program.id).
-	ID            string `yaml:"id"`
-	Title         string `yaml:"title"`
-	Description   string `yaml:"description"`
-	Direction     string `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
-	ScriptNote    string `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
-	SummaryLength int    `yaml:"summary_length,omitempty"`
-	Timezone      string `yaml:"timezone,omitempty"` // IANA tz名。未設定時は DefaultProgramTimezone
+	ID             string `yaml:"id"`
+	Title          string `yaml:"title"`
+	Description    string `yaml:"description"`
+	Direction      string `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
+	ScriptNote     string `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
+	SummaryLength  int    `yaml:"summary_length,omitempty"`
+	Timezone       string `yaml:"timezone,omitempty"`         // IANA tz名。未設定時は DefaultProgramTimezone
+	CharsPerMinute int    `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.
@@ -291,6 +292,14 @@ func (p ProgramConfig) EffectiveSummaryLength() int {
 		return DefaultProgramSummaryLength
 	}
 	return p.SummaryLength
+}
+
+// EffectiveCharsPerMinute returns the configured CharsPerMinute, falling back to DefaultCharsPerMinute.
+func (p ProgramConfig) EffectiveCharsPerMinute() int {
+	if p.CharsPerMinute <= 0 {
+		return DefaultCharsPerMinute
+	}
+	return p.CharsPerMinute
 }
 
 // EffectiveTimezone returns Timezone, falling back to DefaultProgramTimezone.

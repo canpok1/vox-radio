@@ -16,6 +16,7 @@
 | `direction` | string | 任意 | 番組全体の演出方針（direct ステップのみに渡る）。SE・pause の挿入タイミングに関する指示。台本生成・manifest・feed・Slack には渡されない |
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
+| `chars_per_minute` | int | 任意 | 台本の文字数換算に使用する1分あたりの目安文字数。台本生成時の `length_sec` → 目標文字数換算に使用。未指定時はデフォルト 420（= 7文字/秒×60） |
 
 ## `corners` セクション
 
@@ -29,7 +30,7 @@
 | `direction` | string | 任意 | コーナーの演出方針（direct ステップのみに渡る）。SE の挿入タイミングなど。台本生成 LLM へは渡されない |
 | `script_note` | string | 任意 | コーナー個別の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。このコーナーのやり取りの細かい指示を記述する |
 | `cast` | map[string]string | 任意 | キャラID → 役割説明のマップ（キーは `vox-radio.yaml` の `characters` のキーと一致させること） |
-| `length_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に文字数（≈7文字/秒）へ換算される |
+| `length_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に `program.chars_per_minute`（既定 420/分）で文字数へ換算される |
 | `summary_length` | int | 任意 | コーナーサマリーの目安文字数。未指定時はデフォルト 100 文字 |
 | `source` | SourceConfig | 任意 | データソース（省略するとこのコーナーの収集はスキップ） |
 | `start_audio` | AudioRef | 任意 | コーナー開始境界音声。`type` に `jingle`（BGM停止後再生）または `se`（BGMの下で再生）を指定し、`id` に `assets` の該当マップのキーを指定する。コーナー本編の前に確定的に挿入される |

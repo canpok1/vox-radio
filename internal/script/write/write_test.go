@@ -305,7 +305,7 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "c={{corner}}", 0, nil)
 
-	// 14sec * 7chars/sec = 98 chars
+	// 14sec * 420chars/min / 60 = 98 chars
 	corner := config.CornerConfig{Title: "Test", Content: "内容", LengthSec: 14}
 	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil, nil, "", nil)
 
@@ -314,7 +314,7 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	}
 	prompt := mc.captured[0].Messages[0].Content
 	if !strings.Contains(prompt, `"target_chars":98`) {
-		t.Errorf("prompt should contain target_chars:98 (14sec*7), got: %s", prompt)
+		t.Errorf("prompt should contain target_chars:98 (14sec*420/min), got: %s", prompt)
 	}
 	if strings.Contains(prompt, "length_sec") {
 		t.Errorf("prompt should not expose length_sec to LLM, got: %s", prompt)
