@@ -94,7 +94,7 @@ func Run(opts Options, poster Poster) error {
 	}
 	needUpload := true
 
-	if loaded, err := loadState(statePath); err == nil && loaded.AudioFile == manifest.AudioFile && loaded.EpisodeNumber == manifest.EpisodeNumber {
+	if loaded, err := loadState(statePath); err == nil && loaded.Matches(manifest.AudioFile, manifest.EpisodeNumber) {
 		if loaded.Replied {
 			writeResult(opts.Out, loaded.Channel, loaded.FileID, loaded.ThreadTS)
 			return nil

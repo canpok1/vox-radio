@@ -38,6 +38,28 @@ func TestDefaultStatePath(t *testing.T) {
 	}
 }
 
+func TestPostState_Matches(t *testing.T) {
+	s := PostState{AudioFile: "episode.mp3", EpisodeNumber: 13}
+	tests := []struct {
+		name          string
+		audioFile     string
+		episodeNumber int
+		want          bool
+	}{
+		{"same audio and episode", "episode.mp3", 13, true},
+		{"different episode_number", "episode.mp3", 14, false},
+		{"different audio_file", "other.mp3", 13, false},
+		{"both different", "other.mp3", 99, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := s.Matches(tt.audioFile, tt.episodeNumber); got != tt.want {
+				t.Errorf("Matches(%q, %d) = %v, want %v", tt.audioFile, tt.episodeNumber, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSaveAndLoadState_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.slackpost-state.json")
