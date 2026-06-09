@@ -27,6 +27,11 @@ func DefaultStatePath(manifestPath string) string {
 	return filepath.Join(dir, stem+".slackpost-state.json")
 }
 
+// Matches reports whether this state corresponds to the given audio file and episode number.
+func (s *PostState) Matches(audioFile string, episodeNumber int) bool {
+	return s.AudioFile == audioFile && s.EpisodeNumber == episodeNumber
+}
+
 func loadState(path string) (*PostState, error) {
 	var s PostState
 	if err := fileio.ReadJSON(path, &s); err != nil {
