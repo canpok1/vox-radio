@@ -152,7 +152,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	}
 	totalTarget := 0
 	for _, c := range corners {
-		totalTarget += config.DurationSecToTargetChars(c.LengthSec)
+		totalTarget += config.DurationSecToTargetChars(c.LengthSec, program.EffectiveCharsPerMinute())
 	}
 	if totalTarget <= 0 {
 		return cornerLines
@@ -170,7 +170,7 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 	worstIdx := 0
 	worstDev := 0.0
 	for i, corner := range corners {
-		targetChars := config.DurationSecToTargetChars(corner.LengthSec)
+		targetChars := config.DurationSecToTargetChars(corner.LengthSec, program.EffectiveCharsPerMinute())
 		if targetChars <= 0 {
 			continue
 		}

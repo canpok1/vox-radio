@@ -12,19 +12,45 @@ import (
 
 func TestDurationSecToTargetChars(t *testing.T) {
 	tests := []struct {
-		sec  int
-		want int
+		sec            int
+		charsPerMinute int
+		want           int
 	}{
-		{sec: 0, want: 0},
-		{sec: 1, want: 7},
-		{sec: 14, want: 98},
-		{sec: 30, want: 210},
+		// デフォルト値 420/分（= 旧 7文字/秒）での従来値一致
+		{sec: 0, charsPerMinute: 420, want: 0},
+		{sec: 14, charsPerMinute: 420, want: 98},
+		{sec: 30, charsPerMinute: 420, want: 210},
+		// 任意値での確認
+		{sec: 60, charsPerMinute: 300, want: 300},
+		{sec: 120, charsPerMinute: 300, want: 600},
 	}
 	for _, tt := range tests {
-		got := config.DurationSecToTargetChars(tt.sec)
+		got := config.DurationSecToTargetChars(tt.sec, tt.charsPerMinute)
 		if got != tt.want {
-			t.Errorf("DurationSecToTargetChars(%d) = %d, want %d", tt.sec, got, tt.want)
+			t.Errorf("DurationSecToTargetChars(%d, %d) = %d, want %d", tt.sec, tt.charsPerMinute, got, tt.want)
 		}
+	}
+}
+
+func TestProgramConfig_EffectiveCharsPerMinute(t *testing.T) {
+	tests := []struct {
+		name           string
+		charsPerMinute int
+		want           int
+	}{
+		{name: "unset (0) returns default", charsPerMinute: 0, want: config.DefaultCharsPerMinute},
+		{name: "negative returns default", charsPerMinute: -1, want: config.DefaultCharsPerMinute},
+		{name: "explicit value returned", charsPerMinute: 300, want: 300},
+		{name: "explicit default value returned", charsPerMinute: 420, want: 420},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := config.ProgramConfig{CharsPerMinute: tt.charsPerMinute}
+			got := p.EffectiveCharsPerMinute()
+			if got != tt.want {
+				t.Errorf("EffectiveCharsPerMinute() = %d, want %d", got, tt.want)
+			}
+		})
 	}
 }
 
