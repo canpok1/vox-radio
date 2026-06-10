@@ -74,7 +74,7 @@ func Run(opts Options, poster Poster) error {
 	}
 
 	if poster == nil {
-		poster = NewPoster(token)
+		poster = NewPoster(token, cfg.Slack.EffectiveAPIURL())
 	}
 
 	ctx := context.Background()
