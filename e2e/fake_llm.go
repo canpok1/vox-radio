@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
-	"sync"
 )
 
 // llmStepRoute は fake LLM のルーティング1件分。プロンプト冒頭の見出し行で
@@ -38,9 +37,6 @@ var urlInPromptRe = regexp.MustCompile(`"url":\s*"([^"]+)"`)
 // レスポンスは各ステップの JSON Schema（クライアント側で検証される）に適合する固定値を返す。
 type fakeLLM struct {
 	server *httptest.Server
-
-	mu    sync.Mutex
-	calls []string // 受信したステップ名の履歴
 }
 
 func newFakeLLM() *fakeLLM {
@@ -52,19 +48,6 @@ func newFakeLLM() *fakeLLM {
 func (f *fakeLLM) URL() string { return f.server.URL }
 
 func (f *fakeLLM) Close() { f.server.Close() }
-
-// CallCount は指定ステップの受信回数を返す。
-func (f *fakeLLM) CallCount(step string) int {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	n := 0
-	for _, c := range f.calls {
-		if c == step {
-			n++
-		}
-	}
-	return n
-}
 
 type llmRequest struct {
 	Messages []struct {
@@ -98,10 +81,6 @@ func (f *fakeLLM) handle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("fake llm: unknown prompt header %q (新ステップが追加された場合は e2e/fake_llm.go の llmRoutes を更新してください)", firstLine), http.StatusInternalServerError)
 		return
 	}
-
-	f.mu.Lock()
-	f.calls = append(f.calls, step)
-	f.mu.Unlock()
 
 	content, err := cannedResponse(step, prompt)
 	if err != nil {

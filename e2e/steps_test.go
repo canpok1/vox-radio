@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -249,8 +250,12 @@ func (s *scenarioState) assertFileExists(rel string) error {
 }
 
 func (s *scenarioState) assertFileNotExists(rel string) error {
-	if _, err := os.Stat(s.path(rel)); err == nil {
+	_, err := os.Stat(s.path(rel))
+	if err == nil {
 		return fmt.Errorf("file %s should not exist", rel)
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("stat %s: %w", rel, err)
 	}
 	return nil
 }
