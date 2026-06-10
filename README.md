@@ -59,6 +59,19 @@ make eval
 
 評価は週次の GitHub Actions ワークフロー（`.github/workflows/prompt-eval.yml`）でも自動実行されます。通常の開発 CI（`build.yml`）は変更せず、実 API を叩きません。
 
+## e2e テスト（BDD / Gherkin）
+
+プロダクトの主要動線（init・各 check・episodegen 各ステップ/一括・feedgen・slackpost・キャッシュ連携）を、CLI バイナリを実際に実行して検証する e2e テストがあります。テストケースは `e2e/features/*.feature`（日本語 Gherkin）に仕様書として記述され、[godog](https://github.com/cucumber/godog) がそのまま実行します（ADR-0054）。
+
+```bash
+make e2e
+```
+
+- 外部依存（LLM / VOICEVOX / RSS フィード / Slack API）はモックサーバーで差し替えるため、API キーや実サービスは不要です。
+- ffmpeg / ffprobe のみ実バイナリを使います。見つからない環境では `@ffmpeg` タグ付きシナリオが自動的にスキップされます。
+- CI（`build.yml` の `e2e` ジョブ）では ffmpeg をインストールして全シナリオを実行します。
+- テストは `e2e` ビルドタグで分離されており、通常の `make test` には含まれません。
+
 ## リリース設定の検証
 
 `.goreleaser.yaml` を編集した後は、CI を待たずにローカルで構文・設定を検証できます。

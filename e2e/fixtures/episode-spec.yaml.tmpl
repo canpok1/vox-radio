@@ -1,0 +1,33 @@
+# e2e テスト用のエピソード仕様。{{FEED_URL}} はシナリオ実行時にモックフィードサーバーのURLへ展開される。
+program:
+  id: "e2e-radio"
+  title: "E2Eテストラジオ"
+  description: "e2e テスト用の番組です"
+
+casts:
+  zundamon:
+    type: regular
+    role: "MC。進行役。"
+  metan:
+    type: regular
+    role: "MC。ツッコミ担当。"
+
+corners:
+  - id: "opening"
+    title: "オープニング"
+    content: "番組の挨拶と本日のトピック紹介"
+    cast:
+      zundamon: "進行役"
+    length_sec: 30
+
+  - id: "news"
+    title: "ニュースコーナー"
+    content: "テスト記事の紹介"
+    cast:
+      zundamon: "紹介役"
+      metan: "解説役"
+    length_sec: 120
+    source:
+      feeds:
+        - url: {{FEED_URL}}/feed.xml
+          max_items: 5

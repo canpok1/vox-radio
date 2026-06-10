@@ -59,3 +59,5 @@
 | [0051](0051-http-retry-with-exponential-backoff.md) | 外部 HTTP API 呼び出しに指数バックオフのリトライを導入する | 採用 | 2026-06-08 |
 | [0052](0052-corner-id-and-appearance-context-to-llm.md) | コーナーに ID を導入し扱い回数・前回出演回番号を生成 LLM に渡す | 採用 | 2026-06-08 |
 | [0053](0053-slackpost-idempotent-resume-via-state-file.md) | slackpost に状態ファイルによる冪等な再投稿を導入する（ADR-0035 の二重投稿方針を改訂） | 採用 | 2026-06-08 |
+| [0054](0054-godog-bdd-e2e-tests.md) | godog による BDD e2e テストの導入 | 採用 | 2026-06-10 |
+| [0055](0055-slack-api-url-env-override.md) | Slack API URL の環境変数オーバーライド | 採用 | 2026-06-10 |

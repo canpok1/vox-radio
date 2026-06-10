@@ -583,6 +583,56 @@ func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
 	}
 }
 
+func TestSlackConfig_EffectiveAPIURL(t *testing.T) {
+	// t.Setenv を使うため t.Parallel() は併用しない。
+	tests := []struct {
+		name   string
+		env    string // setEnv が true のときに環境変数へ設定する値
+		setEnv bool   // false なら環境変数を未設定にして検証する
+		want   string
+	}{
+		{
+			name:   "環境変数の値を返す（末尾スラッシュを補う）",
+			env:    "http://127.0.0.1:8080/api",
+			setEnv: true,
+			want:   "http://127.0.0.1:8080/api/",
+		},
+		{
+			name:   "末尾スラッシュ付きはそのまま返す",
+			env:    "http://127.0.0.1:8080/api/",
+			setEnv: true,
+			want:   "http://127.0.0.1:8080/api/",
+		},
+		{
+			name: "環境変数なしなら空文字（slack-go デフォルトを使う）",
+			want: "",
+		},
+		{
+			name:   "環境変数が空文字なら空文字",
+			env:    "",
+			setEnv: true,
+			want:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(config.SlackAPIURLEnv, tt.env)
+			} else {
+				// 他テストの影響を排除するため明示的に未設定化する。
+				t.Setenv(config.SlackAPIURLEnv, "")
+				if err := os.Unsetenv(config.SlackAPIURLEnv); err != nil {
+					t.Fatalf("Unsetenv failed: %v", err)
+				}
+			}
+			c := config.SlackConfig{}
+			if got := c.EffectiveAPIURL(); got != tt.want {
+				t.Errorf("EffectiveAPIURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoadConfig_Characters(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/config.yaml")
 	if err != nil {

@@ -47,9 +47,15 @@ type realPoster struct {
 }
 
 // NewPoster creates a Poster backed by the real Slack API.
-func NewPoster(token string) Poster {
+// apiURL overrides the Slack API base URL when non-empty (e.g. for testing
+// against a mock server); pass "" to use the slack-go default.
+func NewPoster(token, apiURL string) Poster {
+	var opts []slackgo.Option
+	if apiURL != "" {
+		opts = append(opts, slackgo.OptionAPIURL(apiURL))
+	}
 	return &realPoster{
-		client:       slackgo.New(token),
+		client:       slackgo.New(token, opts...),
 		pollInterval: time.Second,
 		pollTimeout:  30 * time.Second,
 	}
