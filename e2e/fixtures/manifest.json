@@ -1,0 +1,27 @@
+{
+  "title": "E2Eテストラジオ",
+  "episode_number": 1,
+  "episode_title": "テスト回のサブタイトル",
+  "description": "e2e テスト用の番組です",
+  "summary": "今回の番組のまとめです。",
+  "datetime": "2026-06-01T09:00:00+09:00",
+  "audio_file": "episode.mp3",
+  "corners": [
+    {
+      "id": "news",
+      "title": "ニュースコーナー",
+      "summary": "コーナー内容のまとめです。",
+      "points": ["コーナー要点1"],
+      "articles": [
+        {"title": "テスト記事1", "url": "https://example.com/articles/1"}
+      ]
+    }
+  ],
+  "conversation_notes": [
+    {"category": "雑談", "character_ids": ["zundamon"], "note": "テスト用の会話メモ"}
+  ],
+  "casts": [
+    {"character_id": "zundamon", "role": "MC。進行役。", "type": "regular", "appearance_count": 1},
+    {"character_id": "metan", "role": "MC。ツッコミ担当。", "type": "regular", "appearance_count": 1}
+  ]
+}

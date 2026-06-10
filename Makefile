@@ -51,6 +51,9 @@ release-check:
 eval:
 	go test -tags=eval -count=1 -v -timeout 30m ./internal/eval/...
 
+e2e:
+	go test -tags=e2e -count=1 -v -timeout 10m ./e2e/...
+
 all: build
 
-.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check eval
+.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check eval e2e

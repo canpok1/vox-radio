@@ -1,0 +1,9 @@
+# e2e テスト用の Slack 投稿設定。channel は e2e/fake_slack.go の slackTestChannel と合わせること。
+slack:
+  channel: "C0123456789"
+  message:
+    header: "🎙️ {title} 第{episode_number}回「{episode_title}」"
+    fallback: "{title} 第{episode_number}回 を配信しました"
+    summary: "*今回のまとめ*\n{summary}"
+    corner: "*{corner_title}*\n{corner_summary}\n{articles}"
+    article: " • <{url}|{title}>"
