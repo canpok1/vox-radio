@@ -10,50 +10,38 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/slack"
 )
 
-func writeTestManifest(t *testing.T, dir string) string {
-	t.Helper()
-	manifest := map[string]any{
-		"title":          "ずんだもんテックラジオ",
-		"episode_number": 42,
-		"episode_title":  "テストエピソード",
-		"summary":        "",
-		"audio_file":     "episode42.mp3",
-		"corners":        []any{},
+func buildTestManifest() model.Manifest {
+	return model.Manifest{
+		Title:         "ずんだもんテックラジオ",
+		EpisodeNumber: 42,
+		EpisodeTitle:  "テストエピソード",
+		Summary:       "",
+		AudioFile:     "episode42.mp3",
+		Corners:       []model.ManifestCorner{},
 	}
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	path := filepath.Join(dir, "manifest.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-	return path
 }
 
-// writeTestManifestWithSummary creates a manifest that generates non-empty thread blocks.
-func writeTestManifestWithSummary(t *testing.T, dir string) string {
-	t.Helper()
-	manifest := map[string]any{
-		"title":          "ずんだもんテックラジオ",
-		"episode_number": 42,
-		"episode_title":  "テストエピソード",
-		"summary":        "今回はLLMについてです。",
-		"audio_file":     "episode42.mp3",
-		"corners":        []any{},
+func buildTestManifestWithSummary() model.Manifest {
+	return model.Manifest{
+		Title:         "ずんだもんテックラジオ",
+		EpisodeNumber: 42,
+		EpisodeTitle:  "テストエピソード",
+		Summary:       "今回はLLMについてです。",
+		AudioFile:     "episode42.mp3",
+		Corners:       []model.ManifestCorner{},
 	}
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
+}
+
+func buildTestSlackSpec() slack.SlackSpec {
+	return slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{
+			Channel: "C0123456789",
+		},
 	}
-	path := filepath.Join(dir, "manifest.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-	return path
 }
 
 func writeTestAudio(t *testing.T, dir string) {
@@ -64,64 +52,18 @@ func writeTestAudio(t *testing.T, dir string) {
 	}
 }
 
-func writeTestSlackSpec(t *testing.T, dir string) string {
-	t.Helper()
-	content := `
-slack:
-  channel: "C0123456789"
-`
-	path := filepath.Join(dir, "slack-spec.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write slack-spec: %v", err)
-	}
-	return path
-}
-
-func writeTestConfig(t *testing.T, dir string, botTokenEnv string) string {
-	t.Helper()
-	content := `
-llm:
-  provider: openai
-  temperature: 0.7
-  max_retries: 3
-  steps:
-    write: { temperature: 0.8 }
-  openai:
-    base_url: https://example.com/
-    api_key_env: OPENAI_API_KEY
-    model: gpt-4
-
-voicevox:
-  url: http://localhost:50021
-
-characters: {}
-
-slack:
-  bot_token_env: ` + botTokenEnv + `
-`
-	path := filepath.Join(dir, "vox-radio.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	return path
-}
-
 func TestRun_DryRun_OutputsAudioPathAndComment(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
 
 	var buf strings.Builder
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       true,
-		Out:          &buf,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		DryRun:    true,
+		Out:       &buf,
 	}, nil)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -135,12 +77,8 @@ func TestRun_DryRun_OutputsAudioPathAndComment(t *testing.T) {
 
 func TestRun_DryRun_NoAPICallMade(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
 
 	posterCalled := false
 	mock := &mockPoster{
@@ -151,11 +89,11 @@ func TestRun_DryRun_NoAPICallMade(t *testing.T) {
 	}
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       true,
-		Out:          os.Stdout,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		DryRun:    true,
+		Out:       os.Stdout,
 	}, mock)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -165,55 +103,45 @@ func TestRun_DryRun_NoAPICallMade(t *testing.T) {
 	}
 }
 
-func TestRun_MissingAudioFile_Error(t *testing.T) {
+// dry-run は音声ファイルの存在チェックをスキップするため、ファイルがなくても成功する
+func TestRun_DryRun_SucceedsWithMissingAudioFile(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
-	// audio file is NOT created
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "nonexistent.mp3")
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       true,
-		Out:          os.Stdout,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		DryRun:    true,
+		Out:       io.Discard,
+	}, nil)
+	if err != nil {
+		t.Errorf("dry-run should succeed even when audio file is missing, got: %v", err)
+	}
+}
+
+func TestRun_MissingAudioFile_Error(t *testing.T) {
+	dir := t.TempDir()
+	audioPath := filepath.Join(dir, "nonexistent.mp3")
+
+	err := slack.Run(slack.Options{
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: filepath.Join(dir, "state.json"),
+		DryRun:    false,
+		Out:       os.Stdout,
 	}, nil)
 	if err == nil {
 		t.Error("expected error when audio file is missing")
 	}
 }
 
-func TestRun_EmptyBotToken_Error(t *testing.T) {
-	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
-	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "NONEXISTENT_SLACK_TOKEN_VAR")
-
-	// env var is not set
-	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       false,
-		Out:          os.Stdout,
-	}, nil)
-	if err == nil {
-		t.Error("expected error when bot token env var is not set")
-	}
-}
-
 func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
 
 	uploadCalled := false
 	mock := &mockPoster{
@@ -225,11 +153,12 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 
 	var buf strings.Builder
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       false,
-		Out:          &buf,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		DryRun:    false,
+		Out:       &buf,
 	}, mock)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -246,29 +175,22 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 
 func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	dir := t.TempDir()
+	writeTestAudio(t, dir)
+	audioPath := filepath.Join(dir, "episode42.mp3")
 
-	manifest := map[string]any{
-		"title":          "ずんだもんテックラジオ",
-		"episode_number": 42,
-		"episode_title":  "テストエピソード",
-		"summary":        "今回はLLMについてです。",
-		"audio_file":     "episode42.mp3",
-		"corners": []any{
-			map[string]any{
-				"title":    "コーナー1",
-				"summary":  "コーナーのまとめ",
-				"articles": []any{},
+	manifest := model.Manifest{
+		Title:         "ずんだもんテックラジオ",
+		EpisodeNumber: 42,
+		EpisodeTitle:  "テストエピソード",
+		Summary:       "今回はLLMについてです。",
+		AudioFile:     "episode42.mp3",
+		Corners: []model.ManifestCorner{
+			{
+				Title:   "コーナー1",
+				Summary: "コーナーのまとめ",
 			},
 		},
 	}
-	data, _ := json.Marshal(manifest)
-	manifestPath := filepath.Join(dir, "manifest.json")
-	_ = os.WriteFile(manifestPath, data, 0o644)
-	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
 
 	threadCalled := false
 	mock := &mockPoster{
@@ -285,11 +207,12 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	}
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       false,
-		Out:          os.Stdout,
+		Manifest:  manifest,
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		DryRun:    false,
+		Out:       os.Stdout,
 	}, mock)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -301,22 +224,17 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 
 func TestRun_ResolveThreadTSFails_SavesStateAndReturnsError(t *testing.T) {
 	dir := t.TempDir()
+	audioPath := filepath.Join(dir, "ep1.mp3")
+	_ = os.WriteFile(audioPath, []byte("fake"), 0o644)
 
-	manifest := map[string]any{
-		"title":          "テスト",
-		"episode_number": 1,
-		"summary":        "まとめ",
-		"audio_file":     "ep1.mp3",
-		"corners":        []any{},
+	manifest := model.Manifest{
+		Title:         "テスト",
+		EpisodeNumber: 1,
+		Summary:       "まとめ",
+		AudioFile:     "ep1.mp3",
+		Corners:       []model.ManifestCorner{},
 	}
-	data, _ := json.Marshal(manifest)
-	manifestPath := filepath.Join(dir, "manifest.json")
-	_ = os.WriteFile(manifestPath, data, 0o644)
-	_ = os.WriteFile(filepath.Join(dir, "ep1.mp3"), []byte("fake"), 0o644)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	statePath := filepath.Join(dir, "state.json")
 
 	mock := &mockPoster{
 		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
@@ -328,18 +246,18 @@ func TestRun_ResolveThreadTSFails_SavesStateAndReturnsError(t *testing.T) {
 	}
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       false,
-		Out:          os.Stdout,
+		Manifest:  manifest,
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		DryRun:    false,
+		Out:       os.Stdout,
 	}, mock)
 	if err == nil {
 		t.Fatal("Run should return error when ResolveThreadTS fails")
 	}
 
-	// State file should exist with fileID saved for resume
-	statePath := slack.DefaultStatePath(manifestPath)
 	stateData, err2 := os.ReadFile(statePath)
 	if err2 != nil {
 		t.Fatalf("state file should exist after upload: %v", err2)
@@ -359,12 +277,9 @@ func TestRun_ResolveThreadTSFails_SavesStateAndReturnsError(t *testing.T) {
 // ① 正常系で replied:true まで進む
 func TestRun_StateFile_HappyPath_RepliedTrue(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifestWithSummary(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
 
 	mock := &mockPoster{
 		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
@@ -379,16 +294,17 @@ func TestRun_StateFile_HappyPath_RepliedTrue(t *testing.T) {
 	}
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          io.Discard,
+		Manifest:  buildTestManifestWithSummary(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		Out:       io.Discard,
 	}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	statePath := slack.DefaultStatePath(manifestPath)
 	stateData, err := os.ReadFile(statePath)
 	if err != nil {
 		t.Fatalf("state file should exist after successful run: %v", err)
@@ -405,12 +321,9 @@ func TestRun_StateFile_HappyPath_RepliedTrue(t *testing.T) {
 // ② ts タイムアウト後の再実行で再アップロードせず返信が投稿
 func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifestWithSummary(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
 
 	uploadCount := 0
 	resolveCount := 0
@@ -434,13 +347,16 @@ func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
 		},
 	}
 
-	// First run: upload succeeds, ts resolution fails
-	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          io.Discard,
-	}, mock)
+	opts := slack.Options{
+		Manifest:  buildTestManifestWithSummary(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		Out:       io.Discard,
+	}
+
+	err := slack.Run(opts, mock)
 	if err == nil {
 		t.Error("expected error on first run (ts timeout)")
 	}
@@ -451,13 +367,7 @@ func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
 		t.Errorf("PostThreadReply should not be called on first run, got %d", threadCount)
 	}
 
-	// Second run: resume from state file, skip upload
-	err = slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          io.Discard,
-	}, mock)
+	err = slack.Run(opts, mock)
 	if err != nil {
 		t.Fatalf("expected no error on second run: %v", err)
 	}
@@ -472,15 +382,10 @@ func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
 // ③ replied:true 状態での再実行が何も投稿しない
 func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifestWithSummary(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
 
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
-
-	// Write state file with replied=true
-	statePath := slack.DefaultStatePath(manifestPath)
 	stateJSON := `{"audio_file":"episode42.mp3","episode_number":42,"channel":"C0123456789","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
 	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
 
@@ -499,10 +404,12 @@ func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
 
 	var buf strings.Builder
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          &buf,
+		Manifest:  buildTestManifestWithSummary(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		Out:       &buf,
 	}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -514,7 +421,6 @@ func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
 		t.Error("PostThreadReply should not be called when already replied")
 	}
 
-	// Output should contain the state values
 	out := buf.String()
 	if !strings.Contains(out, "FILE_OLD") {
 		t.Errorf("output should contain file_id from state, got: %q", out)
@@ -524,15 +430,10 @@ func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
 // ④ audio_file 不一致の古い状態を無視
 func TestRun_IgnoresStateMismatch(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir) // audio_file = "episode42.mp3"
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
 
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
-
-	// Write state file with different audio_file
-	statePath := slack.DefaultStatePath(manifestPath)
 	stateJSON := `{"audio_file":"different-episode.mp3","file_id":"FILE_OLD","replied":false}`
 	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
 
@@ -545,10 +446,12 @@ func TestRun_IgnoresStateMismatch(t *testing.T) {
 	}
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          io.Discard,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		Out:       io.Discard,
 	}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -561,38 +464,21 @@ func TestRun_IgnoresStateMismatch(t *testing.T) {
 // ⑤ episode_number が異なる場合は前の状態を無視して新規投稿
 func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 	dir := t.TempDir()
+	audioPath := filepath.Join(dir, "episode.mp3")
+	_ = os.WriteFile(audioPath, []byte("fake mp3"), 0o644)
+	statePath := filepath.Join(dir, "state.json")
 
-	// manifest: episode_number=14, audio_file="episode.mp3"
-	manifest := map[string]any{
-		"title":          "ずんだもんテックラジオ",
-		"episode_number": 14,
-		"episode_title":  "エピソード14",
-		"summary":        "",
-		"audio_file":     "episode.mp3",
-		"corners":        []any{},
-	}
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	manifestPath := filepath.Join(dir, "manifest.json")
-	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "episode.mp3"), []byte("fake mp3"), 0o644); err != nil {
-		t.Fatalf("write audio: %v", err)
+	manifest := model.Manifest{
+		Title:         "ずんだもんテックラジオ",
+		EpisodeNumber: 14,
+		EpisodeTitle:  "エピソード14",
+		Summary:       "",
+		AudioFile:     "episode.mp3",
+		Corners:       []model.ManifestCorner{},
 	}
 
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
-
-	// state: episode_number=13（異なる）, replied=true, audio_file は同名
-	statePath := slack.DefaultStatePath(manifestPath)
 	stateJSON := `{"audio_file":"episode.mp3","episode_number":13,"channel":"C_OLD","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
-	if err := os.WriteFile(statePath, []byte(stateJSON), 0o644); err != nil {
-		t.Fatalf("write state: %v", err)
-	}
+	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
 
 	uploadCalled := false
 	mock := &mockPoster{
@@ -604,10 +490,12 @@ func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 
 	var buf strings.Builder
 	if err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		Out:          &buf,
+		Manifest:  manifest,
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		StatePath: statePath,
+		Out:       &buf,
 	}, mock); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -623,25 +511,22 @@ func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 // ⑥ dry-run で状態ファイル不介入
 func TestRun_DryRun_NoStateFile(t *testing.T) {
 	dir := t.TempDir()
-	manifestPath := writeTestManifest(t, dir)
 	writeTestAudio(t, dir)
-	specPath := writeTestSlackSpec(t, dir)
-	configPath := writeTestConfig(t, dir, "TEST_SLACK_BOT_TOKEN")
-
-	t.Setenv("TEST_SLACK_BOT_TOKEN", "xoxb-test-token")
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
 
 	err := slack.Run(slack.Options{
-		ConfigPath:   configPath,
-		ManifestPath: manifestPath,
-		SpecPath:     specPath,
-		DryRun:       true,
-		Out:          io.Discard,
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		StatePath: statePath,
+		DryRun:    true,
+		Out:       io.Discard,
 	}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	statePath := slack.DefaultStatePath(manifestPath)
 	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
 		t.Error("state file should not exist after dry-run")
 	}

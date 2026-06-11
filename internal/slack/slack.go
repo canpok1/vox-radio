@@ -6,21 +6,20 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
-	"github.com/canpok1/vox-radio/internal/config"
-	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
 // Options holds the inputs for Run.
 type Options struct {
-	ConfigPath   string
-	ManifestPath string
-	SpecPath     string
-	StatePath    string // optional: override state file path (default: derived from ManifestPath)
-	DryRun       bool
-	Out          io.Writer
+	Manifest  model.Manifest
+	AudioPath string
+	Spec      SlackSpec
+	Token     string
+	APIURL    string
+	StatePath string
+	DryRun    bool
+	Out       io.Writer
 }
 
 // Run executes the slackpost workflow.
@@ -30,41 +29,13 @@ func Run(opts Options, poster Poster) error {
 		opts.Out = os.Stdout
 	}
 
-	cfg, err := config.LoadConfig(opts.ConfigPath)
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
-	token := os.Getenv(cfg.Slack.BotTokenEnv)
-	if token == "" && !opts.DryRun {
-		return fmt.Errorf("bot token env var %q is not set", cfg.Slack.BotTokenEnv)
-	}
-
-	var manifest model.Manifest
-	if err := fileio.ReadJSON(opts.ManifestPath, &manifest); err != nil {
-		return fmt.Errorf("load manifest: %w", err)
-	}
-
-	audioPath := filepath.Join(filepath.Dir(opts.ManifestPath), manifest.AudioFile)
-	if _, err := os.Stat(audioPath); err != nil {
-		return fmt.Errorf("audio file not found: %w", err)
-	}
-
-	spec, err := LoadSlackSpec(opts.SpecPath)
-	if err != nil {
-		return fmt.Errorf("load slack spec: %w", err)
-	}
-	if err := ValidateSlackSpec(spec); err != nil {
-		return fmt.Errorf("validate slack spec: %w", err)
-	}
-
-	tmpl := spec.Slack.EffectiveMessageTemplate()
-	header := BuildHeader(manifest, tmpl)
-	blocks, fallback := BuildThreadBlocks(manifest, tmpl)
-	audioTitle := BuildAudioTitle(manifest)
+	tmpl := opts.Spec.Slack.EffectiveMessageTemplate()
+	header := BuildHeader(opts.Manifest, tmpl)
+	blocks, fallback := BuildThreadBlocks(opts.Manifest, tmpl)
+	audioTitle := BuildAudioTitle(opts.Manifest)
 
 	if opts.DryRun {
-		_, _ = fmt.Fprintf(opts.Out, "audio: %s\n", audioPath)
+		_, _ = fmt.Fprintf(opts.Out, "audio: %s\n", opts.AudioPath)
 		_, _ = fmt.Fprintf(opts.Out, "header: %s\n", header)
 		if len(blocks) > 0 {
 			blocksJSON, _ := json.MarshalIndent(blocks, "", "  ")
@@ -73,28 +44,28 @@ func Run(opts Options, poster Poster) error {
 		return nil
 	}
 
+	if _, err := os.Stat(opts.AudioPath); err != nil {
+		return fmt.Errorf("audio file not found: %w", err)
+	}
+
 	if poster == nil {
-		poster = NewPoster(token, cfg.Slack.EffectiveAPIURL())
+		poster = NewPoster(opts.Token, opts.APIURL)
 	}
 
 	ctx := context.Background()
-	channel := spec.Slack.Channel
-
+	channel := opts.Spec.Slack.Channel
 	statePath := opts.StatePath
-	if statePath == "" {
-		statePath = DefaultStatePath(opts.ManifestPath)
-	}
 
 	// Build a base state from the current manifest; update fields progressively as each
 	// phase completes and write a checkpoint so re-runs can resume from where they left off.
 	state := PostState{
-		AudioFile:     manifest.AudioFile,
-		EpisodeNumber: manifest.EpisodeNumber,
+		AudioFile:     opts.Manifest.AudioFile,
+		EpisodeNumber: opts.Manifest.EpisodeNumber,
 		Channel:       channel,
 	}
 	needUpload := true
 
-	if loaded, err := loadState(statePath); err == nil && loaded.Matches(manifest.AudioFile, manifest.EpisodeNumber) {
+	if loaded, err := loadState(statePath); err == nil && loaded.Matches(opts.Manifest.AudioFile, opts.Manifest.EpisodeNumber) {
 		if loaded.Replied {
 			writeResult(opts.Out, loaded.Channel, loaded.FileID, loaded.ThreadTS)
 			return nil
@@ -105,12 +76,13 @@ func Run(opts Options, poster Poster) error {
 		}
 	}
 
+	var err error
 	if needUpload {
 		state.FileID, err = poster.UploadAudio(ctx, UploadParams{
 			Channel:        channel,
-			FilePath:       audioPath,
+			FilePath:       opts.AudioPath,
 			Title:          audioTitle,
-			Filename:       manifest.AudioFile,
+			Filename:       opts.Manifest.AudioFile,
 			InitialComment: header,
 		})
 		if err != nil {
