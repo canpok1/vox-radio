@@ -22,9 +22,17 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
 例:
   vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --spec config/feed-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			spec, err := feed.LoadFeedSpec(specPath)
+			if err != nil {
+				return fmt.Errorf("load feed spec: %w", err)
+			}
+			if err := feed.ValidateFeedSpec(spec); err != nil {
+				return fmt.Errorf("validate feed spec: %w", err)
+			}
+
 			path, n, err := feed.Run(feed.Options{
 				CachePath: cachePath,
-				SpecPath:  specPath,
+				Spec:      spec,
 			})
 			if err != nil {
 				return err
