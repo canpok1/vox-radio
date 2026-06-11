@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/fileio"
@@ -24,20 +23,13 @@ func loadConfigWith(path string, strict bool) (*Config, error) {
 }
 
 func validateConfig(cfg *Config) error {
-	for id, ch := range cfg.Characters {
-		if ch.DefaultStyle != "" {
-			if _, ok := ch.Styles[ch.DefaultStyle]; !ok {
-				return fmt.Errorf("characters[%q].default_style %q not found in styles", id, ch.DefaultStyle)
-			}
-		}
+	if err := validateCharacters(cfg.Characters); err != nil {
+		return err
 	}
 	if err := validateVoicevoxPresets(cfg.Voicevox.Presets); err != nil {
 		return err
 	}
-	if err := validateLLMConfig(&cfg.LLM); err != nil {
-		return err
-	}
-	return nil
+	return validateLLMConfig(&cfg.LLM)
 }
 
 // LoadConfigStrict loads common settings from the given YAML file path with strict parsing.

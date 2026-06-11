@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type CharacterConfig struct {
 	Name         string         `yaml:"name"`
 	Pronoun      string         `yaml:"pronoun"`
@@ -27,4 +29,15 @@ func (c CharacterConfig) SpeakerID(style string) (int, bool) {
 		}
 	}
 	return c.DefaultSpeakerID()
+}
+
+func validateCharacters(chars map[string]CharacterConfig) error {
+	for id, ch := range chars {
+		if ch.DefaultStyle != "" {
+			if _, ok := ch.Styles[ch.DefaultStyle]; !ok {
+				return fmt.Errorf("characters[%q].default_style %q not found in styles", id, ch.DefaultStyle)
+			}
+		}
+	}
+	return nil
 }
