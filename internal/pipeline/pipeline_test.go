@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -70,18 +69,17 @@ func (s *stubSynther) Run(_ context.Context, _ model.Script, outDir string) (*mo
 }
 
 type stubAssembler struct {
-	result           *assemble.Result
 	err              error
 	called           bool
 	capturedClipsDir string
 	capturedOutPath  string
 }
 
-func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string) (*assemble.Result, error) {
+func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string) error {
 	s.called = true
 	s.capturedClipsDir = clipsDir
 	s.capturedOutPath = outPath
-	return s.result, s.err
+	return s.err
 }
 
 type stubProgramSummarizer struct {
@@ -129,7 +127,7 @@ func defaultStubs() stubs {
 		rnd: &stubRundowner{rundown: model.Rundown{Corners: make([]model.RundownCorner, 0)}},
 		scr: &stubScripter{script: model.Script{Segments: make([]model.ScriptSegment, 0)}},
 		syn: &stubSynther{clips: &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}},
-		asm: &stubAssembler{result: &assemble.Result{}},
+		asm: &stubAssembler{},
 	}
 }
 

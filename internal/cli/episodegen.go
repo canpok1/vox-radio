@@ -26,6 +26,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// assemblerAdapter wraps *assemble.Assembler to satisfy pipeline.Assembler (which returns error only).
+type assemblerAdapter struct {
+	inner *assemble.Assembler
+}
+
+func (a *assemblerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) error {
+	_, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath)
+	return err
+}
+
 func newEpisodegenCmd() *cobra.Command {
 	var outDir string
 	var specPath string
@@ -118,7 +128,7 @@ func newEpisodegenCmd() *cobra.Command {
 				Rundowner:         rundowner,
 				Scripter:          scripter,
 				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
-				Assembler:         assemble.New(p.Assets, p.Program, assemble.WithLogger(logger), assemble.WithFFmpegWriter(logFile)),
+				Assembler:         &assemblerAdapter{inner: assemble.New(p.Assets, p.Program, assemble.WithLogger(logger), assemble.WithFFmpegWriter(logFile))},
 				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary"), p.Program.EffectiveSummaryLength(), programsummary.WithLogger(logger)),
 				CornerSummarizer:  programsummary.NewLLMCornerSummarizer(llmClient, prompts["corner_summary"], stepTemp(cfg.LLM, "corner_summary"), programsummary.WithLogger(logger)),
 			}
