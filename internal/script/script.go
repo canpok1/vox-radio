@@ -76,11 +76,10 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		return model.Script{}, model.ScriptLines{}, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allAssignments, cornerMap, chars)
-	builtLines := BuildScriptLines(corners, cornerLines)
-	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: builtLines}
+	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: BuildScriptLines(corners, cornerLines)}
 
 	g.logger.With("step", "script/direct").Info("開始")
-	scr, pr, err := g.director.Direct(ctx, builtLines, g.assetCatalog, program.Direction)
+	scr, pr, err := g.director.Direct(ctx, scriptLines.Corners, g.assetCatalog, program.Direction)
 	if err != nil {
 		return model.Script{}, model.ScriptLines{}, fmt.Errorf("direct: %w", err)
 	}

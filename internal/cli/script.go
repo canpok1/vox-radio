@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -174,13 +173,9 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 
 func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog) error {
 	linesPath := filepath.Join(workDir, fileio.FileLines)
-	data, err := os.ReadFile(linesPath)
+	scriptLines, err := readJSON[model.ScriptLines](linesPath)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", fileio.FileLines, err)
-	}
-	var scriptLines model.ScriptLines
-	if err := json.Unmarshal(data, &scriptLines); err != nil {
-		return fmt.Errorf("parse %s: %w", fileio.FileLines, err)
+		return err
 	}
 
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
