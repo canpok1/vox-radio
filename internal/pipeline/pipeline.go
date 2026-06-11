@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/manifest"
@@ -44,7 +43,7 @@ type Synther interface {
 
 // Assembler produces an MP3 episode from clips and a script.
 type Assembler interface {
-	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) (*assemble.Result, error)
+	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) error
 }
 
 // Options configures a single pipeline run.
@@ -114,7 +113,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		clips = &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
 	}
 
-	if _, err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir)); err != nil {
+	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir)); err != nil {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
