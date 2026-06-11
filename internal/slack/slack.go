@@ -29,10 +29,6 @@ func Run(opts Options, poster Poster) error {
 		opts.Out = os.Stdout
 	}
 
-	if _, err := os.Stat(opts.AudioPath); err != nil {
-		return fmt.Errorf("audio file not found: %w", err)
-	}
-
 	tmpl := opts.Spec.Slack.EffectiveMessageTemplate()
 	header := BuildHeader(opts.Manifest, tmpl)
 	blocks, fallback := BuildThreadBlocks(opts.Manifest, tmpl)
@@ -46,6 +42,10 @@ func Run(opts Options, poster Poster) error {
 			_, _ = fmt.Fprintf(opts.Out, "thread blocks:\n%s\n", blocksJSON)
 		}
 		return nil
+	}
+
+	if _, err := os.Stat(opts.AudioPath); err != nil {
+		return fmt.Errorf("audio file not found: %w", err)
 	}
 
 	if poster == nil {

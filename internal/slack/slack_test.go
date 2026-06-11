@@ -111,7 +111,9 @@ func TestRun_MissingAudioFile_Error(t *testing.T) {
 		Manifest:  buildTestManifest(),
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
-		DryRun:    true,
+		Token:     "xoxb-test-token",
+		StatePath: filepath.Join(dir, "state.json"),
+		DryRun:    false,
 		Out:       os.Stdout,
 	}, nil)
 	if err == nil {

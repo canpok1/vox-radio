@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/config"
-	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/slack"
 	"github.com/spf13/cobra"
@@ -47,8 +46,8 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
 				return fmt.Errorf("bot token env var %q is not set", cfg.Slack.BotTokenEnv)
 			}
 
-			var manifest model.Manifest
-			if err := fileio.ReadJSON(manifestPath, &manifest); err != nil {
+			manifest, err := readJSON[model.Manifest](manifestPath)
+			if err != nil {
 				return fmt.Errorf("load manifest: %w", err)
 			}
 
@@ -62,9 +61,8 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
 				return fmt.Errorf("validate slack spec: %w", err)
 			}
 
-			resolvedStatePath := statePath
-			if resolvedStatePath == "" {
-				resolvedStatePath = slack.DefaultStatePath(manifestPath)
+			if statePath == "" {
+				statePath = slack.DefaultStatePath(manifestPath)
 			}
 
 			return slack.Run(slack.Options{
@@ -73,7 +71,7 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
 				Spec:      spec,
 				Token:     token,
 				APIURL:    cfg.Slack.EffectiveAPIURL(),
-				StatePath: resolvedStatePath,
+				StatePath: statePath,
 				DryRun:    dryRun,
 				Out:       cmd.OutOrStdout(),
 			}, nil)
