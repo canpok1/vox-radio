@@ -110,7 +110,7 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
+	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -154,7 +154,7 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestLLMScriptGenerator_Generate_EmptyRundown(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{Casts: make([]model.RundownCast, 0)}, testCorners, testChars)
+	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{Casts: make([]model.RundownCast, 0)}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		"",
 	)
 
-	got, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), []config.CornerConfig{}, testChars)
+	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), []config.CornerConfig{}, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 
 	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -280,8 +280,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
-	workDir := t.TempDir()
+func TestLLMScriptGenerator_Generate_ReturnsScriptLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -291,16 +290,15 @@ func TestLLMScriptGenerator_Generate_SavesLinesIntermediateFile(t *testing.T) {
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
+		"",
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars); err != nil {
+	_, sl, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	path := filepath.Join(workDir, fileio.FileLines)
-	if _, err := os.Stat(path); err != nil {
-		t.Errorf("expected intermediate file %q to exist: %v", fileio.FileLines, err)
+	if len(sl.Corners) == 0 {
+		t.Error("expected non-empty Corners in returned ScriptLines")
 	}
 }
 
@@ -338,8 +336,7 @@ func TestBuildScriptLines(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) {
-	workDir := t.TempDir()
+func TestLLMScriptGenerator_Generate_ReturnsCornerStructureInLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -352,22 +349,12 @@ func TestLLMScriptGenerator_Generate_LinesFileUsesCornerStructure(t *testing.T) 
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
+		"",
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	path := filepath.Join(workDir, fileio.FileLines)
-	data, err := os.ReadFile(path)
+	_, sl, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
-		t.Fatalf("expected intermediate file to exist: %v", err)
-	}
-
-	var sl model.ScriptLines
-	if err := json.Unmarshal(data, &sl); err != nil {
-		t.Fatalf("03_lines.json must be ScriptLines structure: %v\nContent: %s", err, data)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(sl.Corners) != 1 {
 		t.Fatalf("ScriptLines.Corners: got %d, want 1", len(sl.Corners))
@@ -453,7 +440,7 @@ func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing
 		"",
 	)
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -650,7 +637,7 @@ func TestGenerate_UsesEpisodeCastsForAssignments(t *testing.T) {
 		{Title: "AIコーナー", Cast: map[string]string{"guest_char": "特別ゲスト役"}, LengthSec: 15},
 	}
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -690,7 +677,7 @@ func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 		{Title: "AIコーナー", Cast: map[string]string{"absent_char": "休演中"}, LengthSec: 15},
 	}
 
-	_, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -705,8 +692,7 @@ func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 	}
 }
 
-func TestLLMScriptGenerator_Generate_ProgramDirectionPersistedInLinesFile(t *testing.T) {
-	workDir := t.TempDir()
+func TestLLMScriptGenerator_Generate_ProgramDirectionInReturnedLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -715,28 +701,17 @@ func TestLLMScriptGenerator_Generate_ProgramDirectionPersistedInLinesFile(t *tes
 	corners := []config.CornerConfig{
 		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
-	md := &mockDirector{}
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
-		md,
+		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
+		"",
 	)
 
 	program := config.ProgramConfig{Direction: "番組全体の演出方針テスト"}
-	if _, err := gen.Generate(context.Background(), program, rundown, corners, testChars); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	path := filepath.Join(workDir, fileio.FileLines)
-	data, err := os.ReadFile(path)
+	_, sl, err := gen.Generate(context.Background(), program, rundown, corners, testChars)
 	if err != nil {
-		t.Fatalf("expected intermediate file to exist: %v", err)
-	}
-
-	var sl model.ScriptLines
-	if err := json.Unmarshal(data, &sl); err != nil {
-		t.Fatalf("03_lines.json must be valid ScriptLines: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if sl.Direction != "番組全体の演出方針テスト" {
 		t.Errorf("ScriptLines.Direction: got %q, want 番組全体の演出方針テスト", sl.Direction)
@@ -766,7 +741,7 @@ func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T)
 		workDir,
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -810,7 +785,7 @@ func TestGenerate_DoesNotSaveProofreadIntermediate_WhenProofreadDisabled(t *test
 		workDir,
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -840,7 +815,7 @@ func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
 		workDir,
 	)
 
-	if _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

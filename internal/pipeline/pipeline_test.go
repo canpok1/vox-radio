@@ -44,15 +44,16 @@ func (s *stubRundowner) Run(_ context.Context, _ []config.CornerConfig, _ model.
 
 type stubScripter struct {
 	script     model.Script
+	lines      model.ScriptLines
 	err        error
 	called     bool
 	gotRundown model.Rundown
 }
 
-func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, error) {
+func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error) {
 	s.called = true
 	s.gotRundown = rundown
-	return s.script, s.err
+	return s.script, s.lines, s.err
 }
 
 type stubSynther struct {
@@ -183,7 +184,7 @@ func TestRunner_Run_SavesIntermediateFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.RundownPath(outDir), fileio.ScriptPath(outDir), fileio.ManifestPath(outDir)} {
+	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.RundownPath(outDir), fileio.ScriptPath(outDir), fileio.LinesPath(outDir), fileio.ManifestPath(outDir)} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("expected file %q to exist: %v", path, err)
 		}
@@ -304,9 +305,8 @@ func TestRunner_Run_AssembleError(t *testing.T) {
 func TestRunner_Run_CallsProgramSummarizer(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{summary: "今回は技術ニュースを紹介しました。"}
-
-	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -321,9 +321,8 @@ func TestRunner_Run_ManifestIncludesSummary(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	wantSummary := "今回は技術ニュースを紹介しました。"
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{summary: wantSummary}
-
-	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -356,32 +355,23 @@ func TestRunner_Run_SkipsSummaryWhenSummarizerIsNil(t *testing.T) {
 func TestRunner_Run_ProgramSummarizerError(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{err: errors.New("llm error")}
-
-	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from ProgramSummarizer, got nil")
 	}
 }
 
-func writeScriptLines(t *testing.T, outDir string, sl model.ScriptLines) {
-	t.Helper()
-	if err := fileio.WriteJSON(fileio.LinesPath(outDir), sl); err != nil {
-		t.Fatalf("write script lines: %v", err)
-	}
-}
-
 func TestRunner_Run_CallsCornerSummarizer(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "要約", Points: []string{"p1"}}}
-
-	writeScriptLines(t, outDir, model.ScriptLines{
+	s.scr.lines = model.ScriptLines{
 		Corners: []model.CornerLines{
 			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
 		},
-	})
+	}
+	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "要約", Points: []string{"p1"}}}
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -395,13 +385,12 @@ func TestRunner_Run_CallsCornerSummarizer(t *testing.T) {
 func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "コーナー要約テスト", Points: []string{"要点A"}}}
-
-	writeScriptLines(t, outDir, model.ScriptLines{
+	s.scr.lines = model.ScriptLines{
 		Corners: []model.CornerLines{
 			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
 		},
-	})
+	}
+	s.csum = &stubCornerSummarizer{result: model.CornerSummary{Summary: "コーナー要約テスト", Points: []string{"要点A"}}}
 
 	r := newRunner(s)
 	r.Spec = &config.EpisodeSpec{
@@ -437,13 +426,12 @@ func TestRunner_Run_SkipsCornerSummaryWhenSummarizerIsNil(t *testing.T) {
 func TestRunner_Run_CornerSummarizerError(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
-	s.csum = &stubCornerSummarizer{err: errors.New("llm error")}
-
-	writeScriptLines(t, outDir, model.ScriptLines{
+	s.scr.lines = model.ScriptLines{
 		Corners: []model.CornerLines{
 			{Title: "コーナー", Lines: []model.Line{{Text: "テスト"}}},
 		},
-	})
+	}
+	s.csum = &stubCornerSummarizer{err: errors.New("llm error")}
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error from CornerSummarizer, got nil")
@@ -495,14 +483,13 @@ func TestRunner_Run_NoCastsRundownHasEmptySlice(t *testing.T) {
 func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{
 		summary: "要約",
 		notes: []model.ConversationNote{
 			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
 		},
 	}
-
-	writeScriptLines(t, outDir, model.ScriptLines{Corners: []model.CornerLines{}})
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
 		t.Fatalf("unexpected error: %v", err)

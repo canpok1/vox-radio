@@ -33,7 +33,7 @@ type Rundowner interface {
 
 // Scripter generates a radio script from a rundown.
 type Scripter interface {
-	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -97,11 +97,14 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		chars = r.Config.Characters
 	}
 
-	scr, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
+	scr, scriptLines, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
 	if err := fileio.WriteJSON(fileio.ScriptPath(outDir), scr); err != nil {
+		return err
+	}
+	if err := fileio.WriteJSON(fileio.LinesPath(outDir), scriptLines); err != nil {
 		return err
 	}
 
@@ -125,11 +128,6 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	var programSummary model.ProgramSummary
 	var cornerSummaries map[string]model.CornerSummary
 	if r.ProgramSummarizer != nil || r.CornerSummarizer != nil {
-		var scriptLines model.ScriptLines
-		if err := fileio.ReadJSON(fileio.LinesPath(outDir), &scriptLines); err != nil {
-			return fmt.Errorf("read script lines for summarization: %w", err)
-		}
-
 		if r.ProgramSummarizer != nil {
 			programSummary, err = r.ProgramSummarizer.Summarize(ctx, scriptLines)
 			if err != nil {

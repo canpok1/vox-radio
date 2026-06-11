@@ -20,7 +20,7 @@ import (
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error)
 }
 
 type LLMScriptGenerator struct {
@@ -59,7 +59,7 @@ func NewLLMScriptGenerator(
 	return g
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, error) {
+func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error) {
 	start := time.Now()
 
 	cornerMap := rundown.CornerMap()
@@ -73,30 +73,28 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	g.logger.With("step", "script/write").Info("開始")
 	cornerLines, err := WriteAll(ctx, g.writer, program, corners, allAssignments, cornerMap, chars)
 	if err != nil {
-		return model.Script{}, err
+		return model.Script{}, model.ScriptLines{}, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allAssignments, cornerMap, chars)
-	scriptLines := BuildScriptLines(corners, cornerLines)
-	if err := g.saveIntermediate(fileio.FileLines, model.ScriptLines{Direction: program.Direction, Corners: scriptLines}); err != nil {
-		return model.Script{}, err
-	}
+	builtLines := BuildScriptLines(corners, cornerLines)
+	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: builtLines}
 
 	g.logger.With("step", "script/direct").Info("開始")
-	scr, pr, err := g.director.Direct(ctx, scriptLines, g.assetCatalog, program.Direction)
+	scr, pr, err := g.director.Direct(ctx, builtLines, g.assetCatalog, program.Direction)
 	if err != nil {
-		return model.Script{}, fmt.Errorf("direct: %w", err)
+		return model.Script{}, model.ScriptLines{}, fmt.Errorf("direct: %w", err)
 	}
 
 	if pr != nil {
 		if err := g.saveIntermediate(fileio.FileProofread, pr); err != nil {
-			return model.Script{}, err
+			return model.Script{}, model.ScriptLines{}, err
 		}
 		g.logger.With("step", "script/direct").Info("校正完了", "count", len(pr.Corrections))
 	}
 
 	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
-	return scr, nil
+	return scr, scriptLines, nil
 }
 
 // WriteAll writes lines for each corner in order, passing previously generated corners as context.
