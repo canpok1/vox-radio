@@ -11,6 +11,17 @@ import (
 
 var fixedTime = time.Date(2026, 5, 31, 12, 34, 56, 0, time.UTC)
 
+// newMinimalBuildParams returns a minimal BuildParams for tests that focus on
+// Casts or EpisodeNumber/EpisodeTitle fields.
+func newMinimalBuildParams() manifest.BuildParams {
+	return manifest.BuildParams{
+		Program:     config.ProgramConfig{Title: "テスト番組", Description: "説明"},
+		Corners:     []config.CornerConfig{{Title: "コーナー1"}},
+		AudioFile:   "episode.mp3",
+		GeneratedAt: fixedTime,
+	}
+}
+
 func TestBuild(t *testing.T) {
 	program := config.ProgramConfig{
 		Title:       "今日のテックニュース",
@@ -231,22 +242,15 @@ func TestBuild(t *testing.T) {
 }
 
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{
+	p := newMinimalBuildParams()
+	p.Rundown = model.Rundown{
 		Casts: []model.RundownCast{
 			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 2},
 			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
 		},
 	}
 
-	got := manifest.Build(manifest.BuildParams{
-		Program:     program,
-		Corners:     corners,
-		Rundown:     rundown,
-		AudioFile:   "episode.mp3",
-		GeneratedAt: fixedTime,
-	})
+	got := manifest.Build(p)
 
 	if len(got.Casts) != 2 {
 		t.Fatalf("Casts: got %d, want 2", len(got.Casts))
@@ -264,21 +268,14 @@ func TestBuild_CastsCopiedFromRundown(t *testing.T) {
 
 func TestBuild_CastsFirstAppearancePreserved(t *testing.T) {
 	// 新定義: AppearanceCount=1 は初登場（今回含む出演回数）
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{
+	p := newMinimalBuildParams()
+	p.Rundown = model.Rundown{
 		Casts: []model.RundownCast{
 			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
 		},
 	}
 
-	got := manifest.Build(manifest.BuildParams{
-		Program:     program,
-		Corners:     corners,
-		Rundown:     rundown,
-		AudioFile:   "episode.mp3",
-		GeneratedAt: fixedTime,
-	})
+	got := manifest.Build(p)
 
 	if len(got.Casts) != 1 {
 		t.Fatalf("Casts: got %d, want 1", len(got.Casts))
@@ -290,17 +287,10 @@ func TestBuild_CastsFirstAppearancePreserved(t *testing.T) {
 }
 
 func TestBuild_CastsNeverNil(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{} // Casts is nil
+	p := newMinimalBuildParams()
+	// Rundown.Casts is nil (zero value)
 
-	got := manifest.Build(manifest.BuildParams{
-		Program:     program,
-		Corners:     corners,
-		Rundown:     rundown,
-		AudioFile:   "episode.mp3",
-		GeneratedAt: fixedTime,
-	})
+	got := manifest.Build(p)
 
 	if got.Casts == nil {
 		t.Error("Casts must be [] not nil when rundown has no casts")
@@ -311,20 +301,11 @@ func TestBuild_CastsNeverNil(t *testing.T) {
 }
 
 func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{}
-
 	t.Run("episode_number and episode_title are set when provided", func(t *testing.T) {
-		got := manifest.Build(manifest.BuildParams{
-			Program:       program,
-			Corners:       corners,
-			Rundown:       rundown,
-			AudioFile:     "episode.mp3",
-			GeneratedAt:   fixedTime,
-			EpisodeNumber: 3,
-			EpisodeTitle:  "今週の面白技術",
-		})
+		p := newMinimalBuildParams()
+		p.EpisodeNumber = 3
+		p.EpisodeTitle = "今週の面白技術"
+		got := manifest.Build(p)
 		if got.EpisodeNumber != 3 {
 			t.Errorf("EpisodeNumber = %d, want 3", got.EpisodeNumber)
 		}
@@ -334,13 +315,7 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 	})
 
 	t.Run("episode_number zero and empty title are omitted from manifest", func(t *testing.T) {
-		got := manifest.Build(manifest.BuildParams{
-			Program:     program,
-			Corners:     corners,
-			Rundown:     rundown,
-			AudioFile:   "episode.mp3",
-			GeneratedAt: fixedTime,
-		})
+		got := manifest.Build(newMinimalBuildParams())
 		if got.EpisodeNumber != 0 {
 			t.Errorf("EpisodeNumber = %d, want 0 (omitempty)", got.EpisodeNumber)
 		}
