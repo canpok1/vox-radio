@@ -103,6 +103,23 @@ func TestRun_DryRun_NoAPICallMade(t *testing.T) {
 	}
 }
 
+// dry-run は音声ファイルの存在チェックをスキップするため、ファイルがなくても成功する
+func TestRun_DryRun_SucceedsWithMissingAudioFile(t *testing.T) {
+	dir := t.TempDir()
+	audioPath := filepath.Join(dir, "nonexistent.mp3")
+
+	err := slack.Run(slack.Options{
+		Manifest:  buildTestManifest(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		DryRun:    true,
+		Out:       io.Discard,
+	}, nil)
+	if err != nil {
+		t.Errorf("dry-run should succeed even when audio file is missing, got: %v", err)
+	}
+}
+
 func TestRun_MissingAudioFile_Error(t *testing.T) {
 	dir := t.TempDir()
 	audioPath := filepath.Join(dir, "nonexistent.mp3")
