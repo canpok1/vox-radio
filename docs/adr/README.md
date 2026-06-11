@@ -61,3 +61,4 @@
 | [0053](0053-slackpost-idempotent-resume-via-state-file.md) | slackpost に状態ファイルによる冪等な再投稿を導入する（ADR-0035 の二重投稿方針を改訂） | 採用 | 2026-06-08 |
 | [0054](0054-godog-bdd-e2e-tests.md) | godog による BDD e2e テストの導入 | 採用 | 2026-06-10 |
 | [0055](0055-slack-api-url-env-override.md) | Slack API URL の環境変数オーバーライド | 採用 | 2026-06-10 |
+| [0056](0056-layered-architecture-dependency-rules.md) | レイヤードアーキテクチャと依存方向ルールの明文化 | 採用 | 2026-06-11 |
