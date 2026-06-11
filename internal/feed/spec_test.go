@@ -1,10 +1,10 @@
-package model_test
+package feed_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/feed"
 	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
@@ -36,7 +36,7 @@ output:
 `
 	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(content))
 
-	cfg, err := model.LoadFeedSpec(path)
+	cfg, err := feed.LoadFeedSpec(path)
 	if err != nil {
 		t.Fatalf("LoadFeedSpec: unexpected error: %v", err)
 	}
@@ -75,23 +75,23 @@ output:
 }
 
 func TestLoadFeedSpec_FileNotExist(t *testing.T) {
-	_, err := model.LoadFeedSpec("/nonexistent/path/feed-spec.yaml")
+	_, err := feed.LoadFeedSpec("/nonexistent/path/feed-spec.yaml")
 	if err == nil {
 		t.Error("LoadFeedSpec: expected error for nonexistent file, got nil")
 	}
 }
 
 func TestFeedSpec_EffectivePublicDir_Default(t *testing.T) {
-	cfg := model.FeedSpec{}
+	cfg := feed.FeedSpec{}
 	got := cfg.EffectivePublicDir()
-	if got != model.DefaultPublicDir {
-		t.Errorf("EffectivePublicDir(): got %q, want %q", got, model.DefaultPublicDir)
+	if got != feed.DefaultPublicDir {
+		t.Errorf("EffectivePublicDir(): got %q, want %q", got, feed.DefaultPublicDir)
 	}
 }
 
 func TestFeedSpec_EffectivePublicDir_Custom(t *testing.T) {
-	cfg := model.FeedSpec{
-		Output: model.OutputConfig{Public: "dist/public"},
+	cfg := feed.FeedSpec{
+		Output: feed.OutputConfig{Public: "dist/public"},
 	}
 	got := cfg.EffectivePublicDir()
 	if got != "dist/public" {
@@ -101,7 +101,7 @@ func TestFeedSpec_EffectivePublicDir_Custom(t *testing.T) {
 
 func TestLoadFeedSpecStrict_Valid(t *testing.T) {
 	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(validFeedSpecYAML))
-	_, err := model.LoadFeedSpecStrict(path)
+	_, err := feed.LoadFeedSpecStrict(path)
 	if err != nil {
 		t.Fatalf("LoadFeedSpecStrict: unexpected error: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestLoadFeedSpecStrict_Valid(t *testing.T) {
 
 func TestLoadFeedSpecStrict_UnknownKey(t *testing.T) {
 	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(validFeedSpecYAML+"\nunknown_field: value\n"))
-	_, err := model.LoadFeedSpecStrict(path)
+	_, err := feed.LoadFeedSpecStrict(path)
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for unknown key, got nil")
 	}
@@ -119,22 +119,22 @@ func TestLoadFeedSpecStrict_UnknownKey(t *testing.T) {
 func TestLoadFeedSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
 	content := "program_id: my-radio\n" + validFeedSpecYAML
 	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(content))
-	_, err := model.LoadFeedSpecStrict(path)
+	_, err := feed.LoadFeedSpecStrict(path)
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for program_id (unknown key), got nil")
 	}
 }
 
 func TestLoadFeedSpecStrict_FileNotExist(t *testing.T) {
-	_, err := model.LoadFeedSpecStrict("/nonexistent/path/feed-spec.yaml")
+	_, err := feed.LoadFeedSpecStrict("/nonexistent/path/feed-spec.yaml")
 	if err == nil {
 		t.Error("LoadFeedSpecStrict: expected error for nonexistent file, got nil")
 	}
 }
 
-func validSpec() model.FeedSpec {
-	return model.FeedSpec{
-		Feed: model.FeedConfig{
+func validSpec() feed.FeedSpec {
+	return feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			Language:         "ja",
 			Author:           "Test Author",
 			Email:            "test@example.com",
@@ -147,7 +147,7 @@ func validSpec() model.FeedSpec {
 func TestValidateFeedSpec(t *testing.T) {
 	tests := []struct {
 		name        string
-		mutate      func(s *model.FeedSpec)
+		mutate      func(s *feed.FeedSpec)
 		wantErr     bool
 		errContains []string
 	}{
@@ -158,7 +158,7 @@ func TestValidateFeedSpec(t *testing.T) {
 		},
 		{
 			name: "optional fields empty",
-			mutate: func(s *model.FeedSpec) {
+			mutate: func(s *feed.FeedSpec) {
 				s.Feed.Category = ""
 				s.Feed.CoverImageURL = ""
 				s.Feed.Credit = ""
@@ -168,79 +168,79 @@ func TestValidateFeedSpec(t *testing.T) {
 		},
 		{
 			name:        "missing language",
-			mutate:      func(s *model.FeedSpec) { s.Feed.Language = "" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.Language = "" },
 			wantErr:     true,
 			errContains: []string{"feed.language"},
 		},
 		{
 			name:        "missing author",
-			mutate:      func(s *model.FeedSpec) { s.Feed.Author = "" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.Author = "" },
 			wantErr:     true,
 			errContains: []string{"feed.author"},
 		},
 		{
 			name:        "missing email",
-			mutate:      func(s *model.FeedSpec) { s.Feed.Email = "" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.Email = "" },
 			wantErr:     true,
 			errContains: []string{"feed.email"},
 		},
 		{
 			name:        "missing site_url",
-			mutate:      func(s *model.FeedSpec) { s.Feed.SiteURL = "" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.SiteURL = "" },
 			wantErr:     true,
 			errContains: []string{"feed.site_url"},
 		},
 		{
 			name:        "missing audio_url_template",
-			mutate:      func(s *model.FeedSpec) { s.Feed.AudioURLTemplate = "" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.AudioURLTemplate = "" },
 			wantErr:     true,
 			errContains: []string{"feed.audio_url_template"},
 		},
 		{
 			name:        "invalid email format",
-			mutate:      func(s *model.FeedSpec) { s.Feed.Email = "not-an-email" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.Email = "not-an-email" },
 			wantErr:     true,
 			errContains: []string{"feed.email"},
 		},
 		{
 			name:        "invalid site_url (relative)",
-			mutate:      func(s *model.FeedSpec) { s.Feed.SiteURL = "/relative/path" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.SiteURL = "/relative/path" },
 			wantErr:     true,
 			errContains: []string{"feed.site_url"},
 		},
 		{
 			name:        "invalid site_url (no scheme)",
-			mutate:      func(s *model.FeedSpec) { s.Feed.SiteURL = "example.com" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.SiteURL = "example.com" },
 			wantErr:     true,
 			errContains: []string{"feed.site_url"},
 		},
 		{
 			name:        "invalid audio_url_template (relative)",
-			mutate:      func(s *model.FeedSpec) { s.Feed.AudioURLTemplate = "/ep-{episode_number}/{audio_file}" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.AudioURLTemplate = "/ep-{episode_number}/{audio_file}" },
 			wantErr:     true,
 			errContains: []string{"feed.audio_url_template"},
 		},
 		{
 			name:        "cover_image_url invalid when non-empty",
-			mutate:      func(s *model.FeedSpec) { s.Feed.CoverImageURL = "not-a-url" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.CoverImageURL = "not-a-url" },
 			wantErr:     true,
 			errContains: []string{"feed.cover_image_url"},
 		},
 		{
 			name:        "audio_url_template missing episode_number placeholder",
-			mutate:      func(s *model.FeedSpec) { s.Feed.AudioURLTemplate = "https://example.com/{audio_file}" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.AudioURLTemplate = "https://example.com/{audio_file}" },
 			wantErr:     true,
 			errContains: []string{"episode_number"},
 		},
 		{
 			name:        "audio_url_template missing audio_file placeholder",
-			mutate:      func(s *model.FeedSpec) { s.Feed.AudioURLTemplate = "https://example.com/{episode_number}" },
+			mutate:      func(s *feed.FeedSpec) { s.Feed.AudioURLTemplate = "https://example.com/{episode_number}" },
 			wantErr:     true,
 			errContains: []string{"audio_file"},
 		},
 		{
 			name: "multiple errors collected",
-			mutate: func(s *model.FeedSpec) {
+			mutate: func(s *feed.FeedSpec) {
 				s.Feed.Language = ""
 				s.Feed.Author = ""
 			},
@@ -255,7 +255,7 @@ func TestValidateFeedSpec(t *testing.T) {
 			if tt.mutate != nil {
 				tt.mutate(&spec)
 			}
-			err := model.ValidateFeedSpec(spec)
+			err := feed.ValidateFeedSpec(spec)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("ValidateFeedSpec: expected error, got nil")

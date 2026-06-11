@@ -112,7 +112,6 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | 違反 | 該当ルール | 対応タスク |
 |---|---|---|
-| `internal/model` が `fileio` に依存（`feed_spec.go` / `slack_spec.go` の Load・Validate・Effective値） | §2 データ層・§3 spec配置 | T1: feed-spec/slack-spec をドメインへ移動 |
 | `slack.Run` がパスを受け取り内部で `config.LoadConfig`・spec ロード・`os.Getenv` を実行 | §3 依存注入 | T2: slack.Run の依存注入化 |
 | `feed`（ingest.go）が SpecPath を受け取り内部で spec をロード | §3 依存注入 | T3: feed.Run の依存注入化 |
 | `pipeline.Assembler` interface が具象型 `*assemble.Result` を返す（pipeline → assemble 依存） | §2 オーケストレーション層・§4 interface | T4: Assembler interface の具象型除去 |

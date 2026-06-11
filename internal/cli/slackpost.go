@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/slack"
 	"github.com/spf13/cobra"
 )
@@ -71,12 +70,12 @@ func newSlackpostCheckCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
-			spec, err := model.LoadSlackSpecStrict(path)
+			spec, err := slack.LoadSlackSpecStrict(path)
 			if err != nil {
 				return err
 			}
 
-			if err := model.ValidateSlackSpec(spec); err != nil {
+			if err := slack.ValidateSlackSpec(spec); err != nil {
 				return err
 			}
 
