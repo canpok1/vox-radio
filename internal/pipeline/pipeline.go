@@ -147,7 +147,18 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		}
 	}
 
-	m := manifest.Build(r.Spec.Program, r.Spec.Corners, rundown, fileio.FileEpisode, generatedAt, programSummary.Summary, cornerSummaries, programSummary.ConversationNotes, opts.EpisodeNumber, programSummary.EpisodeTitle)
+	m := manifest.Build(manifest.BuildParams{
+		Program:           r.Spec.Program,
+		Corners:           r.Spec.Corners,
+		Rundown:           rundown,
+		AudioFile:         fileio.FileEpisode,
+		GeneratedAt:       generatedAt,
+		Summary:           programSummary.Summary,
+		CornerSummaries:   cornerSummaries,
+		ConversationNotes: programSummary.ConversationNotes,
+		EpisodeNumber:     opts.EpisodeNumber,
+		EpisodeTitle:      programSummary.EpisodeTitle,
+	})
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
