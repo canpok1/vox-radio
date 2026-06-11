@@ -2,7 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/slack"
 	"github.com/spf13/cobra"
 )
@@ -32,13 +37,45 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --dry-run
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --state /tmp/state.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadConfig(configPath(cmd))
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			token := os.Getenv(cfg.Slack.BotTokenEnv)
+			if token == "" && !dryRun {
+				return fmt.Errorf("bot token env var %q is not set", cfg.Slack.BotTokenEnv)
+			}
+
+			var manifest model.Manifest
+			if err := fileio.ReadJSON(manifestPath, &manifest); err != nil {
+				return fmt.Errorf("load manifest: %w", err)
+			}
+
+			audioPath := filepath.Join(filepath.Dir(manifestPath), manifest.AudioFile)
+
+			spec, err := slack.LoadSlackSpec(specPath)
+			if err != nil {
+				return fmt.Errorf("load slack spec: %w", err)
+			}
+			if err := slack.ValidateSlackSpec(spec); err != nil {
+				return fmt.Errorf("validate slack spec: %w", err)
+			}
+
+			resolvedStatePath := statePath
+			if resolvedStatePath == "" {
+				resolvedStatePath = slack.DefaultStatePath(manifestPath)
+			}
+
 			return slack.Run(slack.Options{
-				ConfigPath:   configPath(cmd),
-				ManifestPath: manifestPath,
-				SpecPath:     specPath,
-				StatePath:    statePath,
-				DryRun:       dryRun,
-				Out:          cmd.OutOrStdout(),
+				Manifest:  manifest,
+				AudioPath: audioPath,
+				Spec:      spec,
+				Token:     token,
+				APIURL:    cfg.Slack.EffectiveAPIURL(),
+				StatePath: resolvedStatePath,
+				DryRun:    dryRun,
+				Out:       cmd.OutOrStdout(),
 			}, nil)
 		},
 	}

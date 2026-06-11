@@ -112,7 +112,6 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | 違反 | 該当ルール | 対応タスク |
 |---|---|---|
-| `slack.Run` がパスを受け取り内部で `config.LoadConfig`・spec ロード・`os.Getenv` を実行 | §3 依存注入 | T2: slack.Run の依存注入化 |
 | `feed`（ingest.go）が SpecPath を受け取り内部で spec をロード | §3 依存注入 | T3: feed.Run の依存注入化 |
 | `Scripter.Generate` が副作用で `03_lines.json` を書き、pipeline が読み戻す暗黙契約（`cli/script.go` のファイル名リテラル直書き含む） | §4 戻り値契約・§5 パス定数 | T5: Generate の戻り値契約化 |
 | `manifest.Build` の引数が11個 | §7 params struct | T6: BuildParams 化 |

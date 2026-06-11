@@ -230,3 +230,22 @@ func TestSlackpost_StateFlagAccepted_DryRunNoStateFile(t *testing.T) {
 		t.Error("state file should not exist in dry-run mode even when --state is specified")
 	}
 }
+
+func TestSlackpost_EmptyBotToken_Error(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForTest(t, dir)
+	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	configPath := writeConfigForSlackTest(t, dir)
+	// env var is NOT set
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{
+		"--config", configPath,
+		"slackpost",
+		"--manifest", manifestPath,
+		"--spec", specPath,
+	})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when bot token env var is not set")
+	}
+}
