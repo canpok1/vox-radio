@@ -1,9 +1,9 @@
-package model_test
+package slack_test
 
 import (
 	"testing"
 
-	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/slack"
 	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
@@ -21,7 +21,7 @@ slack:
 func TestLoadSlackSpec_ValidYAML(t *testing.T) {
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(validSlackSpecYAML))
 
-	spec, err := model.LoadSlackSpec(path)
+	spec, err := slack.LoadSlackSpec(path)
 	if err != nil {
 		t.Fatalf("LoadSlackSpec: unexpected error: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestLoadSlackSpec_ValidYAML(t *testing.T) {
 }
 
 func TestLoadSlackSpec_MissingFile(t *testing.T) {
-	_, err := model.LoadSlackSpec("/nonexistent/slack-spec.yaml")
+	_, err := slack.LoadSlackSpec("/nonexistent/slack-spec.yaml")
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
@@ -48,7 +48,7 @@ func TestLoadSlackSpecStrict_UnknownKeyErrors(t *testing.T) {
 	content := validSlackSpecYAML + "\nunknown_key: value\n"
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
-	_, err := model.LoadSlackSpecStrict(path)
+	_, err := slack.LoadSlackSpecStrict(path)
 	if err == nil {
 		t.Error("expected error for unknown key in strict mode")
 	}
@@ -57,7 +57,7 @@ func TestLoadSlackSpecStrict_UnknownKeyErrors(t *testing.T) {
 func TestLoadSlackSpecStrict_ValidYAML_Success(t *testing.T) {
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(validSlackSpecYAML))
 
-	_, err := model.LoadSlackSpecStrict(path)
+	_, err := slack.LoadSlackSpecStrict(path)
 	if err != nil {
 		t.Errorf("unexpected error for valid spec in strict mode: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestLoadSlackSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
 	content := "program_id: my-radio\n" + validSlackSpecYAML
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
-	_, err := model.LoadSlackSpecStrict(path)
+	_, err := slack.LoadSlackSpecStrict(path)
 	if err == nil {
 		t.Error("expected error for program_id (unknown key) in strict mode, got nil")
 	}
@@ -81,7 +81,7 @@ slack:
 `
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
-	spec, err := model.LoadSlackSpec(path)
+	spec, err := slack.LoadSlackSpec(path)
 	if err != nil {
 		t.Fatalf("LoadSlackSpec: unexpected error: %v", err)
 	}
@@ -91,28 +91,28 @@ slack:
 }
 
 func TestValidateSlackSpec_ValidChannel(t *testing.T) {
-	spec := model.SlackSpec{
-		Slack: model.SlackChannelConfig{Channel: "C0123456789"},
+	spec := slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{Channel: "C0123456789"},
 	}
-	if err := model.ValidateSlackSpec(spec); err != nil {
+	if err := slack.ValidateSlackSpec(spec); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
 func TestValidateSlackSpec_EmptyChannel_Error(t *testing.T) {
-	spec := model.SlackSpec{
-		Slack: model.SlackChannelConfig{Channel: ""},
+	spec := slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{Channel: ""},
 	}
-	if err := model.ValidateSlackSpec(spec); err == nil {
+	if err := slack.ValidateSlackSpec(spec); err == nil {
 		t.Error("expected error for empty channel")
 	}
 }
 
 func TestSlackSpec_EffectiveMessageTemplate_UsesCustomWhenSet(t *testing.T) {
-	spec := model.SlackSpec{
-		Slack: model.SlackChannelConfig{
+	spec := slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{
 			Channel: "C0123456789",
-			Message: model.MessageTemplate{
+			Message: slack.MessageTemplate{
 				Header:   "custom header",
 				Fallback: "custom fallback",
 				Summary:  "custom summary",
@@ -140,8 +140,8 @@ func TestSlackSpec_EffectiveMessageTemplate_UsesCustomWhenSet(t *testing.T) {
 }
 
 func TestSlackSpec_EffectiveMessageTemplate_FallsBackToDefault(t *testing.T) {
-	spec := model.SlackSpec{
-		Slack: model.SlackChannelConfig{Channel: "C0123456789"},
+	spec := slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{Channel: "C0123456789"},
 	}
 	tmpl := spec.Slack.EffectiveMessageTemplate()
 	if tmpl.Header == "" {

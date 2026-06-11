@@ -10,7 +10,7 @@ import (
 )
 
 // BuildHeader builds the initial comment text for the parent mp3 upload message.
-func BuildHeader(manifest model.Manifest, tmpl model.MessageTemplate) string {
+func BuildHeader(manifest model.Manifest, tmpl MessageTemplate) string {
 	s := tmpl.Header
 	s = replacePlaceholders(s, manifest)
 
@@ -26,7 +26,7 @@ func BuildHeader(manifest model.Manifest, tmpl model.MessageTemplate) string {
 }
 
 // BuildFallback builds the fallback plain text for thread reply notifications.
-func BuildFallback(manifest model.Manifest, tmpl model.MessageTemplate) string {
+func BuildFallback(manifest model.Manifest, tmpl MessageTemplate) string {
 	s := tmpl.Fallback
 	s = replacePlaceholders(s, manifest)
 	return strings.TrimSpace(s)
@@ -43,7 +43,7 @@ func BuildAudioTitle(manifest model.Manifest) string {
 
 // BuildThreadBlocks builds the Block Kit blocks and fallback text for the thread reply.
 // Returns nil blocks when both summary and corners are empty (thread should be skipped).
-func BuildThreadBlocks(manifest model.Manifest, tmpl model.MessageTemplate) ([]slackgo.Block, string) {
+func BuildThreadBlocks(manifest model.Manifest, tmpl MessageTemplate) ([]slackgo.Block, string) {
 	var blocks []slackgo.Block
 
 	if manifest.Summary != "" {
@@ -75,7 +75,7 @@ func BuildThreadBlocks(manifest model.Manifest, tmpl model.MessageTemplate) ([]s
 	return blocks, fallback
 }
 
-func buildCornerText(corner model.ManifestCorner, tmpl model.MessageTemplate) string {
+func buildCornerText(corner model.ManifestCorner, tmpl MessageTemplate) string {
 	articlesText := buildArticlesText(corner.Articles, tmpl.Article)
 
 	s := tmpl.Corner

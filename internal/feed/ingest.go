@@ -8,7 +8,6 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/fileio"
-	"github.com/canpok1/vox-radio/internal/model"
 )
 
 // Options holds input parameters for feed generation.
@@ -20,7 +19,7 @@ type Options struct {
 // Run loads cache and feed spec, generates feed.xml, and writes it to the public directory.
 // Returns the output path and the number of items written.
 func Run(opts Options) (string, int, error) {
-	cfg, err := model.LoadFeedSpec(opts.SpecPath)
+	cfg, err := LoadFeedSpec(opts.SpecPath)
 	if err != nil {
 		return "", 0, fmt.Errorf("load feed spec: %w", err)
 	}

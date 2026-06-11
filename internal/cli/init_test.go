@@ -8,7 +8,8 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cli"
 	"github.com/canpok1/vox-radio/internal/config"
-	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/feed"
+	"github.com/canpok1/vox-radio/internal/slack"
 )
 
 func chdirTemp(t *testing.T) string {
@@ -172,10 +173,10 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadEpisodeSpec failed on generated template: %v", err)
 	}
-	if _, err := model.LoadFeedSpec(filepath.Join(dir, "feed-spec.yaml")); err != nil {
+	if _, err := feed.LoadFeedSpec(filepath.Join(dir, "feed-spec.yaml")); err != nil {
 		t.Fatalf("LoadFeedSpec failed on generated template: %v", err)
 	}
-	slackSpec, err := model.LoadSlackSpec(filepath.Join(dir, "slack-spec.yaml"))
+	slackSpec, err := slack.LoadSlackSpec(filepath.Join(dir, "slack-spec.yaml"))
 	if err != nil {
 		t.Fatalf("LoadSlackSpec failed on generated template: %v", err)
 	}
@@ -307,10 +308,10 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 		t.Error("第1回は地震・火山コーナー以外のローテ枠は放送されないべき")
 	}
 
-	if _, err := model.LoadFeedSpec(filepath.Join(dir, "sample", "feed-spec.yaml")); err != nil {
+	if _, err := feed.LoadFeedSpec(filepath.Join(dir, "sample", "feed-spec.yaml")); err != nil {
 		t.Fatalf("LoadFeedSpec failed on sample: %v", err)
 	}
-	if _, err := model.LoadSlackSpec(filepath.Join(dir, "sample", "slack-spec.yaml")); err != nil {
+	if _, err := slack.LoadSlackSpec(filepath.Join(dir, "sample", "slack-spec.yaml")); err != nil {
 		t.Fatalf("LoadSlackSpec failed on sample: %v", err)
 	}
 }

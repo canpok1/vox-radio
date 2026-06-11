@@ -8,12 +8,11 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/feed"
-	"github.com/canpok1/vox-radio/internal/model"
 )
 
 func TestBuildFeed_GoldenOutput(t *testing.T) {
-	cfg := model.FeedSpec{
-		Feed: model.FeedConfig{
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			Language:         "ja",
 			Author:           "testauthor",
 			Email:            "test@example.com",
@@ -24,7 +23,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			AudioURLTemplate: "https://example.com/releases/ep-{episode_number}/{audio_file}",
 			Credit:           "VOICEVOX:ずんだもん",
 		},
-		Output: model.OutputConfig{Public: "public"},
+		Output: feed.OutputConfig{Public: "public"},
 	}
 	entries := []cache.Entry{
 		{
@@ -81,8 +80,8 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 }
 
 func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
-	cfg := model.FeedSpec{
-		Feed: model.FeedConfig{
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://host.example/ep-{episode_number}/{audio_file}",
 		},
 	}
@@ -111,8 +110,8 @@ func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
 }
 
 func TestBuildFeed_GUID(t *testing.T) {
-	cfg := model.FeedSpec{
-		Feed: model.FeedConfig{
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://host.example/ep-{episode_number}/{audio_file}",
 		},
 	}
@@ -140,8 +139,8 @@ func TestBuildFeed_GUID(t *testing.T) {
 }
 
 func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
-	cfg := model.FeedSpec{
-		Feed: model.FeedConfig{
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
 		},
 	}
@@ -185,8 +184,8 @@ func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
 }
 
 func TestBuildFeed_EmptyEntries(t *testing.T) {
-	cfg := model.FeedSpec{
-		Feed: model.FeedConfig{
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
 		},
 	}

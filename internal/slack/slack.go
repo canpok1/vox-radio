@@ -50,11 +50,11 @@ func Run(opts Options, poster Poster) error {
 		return fmt.Errorf("audio file not found: %w", err)
 	}
 
-	spec, err := model.LoadSlackSpec(opts.SpecPath)
+	spec, err := LoadSlackSpec(opts.SpecPath)
 	if err != nil {
 		return fmt.Errorf("load slack spec: %w", err)
 	}
-	if err := model.ValidateSlackSpec(spec); err != nil {
+	if err := ValidateSlackSpec(spec); err != nil {
 		return fmt.Errorf("validate slack spec: %w", err)
 	}
 

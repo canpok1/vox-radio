@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/canpok1/vox-radio/internal/feed"
-	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -65,12 +64,12 @@ func newFeedgenCheckCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
-			spec, err := model.LoadFeedSpecStrict(path)
+			spec, err := feed.LoadFeedSpecStrict(path)
 			if err != nil {
 				return err
 			}
 
-			if err := model.ValidateFeedSpec(spec); err != nil {
+			if err := feed.ValidateFeedSpec(spec); err != nil {
 				return err
 			}
 

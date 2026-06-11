@@ -37,8 +37,8 @@ func makeManifest() model.Manifest {
 	}
 }
 
-func makeTemplate() model.MessageTemplate {
-	return model.MessageTemplate{
+func makeTemplate() slack.MessageTemplate {
+	return slack.MessageTemplate{
 		Header:   "🎙️ {title} 第{episode_number}回「{episode_title}」",
 		Fallback: "{title} 第{episode_number}回 を配信しました",
 		Summary:  "*今回のまとめ*\n{summary}",

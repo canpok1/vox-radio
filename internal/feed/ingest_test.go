@@ -9,11 +9,10 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/feed"
-	"github.com/canpok1/vox-radio/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
-func writeFeedSpecYAML(t *testing.T, path string, cfg model.FeedSpec) {
+func writeFeedSpecYAML(t *testing.T, path string, cfg feed.FeedSpec) {
 	t.Helper()
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -68,11 +67,11 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		Feed: model.FeedConfig{
+	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
-		Output: model.OutputConfig{Public: publicDir},
+		Output: feed.OutputConfig{Public: publicDir},
 	})
 
 	_, n, err := feed.Run(feed.Options{
@@ -125,11 +124,11 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		Feed: model.FeedConfig{
+	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
-		Output: model.OutputConfig{Public: publicDir},
+		Output: feed.OutputConfig{Public: publicDir},
 	})
 
 	_, n, err := feed.Run(feed.Options{
@@ -161,11 +160,11 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		Feed: model.FeedConfig{
+	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
-		Output: model.OutputConfig{Public: publicDir},
+		Output: feed.OutputConfig{Public: publicDir},
 	})
 
 	_, _, err := feed.Run(feed.Options{
@@ -182,11 +181,11 @@ func TestRun_EmptyCache(t *testing.T) {
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	writeFeedSpecYAML(t, specPath, model.FeedSpec{
-		Feed: model.FeedConfig{
+	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
+		Feed: feed.FeedConfig{
 			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
 		},
-		Output: model.OutputConfig{Public: publicDir},
+		Output: feed.OutputConfig{Public: publicDir},
 	})
 
 	_, n, err := feed.Run(feed.Options{
