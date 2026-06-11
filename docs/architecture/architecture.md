@@ -112,7 +112,6 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | 違反 | 該当ルール | 対応タスク |
 |---|---|---|
-| `feed`（ingest.go）が SpecPath を受け取り内部で spec をロード | §3 依存注入 | T3: feed.Run の依存注入化 |
 | `manifest.Build` の引数が11個 | §7 params struct | T6: BuildParams 化 |
 | `internal/config/config.go` が970行 | §7 ファイル分割 | T7: 責務別ファイル分割 |
 | `assemble/filter.go` の `buildRun()` 150行 / `collectRuns()` 100行 | §7 関数分割 | T8: フェーズ別ヘルパー抽出 |

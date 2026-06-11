@@ -9,25 +9,19 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/feed"
-	"gopkg.in/yaml.v3"
 )
 
-func writeFeedSpecYAML(t *testing.T, path string, cfg feed.FeedSpec) {
-	t.Helper()
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		t.Fatalf("marshal feed spec yaml: %v", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write feed spec yaml: %v", err)
+func testFeedSpec(publicDir string) feed.FeedSpec {
+	return feed.FeedSpec{
+		Feed:   feed.FeedConfig{AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}"},
+		Output: feed.OutputConfig{Public: publicDir},
 	}
 }
 
-func setupIngestDirs(t *testing.T) (cachePath, specPath, publicDir string) {
+func setupIngestDirs(t *testing.T) (cachePath, publicDir string) {
 	t.Helper()
 	dir := t.TempDir()
 	return filepath.Join(dir, "cache.jsonl"),
-		filepath.Join(dir, "feed-spec.yaml"),
 		filepath.Join(dir, "public")
 }
 
@@ -50,7 +44,7 @@ func writeCacheJSONL(t *testing.T, path string, entries []cache.Entry) {
 }
 
 func TestRun_GeneratesFeedXML(t *testing.T) {
-	cachePath, specPath, publicDir := setupIngestDirs(t)
+	cachePath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -67,16 +61,9 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	})
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		SpecPath:  specPath,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -102,7 +89,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 
 // program_id フィルタが廃止されたため、cache の全エントリが対象になること
 func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
-	cachePath, specPath, publicDir := setupIngestDirs(t)
+	cachePath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -124,16 +111,9 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	})
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		SpecPath:  specPath,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -146,7 +126,7 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 }
 
 func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
-	cachePath, specPath, publicDir := setupIngestDirs(t)
+	cachePath, publicDir := setupIngestDirs(t)
 
 	entries := []cache.Entry{
 		{
@@ -160,16 +140,9 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	})
-
 	_, _, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		SpecPath:  specPath,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err == nil {
 		t.Error("Run: expected error for episode_number=0, got nil")
@@ -177,20 +150,13 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 }
 
 func TestRun_EmptyCache(t *testing.T) {
-	cachePath, specPath, publicDir := setupIngestDirs(t)
+	cachePath, publicDir := setupIngestDirs(t)
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	writeFeedSpecYAML(t, specPath, feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	})
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		SpecPath:  specPath,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for empty cache: %v", err)
