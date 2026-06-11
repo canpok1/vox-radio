@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -121,9 +120,14 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		script.WithLogger(logger),
 	)
 
-	scr, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
+	scr, lines, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
+	}
+
+	linesPath := filepath.Join(workDir, fileio.FileLines)
+	if err := writeJSON(linesPath, lines); err != nil {
+		return err
 	}
 
 	return writeJSON(out, scr)
@@ -159,7 +163,7 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	}
 
 	scriptLines := model.ScriptLines{Direction: p.Program.Direction, Corners: script.BuildScriptLines(corners, allCornerLines)}
-	outPath := filepath.Join(workDir, "03_lines.json")
+	outPath := filepath.Join(workDir, fileio.FileLines)
 	if err := writeJSON(outPath, scriptLines); err != nil {
 		return err
 	}
@@ -168,14 +172,10 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 }
 
 func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, prompts map[string]string, assetCatalog model.AssetCatalog) error {
-	linesPath := filepath.Join(workDir, "03_lines.json")
-	data, err := os.ReadFile(linesPath)
+	linesPath := filepath.Join(workDir, fileio.FileLines)
+	scriptLines, err := readJSON[model.ScriptLines](linesPath)
 	if err != nil {
-		return fmt.Errorf("read 03_lines.json: %w", err)
-	}
-	var scriptLines model.ScriptLines
-	if err := json.Unmarshal(data, &scriptLines); err != nil {
-		return fmt.Errorf("parse 03_lines.json: %w", err)
+		return err
 	}
 
 	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
