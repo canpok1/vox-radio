@@ -11,6 +11,17 @@ import (
 
 var fixedTime = time.Date(2026, 5, 31, 12, 34, 56, 0, time.UTC)
 
+// newMinimalBuildParams returns a minimal BuildParams for tests that focus on
+// Casts or EpisodeNumber/EpisodeTitle fields.
+func newMinimalBuildParams() manifest.BuildParams {
+	return manifest.BuildParams{
+		Program:     config.ProgramConfig{Title: "テスト番組", Description: "説明"},
+		Corners:     []config.CornerConfig{{Title: "コーナー1"}},
+		AudioFile:   "episode.mp3",
+		GeneratedAt: fixedTime,
+	}
+}
+
 func TestBuild(t *testing.T) {
 	program := config.ProgramConfig{
 		Title:       "今日のテックニュース",
@@ -35,8 +46,18 @@ func TestBuild(t *testing.T) {
 		},
 	}
 
+	defaultParams := func() manifest.BuildParams {
+		return manifest.BuildParams{
+			Program:     program,
+			Corners:     corners,
+			Rundown:     rundown,
+			AudioFile:   "episode.mp3",
+			GeneratedAt: fixedTime,
+		}
+	}
+
 	t.Run("title and description from program", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		if got.Title != program.Title {
 			t.Errorf("Title = %q, want %q", got.Title, program.Title)
 		}
@@ -46,14 +67,14 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("audio_file is set", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		if got.AudioFile != "episode.mp3" {
 			t.Errorf("AudioFile = %q, want %q", got.AudioFile, "episode.mp3")
 		}
 	})
 
 	t.Run("datetime is RFC3339 UTC", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		want := "2026-05-31T12:34:56Z"
 		if got.Datetime != want {
 			t.Errorf("Datetime = %q, want %q", got.Datetime, want)
@@ -61,7 +82,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corners in spec order", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		if len(got.Corners) != len(corners) {
 			t.Fatalf("len(Corners) = %d, want %d", len(got.Corners), len(corners))
 		}
@@ -73,7 +94,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner without articles has empty array not null", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		opening := got.Corners[0]
 		if opening.Articles == nil {
 			t.Error("Articles for corner without articles must be [] not nil")
@@ -84,7 +105,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("articles attributed to correct corner", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		techCorner := got.Corners[1]
 		if len(techCorner.Articles) != 1 {
 			t.Fatalf("len(Articles) = %d, want 1", len(techCorner.Articles))
@@ -98,8 +119,9 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("empty rundown produces empty articles arrays", func(t *testing.T) {
-		emptyRundown := model.Rundown{}
-		got := manifest.Build(program, corners, emptyRundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		p := defaultParams()
+		p.Rundown = model.Rundown{}
+		got := manifest.Build(p)
 		for i, c := range got.Corners {
 			if c.Articles == nil {
 				t.Errorf("Corners[%d].Articles must be [] not nil", i)
@@ -108,7 +130,9 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corners slice is not nil", func(t *testing.T) {
-		got := manifest.Build(program, []config.CornerConfig{}, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		p := defaultParams()
+		p.Corners = []config.CornerConfig{}
+		got := manifest.Build(p)
 		if got.Corners == nil {
 			t.Error("Corners must be [] not nil")
 		}
@@ -116,21 +140,24 @@ func TestBuild(t *testing.T) {
 
 	t.Run("summary is set from argument", func(t *testing.T) {
 		want := "今回はAIチップと最新ニュースを紹介しました。"
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, want, nil, nil, 0, "")
+		p := defaultParams()
+		p.Summary = want
+		got := manifest.Build(p)
 		if got.Summary != want {
 			t.Errorf("Summary = %q, want %q", got.Summary, want)
 		}
 	})
 
 	t.Run("empty summary when empty string given", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		if got.Summary != "" {
 			t.Errorf("Summary = %q, want empty", got.Summary)
 		}
 	})
 
 	t.Run("only selected articles appear in manifest", func(t *testing.T) {
-		rundownWithTwo := model.Rundown{
+		p := defaultParams()
+		p.Rundown = model.Rundown{
 			Corners: []model.RundownCorner{
 				{
 					ID:    "tech",
@@ -141,7 +168,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 		}
-		got := manifest.Build(program, corners, rundownWithTwo, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(p)
 		techCorner := got.Corners[1]
 		if len(techCorner.Articles) != 1 {
 			t.Errorf("Articles count = %d, want 1 (only selected articles)", len(techCorner.Articles))
@@ -149,13 +176,14 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner summary and points are included from cornerSummaries map", func(t *testing.T) {
-		cornerSummaries := map[string]model.CornerSummary{
+		p := defaultParams()
+		p.CornerSummaries = map[string]model.CornerSummary{
 			"今日のテックニュース": {
 				Summary: "AIチップについて話しました。",
 				Points:  []string{"要点1", "要点2"},
 			},
 		}
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries, nil, 0, "")
+		got := manifest.Build(p)
 		techCorner := got.Corners[1]
 		if techCorner.Summary != "AIチップについて話しました。" {
 			t.Errorf("Corners[1].Summary = %q, want %q", techCorner.Summary, "AIチップについて話しました。")
@@ -169,7 +197,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner points is empty array not nil when no corner summary provided", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		for i, c := range got.Corners {
 			if c.Points == nil {
 				t.Errorf("Corners[%d].Points must be [] not nil", i)
@@ -178,20 +206,22 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("corner with summary has non-nil points", func(t *testing.T) {
-		cornerSummaries := map[string]model.CornerSummary{
+		p := defaultParams()
+		p.CornerSummaries = map[string]model.CornerSummary{
 			"オープニング": {Summary: "開始", Points: nil},
 		}
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", cornerSummaries, nil, 0, "")
+		got := manifest.Build(p)
 		if got.Corners[0].Points == nil {
 			t.Error("Points must be [] not nil even when CornerSummary.Points is nil")
 		}
 	})
 
 	t.Run("conversation notes are included", func(t *testing.T) {
-		notes := []model.ConversationNote{
+		p := defaultParams()
+		p.ConversationNotes = []model.ConversationNote{
 			{Category: "近況", CharacterIDs: []string{"zundamon"}, Note: "カフェにハマっている"},
 		}
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, notes, 0, "")
+		got := manifest.Build(p)
 		if len(got.ConversationNotes) != 1 {
 			t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
 		}
@@ -201,7 +231,7 @@ func TestBuild(t *testing.T) {
 	})
 
 	t.Run("conversation notes is empty array not nil when nil given", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(defaultParams())
 		if got.ConversationNotes == nil {
 			t.Error("ConversationNotes must be [] not nil")
 		}
@@ -212,16 +242,15 @@ func TestBuild(t *testing.T) {
 }
 
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{
+	p := newMinimalBuildParams()
+	p.Rundown = model.Rundown{
 		Casts: []model.RundownCast{
 			{CharacterID: "zundamon", Role: "MC", Type: "regular", AppearanceCount: 2},
 			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 0},
 		},
 	}
 
-	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+	got := manifest.Build(p)
 
 	if len(got.Casts) != 2 {
 		t.Fatalf("Casts: got %d, want 2", len(got.Casts))
@@ -239,15 +268,14 @@ func TestBuild_CastsCopiedFromRundown(t *testing.T) {
 
 func TestBuild_CastsFirstAppearancePreserved(t *testing.T) {
 	// 新定義: AppearanceCount=1 は初登場（今回含む出演回数）
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{
+	p := newMinimalBuildParams()
+	p.Rundown = model.Rundown{
 		Casts: []model.RundownCast{
 			{CharacterID: "guest1", Role: "ゲスト", Type: "guest", AppearanceCount: 1},
 		},
 	}
 
-	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+	got := manifest.Build(p)
 
 	if len(got.Casts) != 1 {
 		t.Fatalf("Casts: got %d, want 1", len(got.Casts))
@@ -259,11 +287,10 @@ func TestBuild_CastsFirstAppearancePreserved(t *testing.T) {
 }
 
 func TestBuild_CastsNeverNil(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{} // Casts is nil
+	p := newMinimalBuildParams()
+	// Rundown.Casts is nil (zero value)
 
-	got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+	got := manifest.Build(p)
 
 	if got.Casts == nil {
 		t.Error("Casts must be [] not nil when rundown has no casts")
@@ -274,12 +301,11 @@ func TestBuild_CastsNeverNil(t *testing.T) {
 }
 
 func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
-	program := config.ProgramConfig{Title: "テスト番組", Description: "説明"}
-	corners := []config.CornerConfig{{Title: "コーナー1"}}
-	rundown := model.Rundown{}
-
 	t.Run("episode_number and episode_title are set when provided", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 3, "今週の面白技術")
+		p := newMinimalBuildParams()
+		p.EpisodeNumber = 3
+		p.EpisodeTitle = "今週の面白技術"
+		got := manifest.Build(p)
 		if got.EpisodeNumber != 3 {
 			t.Errorf("EpisodeNumber = %d, want 3", got.EpisodeNumber)
 		}
@@ -289,7 +315,7 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 	})
 
 	t.Run("episode_number zero and empty title are omitted from manifest", func(t *testing.T) {
-		got := manifest.Build(program, corners, rundown, "episode.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(newMinimalBuildParams())
 		if got.EpisodeNumber != 0 {
 			t.Errorf("EpisodeNumber = %d, want 0 (omitempty)", got.EpisodeNumber)
 		}
@@ -308,7 +334,13 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 		cornersWithNote := []config.CornerConfig{
 			{Title: "テストコーナー", ScriptNote: "コーナー台本指示"},
 		}
-		got := manifest.Build(programWithNote, cornersWithNote, model.Rundown{}, "ep.mp3", fixedTime, "", nil, nil, 0, "")
+		got := manifest.Build(manifest.BuildParams{
+			Program:     programWithNote,
+			Corners:     cornersWithNote,
+			Rundown:     model.Rundown{},
+			AudioFile:   "ep.mp3",
+			GeneratedAt: fixedTime,
+		})
 		if got.Description != "公開メタデータ" {
 			t.Errorf("Description = %q, want 公開メタデータ", got.Description)
 		}

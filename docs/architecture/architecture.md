@@ -112,5 +112,4 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | 違反 | 該当ルール | 対応タスク |
 |---|---|---|
-| `manifest.Build` の引数が11個 | §7 params struct | T6: BuildParams 化 |
 | `assemble/filter.go` の `buildRun()` 150行 / `collectRuns()` 100行 | §7 関数分割 | T8: フェーズ別ヘルパー抽出 |
