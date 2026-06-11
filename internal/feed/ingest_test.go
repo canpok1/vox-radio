@@ -11,6 +11,13 @@ import (
 	"github.com/canpok1/vox-radio/internal/feed"
 )
 
+func testFeedSpec(publicDir string) feed.FeedSpec {
+	return feed.FeedSpec{
+		Feed:   feed.FeedConfig{AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}"},
+		Output: feed.OutputConfig{Public: publicDir},
+	}
+}
+
 func setupIngestDirs(t *testing.T) (cachePath, publicDir string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -54,16 +61,9 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	spec := feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	}
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		Spec:      spec,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -111,16 +111,9 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	spec := feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	}
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		Spec:      spec,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error: %v", err)
@@ -147,16 +140,9 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 	}
 	writeCacheJSONL(t, cachePath, entries)
 
-	spec := feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	}
-
 	_, _, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		Spec:      spec,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err == nil {
 		t.Error("Run: expected error for episode_number=0, got nil")
@@ -168,16 +154,9 @@ func TestRun_EmptyCache(t *testing.T) {
 
 	writeCacheJSONL(t, cachePath, []cache.Entry{})
 
-	spec := feed.FeedSpec{
-		Feed: feed.FeedConfig{
-			AudioURLTemplate: "https://example.com/{episode_number}/{audio_file}",
-		},
-		Output: feed.OutputConfig{Public: publicDir},
-	}
-
 	_, n, err := feed.Run(feed.Options{
 		CachePath: cachePath,
-		Spec:      spec,
+		Spec:      testFeedSpec(publicDir),
 	})
 	if err != nil {
 		t.Fatalf("Run: unexpected error for empty cache: %v", err)

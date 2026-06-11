@@ -24,10 +24,10 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
 		RunE: func(cmd *cobra.Command, args []string) error {
 			spec, err := feed.LoadFeedSpec(specPath)
 			if err != nil {
-				return fmt.Errorf("load feed spec: %w", err)
+				return err
 			}
 			if err := feed.ValidateFeedSpec(spec); err != nil {
-				return fmt.Errorf("validate feed spec: %w", err)
+				return err
 			}
 
 			path, n, err := feed.Run(feed.Options{
