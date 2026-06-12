@@ -321,24 +321,24 @@ func (rb *runBuilder) closeBGMInterval(endMs int) {
 // Processing is split into four phases: speech concat → duck split → SE overlay → BGM overlay.
 func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
 	currentLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, assets, runIdx)
-	currentLabel, duckLabel := buildDuckSplit(b, run.bgmIntervals, assets, runIdx, currentLabel)
+	currentLabel, duckLabel, duckRatio := buildDuckSplit(b, run.bgmIntervals, assets, runIdx, currentLabel)
 	currentLabel = buildSEOverlay(b, run.seEvents, assets, runIdx, currentLabel)
-	return buildBGMOverlay(b, run, assets, runIdx, currentLabel, duckLabel)
+	return buildBGMOverlay(b, run, assets, runIdx, currentLabel, duckLabel, duckRatio)
 }
 
 // buildDuckSplit checks whether any BGM interval has duck_ratio > 0.
-// If so, it emits an asplit=2 filter on currentLabel and returns the new mix label
-// together with a sidechain duck label. Otherwise currentLabel and "" are returned.
-func buildDuckSplit(b *filterBuilder, bgmIntervals []bgmInterval, assets config.AssetsConfig, runIdx int, currentLabel string) (string, string) {
+// If so, it emits an asplit=2 filter on currentLabel and returns the new mix label,
+// a sidechain duck label, and the duck ratio. Otherwise currentLabel, "", and 0 are returned.
+func buildDuckSplit(b *filterBuilder, bgmIntervals []bgmInterval, assets config.AssetsConfig, runIdx int, currentLabel string) (string, string, float64) {
 	for _, interval := range bgmIntervals {
 		if e, ok := assets.BGM[interval.assetName]; ok && e.DuckRatio > 0 {
 			mixLabel := fmt.Sprintf("[run%d_speech_mix]", runIdx)
 			duckLabel := fmt.Sprintf("[run%d_speech_duck]", runIdx)
 			b.addFilter(fmt.Sprintf("%sasplit=2%s%s", currentLabel, mixLabel, duckLabel))
-			return mixLabel, duckLabel
+			return mixLabel, duckLabel, e.DuckRatio
 		}
 	}
-	return currentLabel, ""
+	return currentLabel, "", 0
 }
 
 // buildSEOverlay overlays SE events onto currentLabel and returns the updated label.
@@ -390,8 +390,8 @@ func computeBGMCrossfade(intervals []bgmInterval, assets config.AssetsConfig, du
 }
 
 // buildBGMOverlay mixes BGM intervals (with crossfade and optional sidechain ducking) into currentLabel.
-// duckLabel, when non-empty, is the sidechain signal produced by buildDuckSplit.
-func buildBGMOverlay(b *filterBuilder, run runData, assets config.AssetsConfig, runIdx int, currentLabel, duckLabel string) string {
+// duckLabel and duckRatio are produced by buildDuckSplit; duckLabel=="" means no ducking.
+func buildBGMOverlay(b *filterBuilder, run runData, assets config.AssetsConfig, runIdx int, currentLabel, duckLabel string, duckRatio float64) string {
 	bgmParts := buildBGMIntervalParts(b, run, assets, runIdx)
 	if len(bgmParts) == 0 {
 		return currentLabel
@@ -408,16 +408,9 @@ func buildBGMOverlay(b *filterBuilder, run runData, assets config.AssetsConfig, 
 
 	// Apply sidechain ducking if duck ratio > 0.
 	if duckLabel != "" {
-		firstDuckRatio := 0.0
-		for _, interval := range run.bgmIntervals {
-			if e, ok := assets.BGM[interval.assetName]; ok && e.DuckRatio > 0 {
-				firstDuckRatio = e.DuckRatio
-				break
-			}
-		}
 		bgmDuckedLabel := fmt.Sprintf("[run%d_bgm_ducked]", runIdx)
 		b.addFilter(fmt.Sprintf("%s%ssidechaincompress=threshold=0.02:ratio=%.1f%s",
-			bgmFullLabel, duckLabel, firstDuckRatio, bgmDuckedLabel))
+			bgmFullLabel, duckLabel, duckRatio, bgmDuckedLabel))
 		bgmFullLabel = bgmDuckedLabel
 	}
 

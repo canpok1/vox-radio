@@ -1577,7 +1577,7 @@ func TestBuildFFmpegArgs_Golden_FilterComplex(t *testing.T) {
 
 func TestBuildDuckSplit_NoBGMIntervals(t *testing.T) {
 	b := &filterBuilder{}
-	outLabel, duckLabel := buildDuckSplit(b, nil, config.AssetsConfig{}, 0, "[input]")
+	outLabel, duckLabel, _ := buildDuckSplit(b, nil, config.AssetsConfig{}, 0, "[input]")
 	if outLabel != "[input]" {
 		t.Errorf("outLabel: got %q, want %q", outLabel, "[input]")
 	}
@@ -1597,7 +1597,7 @@ func TestBuildDuckSplit_BGMWithNoDuckRatio(t *testing.T) {
 			"bgm1": {File: "/bgm.mp3", Volume: 0.3, DuckRatio: 0},
 		},
 	}
-	outLabel, duckLabel := buildDuckSplit(b, intervals, assets, 0, "[input]")
+	outLabel, duckLabel, _ := buildDuckSplit(b, intervals, assets, 0, "[input]")
 	if outLabel != "[input]" {
 		t.Errorf("outLabel: got %q, want %q", outLabel, "[input]")
 	}
@@ -1617,12 +1617,15 @@ func TestBuildDuckSplit_BGMWithDuckRatio(t *testing.T) {
 			"bgm1": {File: "/bgm.mp3", Volume: 0.3, DuckRatio: 4.0},
 		},
 	}
-	outLabel, duckLabel := buildDuckSplit(b, intervals, assets, 0, "[input]")
+	outLabel, duckLabel, duckRatio := buildDuckSplit(b, intervals, assets, 0, "[input]")
 	if outLabel == "[input]" {
 		t.Errorf("outLabel should change when ducking is applied")
 	}
 	if duckLabel == "" {
 		t.Errorf("duckLabel should be set when ducking is applied")
+	}
+	if duckRatio != 4.0 {
+		t.Errorf("duckRatio: got %v, want 4.0", duckRatio)
 	}
 	if len(b.filters) != 1 {
 		t.Fatalf("expected 1 filter, got %d", len(b.filters))
