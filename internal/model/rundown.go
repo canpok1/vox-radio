@@ -3,20 +3,30 @@ package model
 import "encoding/json"
 
 type RundownArticle struct {
-	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
-	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
-	Title     string   `json:"title"`
-	Body      string   `json:"body"` // 記事原文（write LLM に渡す）
-	Points    []string `json:"points"`
-	Source    string   `json:"source,omitempty"`    // 媒体名
-	Author    string   `json:"author,omitempty"`    // 著者名
-	Published string   `json:"published,omitempty"` // 配信日時（RFC3339）
+	DedupKey    string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
+	URL         string   `json:"url,omitempty"` // 表示用リンク（空可）
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"` // フィード由来のテキスト（RSS/Atom content/description）
+	Body        string   `json:"body,omitempty"`        // 記事ページ直接取得のテキスト（fetchArticle）
+	Points      []string `json:"points"`
+	Source      string   `json:"source,omitempty"`    // 媒体名
+	Author      string   `json:"author,omitempty"`    // 著者名
+	Published   string   `json:"published,omitempty"` // 配信日時（RFC3339）
+}
+
+// Text returns the effective article text: Body if non-empty, otherwise Description.
+func (a RundownArticle) Text() string {
+	if a.Body != "" {
+		return a.Body
+	}
+	return a.Description
 }
 
 // NewRundownArticle creates a RundownArticle with Points guaranteed non-nil.
-func NewRundownArticle(dedupKey, url, title, body string, points []string, source, author, published string) RundownArticle {
+func NewRundownArticle(dedupKey, url, title, description, body string, points []string, source, author, published string) RundownArticle {
 	return RundownArticle{
-		DedupKey: dedupKey, URL: url, Title: title, Body: body,
+		DedupKey: dedupKey, URL: url, Title: title,
+		Description: description, Body: body,
 		Points: NonNil(points), Source: source, Author: author, Published: published,
 	}
 }

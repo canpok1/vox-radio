@@ -52,37 +52,16 @@ func (m *appearanceCapturingSelector) Select(_ context.Context, _ config.CornerC
 var _ sel.CornerAppearanceSetter = (*appearanceCapturingSelector)(nil)
 
 type mockSummarizer struct {
-	byURL          map[string]model.Summary
-	err            error
-	receivedBodies map[string]string
+	byURL         map[string]model.Summary
+	err           error
+	receivedTexts map[string]string
 }
-
-type mockFetcher struct {
-	bodyByURL  map[string]string
-	err        error
-	called     bool
-	fetchedURL string
-}
-
-func (m *mockFetcher) FetchFullText(_ context.Context, url string) (string, error) {
-	m.called = true
-	m.fetchedURL = url
-	if m.err != nil {
-		return "", m.err
-	}
-	if body, ok := m.bodyByURL[url]; ok {
-		return body, nil
-	}
-	return "default full text", nil
-}
-
-var _ rundown.ArticleFetcher = (*mockFetcher)(nil)
 
 func (m *mockSummarizer) Summarize(_ context.Context, a model.Article) (model.Summary, error) {
-	if m.receivedBodies == nil {
-		m.receivedBodies = make(map[string]string)
+	if m.receivedTexts == nil {
+		m.receivedTexts = make(map[string]string)
 	}
-	m.receivedBodies[a.URL] = a.Body
+	m.receivedTexts[a.URL] = a.Text()
 	if m.err != nil {
 		return model.Summary{}, m.err
 	}
@@ -132,10 +111,20 @@ func defaultCorner(title string) config.CornerConfig {
 	return config.CornerConfig{Title: title, Content: "内容", LengthSec: 60}
 }
 
+func article(url string) model.Article {
+	return model.Article{DedupKey: url, URL: url, Title: "記事: " + url, Description: "本文"}
+}
+
+func newRundowner(ms *mockSelector, msum *mockSummarizer, excludedDedupKeys []string, mfd *mockFlowDesigner, opts ...rundown.Option) *rundown.LLMRundowner {
+	return rundown.NewLLMRundowner(ms, msum, mfd, excludedDedupKeys, opts...)
+}
+
+// --- tests ---
+
 func TestLLMRundowner_Run_BakesCornerAppearance(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 	rd.SetCornerAppearances(map[string]cache.CornerAppearance{
 		"tech": {Count: 2, LastEpisodeNumber: 3}, // 過去2回・前回は第3回 → 今回含め3回目
 	})
@@ -146,7 +135,7 @@ func TestLLMRundowner_Run_BakesCornerAppearance(t *testing.T) {
 	}
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
-			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 			{CornerTitle: "オープニング", Articles: []model.Article{}},
 		},
 	}
@@ -177,7 +166,7 @@ func TestLLMRundowner_Run_BakesCornerAppearance(t *testing.T) {
 func TestLLMRundowner_Run_PassesCornerAppearanceToSelector(t *testing.T) {
 	ms := &appearanceCapturingSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, mfd, nil, nil)
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, mfd, nil)
 	rd.SetCornerAppearances(map[string]cache.CornerAppearance{
 		"tech": {Count: 4, LastEpisodeNumber: 5},
 	})
@@ -185,7 +174,7 @@ func TestLLMRundowner_Run_PassesCornerAppearanceToSelector(t *testing.T) {
 	corners := []config.CornerConfig{{ID: "tech", Title: "テック", Content: "内容", LengthSec: 60}}
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
-			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 		},
 	}
 
@@ -200,24 +189,10 @@ func TestLLMRundowner_Run_PassesCornerAppearanceToSelector(t *testing.T) {
 	}
 }
 
-func article(url string) model.Article {
-	return model.Article{DedupKey: url, URL: url, Title: "記事: " + url, Body: "本文"}
-}
-
-func newRundowner(ms *mockSelector, msum *mockSummarizer, mf *mockFetcher, excludedDedupKeys []string, mfd *mockFlowDesigner, opts ...rundown.Option) *rundown.LLMRundowner {
-	var fetcher rundown.ArticleFetcher
-	if mf != nil {
-		fetcher = mf
-	}
-	return rundown.NewLLMRundowner(ms, msum, mfd, fetcher, excludedDedupKeys, opts...)
-}
-
-// --- tests ---
-
 func TestLLMRundowner_Run_EmptyArticles_SkipsSelection(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
 	mfd := &mockFlowDesigner{flow: "空コーナーの導入です"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -248,7 +223,7 @@ func TestLLMRundowner_Run_EmptyArticles_SkipsSelection(t *testing.T) {
 func TestLLMRundowner_Run_NoArticleCorner_FlowNotEmpty(t *testing.T) {
 	ms := &mockSelector{}
 	mfd := &mockFlowDesigner{flow: "番組全体の導入です"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -286,15 +261,15 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 		},
 	}
 	mfd := &mockFlowDesigner{flow: "記事1を紹介する"}
-	rd := newRundowner(ms, msum, nil, nil, mfd)
+	rd := newRundowner(ms, msum, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
 			{
 				CornerTitle: "テックニュース",
 				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
-					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "記事2", Body: "本文2"},
+					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Description: "本文1"},
+					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "記事2", Description: "本文2"},
 				},
 			},
 		},
@@ -328,19 +303,59 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 	if a.Title != "記事1" {
 		t.Errorf("Title: got %q, want %q", a.Title, "記事1")
 	}
-	// Body is the original article body (not the summarizer's output)
-	if a.Body != "本文1" {
-		t.Errorf("Body: got %q, want %q", a.Body, "本文1")
+	// Description is the feed-derived text, transferred as-is to RundownArticle
+	if a.Description != "本文1" {
+		t.Errorf("Description: got %q, want %q", a.Description, "本文1")
 	}
 	if len(a.Points) != 1 || a.Points[0] != "ポイント1" {
 		t.Errorf("Points: got %v, want [ポイント1]", a.Points)
 	}
 }
 
+func TestLLMRundowner_Run_DescriptionPassedToRundownArticle(t *testing.T) {
+	ms := &mockSelector{
+		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/1"}, SelectionReason: "理由"},
+	}
+	msum := &mockSummarizer{}
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := newRundowner(ms, msum, nil, mfd)
+
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{
+				CornerTitle: "テック",
+				Articles: []model.Article{
+					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Description: "フィードテキスト"},
+				},
+			},
+		},
+	}
+	corners := []config.CornerConfig{defaultCorner("テック")}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 1 || len(got.Corners[0].Articles) != 1 {
+		t.Fatalf("unexpected structure: %+v", got)
+	}
+	a := got.Corners[0].Articles[0]
+	if a.Description != "フィードテキスト" {
+		t.Errorf("Description: got %q, want %q", a.Description, "フィードテキスト")
+	}
+	if a.Body != "" {
+		t.Errorf("Body should be empty for feed article, got %q", a.Body)
+	}
+	// summarizer should receive Description via Text()
+	if text, ok := msum.receivedTexts["https://example.com/1"]; !ok || text != "フィードテキスト" {
+		t.Errorf("summarizer should receive feed description via Text(), got %q", text)
+	}
+}
+
 func TestLLMRundowner_Run_SelectorError(t *testing.T) {
 	ms := &mockSelector{err: errors.New("LLM error")}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -359,7 +374,7 @@ func TestLLMRundowner_Run_SummarizerError(t *testing.T) {
 	ms := &mockSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
 	msum := &mockSummarizer{err: errors.New("sum error")}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, nil, nil, mfd)
+	rd := newRundowner(ms, msum, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -379,20 +394,20 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 		result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"},
 	}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	cornerTitles := []string{"オープニング", "テック", "エンディング"}
 	var cornerArticles []model.CornerArticles
-	for _, t := range cornerTitles {
+	for _, title := range cornerTitles {
 		cornerArticles = append(cornerArticles, model.CornerArticles{
-			CornerTitle: t,
-			Articles:    []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}},
+			CornerTitle: title,
+			Articles:    []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}},
 		})
 	}
 
 	var corners []config.CornerConfig
-	for _, t := range cornerTitles {
-		corners = append(corners, defaultCorner(t))
+	for _, title := range cornerTitles {
+		corners = append(corners, defaultCorner(title))
 	}
 
 	got, err := rd.Run(context.Background(), corners, model.Articles{Corners: cornerArticles}, nil)
@@ -411,7 +426,7 @@ func TestLLMRundowner_Run_PreservesCornerOrder(t *testing.T) {
 
 func TestLLMRundowner_Run_ArticlesNotNilForEmptyCorner(t *testing.T) {
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(&mockSelector{}, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(&mockSelector{}, &mockSummarizer{}, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -434,15 +449,15 @@ func TestLLMRundowner_Run_ExcludedDedupKeysFilteredBeforeSelect(t *testing.T) {
 		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/2"}, SelectionReason: "理由"},
 	}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1"}, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, []string{"https://example.com/1"}, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
 			{
 				CornerTitle: "テック",
 				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外記事", Body: "body"},
-					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "対象記事", Body: "body"},
+					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外記事", Description: "body"},
+					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "対象記事", Description: "body"},
 				},
 			},
 		},
@@ -464,15 +479,15 @@ func TestLLMRundowner_Run_ExcludedDedupKeysFilteredBeforeSelect(t *testing.T) {
 func TestLLMRundowner_Run_AllArticlesExcluded_EmptyCorner(t *testing.T) {
 	ms := &mockSelector{}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1", "https://example.com/2"}, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, []string{"https://example.com/1", "https://example.com/2"}, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
 			{
 				CornerTitle: "テック",
 				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外1", Body: "body"},
-					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "除外2", Body: "body"},
+					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外1", Description: "body"},
+					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "除外2", Description: "body"},
 				},
 			},
 		},
@@ -494,102 +509,6 @@ func TestLLMRundowner_Run_AllArticlesExcluded_EmptyCorner(t *testing.T) {
 	}
 }
 
-func TestLLMRundowner_Run_FetcherSuccess_BodyReplaced(t *testing.T) {
-	ms := &mockSelector{
-		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/1"}, SelectionReason: "理由"},
-	}
-	msum := &mockSummarizer{}
-	mf := &mockFetcher{
-		bodyByURL: map[string]string{
-			"https://example.com/1": "全文テキスト",
-		},
-	}
-	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, mf, nil, mfd)
-
-	articles := model.Articles{
-		Corners: []model.CornerArticles{
-			{
-				CornerTitle: "テック",
-				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "スニペット"},
-				},
-			},
-		},
-	}
-	corners := []config.CornerConfig{defaultCorner("テック")}
-
-	_, err := rd.Run(context.Background(), corners, articles, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !mf.called {
-		t.Error("fetcher should have been called")
-	}
-	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "全文テキスト" {
-		t.Errorf("summarizer should receive full text body, got %q", body)
-	}
-}
-
-func TestLLMRundowner_Run_FetcherFailure_FallbackToFeedBody(t *testing.T) {
-	ms := &mockSelector{
-		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/1"}, SelectionReason: "理由"},
-	}
-	msum := &mockSummarizer{}
-	mf := &mockFetcher{err: errors.New("connection refused")}
-	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, mf, nil, mfd)
-
-	articles := model.Articles{
-		Corners: []model.CornerArticles{
-			{
-				CornerTitle: "テック",
-				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "フィードスニペット"},
-				},
-			},
-		},
-	}
-	corners := []config.CornerConfig{defaultCorner("テック")}
-
-	_, err := rd.Run(context.Background(), corners, articles, nil)
-	if err != nil {
-		t.Fatalf("should not return error on fetch failure (fallback to feed body): %v", err)
-	}
-	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードスニペット" {
-		t.Errorf("summarizer should receive feed body as fallback, got %q", body)
-	}
-}
-
-func TestLLMRundowner_Run_FetcherNil_SkipsFetch(t *testing.T) {
-	ms := &mockSelector{
-		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/1"}, SelectionReason: "理由"},
-	}
-	msum := &mockSummarizer{}
-	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, nil, nil, mfd)
-
-	articles := model.Articles{
-		Corners: []model.CornerArticles{
-			{
-				CornerTitle: "テック",
-				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "フィードボディ"},
-				},
-			},
-		},
-	}
-	corners := []config.CornerConfig{defaultCorner("テック")}
-
-	_, err := rd.Run(context.Background(), corners, articles, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードボディ" {
-		t.Errorf("summarizer should receive original feed body when fetcher is nil, got %q", body)
-	}
-}
-
 func TestLLMRundowner_WithLogger_ExcludedArticlesLogFormat(t *testing.T) {
 	var buf bytes.Buffer
 	handler := logging.NewTextHandler(&buf, slog.LevelInfo)
@@ -599,15 +518,15 @@ func TestLLMRundowner_WithLogger_ExcludedArticlesLogFormat(t *testing.T) {
 		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/2"}, SelectionReason: "理由"},
 	}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, []string{"https://example.com/1"}, mfd, rundown.WithLogger(logger))
+	rd := newRundowner(ms, &mockSummarizer{}, []string{"https://example.com/1"}, mfd, rundown.WithLogger(logger))
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
 			{
 				CornerTitle: "今日のテックニュース",
 				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外記事", Body: "body"},
-					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "対象記事", Body: "body"},
+					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "除外記事", Description: "body"},
+					{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "対象記事", Description: "body"},
 				},
 			},
 		},
@@ -631,56 +550,22 @@ func TestLLMRundowner_WithLogger_ExcludedArticlesLogFormat(t *testing.T) {
 	}
 }
 
-func TestLLMRundowner_Run_FetcherEmptyBody_FallbackToFeedBody(t *testing.T) {
-	ms := &mockSelector{
-		result: sel.SelectResult{SelectedIDs: []string{"https://example.com/1"}, SelectionReason: "理由"},
-	}
-	msum := &mockSummarizer{}
-	mf := &mockFetcher{
-		bodyByURL: map[string]string{
-			"https://example.com/1": "",
-		},
-	}
-	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, mf, nil, mfd)
-
-	articles := model.Articles{
-		Corners: []model.CornerArticles{
-			{
-				CornerTitle: "テック",
-				Articles: []model.Article{
-					{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "フィードスニペット"},
-				},
-			},
-		},
-	}
-	corners := []config.CornerConfig{defaultCorner("テック")}
-
-	_, err := rd.Run(context.Background(), corners, articles, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if body, ok := msum.receivedBodies["https://example.com/1"]; !ok || body != "フィードスニペット" {
-		t.Errorf("summarizer should receive feed body when full text is empty, got %q", body)
-	}
-}
-
 func TestLLMRundowner_Run_FlowDesignerCalledForAllCorners(t *testing.T) {
 	ms := &mockSelector{
 		result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"},
 	}
 	mfd := &mockFlowDesigner{flow: "generated flow"}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	cornerTitles := []string{"オープニング", "テックニュース", "エンディング"}
 	cornerArticles := []model.CornerArticles{
 		{CornerTitle: "オープニング", Articles: []model.Article{}},
-		{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+		{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 		{CornerTitle: "エンディング", Articles: []model.Article{}},
 	}
 	var corners []config.CornerConfig
-	for _, t := range cornerTitles {
-		corners = append(corners, defaultCorner(t))
+	for _, title := range cornerTitles {
+		corners = append(corners, defaultCorner(title))
 	}
 
 	got, err := rd.Run(context.Background(), corners, model.Articles{Corners: cornerArticles}, nil)
@@ -704,7 +589,7 @@ func TestLLMRundowner_Run_PositionOpeningForFirstCorner(t *testing.T) {
 
 	var capturedPositions []flow.Position
 	customDesigner := &positionCapturingDesigner{positions: &capturedPositions, flow: "flow"}
-	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, customDesigner, nil, nil)
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, customDesigner, nil)
 
 	corners := []config.CornerConfig{
 		defaultCorner("オープニング"),
@@ -714,7 +599,7 @@ func TestLLMRundowner_Run_PositionOpeningForFirstCorner(t *testing.T) {
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
 			{CornerTitle: "オープニング", Articles: []model.Article{}},
-			{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 			{CornerTitle: "エンディング", Articles: []model.Article{}},
 		},
 	}
@@ -748,12 +633,12 @@ func TestLLMRundowner_Run_FlowDesignerReceivesRundownContext(t *testing.T) {
 	}
 	casts := []model.RundownCast{{CharacterID: "zundamon", Role: "MC", Type: "regular"}}
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(ms, msum, nil, nil, mfd)
+	rd := newRundowner(ms, msum, nil, mfd)
 
 	corners := []config.CornerConfig{defaultCorner("テックニュース")}
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
-			{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "テックニュース", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 		},
 	}
 
@@ -771,12 +656,12 @@ func TestLLMRundowner_Run_FlowDesignerError(t *testing.T) {
 		result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"},
 	}
 	mfd := &mockFlowDesigner{err: errors.New("flow design error")}
-	rd := newRundowner(ms, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
 
 	corners := []config.CornerConfig{defaultCorner("テック")}
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
-			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Body: "b"}}},
+			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
 		},
 	}
 
@@ -788,7 +673,7 @@ func TestLLMRundowner_Run_FlowDesignerError(t *testing.T) {
 
 func TestLLMRundowner_Run_CastsSetInRundown(t *testing.T) {
 	mfd := &mockFlowDesigner{flow: "flow"}
-	rd := newRundowner(&mockSelector{}, &mockSummarizer{}, nil, nil, mfd)
+	rd := newRundowner(&mockSelector{}, &mockSummarizer{}, nil, mfd)
 
 	casts := []model.RundownCast{
 		{CharacterID: "metan", Role: "アシスタント", Type: "regular"},
@@ -825,7 +710,7 @@ func TestLLMRundowner_Run_PropagatesSourceAuthorPublished(t *testing.T) {
 		},
 	}
 	mfd := &mockFlowDesigner{flow: "フロー"}
-	rd := newRundowner(ms, msum, nil, nil, mfd)
+	rd := newRundowner(ms, msum, nil, mfd)
 
 	articles := model.Articles{
 		Corners: []model.CornerArticles{
@@ -833,13 +718,13 @@ func TestLLMRundowner_Run_PropagatesSourceAuthorPublished(t *testing.T) {
 				CornerTitle: "テック",
 				Articles: []model.Article{
 					{
-						DedupKey:  "https://example.com/meta/1",
-						URL:       "https://example.com/meta/1",
-						Title:     "メタ記事",
-						Body:      "本文",
-						Source:    "テストフィード",
-						Author:    "山田太郎",
-						Published: "2026-06-06T19:00:00+09:00",
+						DedupKey:    "https://example.com/meta/1",
+						URL:         "https://example.com/meta/1",
+						Title:       "メタ記事",
+						Description: "本文",
+						Source:      "テストフィード",
+						Author:      "山田太郎",
+						Published:   "2026-06-06T19:00:00+09:00",
 					},
 				},
 			},

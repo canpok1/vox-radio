@@ -91,15 +91,21 @@ func containsInjectionPattern(s string) string {
 // On on_detect=error the function returns an error immediately on the first detection.
 // On on_detect=exclude the caller is responsible for excluding the article entirely;
 // this function does NOT modify any field on detection.
+// Both Description (feed-derived) and Body (directly fetched) are sanitized.
+// max_body_chars applies to each field independently.
 func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (bool, error) {
+	maxChars := policy.EffectiveMaxBodyChars()
+
 	// Phase 1: remove invisible chars from all text fields
 	a.Title = removeInvisibleChars(a.Title)
+	a.Description = removeInvisibleChars(a.Description)
 	a.Body = removeInvisibleChars(a.Body)
 	a.Source = removeInvisibleChars(a.Source)
 	a.Author = removeInvisibleChars(a.Author)
 
-	// Phase 2: truncate body
-	a.Body = truncateBody(a.Body, policy.EffectiveMaxBodyChars())
+	// Phase 2: truncate description and body independently
+	a.Description = truncateBody(a.Description, maxChars)
+	a.Body = truncateBody(a.Body, maxChars)
 
 	// Phase 3: detect injection patterns field by field
 	fields := []struct {
@@ -107,6 +113,7 @@ func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (boo
 		value string
 	}{
 		{"Title", a.Title},
+		{"Description", a.Description},
 		{"Body", a.Body},
 		{"Source", a.Source},
 		{"Author", a.Author},

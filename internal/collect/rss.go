@@ -45,13 +45,13 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 			bodyText = extractTextFromHTML(body)
 		}
 		articles = append(articles, model.Article{
-			DedupKey:  key,
-			URL:       item.Link,
-			Title:     item.Title,
-			Body:      bodyText,
-			Source:    source,
-			Author:    extractAuthor(item),
-			Published: extractPublished(item, c.loc),
+			DedupKey:    key,
+			URL:         item.Link,
+			Title:       item.Title,
+			Description: bodyText,
+			Source:      source,
+			Author:      extractAuthor(item),
+			Published:   extractPublished(item, c.loc),
 		})
 		if maxItems > 0 && len(articles) >= maxItems {
 			break

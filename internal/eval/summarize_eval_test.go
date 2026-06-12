@@ -15,8 +15,9 @@ import (
 
 // summarizeArticle mirrors the input format for summarize.md.
 type summarizeArticle struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"` // フィード由来のテキスト
+	Body        string `json:"body,omitempty"`        // 記事ページ直接取得のテキスト
 }
 
 // summarizeCase is one entry in the summarize testdata files.

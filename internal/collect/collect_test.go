@@ -110,8 +110,11 @@ func TestCollector_Run_RSSParsesFields(t *testing.T) {
 	if art.URL != "https://example.com/article/1" {
 		t.Errorf("url: got %q, want %q", art.URL, "https://example.com/article/1")
 	}
-	if art.Body == "" {
-		t.Error("body must not be empty")
+	if art.Description == "" {
+		t.Error("description must not be empty for feed articles")
+	}
+	if art.Body != "" {
+		t.Error("body must be empty for feed articles (body is reserved for direct HTML fetch)")
 	}
 }
 
@@ -201,8 +204,11 @@ func TestCollector_Run_AtomParsesFields(t *testing.T) {
 	if art.URL != "https://example.com/atom/1" {
 		t.Errorf("url: got %q, want %q", art.URL, "https://example.com/atom/1")
 	}
-	if art.Body == "" {
-		t.Error("body must not be empty")
+	if art.Description == "" {
+		t.Error("description must not be empty for feed articles")
+	}
+	if art.Body != "" {
+		t.Error("body must be empty for feed articles (body is reserved for direct HTML fetch)")
 	}
 }
 
@@ -563,37 +569,6 @@ func TestCollector_RunAll_LogsPerCornerProgress(t *testing.T) {
 	}
 	if !strings.Contains(logs, "2/2") {
 		t.Errorf("should log per-corner progress (2/2): %q", logs)
-	}
-}
-
-func TestCollector_FetchFullText_ReturnsBody(t *testing.T) {
-	htmlData := loadTestdata(t, "article.html")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(htmlData)
-	}))
-	defer server.Close()
-
-	c := collect.New(server.Client())
-	body, err := c.FetchFullText(context.Background(), server.URL+"/article.html")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(body, "最初のパラグラフ") {
-		t.Errorf("body should contain article text, got: %q", body)
-	}
-}
-
-func TestCollector_FetchFullText_ReturnsErrorOnHTTPFailure(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer server.Close()
-
-	c := collect.New(server.Client())
-	_, err := c.FetchFullText(context.Background(), server.URL+"/notfound.html")
-	if err == nil {
-		t.Error("expected error for HTTP 404, got nil")
 	}
 }
 

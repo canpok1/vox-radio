@@ -18,11 +18,6 @@ type Rundowner interface {
 	Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles, casts []model.RundownCast) (model.Rundown, error)
 }
 
-// ArticleFetcher fetches the full body text of an article by URL.
-type ArticleFetcher interface {
-	FetchFullText(ctx context.Context, url string) (string, error)
-}
-
 // Option configures an LLMRundowner.
 type Option func(*LLMRundowner)
 
@@ -36,7 +31,6 @@ type LLMRundowner struct {
 	selector          sel.Selector
 	summarizer        summarize.Summarizer
 	flowDesigner      flow.Designer
-	fetcher           ArticleFetcher
 	excludedDedupKeys map[string]struct{}
 	cornerAppearances map[string]cache.CornerAppearance
 	logger            *slog.Logger
@@ -50,9 +44,8 @@ func (r *LLMRundowner) SetCornerAppearances(m map[string]cache.CornerAppearance)
 }
 
 // NewLLMRundowner creates a LLMRundowner.
-// fetcher may be nil (skips full-text fetch).
 // excludedDedupKeys is the set of article DedupKeys to exclude before selection (nil = no exclusion).
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, designer flow.Designer, fetcher ArticleFetcher, excludedDedupKeys []string, opts ...Option) *LLMRundowner {
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, designer flow.Designer, excludedDedupKeys []string, opts ...Option) *LLMRundowner {
 	excluded := make(map[string]struct{}, len(excludedDedupKeys))
 	for _, k := range excludedDedupKeys {
 		excluded[k] = struct{}{}
@@ -61,7 +54,6 @@ func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, des
 		selector:          selector,
 		summarizer:        summarizer,
 		flowDesigner:      designer,
-		fetcher:           fetcher,
 		excludedDedupKeys: excluded,
 		logger:            slog.Default(),
 	}
@@ -130,22 +122,12 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			if !ok {
 				continue
 			}
-			fetchURL := a.URL
-			if r.fetcher != nil && fetchURL != "" {
-				if fullText, err := r.fetcher.FetchFullText(ctx, fetchURL); err != nil {
-					r.logger.Warn("full text fetch failed, using feed body", "url", fetchURL, "err", err)
-				} else if fullText == "" {
-					r.logger.Warn("full text fetch returned empty body, using feed body", "url", fetchURL)
-				} else {
-					a.Body = fullText
-				}
-			}
 			sum, err := r.summarizer.Summarize(ctx, a)
 			if err != nil {
 				return model.Rundown{}, fmt.Errorf("summarize %q: %w", id, err)
 			}
 			rdArticles = append(rdArticles, model.NewRundownArticle(
-				a.DedupKey, a.URL, a.Title, a.Body, sum.Points,
+				a.DedupKey, a.URL, a.Title, a.Description, a.Body, sum.Points,
 				a.Source, a.Author, a.Published,
 			))
 		}
