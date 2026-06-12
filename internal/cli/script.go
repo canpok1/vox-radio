@@ -130,7 +130,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	}
 
 	if pr != nil {
-		if err := writeJSON(fileio.ProofreadPath(workDir), pr); err != nil {
+		if err := writeJSON(filepath.Join(workDir, fileio.FileProofread), pr); err != nil {
 			return err
 		}
 	}
