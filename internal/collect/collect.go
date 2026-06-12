@@ -126,10 +126,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 	for i, corner := range filtered {
 		logger.Info(fmt.Sprintf("コーナー「%s」を収集中 (%d/%d)", corner.Title, i+1, len(filtered)))
 
-		articles, err := c.Run(ctx, config.FeedsConfig{
-			Feeds:    corner.Source.Feeds,
-			Articles: corner.Source.Articles,
-		}, excluded)
+		articles, err := c.Run(ctx, *corner.Source, excluded)
 		if err != nil {
 			return model.Articles{}, fmt.Errorf("collect corner %q: %w", corner.Title, err)
 		}
