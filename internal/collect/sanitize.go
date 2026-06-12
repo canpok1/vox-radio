@@ -89,7 +89,8 @@ func containsInjectionPattern(s string) string {
 // sanitizeArticle cleans a in-place and returns (flagged, error).
 // flagged is true when an injection pattern was detected in any field.
 // On on_detect=error the function returns an error immediately on the first detection.
-// On on_detect=sanitize (default) the offending field is set to "" and processing continues.
+// On on_detect=sanitize the caller is responsible for excluding the article entirely;
+// this function does NOT modify any field on detection.
 func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (bool, error) {
 	// Phase 1: remove invisible chars from all text fields
 	a.Title = removeInvisibleChars(a.Title)
@@ -102,24 +103,23 @@ func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (boo
 
 	// Phase 3: detect injection patterns field by field
 	fields := []struct {
-		name string
-		ptr  *string
+		name  string
+		value string
 	}{
-		{"Title", &a.Title},
-		{"Body", &a.Body},
-		{"Source", &a.Source},
-		{"Author", &a.Author},
+		{"Title", a.Title},
+		{"Body", a.Body},
+		{"Source", a.Source},
+		{"Author", a.Author},
 	}
 
 	flagged := false
 	onDetect := policy.EffectiveOnDetect()
 	for _, f := range fields {
-		if pat := containsInjectionPattern(*f.ptr); pat != "" {
+		if pat := containsInjectionPattern(f.value); pat != "" {
 			flagged = true
 			if onDetect == config.OnDetectError {
 				return true, fmt.Errorf("prompt injection detected in article %s field %s (matched: %s)", a.URL, f.name, pat)
 			}
-			// on_detect=sanitize: caller excludes the entire article; fields are NOT emptied here
 		}
 	}
 	return flagged, nil

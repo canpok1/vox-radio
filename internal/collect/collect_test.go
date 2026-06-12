@@ -795,7 +795,7 @@ func buildRSSWithItems(items []struct{ title, body string }) []byte {
 	for i, item := range items {
 		b.WriteString("<item>")
 		b.WriteString("<title>" + item.title + "</title>")
-		b.WriteString("<link>https://example.com/item/" + strings.ReplaceAll(strings.ToLower(item.title[:min(8, len(item.title))]), " ", "-") + "</link>")
+		b.WriteString("<link>https://example.com/item/" + fmt.Sprintf("%d", i) + "</link>")
 		b.WriteString("<description>" + item.body + "</description>")
 		b.WriteString("<guid>https://example.com/guid/" + fmt.Sprintf("%d", i) + "</guid>")
 		b.WriteString("</item>")
