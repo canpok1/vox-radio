@@ -50,7 +50,7 @@ func TestLLMWriter_Write_Success(t *testing.T) {
 	assignments := []write.CastAssignment{
 		{CharacterID: "zundamon", Type: "regular", ProgramRole: "MC", CornerRole: "司会"},
 	}
-	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "記事1", Summary: "要約", Points: []string{"p1"}}}
+	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "記事1", Body: "本文", Points: []string{"p1"}}}
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
 	}
@@ -94,7 +94,7 @@ func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	assignments := []write.CastAssignment{
 		{CharacterID: "zundamon", Type: "regular", ProgramRole: "MC", CornerRole: "司会"},
 	}
-	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "AI記事", Summary: "AI要約", Points: []string{"p1"}}}
+	articles := []model.RundownArticle{{URL: "https://example.com/1", Title: "AI記事", Body: "AI記事の本文", Points: []string{"p1"}}}
 	chars := map[string]config.CharacterConfig{
 		"zundamon": {Name: "ずんだもん", Pronoun: "ボク", SpeechSuffix: []string{"〜のだ"}, Personality: []string{"元気"}},
 	}
@@ -108,8 +108,8 @@ func TestLLMWriter_Write_PromptContainsCornerAndCastInfo(t *testing.T) {
 	if !strings.Contains(prompt, "AIコーナー") {
 		t.Errorf("prompt should contain corner title, got: %s", prompt)
 	}
-	if !strings.Contains(prompt, "AI要約") {
-		t.Errorf("prompt should contain summary, got: %s", prompt)
+	if !strings.Contains(prompt, "AI記事の本文") {
+		t.Errorf("prompt should contain article body, got: %s", prompt)
 	}
 	if !strings.Contains(prompt, "ずんだもん") {
 		t.Errorf("prompt should contain character name, got: %s", prompt)

@@ -48,7 +48,7 @@ type writeCorner struct {
 type writeArticle struct {
 	URL       string   `json:"url"`
 	Title     string   `json:"title"`
-	Summary   string   `json:"summary"`
+	Body      string   `json:"body"`
 	Points    []string `json:"points"`
 	Source    string   `json:"source,omitempty"`
 	Author    string   `json:"author,omitempty"`

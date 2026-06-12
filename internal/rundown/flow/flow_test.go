@@ -53,7 +53,7 @@ func TestLLMDesigner_DesignFlow_Success(t *testing.T) {
 		Title:           "テックニュース",
 		SelectionReason: "AIチップ記事が最も関連性高い",
 		Articles: []model.RundownArticle{
-			{URL: "https://example.com/1", Title: "記事1", Summary: "要約1", Points: []string{"p1"}},
+			{URL: "https://example.com/1", Title: "記事1", Body: "記事1の本文", Points: []string{"p1"}},
 		},
 	}
 	rd := model.Rundown{
@@ -209,7 +209,7 @@ func TestLLMDesigner_DesignFlow_LLMError(t *testing.T) {
 	}
 }
 
-func TestLLMDesigner_DesignFlow_ArticleSummarySerializedToProgram(t *testing.T) {
+func TestLLMDesigner_DesignFlow_ArticleBodySerializedToProgram(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"flow":"フロー"}`),
 	}
@@ -219,7 +219,7 @@ func TestLLMDesigner_DesignFlow_ArticleSummarySerializedToProgram(t *testing.T) 
 	target := model.RundownCorner{
 		Title: "テック",
 		Articles: []model.RundownArticle{
-			{URL: "u1", Title: "記事1", Summary: "ユニークな要約テキスト", Points: []string{"p1"}},
+			{URL: "u1", Title: "記事1", Body: "ユニークな本文テキスト", Points: []string{"p1"}},
 		},
 	}
 	rd := model.Rundown{
@@ -233,8 +233,8 @@ func TestLLMDesigner_DesignFlow_ArticleSummarySerializedToProgram(t *testing.T) 
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if !strings.Contains(prompt, "ユニークな要約テキスト") {
-		t.Errorf("prompt should contain article summary via program serialization, got: %s", prompt)
+	if !strings.Contains(prompt, "ユニークな本文テキスト") {
+		t.Errorf("prompt should contain article body via program serialization, got: %s", prompt)
 	}
 }
 

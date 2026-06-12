@@ -145,7 +145,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 				return model.Rundown{}, fmt.Errorf("summarize %q: %w", id, err)
 			}
 			rdArticles = append(rdArticles, model.NewRundownArticle(
-				a.DedupKey, a.URL, a.Title, sum.Summary, sum.Points,
+				a.DedupKey, a.URL, a.Title, a.Body, sum.Points,
 				a.Source, a.Author, a.Published,
 			))
 		}

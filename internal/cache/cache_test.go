@@ -51,7 +51,7 @@ func TestManager_Load_ValidJSONL(t *testing.T) {
 				{
 					Title: "コーナーA",
 					Articles: []cache.ArticleEntry{
-						{Title: "記事1", URL: "https://example.com/1", Summary: "記事要約1", Points: []string{"p1"}},
+						{Title: "記事1", URL: "https://example.com/1", Points: []string{"p1"}},
 					},
 				},
 			},
@@ -339,7 +339,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 			{
 				Title: "コーナーA",
 				Articles: []model.RundownArticle{
-					{DedupKey: key1, URL: "https://example.com/1", Title: "記事1", Summary: "記事1の要約", Points: []string{"ポイント1"}},
+					{DedupKey: key1, URL: "https://example.com/1", Title: "記事1", Points: []string{"ポイント1"}},
 				},
 			},
 		},
@@ -369,7 +369,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 		t.Fatalf("Corners[0].Articles: got %d, want 2", len(got.Corners[0].Articles))
 	}
 
-	// Article with rundown data should have summary and points merged
+	// Article with rundown data should have points merged
 	a1 := got.Corners[0].Articles[0]
 	if a1.DedupKey != key1 {
 		t.Errorf("Articles[0].DedupKey: got %q, want %q", a1.DedupKey, key1)
@@ -377,23 +377,17 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 	if a1.URL != "https://example.com/1" {
 		t.Errorf("Articles[0].URL: got %q, want %q", a1.URL, "https://example.com/1")
 	}
-	if a1.Summary != "記事1の要約" {
-		t.Errorf("Articles[0].Summary: got %q, want %q", a1.Summary, "記事1の要約")
-	}
 	if len(a1.Points) != 1 || a1.Points[0] != "ポイント1" {
 		t.Errorf("Articles[0].Points: got %v, want [ポイント1]", a1.Points)
 	}
 
-	// Article without rundown data should still be included, with empty summary/points
+	// Article without rundown data should still be included, with empty points
 	a2 := got.Corners[0].Articles[1]
 	if a2.DedupKey != key2 {
 		t.Errorf("Articles[1].DedupKey: got %q, want %q", a2.DedupKey, key2)
 	}
 	if a2.URL != "https://example.com/2" {
 		t.Errorf("Articles[1].URL: got %q, want %q", a2.URL, "https://example.com/2")
-	}
-	if a2.Summary != "" {
-		t.Errorf("Articles[1].Summary: expected empty for unknown DedupKey, got %q", a2.Summary)
 	}
 	if len(a2.Points) != 0 {
 		t.Errorf("Articles[1].Points: expected empty, got %v", a2.Points)
