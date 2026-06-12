@@ -108,11 +108,6 @@ func (p *EpisodeSpec) ValidateCasts(chars map[string]CharacterConfig) error {
 	return nil
 }
 
-// ValidateEpisodeSpecCasts は ValidateCasts の後方互換ラッパー。
-func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) error {
-	return p.ValidateCasts(chars)
-}
-
 // ValidateCorners は corners の id・出現条件を検証する（キャラ不要・spec 内部整合のみ）。
 // id は必須かつ番組内で一意。title もユーザー向け表示用に重複を禁止する。
 func (p *EpisodeSpec) ValidateCorners() error {
@@ -139,11 +134,6 @@ func (p *EpisodeSpec) ValidateCorners() error {
 	return nil
 }
 
-// ValidateEpisodeSpecCorners は ValidateCorners の後方互換ラッパー。
-func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
-	return p.ValidateCorners()
-}
-
 // CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
 // Falls back to DefaultCornerSummaryLength when the corner is not found or summary_length is unset.
 func (p *EpisodeSpec) CornerSummaryLength(title string) int {
@@ -164,11 +154,6 @@ func (p *EpisodeSpec) ValidateProgram() error {
 	return nil
 }
 
-// ValidateEpisodeSpecProgram は ValidateProgram の後方互換ラッパー。
-func ValidateEpisodeSpecProgram(p *EpisodeSpec) error {
-	return p.ValidateProgram()
-}
-
 // ValidateCast checks that every character ID in corners[].cast is declared in casts.
 // This ensures corner-only characters are forbidden, preventing rest-state leaks and typos.
 func (p *EpisodeSpec) ValidateCast() error {
@@ -180,11 +165,6 @@ func (p *EpisodeSpec) ValidateCast() error {
 		}
 	}
 	return nil
-}
-
-// ValidateEpisodeSpecCast は ValidateCast の後方互換ラッパー。
-func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
-	return p.ValidateCast()
 }
 
 // ValidateAssets checks that corner-level audio/bgm keys reference existing assets.
@@ -207,11 +187,6 @@ func (p *EpisodeSpec) ValidateAssets() error {
 		}
 	}
 	return nil
-}
-
-// ValidateEpisodeSpecAssets は ValidateAssets の後方互換ラッパー。
-func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
-	return p.ValidateAssets()
 }
 
 // Validate はすべてのバリデーションを実行する単一エントリポイント。

@@ -186,14 +186,14 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if cfg.Slack.BotTokenEnv == "" {
 		t.Error("vox-radio.yaml template should have slack.bot_token_env set")
 	}
-	if err := config.ValidateEpisodeSpecProgram(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecProgram failed (template must set program.id): %v", err)
+	if err := spec.ValidateProgram(); err != nil {
+		t.Fatalf("ValidateProgram failed (template must set program.id): %v", err)
 	}
-	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecCast failed: %v", err)
+	if err := spec.ValidateCast(); err != nil {
+		t.Fatalf("ValidateCast failed: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecAssets failed: %v", err)
+	if err := spec.ValidateAssets(); err != nil {
+		t.Fatalf("ValidateAssets failed: %v", err)
 	}
 
 	// cache フィールドのアサート
@@ -258,17 +258,17 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadEpisodeSpecStrict failed on sample: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecAssets failed on sample: %v", err)
+	if err := spec.ValidateAssets(); err != nil {
+		t.Fatalf("ValidateAssets failed on sample: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecCast(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecCast failed on sample: %v", err)
+	if err := spec.ValidateCast(); err != nil {
+		t.Fatalf("ValidateCast failed on sample: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecCasts(spec, cfg.Characters); err != nil {
-		t.Fatalf("ValidateEpisodeSpecCasts failed on sample: %v", err)
+	if err := spec.ValidateCasts(cfg.Characters); err != nil {
+		t.Fatalf("ValidateCasts failed on sample: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecCorners(spec); err != nil {
-		t.Fatalf("ValidateEpisodeSpecCorners failed on sample: %v", err)
+	if err := spec.ValidateCorners(); err != nil {
+		t.Fatalf("ValidateCorners failed on sample: %v", err)
 	}
 
 	// 毎回の放送コーナーの length_sec 合計が 300 秒（尺不変）であること。
