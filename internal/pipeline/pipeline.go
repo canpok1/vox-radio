@@ -33,7 +33,7 @@ type Rundowner interface {
 
 // Scripter generates a radio script from a rundown.
 type Scripter interface {
-	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error)
 }
 
 // Synther synthesizes voice clips from a script.
@@ -97,7 +97,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		chars = r.Config.Characters
 	}
 
-	scr, scriptLines, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
+	scr, scriptLines, pr, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
@@ -106,6 +106,11 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	}
 	if err := fileio.WriteJSON(fileio.LinesPath(outDir), scriptLines); err != nil {
 		return err
+	}
+	if pr != nil {
+		if err := fileio.WriteJSON(fileio.ProofreadPath(outDir), pr); err != nil {
+			return err
+		}
 	}
 
 	clips, err := r.Synther.Run(ctx, scr, fileio.ClipsDir(outDir))

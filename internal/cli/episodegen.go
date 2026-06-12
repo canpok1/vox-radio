@@ -76,7 +76,6 @@ func newEpisodegenCmd() *cobra.Command {
 			}
 
 			assetCatalog := buildAssetCatalog(p.Assets)
-			intermediateDir := fileio.IntermediateDir(outDir)
 
 			selector := sel.NewLLMSelector(llmClient, prompts["select"], stepTemp(cfg.LLM, "select"))
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
@@ -114,7 +113,6 @@ func newEpisodegenCmd() *cobra.Command {
 					direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
 				),
 				assetCatalog,
-				intermediateDir,
 				script.WithLogger(logger),
 			)
 

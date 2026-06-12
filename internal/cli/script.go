@@ -116,11 +116,10 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 			direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
 		),
 		assetCatalog,
-		workDir,
 		script.WithLogger(logger),
 	)
 
-	scr, lines, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
+	scr, lines, pr, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
 	if err != nil {
 		return fmt.Errorf("generate: %w", err)
 	}
@@ -128,6 +127,12 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 	linesPath := filepath.Join(workDir, fileio.FileLines)
 	if err := writeJSON(linesPath, lines); err != nil {
 		return err
+	}
+
+	if pr != nil {
+		if err := writeJSON(filepath.Join(workDir, fileio.FileProofread), pr); err != nil {
+			return err
+		}
 	}
 
 	return writeJSON(out, scr)

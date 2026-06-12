@@ -2,16 +2,12 @@ package script
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
-	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/write"
@@ -20,14 +16,13 @@ import (
 const regenThreshold = 0.20
 
 type ScriptGenerator interface {
-	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error)
+	Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error)
 }
 
 type LLMScriptGenerator struct {
 	writer       write.Writer
 	director     direct.Director
 	assetCatalog model.AssetCatalog
-	workDir      string
 	logger       *slog.Logger
 }
 
@@ -43,14 +38,12 @@ func NewLLMScriptGenerator(
 	w write.Writer,
 	d direct.Director,
 	assetCatalog model.AssetCatalog,
-	workDir string,
 	opts ...GeneratorOption,
 ) *LLMScriptGenerator {
 	g := &LLMScriptGenerator{
 		writer:       w,
 		director:     d,
 		assetCatalog: assetCatalog,
-		workDir:      workDir,
 		logger:       slog.Default(),
 	}
 	for _, opt := range opts {
@@ -59,7 +52,7 @@ func NewLLMScriptGenerator(
 	return g
 }
 
-func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error) {
+func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error) {
 	start := time.Now()
 
 	cornerMap := rundown.CornerMap()
@@ -73,7 +66,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	g.logger.With("step", "script/write").Info("開始")
 	cornerLines, err := WriteAll(ctx, g.writer, program, corners, allAssignments, cornerMap, chars)
 	if err != nil {
-		return model.Script{}, model.ScriptLines{}, err
+		return model.Script{}, model.ScriptLines{}, nil, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allAssignments, cornerMap, chars)
 	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: BuildScriptLines(corners, cornerLines)}
@@ -81,19 +74,16 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	g.logger.With("step", "script/direct").Info("開始")
 	scr, pr, err := g.director.Direct(ctx, scriptLines.Corners, g.assetCatalog, program.Direction)
 	if err != nil {
-		return model.Script{}, model.ScriptLines{}, fmt.Errorf("direct: %w", err)
+		return model.Script{}, model.ScriptLines{}, nil, fmt.Errorf("direct: %w", err)
 	}
 
 	if pr != nil {
-		if err := g.saveIntermediate(fileio.FileProofread, pr); err != nil {
-			return model.Script{}, model.ScriptLines{}, err
-		}
 		g.logger.With("step", "script/direct").Info("校正完了", "count", len(pr.Corrections))
 	}
 
 	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
-	return scr, scriptLines, nil
+	return scr, scriptLines, pr, nil
 }
 
 // WriteAll writes lines for each corner in order, passing previously generated corners as context.
@@ -193,21 +183,6 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 		cornerLines[worstIdx] = newLines
 	}
 	return cornerLines
-}
-
-func (g *LLMScriptGenerator) saveIntermediate(filename string, v any) error {
-	if g.workDir == "" {
-		return nil
-	}
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal %s: %w", filename, err)
-	}
-	path := filepath.Join(g.workDir, filename)
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", filename, err)
-	}
-	return nil
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.
