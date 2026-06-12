@@ -384,9 +384,9 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := config.ValidateEpisodeSpecAssets(tt.spec)
+			err := tt.spec.ValidateAssets()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateEpisodeSpecAssets() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateAssets() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -516,8 +516,8 @@ func TestLoadEpisodeSpec_ValidateEpisodeSpecAssetsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadEpisodeSpec failed: %v", err)
 	}
-	if err := config.ValidateEpisodeSpecAssets(spec); err != nil {
-		t.Errorf("ValidateEpisodeSpecAssets failed on testdata spec: %v", err)
+	if err := spec.ValidateAssets(); err != nil {
+		t.Errorf("ValidateAssets failed on testdata spec: %v", err)
 	}
 }
 
@@ -745,7 +745,7 @@ func TestValidateEpisodeSpecCast_Valid(t *testing.T) {
 			{Title: "opening", Cast: map[string]string{"zundamon": "ボケ担当"}},
 		},
 	}
-	if err := config.ValidateEpisodeSpecCast(p); err != nil {
+	if err := p.ValidateCast(); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -759,7 +759,7 @@ func TestValidateEpisodeSpecCast_UndeclaredCastKey(t *testing.T) {
 			{Title: "opening", Cast: map[string]string{"unknown_char": "司会"}},
 		},
 	}
-	if err := config.ValidateEpisodeSpecCast(p); err == nil {
+	if err := p.ValidateCast(); err == nil {
 		t.Error("expected error for corner cast key not declared in casts")
 	}
 }
@@ -885,7 +885,7 @@ func TestValidateEpisodeCondition_Offset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &config.EpisodeSpec{Casts: tt.casts}
-			err := config.ValidateEpisodeSpecCasts(p, chars)
+			err := p.ValidateCasts(chars)
 			if tt.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			} else if !tt.wantErr && err != nil {
@@ -943,7 +943,7 @@ func TestValidateEpisodeSpecCasts_Valid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &config.EpisodeSpec{Casts: tt.casts}
-			if err := config.ValidateEpisodeSpecCasts(p, chars); err != nil {
+			if err := p.ValidateCasts(chars); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
@@ -1004,7 +1004,7 @@ func TestValidateEpisodeSpecCasts_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &config.EpisodeSpec{Casts: tt.casts}
-			if err := config.ValidateEpisodeSpecCasts(p, chars); err == nil {
+			if err := p.ValidateCasts(chars); err == nil {
 				t.Errorf("expected error for %q, got nil", tt.name)
 			}
 		})
@@ -1220,15 +1220,15 @@ func TestLoadEpisodeSpec_ProgramID(t *testing.T) {
 
 func TestValidateEpisodeSpecProgram_EmptyID_Error(t *testing.T) {
 	p := &config.EpisodeSpec{Program: config.ProgramConfig{Title: "t", Description: "d"}}
-	if err := config.ValidateEpisodeSpecProgram(p); err == nil {
-		t.Error("ValidateEpisodeSpecProgram should error when program.id is empty")
+	if err := p.ValidateProgram(); err == nil {
+		t.Error("ValidateProgram should error when program.id is empty")
 	}
 }
 
 func TestValidateEpisodeSpecProgram_WithID_NoError(t *testing.T) {
 	p := &config.EpisodeSpec{Program: config.ProgramConfig{ID: "my-program", Title: "t", Description: "d"}}
-	if err := config.ValidateEpisodeSpecProgram(p); err != nil {
-		t.Errorf("ValidateEpisodeSpecProgram should not error when program.id is set: %v", err)
+	if err := p.ValidateProgram(); err != nil {
+		t.Errorf("ValidateProgram should not error when program.id is set: %v", err)
 	}
 }
 

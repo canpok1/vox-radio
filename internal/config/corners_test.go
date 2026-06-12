@@ -236,7 +236,7 @@ func TestValidateEpisodeSpecCorners_Valid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &EpisodeSpec{Corners: tt.corners}
-			if err := ValidateEpisodeSpecCorners(p); err != nil {
+			if err := p.ValidateCorners(); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
@@ -303,7 +303,7 @@ func TestValidateEpisodeSpecCorners_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &EpisodeSpec{Corners: tt.corners}
-			if err := ValidateEpisodeSpecCorners(p); err == nil {
+			if err := p.ValidateCorners(); err == nil {
 				t.Errorf("expected error for %q, got nil", tt.name)
 			}
 		})
