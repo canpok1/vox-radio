@@ -45,6 +45,7 @@ func (s *stubRundowner) Run(_ context.Context, _ []config.CornerConfig, _ model.
 type stubScripter struct {
 	script     model.Script
 	lines      model.ScriptLines
+	proofread  *model.ProofreadResult
 	err        error
 	called     bool
 	gotRundown model.Rundown
@@ -53,7 +54,7 @@ type stubScripter struct {
 func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error) {
 	s.called = true
 	s.gotRundown = rundown
-	return s.script, s.lines, nil, s.err
+	return s.script, s.lines, s.proofread, s.err
 }
 
 type stubSynther struct {
@@ -505,5 +506,37 @@ func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
 	}
 	if !strings.Contains(string(data), `"conversation_notes"`) {
 		t.Errorf("manifest should contain conversation_notes field, got: %s", string(data))
+	}
+}
+
+func TestRunner_Run_WritesProofreadFile_WhenProofreadResultIsNotNil(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.scr.proofread = &model.ProofreadResult{
+		Corrections: []model.ProofreadCorrection{
+			{CornerIndex: 0, LineIndex: 0, Before: "誤字", After: "正字"},
+		},
+	}
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(fileio.ProofreadPath(outDir)); err != nil {
+		t.Errorf("expected proofread file %q to exist: %v", fileio.ProofreadPath(outDir), err)
+	}
+}
+
+func TestRunner_Run_SkipsProofreadFile_WhenProofreadResultIsNil(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	// s.scr.proofread is nil by default
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(fileio.ProofreadPath(outDir)); err == nil {
+		t.Errorf("proofread file should not exist when ProofreadResult is nil, but found %q", fileio.ProofreadPath(outDir))
 	}
 }
