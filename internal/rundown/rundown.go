@@ -144,16 +144,12 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			if err != nil {
 				return model.Rundown{}, fmt.Errorf("summarize %q: %w", id, err)
 			}
-			points := sum.Points
-			if points == nil {
-				points = make([]string, 0)
-			}
 			rdArticles = append(rdArticles, model.RundownArticle{
 				DedupKey:  a.DedupKey,
 				URL:       a.URL,
 				Title:     a.Title,
 				Summary:   sum.Summary,
-				Points:    points,
+				Points:    model.NonNil(sum.Points),
 				Source:    a.Source,
 				Author:    a.Author,
 				Published: a.Published,
@@ -171,9 +167,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	}
 
 	// キャストをセット
-	if casts == nil {
-		casts = make([]model.RundownCast, 0)
-	}
+	casts = model.NonNil(casts)
 	rd := model.Rundown{
 		Corners: rundownCorners,
 		Casts:   casts,

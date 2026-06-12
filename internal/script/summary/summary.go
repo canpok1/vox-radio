@@ -133,13 +133,9 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.Script
 	}
 
 	// Normalize nil slices to empty slices so JSON marshals as [] not null.
-	if result.ConversationNotes == nil {
-		result.ConversationNotes = make([]model.ConversationNote, 0)
-	}
+	result.ConversationNotes = model.NonNil(result.ConversationNotes)
 	for i := range result.ConversationNotes {
-		if result.ConversationNotes[i].CharacterIDs == nil {
-			result.ConversationNotes[i].CharacterIDs = make([]string, 0)
-		}
+		result.ConversationNotes[i].CharacterIDs = model.NonNil(result.ConversationNotes[i].CharacterIDs)
 	}
 
 	return result, nil

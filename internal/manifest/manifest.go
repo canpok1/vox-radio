@@ -35,10 +35,7 @@ func Build(p BuildParams) model.Manifest {
 			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
-		points := cs.Points
-		if points == nil {
-			points = make([]string, 0)
-		}
+		points := model.NonNil(cs.Points)
 		manifestCorners = append(manifestCorners, model.ManifestCorner{
 			ID:       c.ID,
 			Title:    c.Title,
@@ -47,15 +44,8 @@ func Build(p BuildParams) model.Manifest {
 			Articles: refs,
 		})
 	}
-	notes := p.ConversationNotes
-	if notes == nil {
-		notes = make([]model.ConversationNote, 0)
-	}
-
-	casts := p.Rundown.Casts
-	if casts == nil {
-		casts = make([]model.RundownCast, 0)
-	}
+	notes := model.NonNil(p.ConversationNotes)
+	casts := model.NonNil(p.Rundown.Casts)
 
 	return model.Manifest{
 		Title:             p.Program.Title,
