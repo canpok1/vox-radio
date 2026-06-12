@@ -239,7 +239,6 @@ func TestBuild(t *testing.T) {
 			t.Errorf("ConversationNotes: got %d, want 0", len(got.ConversationNotes))
 		}
 	})
-
 }
 
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
