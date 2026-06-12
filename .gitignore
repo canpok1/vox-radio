@@ -36,6 +36,7 @@ go.work.sum
 
 # GoReleaser
 /dist/
+/.extra-files/
 
 # 一時ファイル
 .tmp/
