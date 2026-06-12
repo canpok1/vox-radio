@@ -212,19 +212,7 @@ func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.Episod
 	if err != nil {
 		return nil, nil, fmt.Errorf("load spec: %w", err)
 	}
-	if err := config.ValidateEpisodeSpecProgram(p); err != nil {
-		return nil, nil, fmt.Errorf("spec validation: %w", err)
-	}
-	if err := config.ValidateEpisodeSpecCast(p); err != nil {
-		return nil, nil, fmt.Errorf("spec validation: %w", err)
-	}
-	if err := config.ValidateEpisodeSpecAssets(p); err != nil {
-		return nil, nil, fmt.Errorf("spec validation: %w", err)
-	}
-	if err := config.ValidateEpisodeSpecCasts(p, cfg.Characters); err != nil {
-		return nil, nil, fmt.Errorf("spec validation: %w", err)
-	}
-	if err := config.ValidateEpisodeSpecCorners(p); err != nil {
+	if err := p.Validate(cfg.Characters); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
 	return cfg, p, nil

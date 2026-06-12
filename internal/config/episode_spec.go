@@ -86,9 +86,9 @@ func validateEpisodeCondition(cond EpisodeCondition, prefix string) error {
 	return nil
 }
 
-// ValidateEpisodeSpecCasts checks that every cast character ID exists in chars,
+// ValidateCasts checks that every cast character ID exists in chars,
 // that type is valid, and that condition is set correctly (guest requires condition).
-func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) error {
+func (p *EpisodeSpec) ValidateCasts(chars map[string]CharacterConfig) error {
 	for charID, c := range p.Casts {
 		if _, ok := chars[charID]; !ok {
 			return fmt.Errorf("casts[%q]: character not found in characters catalog", charID)
@@ -108,9 +108,14 @@ func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) 
 	return nil
 }
 
-// ValidateEpisodeSpecCorners は corners の id・出現条件を検証する（キャラ不要・spec 内部整合のみ）。
+// ValidateEpisodeSpecCasts は ValidateCasts の後方互換ラッパー。
+func ValidateEpisodeSpecCasts(p *EpisodeSpec, chars map[string]CharacterConfig) error {
+	return p.ValidateCasts(chars)
+}
+
+// ValidateCorners は corners の id・出現条件を検証する（キャラ不要・spec 内部整合のみ）。
 // id は必須かつ番組内で一意。title もユーザー向け表示用に重複を禁止する。
-func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
+func (p *EpisodeSpec) ValidateCorners() error {
 	seenID := make(map[string]bool, len(p.Corners))
 	seenTitle := make(map[string]bool, len(p.Corners))
 	for i, c := range p.Corners {
@@ -134,6 +139,11 @@ func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
 	return nil
 }
 
+// ValidateEpisodeSpecCorners は ValidateCorners の後方互換ラッパー。
+func ValidateEpisodeSpecCorners(p *EpisodeSpec) error {
+	return p.ValidateCorners()
+}
+
 // CornerSummaryLength returns the effective summary length (chars) for the corner matching title.
 // Falls back to DefaultCornerSummaryLength when the corner is not found or summary_length is unset.
 func (p *EpisodeSpec) CornerSummaryLength(title string) int {
@@ -145,18 +155,23 @@ func (p *EpisodeSpec) CornerSummaryLength(title string) int {
 	return DefaultCornerSummaryLength
 }
 
-// ValidateEpisodeSpecProgram checks that program.id is set.
+// ValidateProgram checks that program.id is set.
 // program.id is the cache key (episodes are stored per program.id), so it is required.
-func ValidateEpisodeSpecProgram(p *EpisodeSpec) error {
+func (p *EpisodeSpec) ValidateProgram() error {
 	if p.Program.ID == "" {
 		return fmt.Errorf("program.id is required (it is the cache key for episode history)")
 	}
 	return nil
 }
 
-// ValidateEpisodeSpecCast checks that every character ID in corners[].cast is declared in casts.
+// ValidateEpisodeSpecProgram は ValidateProgram の後方互換ラッパー。
+func ValidateEpisodeSpecProgram(p *EpisodeSpec) error {
+	return p.ValidateProgram()
+}
+
+// ValidateCast checks that every character ID in corners[].cast is declared in casts.
 // This ensures corner-only characters are forbidden, preventing rest-state leaks and typos.
-func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
+func (p *EpisodeSpec) ValidateCast() error {
 	for _, corner := range p.Corners {
 		for charID := range corner.Cast {
 			if _, ok := p.Casts[charID]; !ok {
@@ -167,8 +182,13 @@ func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
 	return nil
 }
 
-// ValidateEpisodeSpecAssets checks that corner-level audio/bgm keys reference existing assets.
-func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
+// ValidateEpisodeSpecCast は ValidateCast の後方互換ラッパー。
+func ValidateEpisodeSpecCast(p *EpisodeSpec) error {
+	return p.ValidateCast()
+}
+
+// ValidateAssets checks that corner-level audio/bgm keys reference existing assets.
+func (p *EpisodeSpec) ValidateAssets() error {
 	for _, corner := range p.Corners {
 		if corner.StartAudio != nil {
 			if err := validateAudioRef(corner.Title, "start_audio", corner.StartAudio, &p.Assets); err != nil {
@@ -187,6 +207,29 @@ func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
 		}
 	}
 	return nil
+}
+
+// ValidateEpisodeSpecAssets は ValidateAssets の後方互換ラッパー。
+func ValidateEpisodeSpecAssets(p *EpisodeSpec) error {
+	return p.ValidateAssets()
+}
+
+// Validate はすべてのバリデーションを実行する単一エントリポイント。
+// Program・Corners・Cast・Assets・Casts の順に検証し、最初のエラーを返す。
+func (p *EpisodeSpec) Validate(chars map[string]CharacterConfig) error {
+	if err := p.ValidateProgram(); err != nil {
+		return err
+	}
+	if err := p.ValidateCorners(); err != nil {
+		return err
+	}
+	if err := p.ValidateCast(); err != nil {
+		return err
+	}
+	if err := p.ValidateAssets(); err != nil {
+		return err
+	}
+	return p.ValidateCasts(chars)
 }
 
 func validateAudioRef(cornerTitle, field string, ref *AudioRef, assets *AssetsConfig) error {
