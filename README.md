@@ -86,18 +86,17 @@ make release-check
 
 ### バイナリインストール（リリース版）
 
-GitHub Releases のバイナリを `curl` のワンライナーで導入できます。
+[GitHub Releases](https://github.com/canpok1/vox-radio/releases) からインストールスクリプトを取得して実行します。
 
 ```bash
-# 最新版をインストール
-curl -fsSL https://raw.githubusercontent.com/canpok1/vox-radio/main/scripts/install-vox-radio.sh | bash
+# リリースページから install.sh をダウンロードして実行（例: v0.0.1 の場合）
+curl -fsSL https://github.com/canpok1/vox-radio/releases/download/v0.0.1/install.sh | bash
 
-# バージョンを指定してインストール（引数で渡す）
-curl -fsSL https://raw.githubusercontent.com/canpok1/vox-radio/main/scripts/install-vox-radio.sh | bash -s -- v0.0.1
-
-# 設置先を変更（環境変数）
-curl -fsSL https://raw.githubusercontent.com/canpok1/vox-radio/main/scripts/install-vox-radio.sh | INSTALL_DIR=$HOME/.local/bin bash -s -- v0.0.1
+# 設置先を変更する場合は環境変数 INSTALL_DIR を指定
+curl -fsSL https://github.com/canpok1/vox-radio/releases/download/v0.0.1/install.sh | INSTALL_DIR=$HOME/.local/bin bash
 ```
+
+`v0.0.1` の部分はインストールしたいリリースタグに置き換えてください。
 
 デフォルトの設置先は `/usr/local/bin` です。書き込み権限がない場合は自動で `sudo` にフォールバックします。
 
