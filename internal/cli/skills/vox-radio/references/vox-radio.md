@@ -75,6 +75,21 @@
 | `retention_days` | int | 任意 | 保持日数（超過した古い行は削除）。デフォルト: 90 |
 | `llm_context_entries` | int | 任意 | LLM へ渡す直近エピソード件数。デフォルト: 10 |
 
+## `security` セクション
+
+省略時はすべて既定値が適用されます。
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `prompt_injection` | PromptInjectionConfig | 任意 | プロンプトインジェクション対策設定 |
+
+### `security.prompt_injection` サブフィールド
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `on_detect` | string | 任意 | 検出時の挙動。`sanitize`（既定: フィールド破棄して継続）または `error`（パイプライン停止） |
+| `max_body_chars` | int | 任意 | 記事本文の最大ルーン数。超過分は切り詰め。0 または省略で 3000 |
+
 ## `characters` セクション
 
 `characters` はキャラID（文字列キー）をキーにしたマップです。プロファイルの `corners[].cast` で使用するIDを定義します。

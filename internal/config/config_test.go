@@ -1507,6 +1507,63 @@ func TestSEEntry_EffectiveOverlay(t *testing.T) {
 
 func float64Ptr(v float64) *float64 { return &v }
 
+// --- SecurityConfig ---
+
+func TestPromptInjectionConfig_EffectiveOnDetect_Default(t *testing.T) {
+	c := config.PromptInjectionConfig{}
+	if got := c.EffectiveOnDetect(); got != config.OnDetectSanitize {
+		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectSanitize)
+	}
+}
+
+func TestPromptInjectionConfig_EffectiveOnDetect_Sanitize(t *testing.T) {
+	c := config.PromptInjectionConfig{OnDetect: config.OnDetectSanitize}
+	if got := c.EffectiveOnDetect(); got != config.OnDetectSanitize {
+		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectSanitize)
+	}
+}
+
+func TestPromptInjectionConfig_EffectiveOnDetect_Error(t *testing.T) {
+	c := config.PromptInjectionConfig{OnDetect: config.OnDetectError}
+	if got := c.EffectiveOnDetect(); got != config.OnDetectError {
+		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectError)
+	}
+}
+
+func TestPromptInjectionConfig_EffectiveMaxBodyChars_Default(t *testing.T) {
+	c := config.PromptInjectionConfig{}
+	if got := c.EffectiveMaxBodyChars(); got != config.DefaultMaxArticleBodyChars {
+		t.Errorf("EffectiveMaxBodyChars() = %d, want DefaultMaxArticleBodyChars=%d", got, config.DefaultMaxArticleBodyChars)
+	}
+}
+
+func TestPromptInjectionConfig_EffectiveMaxBodyChars_Custom(t *testing.T) {
+	c := config.PromptInjectionConfig{MaxBodyChars: 500}
+	if got := c.EffectiveMaxBodyChars(); got != 500 {
+		t.Errorf("EffectiveMaxBodyChars() = %d, want 500", got)
+	}
+}
+
+func TestLoadConfig_ValidationError_InvalidOnDetect(t *testing.T) {
+	_, err := config.LoadConfig("testdata/config_invalid_on_detect.yaml")
+	if err == nil {
+		t.Error("expected error when on_detect is invalid")
+	}
+}
+
+func TestLoadConfig_Security_ZeroValue(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Security.PromptInjection.EffectiveOnDetect() != config.OnDetectSanitize {
+		t.Errorf("default on_detect should be %q", config.OnDetectSanitize)
+	}
+	if cfg.Security.PromptInjection.EffectiveMaxBodyChars() != config.DefaultMaxArticleBodyChars {
+		t.Errorf("default max_body_chars should be DefaultMaxArticleBodyChars=%d", config.DefaultMaxArticleBodyChars)
+	}
+}
+
 func TestBGMEntry_EffectiveFadeIn(t *testing.T) {
 	cases := []struct {
 		name string

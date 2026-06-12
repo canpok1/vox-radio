@@ -103,7 +103,7 @@ func newEpisodegenCmd() *cobra.Command {
 
 			p.Corners = resolveCorners(p.Corners, episodeNumber)
 
-			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
+			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc), collect.WithSanitizePolicy(cfg.Security.PromptInjection))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
 			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedURLs, rundown.WithLogger(logger))
 			rundowner.SetCornerAppearances(cornerAppearances)

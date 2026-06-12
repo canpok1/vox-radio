@@ -31,6 +31,11 @@ source フィールドのないコーナーはスキップされます。
 			}
 			defer func() { _ = logFile.Close() }()
 
+			cfg, err := config.LoadConfig(configPath(cmd))
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
 			p, err := config.LoadEpisodeSpec(specPath)
 			if err != nil {
 				return fmt.Errorf("load spec: %w", err)
@@ -43,7 +48,7 @@ source フィールドのないコーナーはスキップされます。
 			loc := resolveLocation(p.Program, logger)
 
 			// 回番号を持たないため全コーナーを superset として収集する（rundown 側で絞る）
-			c := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc))
+			c := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc), collect.WithSanitizePolicy(cfg.Security.PromptInjection))
 			articles, err := c.RunAll(context.Background(), p.Corners, nil)
 			if err != nil {
 				return err

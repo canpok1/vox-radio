@@ -8,4 +8,5 @@ type Config struct {
 	Characters map[string]CharacterConfig `yaml:"characters"`
 	Cache      CacheConfig                `yaml:"cache"`
 	Slack      SlackConfig                `yaml:"slack"`
+	Security   SecurityConfig             `yaml:"security,omitempty"`
 }
