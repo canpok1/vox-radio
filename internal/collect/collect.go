@@ -67,11 +67,14 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 			return nil, fmt.Errorf("fetch feed %s: %w", feed.URL, err)
 		}
 		for i := range items {
-			if err := c.applySanitize(&items[i]); err != nil {
+			flagged, err := c.applySanitize(&items[i])
+			if err != nil {
 				return nil, err
 			}
+			if !flagged {
+				articles = append(articles, items[i])
+			}
 		}
-		articles = append(articles, items...)
 	}
 
 	for _, u := range cfg.Articles {
@@ -79,10 +82,13 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 		if err != nil {
 			return nil, fmt.Errorf("fetch article %s: %w", u, err)
 		}
-		if err := c.applySanitize(article); err != nil {
+		flagged, err := c.applySanitize(article)
+		if err != nil {
 			return nil, err
 		}
-		articles = append(articles, *article)
+		if !flagged {
+			articles = append(articles, *article)
+		}
 	}
 
 	return articles, nil
@@ -146,14 +152,15 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 }
 
 // applySanitize applies prompt-injection sanitization to a.
-// WARN is logged when a field is dropped; an error is returned when on_detect=error.
-func (c *Collector) applySanitize(a *model.Article) error {
+// Returns (true, nil) when an injection pattern is detected under on_detect=sanitize (caller must exclude the article).
+// Returns (true, err) when on_detect=error and injection is detected.
+func (c *Collector) applySanitize(a *model.Article) (bool, error) {
 	flagged, err := sanitizeArticle(a, c.policy)
 	if err != nil {
-		return err
+		return true, err
 	}
 	if flagged {
-		c.logger.Warn("prompt injection pattern detected; field(s) dropped", "url", a.URL)
+		c.logger.Warn("prompt injection pattern detected; article excluded", "url", a.URL)
 	}
-	return nil
+	return flagged, nil
 }

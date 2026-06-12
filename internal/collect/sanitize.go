@@ -119,7 +119,7 @@ func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (boo
 			if onDetect == config.OnDetectError {
 				return true, fmt.Errorf("prompt injection detected in article %s field %s (matched: %s)", a.URL, f.name, pat)
 			}
-			*f.ptr = ""
+			// on_detect=sanitize: caller excludes the entire article; fields are NOT emptied here
 		}
 	}
 	return flagged, nil
