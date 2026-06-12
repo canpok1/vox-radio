@@ -257,6 +257,17 @@ func TestEpisodeSpec_Validate_ErrorCases(t *testing.T) {
 				Assets: config.AssetsConfig{Jingle: map[string]config.JingleEntry{}, BGM: map[string]config.BGMEntry{}},
 			},
 		},
+		{
+			name: "存在しないアセットを参照するとき Validate はエラーを返す",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{ID: "prog"},
+				Corners: []config.CornerConfig{
+					{ID: "c1", Title: "opening", StartAudio: &config.AudioRef{Type: "jingle", ID: "nonexistent"}},
+				},
+				Casts:  map[string]config.CastConfig{},
+				Assets: config.AssetsConfig{Jingle: map[string]config.JingleEntry{}, BGM: map[string]config.BGMEntry{}},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
