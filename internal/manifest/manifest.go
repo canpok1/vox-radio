@@ -34,13 +34,12 @@ func Build(p BuildParams) model.Manifest {
 		for _, a := range rc.Articles {
 			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
 		}
-		rawCS := p.CornerSummaries[c.Title]
-		cs := model.NewCornerSummary(rawCS.Summary, rawCS.Points)
+		cs := p.CornerSummaries[c.Title]
 		manifestCorners = append(manifestCorners, model.ManifestCorner{
 			ID:       c.ID,
 			Title:    c.Title,
 			Summary:  cs.Summary,
-			Points:   cs.Points,
+			Points:   model.NonNil(cs.Points),
 			Articles: refs,
 		})
 	}
