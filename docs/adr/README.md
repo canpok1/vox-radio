@@ -65,3 +65,4 @@
 | [0057](0057-feed-prompt-injection-defense.md) | 外部情報源のプロンプトインジェクション多層防御 | 採用 | 2026-06-11 |
 | [0058](0058-decouple-article-dedup-key-from-url.md) | 記事の重複判定をURLから内容ベースの識別キー（DedupKey）へ分離する | 採用 | 2026-06-12 |
 | [0059](0059-drop-article-summary-pass-body-to-write.md) | rundown の記事要約を廃止し原文を write に引き渡す | 採用 | 2026-06-12 |
+| [0060](0060-drop-whole-article-on-injection-detection.md) | 注入検出記事をフィールド破棄でなく丸ごと除外する | 採用 | 2026-06-12 |
