@@ -63,3 +63,4 @@
 | [0055](0055-slack-api-url-env-override.md) | Slack API URL の環境変数オーバーライド | 採用 | 2026-06-10 |
 | [0056](0056-layered-architecture-dependency-rules.md) | レイヤードアーキテクチャと依存方向ルールの明文化 | 採用 | 2026-06-11 |
 | [0057](0057-feed-prompt-injection-defense.md) | 外部情報源のプロンプトインジェクション多層防御 | 採用 | 2026-06-11 |
+| [0058](0058-decouple-article-dedup-key-from-url.md) | 記事の重複判定をURLから内容ベースの識別キー（DedupKey）へ分離する | 採用 | 2026-06-12 |
