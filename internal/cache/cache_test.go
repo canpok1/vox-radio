@@ -449,7 +449,7 @@ func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
 		Title:    "エピソード",
 		Datetime: "2026-06-01T00:00:00Z",
 		Corners: []model.ManifestCorner{
-			{Title: "コーナーA"},
+			model.NewManifestCorner("", "コーナーA", "", nil, nil),
 		},
 	}
 	rd := model.Rundown{}

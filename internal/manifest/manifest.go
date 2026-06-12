@@ -35,13 +35,9 @@ func Build(p BuildParams) model.Manifest {
 			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
-		manifestCorners = append(manifestCorners, model.ManifestCorner{
-			ID:       c.ID,
-			Title:    c.Title,
-			Summary:  cs.Summary,
-			Points:   model.NonNil(cs.Points),
-			Articles: refs,
-		})
+		manifestCorners = append(manifestCorners, model.NewManifestCorner(
+			c.ID, c.Title, cs.Summary, cs.Points, refs,
+		))
 	}
 	return model.Manifest{
 		Title:             p.Program.Title,

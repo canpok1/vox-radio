@@ -207,11 +207,11 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 			}
 			if rda, ok := rdArticleByDedupKey[ar.DedupKey]; ok {
 				ae.Summary = rda.Summary
-				ae.Points = model.NonNil(rda.Points)
+				ae.Points = rda.Points
 			}
 			articles[j] = ae
 		}
-		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: model.NonNil(mc.Points), Articles: articles}
+		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: mc.Points, Articles: articles}
 	}
 
 	casts := make([]CastEntry, len(m.Casts))

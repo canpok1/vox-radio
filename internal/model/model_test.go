@@ -940,6 +940,62 @@ func TestProgramSummary_UnmarshalJSON_NoteCharacterIDsNormalized(t *testing.T) {
 	}
 }
 
+func TestNewRundownArticle_NilPointsNormalized(t *testing.T) {
+	a := model.NewRundownArticle("k", "u", "t", "s", nil, "src", "au", "pub")
+	if a.Points == nil {
+		t.Error("Points should be non-nil after NewRundownArticle with nil")
+	}
+	if len(a.Points) != 0 {
+		t.Errorf("Points should be empty, got %v", a.Points)
+	}
+}
+
+func TestNewRundownArticle_NonNilPointsPreserved(t *testing.T) {
+	a := model.NewRundownArticle("k", "u", "t", "s", []string{"p1", "p2"}, "src", "au", "pub")
+	if len(a.Points) != 2 || a.Points[0] != "p1" {
+		t.Errorf("Points: got %v, want [p1 p2]", a.Points)
+	}
+}
+
+func TestRundownArticle_UnmarshalJSON_NilPointsNormalized(t *testing.T) {
+	data := []byte(`{"dedup_key":"k","title":"t","summary":"s","points":null}`)
+	var a model.RundownArticle
+	if err := json.Unmarshal(data, &a); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if a.Points == nil {
+		t.Error("Points should be non-nil after unmarshal with null")
+	}
+}
+
+func TestNewManifestCorner_NilPointsNormalized(t *testing.T) {
+	c := model.NewManifestCorner("id", "title", "summary", nil, nil)
+	if c.Points == nil {
+		t.Error("Points should be non-nil after NewManifestCorner with nil")
+	}
+	if len(c.Points) != 0 {
+		t.Errorf("Points should be empty, got %v", c.Points)
+	}
+}
+
+func TestNewManifestCorner_NonNilPointsPreserved(t *testing.T) {
+	c := model.NewManifestCorner("id", "title", "s", []string{"p1"}, nil)
+	if len(c.Points) != 1 || c.Points[0] != "p1" {
+		t.Errorf("Points: got %v, want [p1]", c.Points)
+	}
+}
+
+func TestManifestCorner_UnmarshalJSON_NilPointsNormalized(t *testing.T) {
+	data := []byte(`{"id":"id","title":"t","summary":"s","points":null,"articles":[]}`)
+	var c model.ManifestCorner
+	if err := json.Unmarshal(data, &c); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if c.Points == nil {
+		t.Error("Points should be non-nil after unmarshal with null")
+	}
+}
+
 func TestNewCornerSummary_NilPointsNormalized(t *testing.T) {
 	cs := model.NewCornerSummary("summary text", nil)
 	if cs.Points == nil {

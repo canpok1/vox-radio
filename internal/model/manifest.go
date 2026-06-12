@@ -69,6 +69,26 @@ type ManifestCorner struct {
 	Articles []ArticleRef `json:"articles"`
 }
 
+// NewManifestCorner creates a ManifestCorner with Points guaranteed non-nil.
+func NewManifestCorner(id, title, summary string, points []string, articles []ArticleRef) ManifestCorner {
+	return ManifestCorner{
+		ID: id, Title: title, Summary: summary,
+		Points: NonNil(points), Articles: articles,
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler to normalize Points to a non-nil empty slice.
+func (c *ManifestCorner) UnmarshalJSON(data []byte) error {
+	type alias ManifestCorner
+	var raw alias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*c = ManifestCorner(raw)
+	c.Points = NonNil(c.Points)
+	return nil
+}
+
 // Manifest is the content manifest output alongside an mp3 episode.
 type Manifest struct {
 	Title             string             `json:"title"`

@@ -1,5 +1,7 @@
 package model
 
+import "encoding/json"
+
 type RundownArticle struct {
 	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
 	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
@@ -9,6 +11,26 @@ type RundownArticle struct {
 	Source    string   `json:"source,omitempty"`    // 媒体名
 	Author    string   `json:"author,omitempty"`    // 著者名
 	Published string   `json:"published,omitempty"` // 配信日時（RFC3339）
+}
+
+// NewRundownArticle creates a RundownArticle with Points guaranteed non-nil.
+func NewRundownArticle(dedupKey, url, title, summary string, points []string, source, author, published string) RundownArticle {
+	return RundownArticle{
+		DedupKey: dedupKey, URL: url, Title: title, Summary: summary,
+		Points: NonNil(points), Source: source, Author: author, Published: published,
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler to normalize Points to a non-nil empty slice.
+func (a *RundownArticle) UnmarshalJSON(data []byte) error {
+	type alias RundownArticle
+	var raw alias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*a = RundownArticle(raw)
+	a.Points = NonNil(a.Points)
+	return nil
 }
 
 type RundownCorner struct {
