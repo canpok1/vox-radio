@@ -3,6 +3,7 @@ package model_test
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -940,78 +941,113 @@ func TestProgramSummary_UnmarshalJSON_NoteCharacterIDsNormalized(t *testing.T) {
 	}
 }
 
-func TestNewRundownArticle_NilPointsNormalized(t *testing.T) {
-	a := model.NewRundownArticle("k", "u", "t", "s", nil, "src", "au", "pub")
-	if a.Points == nil {
-		t.Error("Points should be non-nil after NewRundownArticle with nil")
+func TestNewXxx_PointsNormalization(t *testing.T) {
+	tests := []struct {
+		name      string
+		getPoints func() []string
+		want      []string
+	}{
+		{
+			name: "NewRundownArticle/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewRundownArticle("k", "u", "t", "s", nil, "src", "au", "pub").Points
+			},
+			want: []string{},
+		},
+		{
+			name: "NewRundownArticle/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewRundownArticle("k", "u", "t", "s", []string{"p1", "p2"}, "src", "au", "pub").Points
+			},
+			want: []string{"p1", "p2"},
+		},
+		{
+			name: "NewManifestCorner/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewManifestCorner("id", "title", "s", nil, nil).Points
+			},
+			want: []string{},
+		},
+		{
+			name: "NewManifestCorner/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewManifestCorner("id", "title", "s", []string{"p1"}, nil).Points
+			},
+			want: []string{"p1"},
+		},
+		{
+			name: "NewCornerSummary/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewCornerSummary("summary text", nil).Points
+			},
+			want: []string{},
+		},
+		{
+			name: "NewCornerSummary/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewCornerSummary("s", []string{"p1", "p2"}).Points
+			},
+			want: []string{"p1", "p2"},
+		},
 	}
-	if len(a.Points) != 0 {
-		t.Errorf("Points should be empty, got %v", a.Points)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.getPoints()
+			if got == nil {
+				t.Fatal("Points should be non-nil")
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("Points: got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestNewRundownArticle_NonNilPointsPreserved(t *testing.T) {
-	a := model.NewRundownArticle("k", "u", "t", "s", []string{"p1", "p2"}, "src", "au", "pub")
-	if len(a.Points) != 2 || a.Points[0] != "p1" {
-		t.Errorf("Points: got %v, want [p1 p2]", a.Points)
-	}
-}
-
-func TestRundownArticle_UnmarshalJSON_NilPointsNormalized(t *testing.T) {
-	data := []byte(`{"dedup_key":"k","title":"t","summary":"s","points":null}`)
-	var a model.RundownArticle
-	if err := json.Unmarshal(data, &a); err != nil {
-		t.Fatalf("unmarshal failed: %v", err)
-	}
-	if a.Points == nil {
-		t.Error("Points should be non-nil after unmarshal with null")
-	}
-}
-
-func TestNewManifestCorner_NilPointsNormalized(t *testing.T) {
-	c := model.NewManifestCorner("id", "title", "summary", nil, nil)
-	if c.Points == nil {
-		t.Error("Points should be non-nil after NewManifestCorner with nil")
-	}
-	if len(c.Points) != 0 {
-		t.Errorf("Points should be empty, got %v", c.Points)
-	}
-}
-
-func TestNewManifestCorner_NonNilPointsPreserved(t *testing.T) {
-	c := model.NewManifestCorner("id", "title", "s", []string{"p1"}, nil)
-	if len(c.Points) != 1 || c.Points[0] != "p1" {
-		t.Errorf("Points: got %v, want [p1]", c.Points)
-	}
-}
-
-func TestManifestCorner_UnmarshalJSON_NilPointsNormalized(t *testing.T) {
-	data := []byte(`{"id":"id","title":"t","summary":"s","points":null,"articles":[]}`)
-	var c model.ManifestCorner
-	if err := json.Unmarshal(data, &c); err != nil {
-		t.Fatalf("unmarshal failed: %v", err)
-	}
-	if c.Points == nil {
-		t.Error("Points should be non-nil after unmarshal with null")
-	}
-}
-
-func TestNewCornerSummary_NilPointsNormalized(t *testing.T) {
+func TestNewCornerSummary_SummaryPreserved(t *testing.T) {
 	cs := model.NewCornerSummary("summary text", nil)
-	if cs.Points == nil {
-		t.Error("Points should be non-nil after NewCornerSummary with nil")
-	}
-	if len(cs.Points) != 0 {
-		t.Errorf("Points should be empty, got %v", cs.Points)
-	}
 	if cs.Summary != "summary text" {
 		t.Errorf("Summary: got %q, want %q", cs.Summary, "summary text")
 	}
 }
 
-func TestNewCornerSummary_NonNilPointsPreserved(t *testing.T) {
-	cs := model.NewCornerSummary("s", []string{"p1", "p2"})
-	if len(cs.Points) != 2 || cs.Points[0] != "p1" {
-		t.Errorf("Points: got %v, want [p1 p2]", cs.Points)
+func TestXxx_UnmarshalJSON_PointsNormalized(t *testing.T) {
+	tests := []struct {
+		name      string
+		data      []byte
+		getPoints func([]byte) ([]string, error)
+	}{
+		{
+			name: "RundownArticle/points:null",
+			data: []byte(`{"dedup_key":"k","title":"t","summary":"s","points":null}`),
+			getPoints: func(data []byte) ([]string, error) {
+				var a model.RundownArticle
+				if err := json.Unmarshal(data, &a); err != nil {
+					return nil, err
+				}
+				return a.Points, nil
+			},
+		},
+		{
+			name: "ManifestCorner/points:null",
+			data: []byte(`{"id":"id","title":"t","summary":"s","points":null,"articles":[]}`),
+			getPoints: func(data []byte) ([]string, error) {
+				var c model.ManifestCorner
+				if err := json.Unmarshal(data, &c); err != nil {
+					return nil, err
+				}
+				return c.Points, nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pts, err := tt.getPoints(tt.data)
+			if err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+			if pts == nil {
+				t.Error("Points should be non-nil after unmarshal with null")
+			}
+		})
 	}
 }
