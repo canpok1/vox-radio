@@ -32,10 +32,8 @@ type FeedsConfig struct {
 }
 
 // SourceConfig defines the data sources for a corner (feeds and individual article URLs).
-type SourceConfig struct {
-	Feeds    []FeedEntry `yaml:"feeds"`
-	Articles []string    `yaml:"articles"`
-}
+// It is an alias for FeedsConfig, ensuring the two remain in sync.
+type SourceConfig = FeedsConfig
 
 // AudioRef references a jingle or SE asset by type and asset ID.
 type AudioRef struct {
