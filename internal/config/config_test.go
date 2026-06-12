@@ -1511,15 +1511,23 @@ func float64Ptr(v float64) *float64 { return &v }
 
 func TestPromptInjectionConfig_EffectiveOnDetect_Default(t *testing.T) {
 	c := config.PromptInjectionConfig{}
-	if got := c.EffectiveOnDetect(); got != config.OnDetectSanitize {
-		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectSanitize)
+	if got := c.EffectiveOnDetect(); got != config.OnDetectExclude {
+		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectExclude)
 	}
 }
 
-func TestPromptInjectionConfig_EffectiveOnDetect_Sanitize(t *testing.T) {
-	c := config.PromptInjectionConfig{OnDetect: config.OnDetectSanitize}
-	if got := c.EffectiveOnDetect(); got != config.OnDetectSanitize {
-		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectSanitize)
+func TestPromptInjectionConfig_EffectiveOnDetect_Exclude(t *testing.T) {
+	c := config.PromptInjectionConfig{OnDetect: config.OnDetectExclude}
+	if got := c.EffectiveOnDetect(); got != config.OnDetectExclude {
+		t.Errorf("EffectiveOnDetect() = %q, want %q", got, config.OnDetectExclude)
+	}
+}
+
+func TestPromptInjectionConfig_EffectiveOnDetect_SanitizeLegacy(t *testing.T) {
+	// "sanitize" is a deprecated alias for "exclude" (backward compatibility)
+	c := config.PromptInjectionConfig{OnDetect: "sanitize"}
+	if got := c.EffectiveOnDetect(); got != config.OnDetectExclude {
+		t.Errorf("EffectiveOnDetect() with legacy 'sanitize' = %q, want %q", got, config.OnDetectExclude)
 	}
 }
 
@@ -1556,8 +1564,8 @@ func TestLoadConfig_Security_ZeroValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
-	if cfg.Security.PromptInjection.EffectiveOnDetect() != config.OnDetectSanitize {
-		t.Errorf("default on_detect should be %q", config.OnDetectSanitize)
+	if cfg.Security.PromptInjection.EffectiveOnDetect() != config.OnDetectExclude {
+		t.Errorf("default on_detect should be %q", config.OnDetectExclude)
 	}
 	if cfg.Security.PromptInjection.EffectiveMaxBodyChars() != config.DefaultMaxArticleBodyChars {
 		t.Errorf("default max_body_chars should be DefaultMaxArticleBodyChars=%d", config.DefaultMaxArticleBodyChars)

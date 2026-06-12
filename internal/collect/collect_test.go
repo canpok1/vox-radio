@@ -820,7 +820,7 @@ func TestCollector_Run_RSS_ExcludesInjectionArticle(t *testing.T) {
 	cfg := config.FeedsConfig{
 		Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 10}},
 	}
-	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectSanitize, MaxBodyChars: 10000}
+	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectExclude, MaxBodyChars: 10000}
 	c := collect.New(server.Client(), collect.WithSanitizePolicy(policy))
 	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {
@@ -846,7 +846,7 @@ func TestCollector_Run_Article_ExcludesInjectionArticle(t *testing.T) {
 	cfg := config.FeedsConfig{
 		Articles: []string{server.URL + "/article.html"},
 	}
-	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectSanitize, MaxBodyChars: 10000}
+	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectExclude, MaxBodyChars: 10000}
 	c := collect.New(server.Client(), collect.WithSanitizePolicy(policy))
 	result, err := c.Run(context.Background(), cfg, nil)
 	if err != nil {

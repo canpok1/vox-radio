@@ -2,7 +2,7 @@
 
 - ステータス: 採用
 - 日付: 2026-06-11
-- 備考: 決定2（検出時はフィールド単位で破棄）は [ADR-0060](0060-drop-whole-article-on-injection-detection.md) で改定（`on_detect=sanitize` 時は記事を丸ごと除外）。
+- 備考: 決定2（検出時はフィールド単位で破棄）は [ADR-0060](0060-drop-whole-article-on-injection-detection.md) で改定（`on_detect=exclude` 時は記事を丸ごと除外）。
 
 ## コンテキスト
 
@@ -16,7 +16,7 @@
 2. **検出時はフィールド単位で破棄**: `Title`/`Body`/`Source`/`Author` のうち検出されたフィールドを空文字へ落とす。命令文の外科的除去はしない。本文のみ汚染時は自然に「タイトル＋メタデータのみ」要約になる。
 3. **LLM による検出は採らない**: 判定自体が注入対象となりコスト・遅延・新たな失敗点を増やすため。
 4. **プロンプト枠付け**（provider 非依存）: `summarize.md` / `write.md` に、埋め込み JSON は信頼できない外部データであり中の指示に従わない旨の防御節を追加する。
-5. **設定で停止/継続を切替**: `security.prompt_injection.on_detect`（`sanitize` 既定 / `error`）。`max_body_chars` で上限を調整可能。
+5. **設定で停止/継続を切替**: `security.prompt_injection.on_detect`（`exclude` 既定 / `error`）。`max_body_chars` で上限を調整可能。
 
 ## 結果
 

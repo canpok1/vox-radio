@@ -152,7 +152,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 }
 
 // applySanitize applies prompt-injection sanitization to a.
-// Returns (true, nil) when an injection pattern is detected under on_detect=sanitize (caller must exclude the article).
+// Returns (true, nil) when an injection pattern is detected under on_detect=exclude (caller must exclude the article).
 // Returns (true, err) when on_detect=error and injection is detected.
 func (c *Collector) applySanitize(a *model.Article) (bool, error) {
 	flagged, err := sanitizeArticle(a, c.policy)
