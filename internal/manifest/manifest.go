@@ -43,9 +43,6 @@ func Build(p BuildParams) model.Manifest {
 			Articles: refs,
 		})
 	}
-	notes := model.NonNil(p.ConversationNotes)
-	casts := model.NonNil(p.Rundown.Casts)
-
 	return model.Manifest{
 		Title:             p.Program.Title,
 		EpisodeNumber:     p.EpisodeNumber,
@@ -55,7 +52,7 @@ func Build(p BuildParams) model.Manifest {
 		Datetime:          p.GeneratedAt.UTC().Format(time.RFC3339),
 		AudioFile:         p.AudioFile,
 		Corners:           manifestCorners,
-		ConversationNotes: notes,
-		Casts:             casts,
+		ConversationNotes: model.NonNil(p.ConversationNotes),
+		Casts:             model.NonNil(p.Rundown.Casts),
 	}
 }
