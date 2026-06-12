@@ -2,6 +2,7 @@
 
 - ステータス: 採用
 - 日付: 2026-06-11
+- 備考: 決定2（検出時はフィールド単位で破棄）は [ADR-0060](0060-drop-whole-article-on-injection-detection.md) で改定（`on_detect=sanitize` 時は記事を丸ごと除外）。
 
 ## コンテキスト
 
