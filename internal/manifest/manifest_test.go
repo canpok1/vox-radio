@@ -355,23 +355,18 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 }
 
 func TestBuild_DedupKeyCopiedToArticleRef(t *testing.T) {
-	corners := []config.CornerConfig{
+	p := newMinimalBuildParams()
+	p.Corners = []config.CornerConfig{
 		{ID: "opening", Title: "オープニング"},
 		{ID: "tech", Title: "今日のテックニュース"},
 	}
-	p := manifest.BuildParams{
-		Program:     config.ProgramConfig{Title: "テスト番組", Description: "説明"},
-		Corners:     corners,
-		AudioFile:   "episode.mp3",
-		GeneratedAt: fixedTime,
-		Rundown: model.Rundown{
-			Corners: []model.RundownCorner{
-				{
-					ID:    "tech",
-					Title: "今日のテックニュース",
-					Articles: []model.RundownArticle{
-						{DedupKey: "sha256:abc123", URL: "https://example.com/1", Title: "記事1", Points: []string{}},
-					},
+	p.Rundown = model.Rundown{
+		Corners: []model.RundownCorner{
+			{
+				ID:    "tech",
+				Title: "今日のテックニュース",
+				Articles: []model.RundownArticle{
+					{DedupKey: "sha256:abc123", URL: "https://example.com/1", Title: "記事1", Points: []string{}},
 				},
 			},
 		},
