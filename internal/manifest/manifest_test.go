@@ -239,6 +239,7 @@ func TestBuild(t *testing.T) {
 			t.Errorf("ConversationNotes: got %d, want 0", len(got.ConversationNotes))
 		}
 	})
+
 }
 
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
@@ -351,4 +352,36 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 			t.Errorf("Title = %q, want テスト番組", got.Title)
 		}
 	})
+}
+
+func TestBuild_DedupKeyCopiedToArticleRef(t *testing.T) {
+	corners := []config.CornerConfig{
+		{ID: "opening", Title: "オープニング"},
+		{ID: "tech", Title: "今日のテックニュース"},
+	}
+	p := manifest.BuildParams{
+		Program:     config.ProgramConfig{Title: "テスト番組", Description: "説明"},
+		Corners:     corners,
+		AudioFile:   "episode.mp3",
+		GeneratedAt: fixedTime,
+		Rundown: model.Rundown{
+			Corners: []model.RundownCorner{
+				{
+					ID:    "tech",
+					Title: "今日のテックニュース",
+					Articles: []model.RundownArticle{
+						{DedupKey: "sha256:abc123", URL: "https://example.com/1", Title: "記事1", Points: []string{}},
+					},
+				},
+			},
+		},
+	}
+	got := manifest.Build(p)
+	techCorner := got.Corners[1]
+	if len(techCorner.Articles) != 1 {
+		t.Fatalf("Articles count = %d, want 1", len(techCorner.Articles))
+	}
+	if techCorner.Articles[0].DedupKey != "sha256:abc123" {
+		t.Errorf("Articles[0].DedupKey = %q, want %q", techCorner.Articles[0].DedupKey, "sha256:abc123")
+	}
 }
