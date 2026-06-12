@@ -60,8 +60,8 @@ func TestArticles_Fields(t *testing.T) {
 		t.Error("expected at least one article in corner")
 	}
 	a := ca.Articles[0]
-	if a.URL == "" {
-		t.Error("URL must not be empty")
+	if a.DedupKey == "" {
+		t.Error("DedupKey must not be empty")
 	}
 	if a.Title == "" {
 		t.Error("Title must not be empty")
@@ -318,8 +318,8 @@ func TestRundown_Fields(t *testing.T) {
 		t.Error("Articles must not be empty")
 	}
 	a := c.Articles[0]
-	if a.URL == "" {
-		t.Error("Article.URL must not be empty")
+	if a.DedupKey == "" {
+		t.Error("Article.DedupKey must not be empty")
 	}
 	if a.Title == "" {
 		t.Error("Article.Title must not be empty")

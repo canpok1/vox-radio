@@ -31,7 +31,7 @@ var llmRoutes = []llmStepRoute{
 	{step: "corner_summary", header: "# [D] コーナー要約プロンプト"},
 }
 
-var urlInPromptRe = regexp.MustCompile(`"url":\s*"([^"]+)"`)
+var idInPromptRe = regexp.MustCompile(`"id":\s*"([^"]+)"`)
 
 // fakeLLM は OpenAI 互換 /chat/completions を模倣するモックサーバー。
 // レスポンスは各ステップの JSON Schema（クライアント側で検証される）に適合する固定値を返す。
@@ -104,22 +104,22 @@ func cannedResponse(step, prompt string) (string, error) {
 	case "summarize":
 		return `{"summary":"記事の一行要約です。","points":["要点1","要点2","要点3"]}`, nil
 	case "select":
-		// 候補記事の URL は fake feed の動的ポートを含むため、プロンプト本文から抽出して全件選択する。
-		matches := urlInPromptRe.FindAllStringSubmatch(prompt, -1)
+		// 候補記事の ID は DedupKey（sha256:...）のためプロンプト本文から抽出して全件選択する。
+		matches := idInPromptRe.FindAllStringSubmatch(prompt, -1)
 		if len(matches) == 0 {
-			return "", fmt.Errorf("select prompt contains no candidate urls")
+			return "", fmt.Errorf("select prompt contains no candidate ids")
 		}
-		urls := make([]string, 0, len(matches))
+		ids := make([]string, 0, len(matches))
 		seen := map[string]struct{}{}
 		for _, m := range matches {
 			if _, ok := seen[m[1]]; ok {
 				continue
 			}
 			seen[m[1]] = struct{}{}
-			urls = append(urls, m[1])
+			ids = append(ids, m[1])
 		}
 		b, _ := json.Marshal(map[string]any{
-			"selected_urls":    urls,
+			"selected_ids":     ids,
 			"selection_reason": "テスト用に候補記事を全件選択",
 		})
 		return string(b), nil

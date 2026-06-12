@@ -15,7 +15,8 @@ import (
 
 // selectArticle mirrors the articleForPrompt passed to select.md.
 type selectArticle struct {
-	URL   string `json:"url"`
+	ID    string `json:"id"`
+	URL   string `json:"url,omitempty"`
 	Title string `json:"title"`
 }
 
@@ -32,9 +33,9 @@ type selectCase struct {
 // selectOutputSchema is the JSON schema for the select.md output.
 var selectOutputSchema = json.RawMessage(`{
   "type": "object",
-  "required": ["selected_urls", "selection_reason"],
+  "required": ["selected_ids", "selection_reason"],
   "properties": {
-    "selected_urls": {
+    "selected_ids": {
       "type": "array",
       "items": {"type": "string"},
       "minItems": 1
@@ -71,7 +72,7 @@ var selectJudgeSchema = json.RawMessage(`{
 
 // selectOutput mirrors the select.md output for mechanical verification.
 type selectOutput struct {
-	SelectedURLs    []string `json:"selected_urls"`
+	SelectedIDs     []string `json:"selected_ids"`
 	SelectionReason string   `json:"selection_reason"`
 }
 
@@ -149,16 +150,16 @@ func TestSelectEval(t *testing.T) {
 			if err := json.Unmarshal(raw, &output); err != nil {
 				return nil, fmt.Errorf("unmarshal select output for case %s: %w", c.Name, err)
 			}
-			candidateURLs := make(map[string]bool, len(ec.Articles))
+			candidateIDs := make(map[string]bool, len(ec.Articles))
 			for _, a := range ec.Articles {
-				candidateURLs[a.URL] = true
+				candidateIDs[a.ID] = true
 			}
-			if len(output.SelectedURLs) == 0 {
-				t.Errorf("*** CONSTRAINT VIOLATION *** [%s] selected_urls is empty (min 1 required)", c.Name)
+			if len(output.SelectedIDs) == 0 {
+				t.Errorf("*** CONSTRAINT VIOLATION *** [%s] selected_ids is empty (min 1 required)", c.Name)
 			}
-			for _, u := range output.SelectedURLs {
-				if !candidateURLs[u] {
-					t.Errorf("*** CONSTRAINT VIOLATION *** [%s] selected URL %q is not in candidate set", c.Name, u)
+			for _, id := range output.SelectedIDs {
+				if !candidateIDs[id] {
+					t.Errorf("*** CONSTRAINT VIOLATION *** [%s] selected ID %q is not in candidate set", c.Name, id)
 				}
 			}
 

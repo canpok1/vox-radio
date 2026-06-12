@@ -2,8 +2,9 @@ package model
 
 // ArticleRef is a reference to an article included in a manifest corner.
 type ArticleRef struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	DedupKey string `json:"dedup_key"` // 重複判定キー（sha256:hex）
+	Title    string `json:"title"`
+	URL      string `json:"url,omitempty"` // 表示用リンク（空可）
 }
 
 // CornerSummary holds the LLM-generated summary for a single corner.

@@ -318,6 +318,8 @@ func TestPastURLs_EmptyEntries(t *testing.T) {
 }
 
 func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
+	const key1 = "sha256:aaa1111111111111111111111111111111111111111111111111111111111111"
+	const key2 = "sha256:bbb2222222222222222222222222222222222222222222222222222222222222"
 	m := model.Manifest{
 		Title:    "テストエピソード",
 		Summary:  "全体要約",
@@ -326,8 +328,8 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 			{
 				Title: "コーナーA",
 				Articles: []model.ArticleRef{
-					{Title: "記事1", URL: "https://example.com/1"},
-					{Title: "記事2", URL: "https://example.com/2"},
+					{DedupKey: key1, Title: "記事1", URL: "https://example.com/1"},
+					{DedupKey: key2, Title: "記事2", URL: "https://example.com/2"},
 				},
 			},
 		},
@@ -337,7 +339,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 			{
 				Title: "コーナーA",
 				Articles: []model.RundownArticle{
-					{URL: "https://example.com/1", Title: "記事1", Summary: "記事1の要約", Points: []string{"ポイント1"}},
+					{DedupKey: key1, URL: "https://example.com/1", Title: "記事1", Summary: "記事1の要約", Points: []string{"ポイント1"}},
 				},
 			},
 		},
@@ -369,6 +371,9 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 
 	// Article with rundown data should have summary and points merged
 	a1 := got.Corners[0].Articles[0]
+	if a1.DedupKey != key1 {
+		t.Errorf("Articles[0].DedupKey: got %q, want %q", a1.DedupKey, key1)
+	}
 	if a1.URL != "https://example.com/1" {
 		t.Errorf("Articles[0].URL: got %q, want %q", a1.URL, "https://example.com/1")
 	}
@@ -381,11 +386,14 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 
 	// Article without rundown data should still be included, with empty summary/points
 	a2 := got.Corners[0].Articles[1]
+	if a2.DedupKey != key2 {
+		t.Errorf("Articles[1].DedupKey: got %q, want %q", a2.DedupKey, key2)
+	}
 	if a2.URL != "https://example.com/2" {
 		t.Errorf("Articles[1].URL: got %q, want %q", a2.URL, "https://example.com/2")
 	}
 	if a2.Summary != "" {
-		t.Errorf("Articles[1].Summary: expected empty for unknown URL, got %q", a2.Summary)
+		t.Errorf("Articles[1].Summary: expected empty for unknown DedupKey, got %q", a2.Summary)
 	}
 	if len(a2.Points) != 0 {
 		t.Errorf("Articles[1].Points: expected empty, got %v", a2.Points)
@@ -872,5 +880,69 @@ func TestBuildEntryFromManifest_CastsNeverNil(t *testing.T) {
 	}
 	if len(got.Casts) != 0 {
 		t.Errorf("BuildEntryFromManifest: Casts: got %d, want 0", len(got.Casts))
+	}
+}
+
+func TestPastDedupKeys_ExtractsAllKeys(t *testing.T) {
+	entries := []cache.Entry{
+		{Corners: []cache.CornerEntry{
+			{Articles: []cache.ArticleEntry{
+				{DedupKey: "sha256:aaa"},
+				{DedupKey: "sha256:bbb"},
+			}},
+		}},
+		{Corners: []cache.CornerEntry{
+			{Articles: []cache.ArticleEntry{
+				{DedupKey: "sha256:ccc"},
+			}},
+		}},
+	}
+	got := cache.PastDedupKeys(entries)
+	if len(got) != 3 {
+		t.Fatalf("PastDedupKeys: got %d keys, want 3", len(got))
+	}
+}
+
+func TestPastDedupKeys_DeduplicatesKeys(t *testing.T) {
+	entries := []cache.Entry{
+		{Corners: []cache.CornerEntry{
+			{Articles: []cache.ArticleEntry{{DedupKey: "sha256:aaa"}}},
+		}},
+		{Corners: []cache.CornerEntry{
+			{Articles: []cache.ArticleEntry{{DedupKey: "sha256:aaa"}}},
+		}},
+	}
+	got := cache.PastDedupKeys(entries)
+	if len(got) != 1 {
+		t.Fatalf("PastDedupKeys: got %d keys (expected dedup=1)", len(got))
+	}
+}
+
+func TestPastDedupKeys_SkipsEmptyKeys(t *testing.T) {
+	// 旧エントリで DedupKey が空の場合はスキップ
+	entries := []cache.Entry{
+		{Corners: []cache.CornerEntry{
+			{Articles: []cache.ArticleEntry{
+				{URL: "https://example.com/1"}, // DedupKey なし（旧エントリ）
+				{DedupKey: "sha256:aaa"},
+			}},
+		}},
+	}
+	got := cache.PastDedupKeys(entries)
+	if len(got) != 1 {
+		t.Fatalf("PastDedupKeys: got %d keys, want 1 (empty DedupKey skipped)", len(got))
+	}
+	if got[0] != "sha256:aaa" {
+		t.Errorf("PastDedupKeys: got %q, want sha256:aaa", got[0])
+	}
+}
+
+func TestPastDedupKeys_EmptyEntries(t *testing.T) {
+	got := cache.PastDedupKeys([]cache.Entry{})
+	if got == nil {
+		t.Error("PastDedupKeys: expected non-nil slice for empty entries")
+	}
+	if len(got) != 0 {
+		t.Errorf("PastDedupKeys: expected empty slice, got %d", len(got))
 	}
 }

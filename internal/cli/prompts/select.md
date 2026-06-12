@@ -21,7 +21,7 @@
 {{corner}}
 ```
 
-## 候補記事（タイトルと URL のみ）
+## 候補記事（id・タイトル・URL）
 
 ```json
 {{articles}}
@@ -33,21 +33,21 @@
 
 ```json
 {
-  "selected_urls": [
-    "https://example.com/article/1",
-    "https://example.com/article/2"
+  "selected_ids": [
+    "sha256:a1b2c3d4...",
+    "sha256:e5f6g7h8..."
   ],
   "selection_reason": "AIチップ性能向上の記事が最も注目度が高く、次にその普及課題の記事を選んだ。この2本でコーナーの趣旨を網羅できる"
 }
 ```
 
-- `selected_urls`: 番組で紹介する記事の URL を**紹介順**に並べてください
+- `selected_ids`: 番組で紹介する記事の `id` を**紹介順**に並べてください
 - `selection_reason`: なぜこの記事をこの順で選んだか・どんな意図か、自由文で記述してください
 
 ## 注意事項
 
 - コーナーの趣旨（`content`）と目標放送時間（`target_duration_seconds`）に合った記事を選んでください
-- 候補記事がない場合でも最低1件は選ぶようにしてください（候補にある URL のみを使用してください）
-- `selected_urls` に含める URL は必ず候補記事の中から選んでください
+- 候補記事がない場合でも最低1件は選ぶようにしてください（候補にある `id` のみを使用してください）
+- `selected_ids` に含める `id` は必ず候補記事の中から選んでください
 - `selection_reason` は記事の選び方の意図・根拠を記述してください（話の流れの詳細設計は不要）
 - 日本語で回答してください

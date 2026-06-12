@@ -1,7 +1,8 @@
 package model
 
 type Article struct {
-	URL       string `json:"url"`
+	DedupKey  string `json:"dedup_key"`     // 重複判定キー（sha256:hex）。collect が設定する
+	URL       string `json:"url,omitempty"` // 表示用リンク（空可）
 	Title     string `json:"title"`
 	Body      string `json:"body"`
 	Source    string `json:"source,omitempty"`    // 媒体名（RSS feed.Title）

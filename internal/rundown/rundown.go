@@ -37,7 +37,7 @@ type LLMRundowner struct {
 	summarizer        summarize.Summarizer
 	flowDesigner      flow.Designer
 	fetcher           ArticleFetcher
-	excludedURLs      map[string]struct{}
+	excludedDedupKeys map[string]struct{}
 	cornerAppearances map[string]cache.CornerAppearance
 	logger            *slog.Logger
 }
@@ -51,19 +51,19 @@ func (r *LLMRundowner) SetCornerAppearances(m map[string]cache.CornerAppearance)
 
 // NewLLMRundowner creates a LLMRundowner.
 // fetcher may be nil (skips full-text fetch).
-// excludedURLs is the set of article URLs to exclude before selection (nil = no exclusion).
-func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, designer flow.Designer, fetcher ArticleFetcher, excludedURLs []string, opts ...Option) *LLMRundowner {
-	excluded := make(map[string]struct{}, len(excludedURLs))
-	for _, u := range excludedURLs {
-		excluded[u] = struct{}{}
+// excludedDedupKeys is the set of article DedupKeys to exclude before selection (nil = no exclusion).
+func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, designer flow.Designer, fetcher ArticleFetcher, excludedDedupKeys []string, opts ...Option) *LLMRundowner {
+	excluded := make(map[string]struct{}, len(excludedDedupKeys))
+	for _, k := range excludedDedupKeys {
+		excluded[k] = struct{}{}
 	}
 	r := &LLMRundowner{
-		selector:     selector,
-		summarizer:   summarizer,
-		flowDesigner: designer,
-		fetcher:      fetcher,
-		excludedURLs: excluded,
-		logger:       slog.Default(),
+		selector:          selector,
+		summarizer:        summarizer,
+		flowDesigner:      designer,
+		fetcher:           fetcher,
+		excludedDedupKeys: excluded,
+		logger:            slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -88,7 +88,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 
 		filtered := make([]model.Article, 0, len(cornerArticles))
 		for _, a := range cornerArticles {
-			if _, excluded := r.excludedURLs[a.URL]; !excluded {
+			if _, excluded := r.excludedDedupKeys[a.DedupKey]; !excluded {
 				filtered = append(filtered, a)
 			}
 		}
@@ -118,36 +118,38 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			return model.Rundown{}, fmt.Errorf("select corner %q: %w", corner.Title, err)
 		}
 
-		// Build URL→Article index for fast lookup
-		articleByURL := make(map[string]model.Article, len(cornerArticles))
+		// Build DedupKey→Article index for fast lookup
+		articleByDedupKey := make(map[string]model.Article, len(cornerArticles))
 		for _, a := range cornerArticles {
-			articleByURL[a.URL] = a
+			articleByDedupKey[a.DedupKey] = a
 		}
 
-		rdArticles := make([]model.RundownArticle, 0, len(selected.SelectedURLs))
-		for _, url := range selected.SelectedURLs {
-			a, ok := articleByURL[url]
+		rdArticles := make([]model.RundownArticle, 0, len(selected.SelectedIDs))
+		for _, id := range selected.SelectedIDs {
+			a, ok := articleByDedupKey[id]
 			if !ok {
 				continue
 			}
-			if r.fetcher != nil {
-				if fullText, err := r.fetcher.FetchFullText(ctx, url); err != nil {
-					r.logger.Warn("full text fetch failed, using feed body", "url", url, "err", err)
+			fetchURL := a.URL
+			if r.fetcher != nil && fetchURL != "" {
+				if fullText, err := r.fetcher.FetchFullText(ctx, fetchURL); err != nil {
+					r.logger.Warn("full text fetch failed, using feed body", "url", fetchURL, "err", err)
 				} else if fullText == "" {
-					r.logger.Warn("full text fetch returned empty body, using feed body", "url", url)
+					r.logger.Warn("full text fetch returned empty body, using feed body", "url", fetchURL)
 				} else {
 					a.Body = fullText
 				}
 			}
 			sum, err := r.summarizer.Summarize(ctx, a)
 			if err != nil {
-				return model.Rundown{}, fmt.Errorf("summarize %q: %w", url, err)
+				return model.Rundown{}, fmt.Errorf("summarize %q: %w", id, err)
 			}
 			points := sum.Points
 			if points == nil {
 				points = make([]string, 0)
 			}
 			rdArticles = append(rdArticles, model.RundownArticle{
+				DedupKey:  a.DedupKey,
 				URL:       a.URL,
 				Title:     a.Title,
 				Summary:   sum.Summary,

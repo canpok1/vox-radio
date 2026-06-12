@@ -91,7 +91,7 @@ func newEpisodegenCmd() *cobra.Command {
 			}
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
-			excludedURLs := cache.PastURLs(entries)
+			excludedDedupKeys := cache.PastDedupKeys(entries)
 			castAppearances := cache.CastAppearances(entries)
 			cornerAppearances := cache.CornerAppearances(entries)
 			writer.SetPastEpisodes(recent)
@@ -105,7 +105,7 @@ func newEpisodegenCmd() *cobra.Command {
 
 			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc), collect.WithSanitizePolicy(cfg.Security.PromptInjection))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedURLs, rundown.WithLogger(logger))
+			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedDedupKeys, rundown.WithLogger(logger))
 			rundowner.SetCornerAppearances(cornerAppearances)
 
 			scripter := script.NewLLMScriptGenerator(
@@ -124,7 +124,7 @@ func newEpisodegenCmd() *cobra.Command {
 				Spec:              p,
 				Config:            cfg,
 				Collector:         collector,
-				ExcludedURLs:      excludedURLs,
+				ExcludedDedupKeys: excludedDedupKeys,
 				Rundowner:         rundowner,
 				Scripter:          scripter,
 				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),

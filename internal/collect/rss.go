@@ -24,17 +24,31 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 
 	articles := make([]model.Article, 0, len(feed.Items))
 	for _, item := range feed.Items {
-		if _, skip := excluded[item.Link]; skip {
-			continue
-		}
 		body := item.Content
 		if body == "" {
 			body = item.Description
 		}
+
+		// GUID が非空なら DedupKey に bodyText 不要 → 除外チェック後まで HTML パースを遅延
+		var bodyText string
+		if item.GUID == "" {
+			bodyText = extractTextFromHTML(body)
+		}
+		key := FeedDedupKey(url, item.GUID, item.Title, bodyText)
+
+		if _, skip := excluded[key]; skip {
+			continue
+		}
+
+		// GUID 非空で遅延した場合はここで HTML パース
+		if item.GUID != "" {
+			bodyText = extractTextFromHTML(body)
+		}
 		articles = append(articles, model.Article{
+			DedupKey:  key,
 			URL:       item.Link,
 			Title:     item.Title,
-			Body:      extractTextFromHTML(body),
+			Body:      bodyText,
 			Source:    source,
 			Author:    extractAuthor(item),
 			Published: extractPublished(item, c.loc),

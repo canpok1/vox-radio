@@ -14,9 +14,9 @@ import (
 
 var selectSchema = json.RawMessage(`{
   "type": "object",
-  "required": ["selected_urls", "selection_reason"],
+  "required": ["selected_ids", "selection_reason"],
   "properties": {
-    "selected_urls": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "selected_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
     "selection_reason": {"type": "string"}
   },
   "additionalProperties": false
@@ -24,7 +24,7 @@ var selectSchema = json.RawMessage(`{
 
 // SelectResult holds the output of a selection operation.
 type SelectResult struct {
-	SelectedURLs    []string
+	SelectedIDs     []string
 	SelectionReason string
 }
 
@@ -42,12 +42,13 @@ type CornerAppearanceSetter interface {
 
 // articleForPrompt is the subset of article data passed to the LLM (body excluded to save tokens).
 type articleForPrompt struct {
-	URL   string `json:"url"`
+	ID    string `json:"id"`            // DedupKey: 選別結果の id として返却される
+	URL   string `json:"url,omitempty"` // 表示用（空可）
 	Title string `json:"title"`
 }
 
 type selectResponse struct {
-	SelectedURLs    []string `json:"selected_urls"`
+	SelectedIDs     []string `json:"selected_ids"`
 	SelectionReason string   `json:"selection_reason"`
 }
 
@@ -89,7 +90,7 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 
 	aps := make([]articleForPrompt, len(articles))
 	for i, a := range articles {
-		aps[i] = articleForPrompt{URL: a.URL, Title: a.Title}
+		aps[i] = articleForPrompt{ID: a.DedupKey, URL: a.URL, Title: a.Title}
 	}
 	articlesJSON, err := json.Marshal(aps)
 	if err != nil {
@@ -121,9 +122,9 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 		return SelectResult{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	urls := resp.SelectedURLs
-	if urls == nil {
-		urls = make([]string, 0)
+	ids := resp.SelectedIDs
+	if ids == nil {
+		ids = make([]string, 0)
 	}
-	return SelectResult{SelectedURLs: urls, SelectionReason: resp.SelectionReason}, nil
+	return SelectResult{SelectedIDs: ids, SelectionReason: resp.SelectionReason}, nil
 }

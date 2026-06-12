@@ -101,8 +101,25 @@ func buildArticlesText(articles []model.ArticleRef, articleTmpl string) string {
 	var parts []string
 	for _, a := range articles {
 		line := articleTmpl
+		if a.URL == "" {
+			// Remove Slack link wrappers "<{url}|...>" → inner text only
+			const open = "<{url}|"
+			for {
+				before, after, found := strings.Cut(line, open)
+				if !found {
+					break
+				}
+				inner, tail, ok := strings.Cut(after, ">")
+				if !ok {
+					break
+				}
+				line = before + inner + tail
+			}
+			line = strings.ReplaceAll(line, "{url}", "")
+		} else {
+			line = strings.ReplaceAll(line, "{url}", a.URL)
+		}
 		line = strings.ReplaceAll(line, "{title}", a.Title)
-		line = strings.ReplaceAll(line, "{url}", a.URL)
 		parts = append(parts, line)
 	}
 	return strings.Join(parts, "\n")
