@@ -50,8 +50,8 @@ type SecurityConfig struct {
 }
 
 func validateSecurityConfig(cfg *SecurityConfig) error {
-	switch cfg.PromptInjection.OnDetect {
-	case "", OnDetectExclude, "sanitize", OnDetectError: // "sanitize" is a deprecated alias for "exclude"
+	switch cfg.PromptInjection.EffectiveOnDetect() {
+	case OnDetectExclude, OnDetectError:
 		return nil
 	default:
 		return fmt.Errorf("security.prompt_injection.on_detect: invalid value %q (must be %q or %q)", cfg.PromptInjection.OnDetect, OnDetectExclude, OnDetectError)
