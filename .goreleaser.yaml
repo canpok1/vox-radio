@@ -1,6 +1,11 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
+before:
+  hooks:
+    - mkdir -p dist
+    - sed 's/__VERSION__/{{ .Tag }}/g' scripts/install.sh > dist/install.sh
+
 builds:
   - id: vox-radio
     main: ./cmd/vox-radio
@@ -37,6 +42,8 @@ changelog:
       - "^test:"
 
 release:
+  extra_files:
+    - glob: dist/install.sh
   footer: >-
 
     ---
