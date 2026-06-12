@@ -112,4 +112,3 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | 違反 | 該当ルール | 対応タスク |
 |---|---|---|
-| `assemble/filter.go` の `buildRun()` 150行 / `collectRuns()` 100行 | §7 関数分割 | T8: フェーズ別ヘルパー抽出 |

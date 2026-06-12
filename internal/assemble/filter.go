@@ -268,31 +268,15 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64, 
 			}
 
 		case model.SegmentTypeBGM:
-			// Finalize active BGM interval if any.
-			if current.activeBGMStart >= 0 {
-				current.bgmIntervals = append(current.bgmIntervals, bgmInterval{
-					startMs:   current.activeBGMStart,
-					endMs:     current.durationMs,
-					assetName: current.activeBGMName,
-				})
-			}
+			current.closeBGMInterval(current.durationMs)
 			if seg.AssetName != "" {
 				current.activeBGMStart = current.durationMs
 				current.activeBGMName = seg.AssetName
-			} else {
-				current.activeBGMStart = -1
-				current.activeBGMName = ""
 			}
 
 		case model.SegmentTypeJingle:
-			// Finalize active BGM (doesn't cross jingle boundary).
-			if current.activeBGMStart >= 0 {
-				current.bgmIntervals = append(current.bgmIntervals, bgmInterval{
-					startMs:   current.activeBGMStart,
-					endMs:     -1,
-					assetName: current.activeBGMName,
-				})
-			}
+			// BGM does not cross jingle boundaries.
+			current.closeBGMInterval(-1)
 			runs = append(runs, current.runData)
 			jingles = append(jingles, seg.AssetName)
 			current = newRun()
@@ -300,13 +284,7 @@ func collectRuns(script model.Script, clips []model.ClipMeta, pauseSec float64, 
 	}
 
 	// Finalize active BGM for the last run.
-	if current.activeBGMStart >= 0 {
-		current.bgmIntervals = append(current.bgmIntervals, bgmInterval{
-			startMs:   current.activeBGMStart,
-			endMs:     -1,
-			assetName: current.activeBGMName,
-		})
-	}
+	current.closeBGMInterval(-1)
 	runs = append(runs, current.runData)
 
 	return runs, jingles
@@ -323,35 +301,49 @@ func newRun() runBuilder {
 	return runBuilder{activeBGMStart: -1}
 }
 
-// buildRun constructs the filter_complex entries for a single run and returns the output label.
-func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
-	speechLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, assets, runIdx)
-	currentLabel := speechLabel
+// closeBGMInterval finalizes the active BGM interval if any, appending it to bgmIntervals.
+// endMs=-1 means the interval extends to the end of the run.
+// After the call activeBGMStart is reset to -1.
+func (rb *runBuilder) closeBGMInterval(endMs int) {
+	if rb.activeBGMStart < 0 {
+		return
+	}
+	rb.bgmIntervals = append(rb.bgmIntervals, bgmInterval{
+		startMs:   rb.activeBGMStart,
+		endMs:     endMs,
+		assetName: rb.activeBGMName,
+	})
+	rb.activeBGMStart = -1
+	rb.activeBGMName = ""
+}
 
-	// Single pass over bgmIntervals to determine hasBGM, hasDucking, and firstDuckRatio.
-	hasBGM, hasDucking := false, false
-	firstDuckRatio := 0.0
-	for _, interval := range run.bgmIntervals {
-		if e, ok := assets.BGM[interval.assetName]; ok {
-			hasBGM = true
-			if e.DuckRatio > 0 && !hasDucking {
-				hasDucking = true
-				firstDuckRatio = e.DuckRatio
-			}
+// buildRun constructs the filter_complex entries for a single run and returns the output label.
+// Processing is split into four phases: speech concat → duck split → SE overlay → BGM overlay.
+func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.AssetsConfig, runIdx int) string {
+	currentLabel := buildSpeechConcat(b, run.speechItems, clipInputIdx, assets, runIdx)
+	currentLabel, duckLabel, duckRatio := buildDuckSplit(b, run.bgmIntervals, assets, runIdx, currentLabel)
+	currentLabel = buildSEOverlay(b, run.seEvents, assets, runIdx, currentLabel)
+	return buildBGMOverlay(b, run, assets, runIdx, currentLabel, duckLabel, duckRatio)
+}
+
+// buildDuckSplit checks whether any BGM interval has duck_ratio > 0.
+// If so, it emits an asplit=2 filter on currentLabel and returns the new mix label,
+// a sidechain duck label, and the duck ratio. Otherwise currentLabel, "", and 0 are returned.
+func buildDuckSplit(b *filterBuilder, bgmIntervals []bgmInterval, assets config.AssetsConfig, runIdx int, currentLabel string) (string, string, float64) {
+	for _, interval := range bgmIntervals {
+		if e, ok := assets.BGM[interval.assetName]; ok && e.DuckRatio > 0 {
+			mixLabel := fmt.Sprintf("[run%d_speech_mix]", runIdx)
+			duckLabel := fmt.Sprintf("[run%d_speech_duck]", runIdx)
+			b.addFilter(fmt.Sprintf("%sasplit=2%s%s", currentLabel, mixLabel, duckLabel))
+			return mixLabel, duckLabel, e.DuckRatio
 		}
 	}
+	return currentLabel, "", 0
+}
 
-	// Split speech for sidechain ducking if any BGM has duck_ratio > 0.
-	duckLabel := ""
-	if hasDucking {
-		mixLabel := fmt.Sprintf("[run%d_speech_mix]", runIdx)
-		duckLabel = fmt.Sprintf("[run%d_speech_duck]", runIdx)
-		b.addFilter(fmt.Sprintf("%sasplit=2%s%s", currentLabel, mixLabel, duckLabel))
-		currentLabel = mixLabel
-	}
-
-	// SE overlay.
-	for i, ev := range run.seEvents {
+// buildSEOverlay overlays SE events onto currentLabel and returns the updated label.
+func buildSEOverlay(b *filterBuilder, seEvents []seEvent, assets config.AssetsConfig, runIdx int, currentLabel string) string {
+	for i, ev := range seEvents {
 		entry, ok := assets.SE[ev.assetName]
 		if !ok {
 			continue
@@ -367,106 +359,113 @@ func buildRun(b *filterBuilder, run runData, clipInputIdx []int, assets config.A
 			currentLabel, delayedLabel, nextLabel))
 		currentLabel = nextLabel
 	}
+	return currentLabel
+}
 
-	// BGM intervals overlay.
-	if hasBGM {
-		// Pre-compute crossfade parameters for adjacent BGM pairs.
-		// crossfadeExtSec[i] = seconds to extend interval i (due to following crossfade with i+1).
-		// crossfadeFadeInSec[i] = fade-in duration override for interval i (due to preceding crossfade from i-1).
-		crossfadeExtSec := make([]float64, len(run.bgmIntervals))
-		crossfadeFadeInSec := make([]float64, len(run.bgmIntervals))
-		for i := 0; i < len(run.bgmIntervals)-1; i++ {
-			curr := run.bgmIntervals[i]
-			next := run.bgmIntervals[i+1]
-			currEntry, currOk := assets.BGM[curr.assetName]
-			nextEntry, nextOk := assets.BGM[next.assetName]
-			if !currOk || !nextOk {
-				continue
-			}
-			currEndMs := curr.endMs
-			if currEndMs < 0 {
-				currEndMs = run.durationMs
-			}
-			if next.startMs == currEndMs {
-				// Adjacent BGM pair: apply crossfade.
-				overlapSec := math.Min(currEntry.EffectiveFadeOut(), nextEntry.EffectiveFadeIn())
-				crossfadeExtSec[i] = overlapSec
-				crossfadeFadeInSec[i+1] = overlapSec
-			}
+// computeBGMCrossfade returns per-interval crossfade extension seconds and fade-in overrides
+// for adjacent BGM pairs. crossfadeExtSec[i] is the extra duration added to interval i so
+// it overlaps with interval i+1; crossfadeFadeInSec[i+1] overrides interval i+1's fade-in.
+func computeBGMCrossfade(intervals []bgmInterval, assets config.AssetsConfig, durationMs int) (crossfadeExtSec, crossfadeFadeInSec []float64) {
+	crossfadeExtSec = make([]float64, len(intervals))
+	crossfadeFadeInSec = make([]float64, len(intervals))
+	for i := 0; i < len(intervals)-1; i++ {
+		curr := intervals[i]
+		next := intervals[i+1]
+		currEntry, currOk := assets.BGM[curr.assetName]
+		nextEntry, nextOk := assets.BGM[next.assetName]
+		if !currOk || !nextOk {
+			continue
 		}
-
-		bgmParts := make([]string, 0, len(run.bgmIntervals))
-		for i, interval := range run.bgmIntervals {
-			entry, ok := assets.BGM[interval.assetName]
-			if !ok {
-				continue
-			}
-			var bgmIdx int
-			if entry.Loop {
-				bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
-			} else {
-				bgmIdx = b.addInput(entry.File)
-			}
-			intervalLabel := fmt.Sprintf("[run%d_bgm%d_raw]", runIdx, i)
-			endMs := interval.endMs
-			if endMs < 0 {
-				endMs = run.durationMs
-			}
-			durationSec := float64(endMs-interval.startMs)/1000.0 + crossfadeExtSec[i]
-
-			// Determine fade-in/out durations.
-			fadeIn := crossfadeFadeInSec[i]
-			if fadeIn == 0 {
-				fadeIn = entry.EffectiveFadeIn()
-			}
-			fadeOut := crossfadeExtSec[i]
-			if fadeOut == 0 {
-				fadeOut = entry.EffectiveFadeOut()
-			}
-			// Clamp to half duration to prevent overlapping fades.
-			half := durationSec / 2
-			if fadeIn > half {
-				fadeIn = half
-			}
-			if fadeOut > half {
-				fadeOut = half
-			}
-
-			key := fmt.Sprintf("run%d_bgm%d", runIdx, i)
-			trimLabel := fmt.Sprintf("[%s_trim]", key)
-			b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f%s", bgmIdx, entry.Volume, durationSec, trimLabel))
-			label := applyFadeIn(b, trimLabel, key, fadeIn)
-			label = applyFadeOut(b, label, key, fadeOut)
-			b.addFilter(fmt.Sprintf("%sadelay=%d|%d%s", label, interval.startMs, interval.startMs, intervalLabel))
-			bgmParts = append(bgmParts, intervalLabel)
+		currEndMs := curr.endMs
+		if currEndMs < 0 {
+			currEndMs = durationMs
 		}
-
-		if len(bgmParts) > 0 {
-			var bgmFullLabel string
-			if len(bgmParts) == 1 {
-				bgmFullLabel = bgmParts[0]
-			} else {
-				bgmFullLabel = fmt.Sprintf("[run%d_bgm_full]", runIdx)
-				b.addFilter(fmt.Sprintf("%samix=inputs=%d:duration=longest:normalize=0%s",
-					strings.Join(bgmParts, ""), len(bgmParts), bgmFullLabel))
-			}
-
-			// Apply sidechain ducking if duck ratio > 0.
-			if duckLabel != "" {
-				bgmDuckedLabel := fmt.Sprintf("[run%d_bgm_ducked]", runIdx)
-				b.addFilter(fmt.Sprintf("%s%ssidechaincompress=threshold=0.02:ratio=%.1f%s",
-					bgmFullLabel, duckLabel, firstDuckRatio, bgmDuckedLabel))
-				bgmFullLabel = bgmDuckedLabel
-			}
-
-			afterBGMLabel := fmt.Sprintf("[run%d_after_bgm]", runIdx)
-			b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=first:normalize=0%s",
-				currentLabel, bgmFullLabel, afterBGMLabel))
-			currentLabel = afterBGMLabel
+		if next.startMs == currEndMs {
+			overlapSec := math.Min(currEntry.EffectiveFadeOut(), nextEntry.EffectiveFadeIn())
+			crossfadeExtSec[i] = overlapSec
+			crossfadeFadeInSec[i+1] = overlapSec
 		}
 	}
+	return crossfadeExtSec, crossfadeFadeInSec
+}
 
-	return currentLabel
+// buildBGMOverlay mixes BGM intervals (with crossfade and optional sidechain ducking) into currentLabel.
+// duckLabel and duckRatio are produced by buildDuckSplit; duckLabel=="" means no ducking.
+func buildBGMOverlay(b *filterBuilder, run runData, assets config.AssetsConfig, runIdx int, currentLabel, duckLabel string, duckRatio float64) string {
+	bgmParts := buildBGMIntervalParts(b, run, assets, runIdx)
+	if len(bgmParts) == 0 {
+		return currentLabel
+	}
+
+	var bgmFullLabel string
+	if len(bgmParts) == 1 {
+		bgmFullLabel = bgmParts[0]
+	} else {
+		bgmFullLabel = fmt.Sprintf("[run%d_bgm_full]", runIdx)
+		b.addFilter(fmt.Sprintf("%samix=inputs=%d:duration=longest:normalize=0%s",
+			strings.Join(bgmParts, ""), len(bgmParts), bgmFullLabel))
+	}
+
+	// Apply sidechain ducking if duck ratio > 0.
+	if duckLabel != "" {
+		bgmDuckedLabel := fmt.Sprintf("[run%d_bgm_ducked]", runIdx)
+		b.addFilter(fmt.Sprintf("%s%ssidechaincompress=threshold=0.02:ratio=%.1f%s",
+			bgmFullLabel, duckLabel, duckRatio, bgmDuckedLabel))
+		bgmFullLabel = bgmDuckedLabel
+	}
+
+	afterBGMLabel := fmt.Sprintf("[run%d_after_bgm]", runIdx)
+	b.addFilter(fmt.Sprintf("%s%samix=inputs=2:duration=first:normalize=0%s",
+		currentLabel, bgmFullLabel, afterBGMLabel))
+	return afterBGMLabel
+}
+
+// buildBGMIntervalParts builds filter entries for each BGM interval in the run,
+// returning the list of interval output labels for subsequent mixing.
+// Returns an empty slice when no known BGM asset is active.
+func buildBGMIntervalParts(b *filterBuilder, run runData, assets config.AssetsConfig, runIdx int) []string {
+	crossfadeExtSec, crossfadeFadeInSec := computeBGMCrossfade(run.bgmIntervals, assets, run.durationMs)
+	bgmParts := make([]string, 0, len(run.bgmIntervals))
+	for i, interval := range run.bgmIntervals {
+		entry, ok := assets.BGM[interval.assetName]
+		if !ok {
+			continue
+		}
+		var bgmIdx int
+		if entry.Loop {
+			bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
+		} else {
+			bgmIdx = b.addInput(entry.File)
+		}
+		intervalLabel := fmt.Sprintf("[run%d_bgm%d_raw]", runIdx, i)
+		endMs := interval.endMs
+		if endMs < 0 {
+			endMs = run.durationMs
+		}
+		durationSec := float64(endMs-interval.startMs)/1000.0 + crossfadeExtSec[i]
+
+		// Determine fade-in/out durations; clamp to half duration to prevent overlapping fades.
+		fadeIn := crossfadeFadeInSec[i]
+		if fadeIn == 0 {
+			fadeIn = entry.EffectiveFadeIn()
+		}
+		fadeOut := crossfadeExtSec[i]
+		if fadeOut == 0 {
+			fadeOut = entry.EffectiveFadeOut()
+		}
+		half := durationSec / 2
+		fadeIn = min(fadeIn, half)
+		fadeOut = min(fadeOut, half)
+
+		key := fmt.Sprintf("run%d_bgm%d", runIdx, i)
+		trimLabel := fmt.Sprintf("[%s_trim]", key)
+		b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f%s", bgmIdx, entry.Volume, durationSec, trimLabel))
+		label := applyFadeIn(b, trimLabel, key, fadeIn)
+		label = applyFadeOut(b, label, key, fadeOut)
+		b.addFilter(fmt.Sprintf("%sadelay=%d|%d%s", label, interval.startMs, interval.startMs, intervalLabel))
+		bgmParts = append(bgmParts, intervalLabel)
+	}
+	return bgmParts
 }
 
 // buildSpeechConcat generates filter entries for the speech timeline of a run.
