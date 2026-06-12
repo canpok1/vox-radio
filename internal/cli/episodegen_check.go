@@ -32,28 +32,12 @@ func newEpisodegenCheckCmd() *cobra.Command {
 				return err
 			}
 
-			if err := config.ValidateEpisodeSpecProgram(p); err != nil {
-				return err
-			}
-
-			if err := config.ValidateEpisodeSpecAssets(p); err != nil {
-				return err
-			}
-
 			cfg, err := config.LoadConfig(configPath(cmd))
 			if err != nil {
 				return fmt.Errorf("load config for cast validation: %w", err)
 			}
 
-			if err := config.ValidateEpisodeSpecCast(p); err != nil {
-				return err
-			}
-
-			if err := config.ValidateEpisodeSpecCasts(p, cfg.Characters); err != nil {
-				return err
-			}
-
-			if err := config.ValidateEpisodeSpecCorners(p); err != nil {
+			if err := p.Validate(cfg.Characters); err != nil {
 				return err
 			}
 

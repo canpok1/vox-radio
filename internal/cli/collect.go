@@ -41,7 +41,7 @@ source フィールドのないコーナーはスキップされます。
 				return fmt.Errorf("load spec: %w", err)
 			}
 
-			if err := config.ValidateEpisodeSpecCorners(p); err != nil {
+			if err := p.ValidateCorners(); err != nil {
 				return fmt.Errorf("spec validation: %w", err)
 			}
 
