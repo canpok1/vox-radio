@@ -75,7 +75,7 @@ func truncateBody(body string, maxChars int) string {
 	return string(runes[:maxChars])
 }
 
-// containsInjectionPattern returns the matched pattern string if s contains a
+// containsInjectionPattern returns the matched text if s contains a
 // known prompt-injection phrase, or empty string if none matched.
 func containsInjectionPattern(s string) string {
 	for _, re := range injectionPatterns {
