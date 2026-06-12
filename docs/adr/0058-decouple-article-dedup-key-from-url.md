@@ -14,7 +14,7 @@ collect が取得する記事の一意性判定は `model.Article.URL` に一元
 
 重複判定の識別子を URL から分離し、`Article.DedupKey` を新設する。URL は表示専用（空可）へ降格する。
 
-1. **DedupKey の算出はソース種別ごと**: フィードは `item.GUID`（無ければ内容ハッシュ）。Web ページは本文ハッシュ `sha256(正規化した title+body)`。共通ヘルパー `contentHash` を collect に置き両経路から呼ぶ。
+1. **DedupKey はソース種別ごとに算出し、ソース URL で名前空間化する**: 識別材料はフィードなら `item.GUID`（無ければ正規化した本文）、Web ページなら正規化した本文。最終キーは `sha256(ソースURL + 区切り + 識別材料)`（`sha256:<hex>`）。RSS の `<guid>` は同一フィード内でのみ一意で、フィード間では連番等が衝突し得るため、フィード URL／ページ URL を名前空間に含めて全ソース横断で一意にする。共通ヘルパーを collect に置き両経路から呼ぶ。
 2. **識別子の連鎖を URL→DedupKey へ全面移行**: `Article → RundownArticle → ArticleRef(manifest) → ArticleEntry(cache)` まで DedupKey をスレッドし、除外・マージ・選別の各キーを DedupKey にする。cache は `dedup_key` を保存し `PastURLs`→`PastDedupKeys`。
 3. **選別 LLM の識別子を `id` へ**: `select.md`／スキーマの `url`/`selected_urls` を `id`/`selected_ids` に改名し DedupKey を授受する。
 4. **URL は表示専用**: manifest/slack は URL が空のとき欠落を許容する。
