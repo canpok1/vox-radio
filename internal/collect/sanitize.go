@@ -1,0 +1,126 @@
+package collect
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/model"
+)
+
+// injectionPatterns lists conservative regexps that match known prompt-injection phrases.
+// Each pattern targets a specific injection technique; false positives are minimized
+// by requiring explicit instruction-override vocabulary.
+var injectionPatterns = []*regexp.Regexp{
+	// Japanese: override previous/above instructions
+	regexp.MustCompile(`(?i)(以前|これまで|上記)の指示を(無視|忘れ)`),
+	// Japanese: "follow the next instruction"
+	regexp.MustCompile(`次の指示に従って`),
+	// Japanese: "you are now ..." identity override
+	regexp.MustCompile(`あなたは(今|これ)から`),
+	// Japanese: ignore output format
+	regexp.MustCompile(`出力(形式)?を無視`),
+	// English: ignore/disregard/forget instructions
+	regexp.MustCompile(`(?i)(ignore|disregard|forget).{0,30}(above|previous|prior|all previous) instructions`),
+	// English: "you are now" identity override
+	regexp.MustCompile(`(?i)you are now `),
+	// Role markers at the start of a word (system:, assistant:, <system>)
+	regexp.MustCompile(`(?i)\bsystem:`),
+	regexp.MustCompile(`(?i)\bassistant:`),
+	regexp.MustCompile(`(?i)<system>`),
+}
+
+// invisibleCharRanges holds ranges of rune values to remove.
+// Kept as sorted pairs [lo, hi] (inclusive on both ends).
+var invisibleCharRanges = [][2]rune{
+	{0x0001, 0x0008}, // C0 controls excluding \t (0x09)
+	{0x000B, 0x000C}, // vertical tab, form feed
+	{0x000E, 0x001F}, // remaining C0 controls (excluding \n=0x0A, \t=0x09)
+	{0x007F, 0x009F}, // DEL + C1 controls
+	{0x200B, 0x200D}, // zero-width space, ZWNJ, ZWJ
+	{0x202A, 0x202E}, // bidi embedding/override controls
+	{0x2066, 0x2069}, // bidi isolate controls
+	{0xFEFF, 0xFEFF}, // BOM / zero-width no-break space
+}
+
+// removeInvisibleChars strips invisible and potentially-obfuscating characters.
+// Newline (\n, 0x0A) and tab (\t, 0x09) are preserved.
+func removeInvisibleChars(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if !isInvisible(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func isInvisible(r rune) bool {
+	for _, pair := range invisibleCharRanges {
+		if r >= pair[0] && r <= pair[1] {
+			return true
+		}
+	}
+	return false
+}
+
+// truncateBody limits body to at most maxChars runes.
+func truncateBody(body string, maxChars int) string {
+	if utf8.RuneCountInString(body) <= maxChars {
+		return body
+	}
+	runes := []rune(body)
+	return string(runes[:maxChars])
+}
+
+// containsInjectionPattern returns the matched pattern string if s contains a
+// known prompt-injection phrase, or empty string if none matched.
+func containsInjectionPattern(s string) string {
+	for _, re := range injectionPatterns {
+		if loc := re.FindString(s); loc != "" {
+			return re.String()
+		}
+	}
+	return ""
+}
+
+// sanitizeArticle cleans a in-place and returns (flagged, error).
+// flagged is true when an injection pattern was detected in any field.
+// On on_detect=error the function returns an error immediately on the first detection.
+// On on_detect=sanitize (default) the offending field is set to "" and processing continues.
+func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (bool, error) {
+	// Phase 1: remove invisible chars from all text fields
+	a.Title = removeInvisibleChars(a.Title)
+	a.Body = removeInvisibleChars(a.Body)
+	a.Source = removeInvisibleChars(a.Source)
+	a.Author = removeInvisibleChars(a.Author)
+
+	// Phase 2: truncate body
+	a.Body = truncateBody(a.Body, policy.EffectiveMaxBodyChars())
+
+	// Phase 3: detect injection patterns field by field
+	fields := []struct {
+		name string
+		ptr  *string
+	}{
+		{"Title", &a.Title},
+		{"Body", &a.Body},
+		{"Source", &a.Source},
+		{"Author", &a.Author},
+	}
+
+	flagged := false
+	for _, f := range fields {
+		if pat := containsInjectionPattern(*f.ptr); pat != "" {
+			flagged = true
+			if policy.EffectiveOnDetect() == config.OnDetectError {
+				return true, fmt.Errorf("prompt injection detected in article %s field %s (pattern: %s)", a.URL, f.name, pat)
+			}
+			*f.ptr = ""
+		}
+	}
+	return flagged, nil
+}

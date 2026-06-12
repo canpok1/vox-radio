@@ -29,7 +29,10 @@ func validateConfig(cfg *Config) error {
 	if err := validateVoicevoxPresets(cfg.Voicevox.Presets); err != nil {
 		return err
 	}
-	return validateLLMConfig(&cfg.LLM)
+	if err := validateLLMConfig(&cfg.LLM); err != nil {
+		return err
+	}
+	return validateSecurityConfig(&cfg.Security)
 }
 
 // LoadConfigStrict loads common settings from the given YAML file path with strict parsing.

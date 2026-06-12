@@ -18,6 +18,7 @@ type Collector struct {
 	client *http.Client
 	logger *slog.Logger
 	loc    *time.Location
+	policy config.PromptInjectionConfig
 }
 
 // Option configures a Collector.
@@ -31,6 +32,11 @@ func WithLogger(l *slog.Logger) Option {
 // WithLocation sets the timezone used for converting article published times.
 func WithLocation(loc *time.Location) Option {
 	return func(c *Collector) { c.loc = loc }
+}
+
+// WithSanitizePolicy sets the prompt-injection sanitize policy applied to each fetched article.
+func WithSanitizePolicy(p config.PromptInjectionConfig) Option {
+	return func(c *Collector) { c.policy = p }
 }
 
 // New creates a Collector. If client is nil, a client with retry-enabled
@@ -60,6 +66,11 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 		if err != nil {
 			return nil, fmt.Errorf("fetch feed %s: %w", feed.URL, err)
 		}
+		for i := range items {
+			if err := c.applySanitize(&items[i]); err != nil {
+				return nil, err
+			}
+		}
 		articles = append(articles, items...)
 	}
 
@@ -67,6 +78,9 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 		article, err := c.fetchArticle(ctx, u)
 		if err != nil {
 			return nil, fmt.Errorf("fetch article %s: %w", u, err)
+		}
+		if err := c.applySanitize(article); err != nil {
+			return nil, err
 		}
 		articles = append(articles, *article)
 	}
@@ -132,4 +146,17 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 	logger.Info(fmt.Sprintf("完了 (%d記事 / %dコーナー, %.1fs)", totalArticles, len(result), time.Since(start).Seconds()))
 
 	return model.Articles{Corners: result}, nil
+}
+
+// applySanitize applies prompt-injection sanitization to a.
+// WARN is logged when a field is dropped; an error is returned when on_detect=error.
+func (c *Collector) applySanitize(a *model.Article) error {
+	flagged, err := sanitizeArticle(a, c.policy)
+	if err != nil {
+		return err
+	}
+	if flagged {
+		c.logger.Warn("prompt injection pattern detected; field(s) dropped", "url", a.URL)
+	}
+	return nil
 }
