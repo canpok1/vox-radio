@@ -3,6 +3,7 @@ package model_test
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -942,85 +943,70 @@ func TestProgramSummary_UnmarshalJSON_NoteCharacterIDsNormalized(t *testing.T) {
 
 func TestNewXxx_PointsNormalization(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      []string
-		getPoints  func([]string) []string
-		want       []string
-		extraCheck func(*testing.T)
+		name      string
+		getPoints func() []string
+		want      []string
 	}{
 		{
-			name:  "NewRundownArticle/nil→empty non-nil",
-			input: nil,
-			getPoints: func(p []string) []string {
-				return model.NewRundownArticle("k", "u", "t", "s", p, "src", "au", "pub").Points
+			name: "NewRundownArticle/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewRundownArticle("k", "u", "t", "s", nil, "src", "au", "pub").Points
 			},
 			want: []string{},
 		},
 		{
-			name:  "NewRundownArticle/non-nil→preserved",
-			input: []string{"p1", "p2"},
-			getPoints: func(p []string) []string {
-				return model.NewRundownArticle("k", "u", "t", "s", p, "src", "au", "pub").Points
+			name: "NewRundownArticle/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewRundownArticle("k", "u", "t", "s", []string{"p1", "p2"}, "src", "au", "pub").Points
 			},
 			want: []string{"p1", "p2"},
 		},
 		{
-			name:  "NewManifestCorner/nil→empty non-nil",
-			input: nil,
-			getPoints: func(p []string) []string {
-				return model.NewManifestCorner("id", "title", "s", p, nil).Points
+			name: "NewManifestCorner/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewManifestCorner("id", "title", "s", nil, nil).Points
 			},
 			want: []string{},
 		},
 		{
-			name:  "NewManifestCorner/non-nil→preserved",
-			input: []string{"p1"},
-			getPoints: func(p []string) []string {
-				return model.NewManifestCorner("id", "title", "s", p, nil).Points
+			name: "NewManifestCorner/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewManifestCorner("id", "title", "s", []string{"p1"}, nil).Points
 			},
 			want: []string{"p1"},
 		},
 		{
-			name:  "NewCornerSummary/nil→empty non-nil",
-			input: nil,
-			getPoints: func(p []string) []string {
-				return model.NewCornerSummary("summary text", p).Points
+			name: "NewCornerSummary/nil→empty non-nil",
+			getPoints: func() []string {
+				return model.NewCornerSummary("summary text", nil).Points
 			},
 			want: []string{},
-			extraCheck: func(t *testing.T) {
-				cs := model.NewCornerSummary("summary text", nil)
-				if cs.Summary != "summary text" {
-					t.Errorf("Summary: got %q, want %q", cs.Summary, "summary text")
-				}
-			},
 		},
 		{
-			name:  "NewCornerSummary/non-nil→preserved",
-			input: []string{"p1", "p2"},
-			getPoints: func(p []string) []string {
-				return model.NewCornerSummary("s", p).Points
+			name: "NewCornerSummary/non-nil→preserved",
+			getPoints: func() []string {
+				return model.NewCornerSummary("s", []string{"p1", "p2"}).Points
 			},
 			want: []string{"p1", "p2"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.getPoints(tt.input)
+			got := tt.getPoints()
 			if got == nil {
 				t.Fatal("Points should be non-nil")
 			}
-			if len(got) != len(tt.want) {
-				t.Fatalf("Points: got %v, want %v", got, tt.want)
-			}
-			for i := range tt.want {
-				if got[i] != tt.want[i] {
-					t.Errorf("Points[%d]: got %q, want %q", i, got[i], tt.want[i])
-				}
-			}
-			if tt.extraCheck != nil {
-				tt.extraCheck(t)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("Points: got %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestNewCornerSummary_SetsAllFields(t *testing.T) {
+	cs := model.NewCornerSummary("summary text", nil)
+	if cs.Summary != "summary text" {
+		t.Errorf("Summary: got %q, want %q", cs.Summary, "summary text")
 	}
 }
 
