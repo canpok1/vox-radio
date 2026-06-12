@@ -115,12 +115,9 @@ INSTALLED_VERSION=""
 if command -v vox-radio >/dev/null 2>&1; then
   raw_ver="$(vox-radio --version 2>/dev/null || true)"
   # cobra デフォルト形式: "vox-radio version 0.0.1" → "v0.0.1" に正規化
-  ver_num="$(echo "$raw_ver" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
-  if [[ -n "$ver_num" ]]; then
-    INSTALLED_VERSION="v${ver_num}"
-  else
-    INSTALLED_VERSION="$raw_ver"
-  fi
+  INSTALLED_VERSION="$(printf '%s' "$raw_ver" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  INSTALLED_VERSION="${INSTALLED_VERSION:+v${INSTALLED_VERSION}}"
+  INSTALLED_VERSION="${INSTALLED_VERSION:-$raw_ver}"
 fi
 
 if [[ -n "$INSTALLED_VERSION" ]]; then
