@@ -35,12 +35,11 @@ func Build(p BuildParams) model.Manifest {
 			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
-		points := model.NonNil(cs.Points)
 		manifestCorners = append(manifestCorners, model.ManifestCorner{
 			ID:       c.ID,
 			Title:    c.Title,
 			Summary:  cs.Summary,
-			Points:   points,
+			Points:   model.NonNil(cs.Points),
 			Articles: refs,
 		})
 	}

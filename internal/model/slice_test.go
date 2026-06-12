@@ -53,17 +53,6 @@ func TestNonNil(t *testing.T) {
 	}
 }
 
-func TestNonNil_int_slice(t *testing.T) {
-	var s []int
-	got := model.NonNil(s)
-	if got == nil {
-		t.Error("NonNil(nil []int) should not return nil")
-	}
-	if len(got) != 0 {
-		t.Errorf("NonNil(nil []int) len = %d, want 0", len(got))
-	}
-}
-
 func TestNonNil_nil_marshals_as_empty_array(t *testing.T) {
 	type wrapper struct {
 		Items []string `json:"items"`

@@ -207,9 +207,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 			}
 			if rda, ok := rdArticleByDedupKey[ar.DedupKey]; ok {
 				ae.Summary = rda.Summary
-				if rda.Points != nil {
-					ae.Points = rda.Points
-				}
+				ae.Points = model.NonNil(rda.Points)
 			}
 			articles[j] = ae
 		}

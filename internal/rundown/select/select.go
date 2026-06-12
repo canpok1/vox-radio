@@ -122,9 +122,5 @@ func (s *LLMSelector) Select(ctx context.Context, corner config.CornerConfig, ar
 		return SelectResult{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	ids := resp.SelectedIDs
-	if ids == nil {
-		ids = make([]string, 0)
-	}
-	return SelectResult{SelectedIDs: ids, SelectionReason: resp.SelectionReason}, nil
+	return SelectResult{SelectedIDs: model.NonNil(resp.SelectedIDs), SelectionReason: resp.SelectionReason}, nil
 }
