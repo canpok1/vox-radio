@@ -50,10 +50,10 @@ type stubScripter struct {
 	gotRundown model.Rundown
 }
 
-func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, model.ScriptLines, error) {
+func (s *stubScripter) Generate(_ context.Context, _ config.ProgramConfig, rundown model.Rundown, _ []config.CornerConfig, _ map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error) {
 	s.called = true
 	s.gotRundown = rundown
-	return s.script, s.lines, s.err
+	return s.script, s.lines, nil, s.err
 }
 
 type stubSynther struct {

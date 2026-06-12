@@ -2,15 +2,11 @@ package script_test
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
-	"github.com/canpok1/vox-radio/internal/fileio"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/write"
@@ -107,10 +103,9 @@ func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: []model.AssetCatalogEntry{{Name: "chime"}}},
-		"",
 	)
 
-	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
+	got, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -124,10 +119,9 @@ func TestLLMScriptGenerator_Generate_WriteError(t *testing.T) {
 		&mockWriter{err: context.Canceled},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), testCorners, testChars)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -151,10 +145,9 @@ func TestLLMScriptGenerator_Generate_CharCountRegen(t *testing.T) {
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -176,10 +169,9 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenWithinThreshold(t *testing.T) {
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,10 +185,9 @@ func TestLLMScriptGenerator_Generate_EmptyRundown(t *testing.T) {
 		&mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{Casts: make([]model.RundownCast, 0)}, testCorners, testChars)
+	got, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, model.Rundown{Casts: make([]model.RundownCast, 0)}, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -210,10 +201,9 @@ func TestLLMScriptGenerator_Generate_EmptyCorners(t *testing.T) {
 		&mockWriter{},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	got, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), []config.CornerConfig{}, testChars)
+	got, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, corneredRundown("AIコーナー", model.RundownArticle{URL: "u"}), []config.CornerConfig{}, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -234,10 +224,9 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -267,9 +256,9 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)}, "", script.WithLogger(logger))
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)}, script.WithLogger(logger))
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -290,10 +279,9 @@ func TestLLMScriptGenerator_Generate_ReturnsScriptLines(t *testing.T) {
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, sl, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
+	_, sl, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -349,10 +337,9 @@ func TestLLMScriptGenerator_Generate_ReturnsCornerStructureInLines(t *testing.T)
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, sl, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, sl, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -437,10 +424,9 @@ func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing
 		mw,
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -625,7 +611,7 @@ func TestMergeCornerCast_AbsentCastExcluded(t *testing.T) {
 func TestGenerate_UsesEpisodeCastsForAssignments(t *testing.T) {
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
 	md := &mockDirector{}
-	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{})
 
 	rundown := model.Rundown{
 		Corners: []model.RundownCorner{{Title: "AIコーナー", Flow: "フロー"}},
@@ -637,7 +623,7 @@ func TestGenerate_UsesEpisodeCastsForAssignments(t *testing.T) {
 		{Title: "AIコーナー", Cast: map[string]string{"guest_char": "特別ゲスト役"}, LengthSec: 15},
 	}
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -666,7 +652,7 @@ func TestGenerate_UsesEpisodeCastsForAssignments(t *testing.T) {
 func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちは"}}}
 	md := &mockDirector{}
-	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{}, "")
+	gen := script.NewLLMScriptGenerator(mw, md, model.AssetCatalog{})
 
 	// absent_char は casts に含まれないが corner.Cast に書かれている
 	rundown := model.Rundown{
@@ -677,7 +663,7 @@ func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 		{Title: "AIコーナー", Cast: map[string]string{"absent_char": "休演中"}, LengthSec: 15},
 	}
 
-	_, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -705,11 +691,10 @@ func TestLLMScriptGenerator_Generate_ProgramDirectionInReturnedLines(t *testing.
 		&mockWriter{lines: lines},
 		&mockDirector{},
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		"",
 	)
 
 	program := config.ProgramConfig{Direction: "番組全体の演出方針テスト"}
-	_, sl, err := gen.Generate(context.Background(), program, rundown, corners, testChars)
+	_, sl, _, err := gen.Generate(context.Background(), program, rundown, corners, testChars)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -718,8 +703,7 @@ func TestLLMScriptGenerator_Generate_ProgramDirectionInReturnedLines(t *testing.
 	}
 }
 
-func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T) {
-	workDir := t.TempDir()
+func TestGenerate_ReturnsProofreadResult_WhenProofreadSucceeds(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -738,22 +722,15 @@ func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T)
 		&mockWriter{lines: lines},
 		md,
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
 	)
 
-	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	_, _, got, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	path := filepath.Join(workDir, fileio.FileProofread)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("expected %s to exist: %v", fileio.FileProofread, err)
-	}
-
-	var got model.ProofreadResult
-	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
+	if got == nil {
+		t.Fatal("expected non-nil ProofreadResult, got nil")
 	}
 	if len(got.Corrections) != 1 {
 		t.Fatalf("Corrections: got %d, want 1", len(got.Corrections))
@@ -766,8 +743,7 @@ func TestGenerate_SavesProofreadIntermediate_WhenProofreadSucceeds(t *testing.T)
 	}
 }
 
-func TestGenerate_DoesNotSaveProofreadIntermediate_WhenProofreadDisabled(t *testing.T) {
-	workDir := t.TempDir()
+func TestGenerate_ReturnsNilProofreadResult_WhenProofreadDisabled(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -776,27 +752,24 @@ func TestGenerate_DoesNotSaveProofreadIntermediate_WhenProofreadDisabled(t *test
 		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 
-	// proofreadResult is nil (proofread not set or failed)
 	md := &mockDirector{proofreadResult: nil}
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
 		md,
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
 	)
 
-	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	_, _, got, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	path := filepath.Join(workDir, fileio.FileProofread)
-	if _, err := os.Stat(path); err == nil {
-		t.Errorf("%s should NOT exist when proofread is disabled, but it does", fileio.FileProofread)
+	if got != nil {
+		t.Errorf("expected nil ProofreadResult when proofread disabled, got %+v", got)
 	}
 }
 
-func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
-	workDir := t.TempDir()
+func TestGenerate_ReturnsEmptyCorrections_WhenProofreadFoundNone(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
 		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
 	)
@@ -805,32 +778,24 @@ func TestGenerate_SavesProofreadIntermediate_EmptyCorrections(t *testing.T) {
 		{Title: "AIコーナー", Content: "AI紹介", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},
 	}
 
-	// proofread ran but found 0 corrections
 	pr := &model.ProofreadResult{Corrections: make([]model.ProofreadCorrection, 0)}
 	md := &mockDirector{proofreadResult: pr}
 	gen := script.NewLLMScriptGenerator(
 		&mockWriter{lines: lines},
 		md,
 		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
-		workDir,
 	)
 
-	if _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars); err != nil {
+	_, _, got, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	path := filepath.Join(workDir, fileio.FileProofread)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("expected %s to exist even with 0 corrections: %v", fileio.FileProofread, err)
-	}
-
-	var got model.ProofreadResult
-	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatalf("%s must be valid ProofreadResult JSON: %v", fileio.FileProofread, err)
+	if got == nil {
+		t.Fatal("expected non-nil ProofreadResult even with 0 corrections")
 	}
 	if got.Corrections == nil {
-		t.Error("Corrections should be [] not null in JSON output")
+		t.Error("Corrections should be [] not nil")
 	}
 	if len(got.Corrections) != 0 {
 		t.Errorf("Corrections: got %d, want 0", len(got.Corrections))
