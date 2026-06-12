@@ -69,7 +69,7 @@
       {
         "url": "https://example.com/ai-chip-perf",
         "title": "最新AIチップの性能が従来比3倍に向上",
-        "summary": "新世代のAIチップが発表され、従来品と比較して推論速度が3倍向上した。",
+        "body": "新世代のAIチップが発表され、従来品と比較して推論速度が3倍向上した。",
         "points": ["推論速度が従来比3倍に向上", "消費電力は20%削減", "主要クラウドで今四半期中に提供開始"],
         "source": "TechNews",
         "published": "2024-05-30T09:00:00+09:00"
@@ -77,7 +77,7 @@
       {
         "url": "https://example.com/rust-async",
         "title": "Rustの非同期処理入門：async/awaitの使い方",
-        "summary": "Rustの非同期プログラミングの基礎と実践的な使い方を解説する記事。",
+        "body": "Rustの非同期プログラミングの基礎と実践的な使い方を解説する記事。",
         "points": ["async/awaitの基本構文を解説", "tokioランタイムの使い方", "エラーハンドリングのパターン紹介"],
         "source": "RustBlog"
       }
@@ -126,7 +126,7 @@
       {
         "url": "https://example.com/cloud-storage",
         "title": "主要クラウドストレージのコスト比較2024年版",
-        "summary": "AWS・GCP・Azureの主要ストレージサービスの料金を比較。GCPが最も安価であることが明らかになった。",
+        "body": "AWS・GCP・Azureの主要ストレージサービスの料金を比較。GCPが最も安価であることが明らかになった。",
         "points": ["GCPが最安値", "AWSは使いやすさで優位", "Azureは既存Windowsユーザーに有利"],
         "source": "CloudReport"
       }

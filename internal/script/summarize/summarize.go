@@ -12,9 +12,8 @@ import (
 
 var summarySchema = json.RawMessage(`{
   "type": "object",
-  "required": ["summary", "points"],
+  "required": ["points"],
   "properties": {
-    "summary": {"type": "string"},
     "points": {"type": "array", "items": {"type": "string"}}
   },
   "additionalProperties": false
@@ -35,8 +34,7 @@ func NewLLMSummarizer(client llm.Client, promptTemplate string, temperature floa
 }
 
 type summaryResponse struct {
-	Summary string   `json:"summary"`
-	Points  []string `json:"points"`
+	Points []string `json:"points"`
 }
 
 func (s *LLMSummarizer) Summarize(ctx context.Context, a model.Article) (model.Summary, error) {
@@ -62,8 +60,7 @@ func (s *LLMSummarizer) Summarize(ctx context.Context, a model.Article) (model.S
 	}
 
 	return model.Summary{
-		URL:     a.URL,
-		Summary: resp.Summary,
-		Points:  resp.Points,
+		URL:    a.URL,
+		Points: resp.Points,
 	}, nil
 }

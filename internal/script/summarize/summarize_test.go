@@ -24,7 +24,7 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 
 func TestLLMSummarizer_Summarize_Success(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"summary":"AIチップ要約","points":["性能2倍","省電力"]}`),
+		response: json.RawMessage(`{"points":["性能2倍","省電力"]}`),
 	}
 	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}", 0)
 
@@ -41,9 +41,6 @@ func TestLLMSummarizer_Summarize_Success(t *testing.T) {
 	if got.URL != article.URL {
 		t.Errorf("URL: got %q, want %q", got.URL, article.URL)
 	}
-	if got.Summary != "AIチップ要約" {
-		t.Errorf("Summary: got %q, want %q", got.Summary, "AIチップ要約")
-	}
 	if len(got.Points) != 2 {
 		t.Errorf("Points: got %d, want 2", len(got.Points))
 	}
@@ -51,7 +48,7 @@ func TestLLMSummarizer_Summarize_Success(t *testing.T) {
 
 func TestLLMSummarizer_Summarize_PromptContainsArticleJSON(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"summary":"要約","points":["p1"]}`),
+		response: json.RawMessage(`{"points":["p1"]}`),
 	}
 	s := summarize.NewLLMSummarizer(mc, "記事: {{article}}", 0)
 

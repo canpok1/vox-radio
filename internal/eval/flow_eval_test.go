@@ -15,10 +15,10 @@ import (
 
 // flowArticle mirrors the RundownArticle passed to flow.md.
 type flowArticle struct {
-	URL     string   `json:"url"`
-	Title   string   `json:"title"`
-	Summary string   `json:"summary"`
-	Points  []string `json:"points"`
+	URL    string   `json:"url"`
+	Title  string   `json:"title"`
+	Body   string   `json:"body"`
+	Points []string `json:"points"`
 }
 
 // flowCornerForProgram mirrors the cornerForProgram passed as part of {{program}}.

@@ -220,7 +220,7 @@ func TestRunner_Run_PassesRundownToScripter(t *testing.T) {
 				Title: "テストコーナー",
 				Flow:  "記事を順に紹介",
 				Articles: []model.RundownArticle{
-					{URL: "http://example.com", Title: "記事", Summary: "要約", Points: []string{"p1"}},
+					{URL: "http://example.com", Title: "記事", Body: "記事の本文", Points: []string{"p1"}},
 				},
 			},
 		},

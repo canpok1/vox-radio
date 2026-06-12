@@ -40,7 +40,7 @@ func TestBuild(t *testing.T) {
 				Title: "今日のテックニュース",
 				Flow:  "最新記事を紹介",
 				Articles: []model.RundownArticle{
-					{URL: "https://example.com/articles/123", Title: "記事タイトル", Summary: "要約", Points: []string{"p1"}},
+					{URL: "https://example.com/articles/123", Title: "記事タイトル", Body: "記事の本文", Points: []string{"p1"}},
 				},
 			},
 		},

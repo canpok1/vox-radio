@@ -16,7 +16,6 @@ type ArticleEntry struct {
 	DedupKey string   `json:"dedup_key,omitempty"` // 重複判定キー（sha256:hex）。旧エントリでは空
 	Title    string   `json:"title"`
 	URL      string   `json:"url,omitempty"`
-	Summary  string   `json:"summary"`
 	Points   []string `json:"points"`
 }
 
@@ -206,7 +205,6 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 				Points:   make([]string, 0),
 			}
 			if rda, ok := rdArticleByDedupKey[ar.DedupKey]; ok {
-				ae.Summary = rda.Summary
 				ae.Points = rda.Points
 			}
 			articles[j] = ae

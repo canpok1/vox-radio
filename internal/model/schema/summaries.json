@@ -14,10 +14,9 @@
   "$defs": {
     "Summary": {
       "type": "object",
-      "required": ["url", "summary", "points"],
+      "required": ["url", "points"],
       "properties": {
         "url":     { "type": "string", "format": "uri" },
-        "summary": { "type": "string", "minLength": 1 },
         "points": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

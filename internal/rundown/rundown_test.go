@@ -89,7 +89,7 @@ func (m *mockSummarizer) Summarize(_ context.Context, a model.Article) (model.Su
 	if s, ok := m.byURL[a.URL]; ok {
 		return s, nil
 	}
-	return model.Summary{URL: a.URL, Summary: "default", Points: []string{"p1"}}, nil
+	return model.Summary{URL: a.URL, Points: []string{"p1"}}, nil
 }
 
 // ensure mockSummarizer implements summarize.Summarizer
@@ -280,9 +280,8 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 	msum := &mockSummarizer{
 		byURL: map[string]model.Summary{
 			"https://example.com/1": {
-				URL:     "https://example.com/1",
-				Summary: "要約テキスト",
-				Points:  []string{"ポイント1"},
+				URL:    "https://example.com/1",
+				Points: []string{"ポイント1"},
 			},
 		},
 	}
@@ -329,8 +328,9 @@ func TestLLMRundowner_Run_SelectsAndSummarizes(t *testing.T) {
 	if a.Title != "記事1" {
 		t.Errorf("Title: got %q, want %q", a.Title, "記事1")
 	}
-	if a.Summary != "要約テキスト" {
-		t.Errorf("Summary: got %q, want %q", a.Summary, "要約テキスト")
+	// Body is the original article body (not the summarizer's output)
+	if a.Body != "本文1" {
+		t.Errorf("Body: got %q, want %q", a.Body, "本文1")
 	}
 	if len(a.Points) != 1 || a.Points[0] != "ポイント1" {
 		t.Errorf("Points: got %v, want [ポイント1]", a.Points)
@@ -743,7 +743,7 @@ func TestLLMRundowner_Run_FlowDesignerReceivesRundownContext(t *testing.T) {
 	}
 	msum := &mockSummarizer{
 		byURL: map[string]model.Summary{
-			"u1": {URL: "u1", Summary: "要約", Points: []string{"p1"}},
+			"u1": {URL: "u1", Points: []string{"p1"}},
 		},
 	}
 	casts := []model.RundownCast{{CharacterID: "zundamon", Role: "MC", Type: "regular"}}
@@ -819,9 +819,8 @@ func TestLLMRundowner_Run_PropagatesSourceAuthorPublished(t *testing.T) {
 	msum := &mockSummarizer{
 		byURL: map[string]model.Summary{
 			"https://example.com/meta/1": {
-				URL:     "https://example.com/meta/1",
-				Summary: "要約テキスト",
-				Points:  []string{"ポイント1"},
+				URL:    "https://example.com/meta/1",
+				Points: []string{"ポイント1"},
 			},
 		},
 	}

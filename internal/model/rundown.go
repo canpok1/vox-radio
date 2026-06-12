@@ -6,7 +6,7 @@ type RundownArticle struct {
 	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
 	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
 	Title     string   `json:"title"`
-	Summary   string   `json:"summary"`
+	Body      string   `json:"body"` // 記事原文（write LLM に渡す）
 	Points    []string `json:"points"`
 	Source    string   `json:"source,omitempty"`    // 媒体名
 	Author    string   `json:"author,omitempty"`    // 著者名
@@ -14,9 +14,9 @@ type RundownArticle struct {
 }
 
 // NewRundownArticle creates a RundownArticle with Points guaranteed non-nil.
-func NewRundownArticle(dedupKey, url, title, summary string, points []string, source, author, published string) RundownArticle {
+func NewRundownArticle(dedupKey, url, title, body string, points []string, source, author, published string) RundownArticle {
 	return RundownArticle{
-		DedupKey: dedupKey, URL: url, Title: title, Summary: summary,
+		DedupKey: dedupKey, URL: url, Title: title, Body: body,
 		Points: NonNil(points), Source: source, Author: author, Published: published,
 	}
 }

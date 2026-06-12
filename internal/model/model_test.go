@@ -261,17 +261,14 @@ func TestSummaries_Fields(t *testing.T) {
 	if s.URL == "" {
 		t.Error("URL must not be empty")
 	}
-	if s.Summary == "" {
-		t.Error("Summary must not be empty")
-	}
 	if len(s.Points) == 0 {
 		t.Error("Points must not be empty")
 	}
 }
 
 func TestSummaries_CornerMap(t *testing.T) {
-	sum1 := model.Summary{URL: "https://example.com/1", Summary: "S1", Points: []string{"p1"}}
-	sum2 := model.Summary{URL: "https://example.com/2", Summary: "S2", Points: []string{"p2"}}
+	sum1 := model.Summary{URL: "https://example.com/1", Points: []string{"p1"}}
+	sum2 := model.Summary{URL: "https://example.com/2", Points: []string{"p2"}}
 	s := model.Summaries{
 		Corners: []model.CornerSummaries{
 			{CornerTitle: "ニュース", Summaries: []model.Summary{sum1}},
@@ -325,8 +322,8 @@ func TestRundown_Fields(t *testing.T) {
 	if a.Title == "" {
 		t.Error("Article.Title must not be empty")
 	}
-	if a.Summary == "" {
-		t.Error("Article.Summary must not be empty")
+	if a.Body == "" {
+		t.Error("Article.Body must not be empty")
 	}
 	if len(a.Points) == 0 {
 		t.Error("Article.Points must not be empty")
@@ -334,8 +331,8 @@ func TestRundown_Fields(t *testing.T) {
 }
 
 func TestRundown_CornerMap(t *testing.T) {
-	art1 := model.RundownArticle{URL: "https://example.com/1", Title: "T1", Summary: "S1", Points: []string{"p1"}}
-	art2 := model.RundownArticle{URL: "https://example.com/2", Title: "T2", Summary: "S2", Points: []string{"p2"}}
+	art1 := model.RundownArticle{URL: "https://example.com/1", Title: "T1", Body: "body1", Points: []string{"p1"}}
+	art2 := model.RundownArticle{URL: "https://example.com/2", Title: "T2", Body: "body2", Points: []string{"p2"}}
 	rd := model.Rundown{
 		Corners: []model.RundownCorner{
 			{ID: "news", Title: "ニュース", Flow: "最新ニュースを紹介", Articles: []model.RundownArticle{art1}},

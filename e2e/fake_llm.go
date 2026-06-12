@@ -102,7 +102,7 @@ func (f *fakeLLM) handle(w http.ResponseWriter, r *http.Request) {
 func cannedResponse(step, prompt string) (string, error) {
 	switch step {
 	case "summarize":
-		return `{"summary":"記事の一行要約です。","points":["要点1","要点2","要点3"]}`, nil
+		return `{"points":["要点1","要点2","要点3"]}`, nil
 	case "select":
 		// 候補記事の ID は DedupKey（sha256:...）のためプロンプト本文から抽出して全件選択する。
 		matches := idInPromptRe.FindAllStringSubmatch(prompt, -1)

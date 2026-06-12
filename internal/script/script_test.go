@@ -93,7 +93,7 @@ func corneredRundown(cornerTitle string, arts ...model.RundownArticle) model.Run
 
 func TestLLMScriptGenerator_Generate_HappyPath(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{
 		{SpeakerRole: "zundamon", Text: "テスト"},
@@ -245,7 +245,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 				Title: "ニュース",
 				Flow:  "記事を紹介",
 				Articles: []model.RundownArticle{
-					{URL: "https://example.com/1", Title: "記事1", Summary: "要約1", Points: []string{"p1"}},
+					{URL: "https://example.com/1", Title: "記事1", Body: "記事1の本文", Points: []string{"p1"}},
 				},
 			},
 		},
@@ -271,7 +271,7 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_ReturnsScriptLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 
@@ -326,7 +326,7 @@ func TestBuildScriptLines(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_ReturnsCornerStructureInLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 
@@ -680,7 +680,7 @@ func TestGenerate_AbsentCastNotInAssignments(t *testing.T) {
 
 func TestLLMScriptGenerator_Generate_ProgramDirectionInReturnedLines(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 
@@ -705,7 +705,7 @@ func TestLLMScriptGenerator_Generate_ProgramDirectionInReturnedLines(t *testing.
 
 func TestGenerate_ReturnsProofreadResult_WhenProofreadSucceeds(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 	corners := []config.CornerConfig{
@@ -745,7 +745,7 @@ func TestGenerate_ReturnsProofreadResult_WhenProofreadSucceeds(t *testing.T) {
 
 func TestGenerate_ReturnsNilProofreadResult_WhenProofreadDisabled(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 	corners := []config.CornerConfig{
@@ -771,7 +771,7 @@ func TestGenerate_ReturnsNilProofreadResult_WhenProofreadDisabled(t *testing.T) 
 
 func TestGenerate_ReturnsEmptyCorrections_WhenProofreadFoundNone(t *testing.T) {
 	rundown := corneredRundown("AIコーナー",
-		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Summary: "要約", Points: []string{"p1"}},
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
 	)
 	lines := []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}
 	corners := []config.CornerConfig{
