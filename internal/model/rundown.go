@@ -2,6 +2,17 @@ package model
 
 import "encoding/json"
 
+type RundownArticle struct {
+	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
+	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
+	Title     string   `json:"title"`
+	Summary   string   `json:"summary"`
+	Points    []string `json:"points"`
+	Source    string   `json:"source,omitempty"`    // 媒体名
+	Author    string   `json:"author,omitempty"`    // 著者名
+	Published string   `json:"published,omitempty"` // 配信日時（RFC3339）
+}
+
 // NewRundownArticle creates a RundownArticle with Points guaranteed non-nil.
 func NewRundownArticle(dedupKey, url, title, summary string, points []string, source, author, published string) RundownArticle {
 	return RundownArticle{
@@ -20,17 +31,6 @@ func (a *RundownArticle) UnmarshalJSON(data []byte) error {
 	*a = RundownArticle(raw)
 	a.Points = NonNil(a.Points)
 	return nil
-}
-
-type RundownArticle struct {
-	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
-	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
-	Title     string   `json:"title"`
-	Summary   string   `json:"summary"`
-	Points    []string `json:"points"`
-	Source    string   `json:"source,omitempty"`    // 媒体名
-	Author    string   `json:"author,omitempty"`    // 著者名
-	Published string   `json:"published,omitempty"` // 配信日時（RFC3339）
 }
 
 type RundownCorner struct {

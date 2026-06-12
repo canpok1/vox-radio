@@ -60,6 +60,15 @@ func (p *ProgramSummary) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// ManifestCorner represents a corner in the manifest with its articles.
+type ManifestCorner struct {
+	ID       string       `json:"id"`
+	Title    string       `json:"title"`
+	Summary  string       `json:"summary"`
+	Points   []string     `json:"points"`
+	Articles []ArticleRef `json:"articles"`
+}
+
 // NewManifestCorner creates a ManifestCorner with Points guaranteed non-nil.
 func NewManifestCorner(id, title, summary string, points []string, articles []ArticleRef) ManifestCorner {
 	return ManifestCorner{
@@ -78,15 +87,6 @@ func (c *ManifestCorner) UnmarshalJSON(data []byte) error {
 	*c = ManifestCorner(raw)
 	c.Points = NonNil(c.Points)
 	return nil
-}
-
-// ManifestCorner represents a corner in the manifest with its articles.
-type ManifestCorner struct {
-	ID       string       `json:"id"`
-	Title    string       `json:"title"`
-	Summary  string       `json:"summary"`
-	Points   []string     `json:"points"`
-	Articles []ArticleRef `json:"articles"`
 }
 
 // Manifest is the content manifest output alongside an mp3 episode.
