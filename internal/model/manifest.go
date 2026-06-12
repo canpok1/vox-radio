@@ -1,5 +1,7 @@
 package model
 
+import "encoding/json"
+
 // ArticleRef is a reference to an article included in a manifest corner.
 type ArticleRef struct {
 	DedupKey string `json:"dedup_key"` // 重複判定キー（sha256:hex）
@@ -13,6 +15,11 @@ type CornerSummary struct {
 	Points  []string
 }
 
+// NewCornerSummary creates a CornerSummary with Points guaranteed non-nil.
+func NewCornerSummary(summary string, points []string) CornerSummary {
+	return CornerSummary{Summary: summary, Points: NonNil(points)}
+}
+
 // ConversationNote is a single piece of noteworthy information from the episode's conversation
 // that is not part of the rundown (article facts). Examples: character status updates,
 // interactions, reactions, happenings, or ongoing threads.
@@ -22,11 +29,35 @@ type ConversationNote struct {
 	Note         string   `json:"note"`          // memo text that lets you recall the conversation later
 }
 
+// UnmarshalJSON implements json.Unmarshaler to normalize CharacterIDs to a non-nil empty slice.
+func (n *ConversationNote) UnmarshalJSON(data []byte) error {
+	type alias ConversationNote
+	var raw alias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*n = ConversationNote(raw)
+	n.CharacterIDs = NonNil(n.CharacterIDs)
+	return nil
+}
+
 // ProgramSummary is the output of the program summarization step.
 type ProgramSummary struct {
 	Summary           string             `json:"summary"`
 	EpisodeTitle      string             `json:"episode_title"`
 	ConversationNotes []ConversationNote `json:"conversation_notes"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler to normalize ConversationNotes to a non-nil empty slice.
+func (p *ProgramSummary) UnmarshalJSON(data []byte) error {
+	type alias ProgramSummary
+	var raw alias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*p = ProgramSummary(raw)
+	p.ConversationNotes = NonNil(p.ConversationNotes)
+	return nil
 }
 
 // ManifestCorner represents a corner in the manifest with its articles.

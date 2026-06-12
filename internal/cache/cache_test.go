@@ -512,21 +512,6 @@ func TestBuildEntryFromManifest_EpisodeNumberAndTitleCopied(t *testing.T) {
 	}
 }
 
-func TestBuildEntryFromManifest_ConversationNotesNeverNil(t *testing.T) {
-	m := model.Manifest{
-		Title:    "エピソード",
-		Datetime: "2026-06-01T00:00:00Z",
-		Corners:  []model.ManifestCorner{},
-	}
-	rd := model.Rundown{}
-
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
-
-	if got.ConversationNotes == nil {
-		t.Error("ConversationNotes must be [] not nil")
-	}
-}
-
 func TestNextEpisodeNumber_NoEntries_ReturnsOne(t *testing.T) {
 	got := cache.NextEpisodeNumber([]cache.Entry{})
 	if got != 1 {

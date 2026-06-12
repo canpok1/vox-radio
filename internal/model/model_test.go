@@ -881,3 +881,81 @@ func TestProofreadCorrection_ReasonOmittedWhenEmpty(t *testing.T) {
 		t.Errorf("reason should be omitted when empty: %s", string(data))
 	}
 }
+
+func TestConversationNote_UnmarshalJSON_NilCharacterIDsNormalized(t *testing.T) {
+	data := []byte(`{"category":"ハプニング","note":"test"}`)
+	var note model.ConversationNote
+	if err := json.Unmarshal(data, &note); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if note.CharacterIDs == nil {
+		t.Error("CharacterIDs should be non-nil after unmarshal without key")
+	}
+}
+
+func TestConversationNote_UnmarshalJSON_NullCharacterIDsNormalized(t *testing.T) {
+	data := []byte(`{"category":"ハプニング","character_ids":null,"note":"test"}`)
+	var note model.ConversationNote
+	if err := json.Unmarshal(data, &note); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if note.CharacterIDs == nil {
+		t.Error("CharacterIDs should be non-nil after unmarshal with null")
+	}
+}
+
+func TestProgramSummary_UnmarshalJSON_NilConversationNotesNormalized(t *testing.T) {
+	data := []byte(`{"summary":"s","episode_title":"t"}`)
+	var ps model.ProgramSummary
+	if err := json.Unmarshal(data, &ps); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if ps.ConversationNotes == nil {
+		t.Error("ConversationNotes should be non-nil after unmarshal without key")
+	}
+}
+
+func TestProgramSummary_UnmarshalJSON_NullConversationNotesNormalized(t *testing.T) {
+	data := []byte(`{"summary":"s","episode_title":"t","conversation_notes":null}`)
+	var ps model.ProgramSummary
+	if err := json.Unmarshal(data, &ps); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if ps.ConversationNotes == nil {
+		t.Error("ConversationNotes should be non-nil after unmarshal with null")
+	}
+}
+
+func TestProgramSummary_UnmarshalJSON_NoteCharacterIDsNormalized(t *testing.T) {
+	data := []byte(`{"summary":"s","episode_title":"t","conversation_notes":[{"category":"test","character_ids":null,"note":"n"}]}`)
+	var ps model.ProgramSummary
+	if err := json.Unmarshal(data, &ps); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+	if len(ps.ConversationNotes) != 1 {
+		t.Fatalf("ConversationNotes: want 1, got %d", len(ps.ConversationNotes))
+	}
+	if ps.ConversationNotes[0].CharacterIDs == nil {
+		t.Error("note CharacterIDs should be non-nil after unmarshal with null")
+	}
+}
+
+func TestNewCornerSummary_NilPointsNormalized(t *testing.T) {
+	cs := model.NewCornerSummary("summary text", nil)
+	if cs.Points == nil {
+		t.Error("Points should be non-nil after NewCornerSummary with nil")
+	}
+	if len(cs.Points) != 0 {
+		t.Errorf("Points should be empty, got %v", cs.Points)
+	}
+	if cs.Summary != "summary text" {
+		t.Errorf("Summary: got %q, want %q", cs.Summary, "summary text")
+	}
+}
+
+func TestNewCornerSummary_NonNilPointsPreserved(t *testing.T) {
+	cs := model.NewCornerSummary("s", []string{"p1", "p2"})
+	if len(cs.Points) != 2 || cs.Points[0] != "p1" {
+		t.Errorf("Points: got %v, want [p1 p2]", cs.Points)
+	}
+}

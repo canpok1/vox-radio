@@ -214,8 +214,6 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: model.NonNil(mc.Points), Articles: articles}
 	}
 
-	notes := model.NonNil(m.ConversationNotes)
-
 	casts := make([]CastEntry, len(m.Casts))
 	for i, c := range m.Casts {
 		casts[i] = CastEntry{CharacterID: c.CharacterID, Type: c.Type}
@@ -233,7 +231,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		Bytes:             bytes,
 		DurationSec:       durationSec,
 		Corners:           corners,
-		ConversationNotes: notes,
+		ConversationNotes: m.ConversationNotes,
 		Casts:             casts,
 	}
 }

@@ -84,7 +84,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	rundown, err := r.Rundowner.Run(ctx, r.Spec.Corners, articles, opts.Casts)
+	rundown, err := r.Rundowner.Run(ctx, r.Spec.Corners, articles, model.NonNil(opts.Casts))
 	if err != nil {
 		return fmt.Errorf("rundown: %w", err)
 	}

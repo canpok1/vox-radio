@@ -89,5 +89,5 @@ func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.
 		return model.CornerSummary{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	return model.CornerSummary{Summary: resp.Summary, Points: model.NonNil(resp.Points)}, nil
+	return model.NewCornerSummary(resp.Summary, resp.Points), nil
 }

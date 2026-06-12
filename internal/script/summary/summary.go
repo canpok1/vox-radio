@@ -132,11 +132,5 @@ func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.Script
 		return model.ProgramSummary{}, fmt.Errorf("unmarshal response: %w", err)
 	}
 
-	// Normalize nil slices to empty slices so JSON marshals as [] not null.
-	result.ConversationNotes = model.NonNil(result.ConversationNotes)
-	for i := range result.ConversationNotes {
-		result.ConversationNotes[i].CharacterIDs = model.NonNil(result.ConversationNotes[i].CharacterIDs)
-	}
-
 	return result, nil
 }

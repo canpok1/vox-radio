@@ -167,7 +167,6 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	}
 
 	// キャストをセット
-	casts = model.NonNil(casts)
 	rd := model.Rundown{
 		Corners: rundownCorners,
 		Casts:   casts,
