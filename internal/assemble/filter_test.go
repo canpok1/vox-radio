@@ -1,6 +1,7 @@
 package assemble
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -1500,6 +1501,227 @@ func TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset(t *testing
 }
 
 func float64Ptr(v float64) *float64 { return &v }
+
+// --- golden test ---
+
+// TestBuildFFmpegArgs_Golden_FilterComplex verifies that the exact filter_complex output
+// for a comprehensive scenario (jingle / same-speaker / BGM-duck / SE overlay / jingle)
+// does not change across refactoring.
+// Run with UPDATE_GOLDEN=1 to regenerate testdata/golden_filter_complex.txt.
+func TestBuildFFmpegArgs_Golden_FilterComplex(t *testing.T) {
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeJingle, AssetName: "op"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "A"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "B"},
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "guest", Text: "C"},
+				{Type: model.SegmentTypeSE, AssetName: "chime"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "D"},
+				{Type: model.SegmentTypeJingle, AssetName: "ed"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{
+				{Index: 0, File: "clip_000.wav", DurationSec: 1.5},
+				{Index: 1, File: "clip_001.wav", DurationSec: 2.0},
+				{Index: 2, File: "clip_002.wav", DurationSec: 1.0},
+				{Index: 3, File: "clip_003.wav", DurationSec: 3.0},
+			},
+		},
+		ClipsDir: "/clips",
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, DuckRatio: 4.0},
+			},
+			SE: map[string]config.SEEntry{
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
+			},
+			Jingle: map[string]config.JingleEntry{
+				"op": {File: "/assets/op.wav", FadeIn: 0.3},
+				"ed": {File: "/assets/ed.wav", FadeOut: 1.0},
+			},
+		},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	goldenFile := "testdata/golden_filter_complex.txt"
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.MkdirAll("testdata", 0755); err != nil {
+			t.Fatalf("failed to create testdata dir: %v", err)
+		}
+		if err := os.WriteFile(goldenFile, []byte(args.FilterComplex), 0644); err != nil {
+			t.Fatalf("failed to write golden file: %v", err)
+		}
+		t.Logf("golden file updated: %s", goldenFile)
+		return
+	}
+
+	want, err := os.ReadFile(goldenFile)
+	if err != nil {
+		t.Fatalf("golden file not found (run with UPDATE_GOLDEN=1 to create): %v", err)
+	}
+	if args.FilterComplex != string(want) {
+		t.Errorf("filter_complex mismatch:\ngot:  %s\nwant: %s", args.FilterComplex, string(want))
+	}
+}
+
+// --- buildDuckSplit unit tests ---
+
+func TestBuildDuckSplit_NoBGMIntervals(t *testing.T) {
+	b := &filterBuilder{}
+	outLabel, duckLabel := buildDuckSplit(b, nil, config.AssetsConfig{}, 0, "[input]")
+	if outLabel != "[input]" {
+		t.Errorf("outLabel: got %q, want %q", outLabel, "[input]")
+	}
+	if duckLabel != "" {
+		t.Errorf("duckLabel: got %q, want empty", duckLabel)
+	}
+	if len(b.filters) != 0 {
+		t.Errorf("no filters should be emitted, got %d", len(b.filters))
+	}
+}
+
+func TestBuildDuckSplit_BGMWithNoDuckRatio(t *testing.T) {
+	b := &filterBuilder{}
+	intervals := []bgmInterval{{assetName: "bgm1", startMs: 0, endMs: -1}}
+	assets := config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm1": {File: "/bgm.mp3", Volume: 0.3, DuckRatio: 0},
+		},
+	}
+	outLabel, duckLabel := buildDuckSplit(b, intervals, assets, 0, "[input]")
+	if outLabel != "[input]" {
+		t.Errorf("outLabel: got %q, want %q", outLabel, "[input]")
+	}
+	if duckLabel != "" {
+		t.Errorf("duckLabel: got %q, want empty", duckLabel)
+	}
+	if len(b.filters) != 0 {
+		t.Errorf("no filters should be emitted, got %d", len(b.filters))
+	}
+}
+
+func TestBuildDuckSplit_BGMWithDuckRatio(t *testing.T) {
+	b := &filterBuilder{}
+	intervals := []bgmInterval{{assetName: "bgm1", startMs: 0, endMs: -1}}
+	assets := config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm1": {File: "/bgm.mp3", Volume: 0.3, DuckRatio: 4.0},
+		},
+	}
+	outLabel, duckLabel := buildDuckSplit(b, intervals, assets, 0, "[input]")
+	if outLabel == "[input]" {
+		t.Errorf("outLabel should change when ducking is applied")
+	}
+	if duckLabel == "" {
+		t.Errorf("duckLabel should be set when ducking is applied")
+	}
+	if len(b.filters) != 1 {
+		t.Fatalf("expected 1 filter, got %d", len(b.filters))
+	}
+	if !strings.Contains(b.filters[0], "asplit=2") {
+		t.Errorf("filter should contain asplit=2, got: %s", b.filters[0])
+	}
+}
+
+// --- buildSEOverlay unit tests ---
+
+func TestBuildSEOverlay_NoEvents(t *testing.T) {
+	b := &filterBuilder{}
+	outLabel := buildSEOverlay(b, nil, config.AssetsConfig{}, 0, "[input]")
+	if outLabel != "[input]" {
+		t.Errorf("outLabel: got %q, want %q", outLabel, "[input]")
+	}
+	if len(b.filters) != 0 {
+		t.Errorf("no filters should be emitted, got %d", len(b.filters))
+	}
+}
+
+func TestBuildSEOverlay_UnknownAsset(t *testing.T) {
+	b := &filterBuilder{}
+	events := []seEvent{{assetName: "unknown", offsetMs: 1000}}
+	outLabel := buildSEOverlay(b, events, config.AssetsConfig{SE: map[string]config.SEEntry{}}, 0, "[input]")
+	if outLabel != "[input]" {
+		t.Errorf("outLabel should be unchanged for unknown asset, got %q", outLabel)
+	}
+}
+
+func TestBuildSEOverlay_OneOverlayEvent(t *testing.T) {
+	b := &filterBuilder{}
+	events := []seEvent{{assetName: "chime", offsetMs: 2000}}
+	assets := config.AssetsConfig{
+		SE: map[string]config.SEEntry{
+			"chime": {File: "/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
+		},
+	}
+	outLabel := buildSEOverlay(b, events, assets, 0, "[input]")
+	if outLabel == "[input]" {
+		t.Errorf("outLabel should change after SE overlay")
+	}
+	found := false
+	for _, f := range b.filters {
+		if strings.Contains(f, "adelay=2000|2000") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("adelay=2000|2000 not found in filters: %v", b.filters)
+	}
+}
+
+// --- runBuilder.closeBGMInterval unit tests ---
+
+func TestRunBuilderCloseBGMInterval_NoActiveBGM(t *testing.T) {
+	rb := newRun()
+	rb.closeBGMInterval(5000)
+	if len(rb.bgmIntervals) != 0 {
+		t.Errorf("no interval should be appended when no active BGM, got %d", len(rb.bgmIntervals))
+	}
+}
+
+func TestRunBuilderCloseBGMInterval_ExplicitEnd(t *testing.T) {
+	rb := newRun()
+	rb.activeBGMStart = 1000
+	rb.activeBGMName = "bgm1"
+	rb.closeBGMInterval(5000)
+	if len(rb.bgmIntervals) != 1 {
+		t.Fatalf("expected 1 interval, got %d", len(rb.bgmIntervals))
+	}
+	iv := rb.bgmIntervals[0]
+	if iv.startMs != 1000 || iv.endMs != 5000 || iv.assetName != "bgm1" {
+		t.Errorf("interval mismatch: got %+v", iv)
+	}
+	if rb.activeBGMStart != -1 {
+		t.Errorf("activeBGMStart should be reset to -1, got %d", rb.activeBGMStart)
+	}
+	if rb.activeBGMName != "" {
+		t.Errorf("activeBGMName should be reset, got %q", rb.activeBGMName)
+	}
+}
+
+func TestRunBuilderCloseBGMInterval_ToEnd(t *testing.T) {
+	rb := newRun()
+	rb.activeBGMStart = 500
+	rb.activeBGMName = "bgm2"
+	rb.closeBGMInterval(-1)
+	if len(rb.bgmIntervals) != 1 {
+		t.Fatalf("expected 1 interval, got %d", len(rb.bgmIntervals))
+	}
+	if rb.bgmIntervals[0].endMs != -1 {
+		t.Errorf("endMs should be -1, got %d", rb.bgmIntervals[0].endMs)
+	}
+	if rb.activeBGMStart != -1 {
+		t.Errorf("activeBGMStart should be reset to -1, got %d", rb.activeBGMStart)
+	}
+}
 
 // TestBuildFFmpegArgs_BGMFadeInOut_A1 verifies that a BGM interval with explicit FadeIn/FadeOut
 // gets afade filters applied before adelay.
