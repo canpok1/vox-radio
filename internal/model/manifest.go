@@ -60,6 +60,26 @@ func (p *ProgramSummary) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// NewManifestCorner creates a ManifestCorner with Points guaranteed non-nil.
+func NewManifestCorner(id, title, summary string, points []string, articles []ArticleRef) ManifestCorner {
+	return ManifestCorner{
+		ID: id, Title: title, Summary: summary,
+		Points: NonNil(points), Articles: articles,
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler to normalize Points to a non-nil empty slice.
+func (c *ManifestCorner) UnmarshalJSON(data []byte) error {
+	type alias ManifestCorner
+	var raw alias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*c = ManifestCorner(raw)
+	c.Points = NonNil(c.Points)
+	return nil
+}
+
 // ManifestCorner represents a corner in the manifest with its articles.
 type ManifestCorner struct {
 	ID       string       `json:"id"`
