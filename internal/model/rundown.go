@@ -15,12 +15,7 @@ type RundownArticle struct {
 }
 
 // Text returns the effective article text: Body if non-empty, otherwise Description.
-func (a RundownArticle) Text() string {
-	if a.Body != "" {
-		return a.Body
-	}
-	return a.Description
-}
+func (a RundownArticle) Text() string { return textOf(a.Body, a.Description) }
 
 // NewRundownArticle creates a RundownArticle with Points guaranteed non-nil.
 func NewRundownArticle(dedupKey, url, title, description, body string, points []string, source, author, published string) RundownArticle {

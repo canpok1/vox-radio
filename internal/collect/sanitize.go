@@ -68,6 +68,9 @@ func isInvisible(r rune) bool {
 
 // truncateBody limits body to at most maxChars runes.
 func truncateBody(body string, maxChars int) string {
+	if body == "" {
+		return body
+	}
 	runes := []rune(body)
 	if len(runes) <= maxChars {
 		return body
@@ -97,15 +100,14 @@ func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (boo
 	maxChars := policy.EffectiveMaxBodyChars()
 
 	// Phase 1: remove invisible chars from all text fields
-	a.Title = removeInvisibleChars(a.Title)
-	a.Description = removeInvisibleChars(a.Description)
-	a.Body = removeInvisibleChars(a.Body)
-	a.Source = removeInvisibleChars(a.Source)
-	a.Author = removeInvisibleChars(a.Author)
+	for _, f := range []*string{&a.Title, &a.Description, &a.Body, &a.Source, &a.Author} {
+		*f = removeInvisibleChars(*f)
+	}
 
-	// Phase 2: truncate description and body independently
-	a.Description = truncateBody(a.Description, maxChars)
-	a.Body = truncateBody(a.Body, maxChars)
+	// Phase 2: truncate body-like fields independently
+	for _, f := range []*string{&a.Description, &a.Body} {
+		*f = truncateBody(*f, maxChars)
+	}
 
 	// Phase 3: detect injection patterns field by field
 	fields := []struct {

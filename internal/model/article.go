@@ -12,11 +12,14 @@ type Article struct {
 }
 
 // Text returns the effective article text: Body if non-empty, otherwise Description.
-func (a Article) Text() string {
-	if a.Body != "" {
-		return a.Body
+func (a Article) Text() string { return textOf(a.Body, a.Description) }
+
+// textOf returns body if non-empty, otherwise description.
+func textOf(body, description string) string {
+	if body != "" {
+		return body
 	}
-	return a.Description
+	return description
 }
 
 type CornerArticles struct {

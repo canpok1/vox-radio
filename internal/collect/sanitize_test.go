@@ -281,42 +281,82 @@ func TestSanitizeArticle_Error_TitleWithInjection_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestSanitizeArticle_BodyTruncated(t *testing.T) {
-	a := &model.Article{
-		URL:  "https://example.com/1",
-		Body: strings.Repeat("あ", 200),
-	}
-	policy := makePolicy(config.OnDetectExclude, 100)
-	flagged, err := sanitizeArticle(a, policy)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if flagged {
-		t.Error("truncation alone should not flag the article")
-	}
-	if utf8.RuneCountInString(a.Body) != 100 {
-		t.Errorf("body rune count: got %d, want 100", utf8.RuneCountInString(a.Body))
+func TestSanitizeArticle_BodyTextTruncated(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(*model.Article)
+		check func(*model.Article) int
+		field string
+	}{
+		{
+			name:  "body",
+			setup: func(a *model.Article) { a.Body = strings.Repeat("あ", 200) },
+			check: func(a *model.Article) int { return utf8.RuneCountInString(a.Body) },
+			field: "Body",
+		},
+		{
+			name:  "description",
+			setup: func(a *model.Article) { a.Description = strings.Repeat("あ", 200) },
+			check: func(a *model.Article) int { return utf8.RuneCountInString(a.Description) },
+			field: "Description",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a := &model.Article{URL: "https://example.com/1"}
+			tc.setup(a)
+			policy := makePolicy(config.OnDetectExclude, 100)
+			flagged, err := sanitizeArticle(a, policy)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if flagged {
+				t.Error("truncation alone should not flag the article")
+			}
+			if got := tc.check(a); got != 100 {
+				t.Errorf("%s rune count: got %d, want 100", tc.field, got)
+			}
+		})
 	}
 }
 
 func TestSanitizeArticle_InvisibleCharsRemoved(t *testing.T) {
 	zwsp := string([]rune{0x200B})
 	zwnj := string([]rune{0x200C})
-	a := &model.Article{
-		URL:   "https://example.com/1",
-		Title: "hello" + zwsp + "world",
-		Body:  "normal" + zwnj + "text",
-	}
-	policy := makePolicy(config.OnDetectExclude, 1000)
-	_, err := sanitizeArticle(a, policy)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if a.Title != "helloworld" {
-		t.Errorf("Title: got %q, want %q", a.Title, "helloworld")
-	}
-	if a.Body != "normaltext" {
-		t.Errorf("Body: got %q, want %q", a.Body, "normaltext")
+	for _, tc := range []struct {
+		name    string
+		article *model.Article
+		check   func(*model.Article) string
+		want    string
+	}{
+		{
+			name:    "title",
+			article: &model.Article{URL: "https://example.com/1", Title: "hello" + zwsp + "world"},
+			check:   func(a *model.Article) string { return a.Title },
+			want:    "helloworld",
+		},
+		{
+			name:    "body",
+			article: &model.Article{URL: "https://example.com/1", Body: "normal" + zwnj + "text"},
+			check:   func(a *model.Article) string { return a.Body },
+			want:    "normaltext",
+		},
+		{
+			name:    "description",
+			article: &model.Article{URL: "https://example.com/1", Description: "feed" + zwnj + "text"},
+			check:   func(a *model.Article) string { return a.Description },
+			want:    "feedtext",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := makePolicy(config.OnDetectExclude, 1000)
+			_, err := sanitizeArticle(tc.article, policy)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got := tc.check(tc.article); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -337,39 +377,5 @@ func TestSanitizeArticle_Exclude_DescriptionWithInjection_FlaggedFieldNotDropped
 	}
 	if a.Description == "" {
 		t.Errorf("Description should not be dropped (caller excludes the article instead), got empty")
-	}
-}
-
-func TestSanitizeArticle_DescriptionTruncated(t *testing.T) {
-	a := &model.Article{
-		URL:         "https://example.com/1",
-		Description: strings.Repeat("あ", 200),
-	}
-	policy := makePolicy(config.OnDetectExclude, 100)
-	flagged, err := sanitizeArticle(a, policy)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if flagged {
-		t.Error("truncation alone should not flag the article")
-	}
-	if utf8.RuneCountInString(a.Description) != 100 {
-		t.Errorf("description rune count: got %d, want 100", utf8.RuneCountInString(a.Description))
-	}
-}
-
-func TestSanitizeArticle_DescriptionInvisibleCharsRemoved(t *testing.T) {
-	zwnj := string([]rune{0x200C})
-	a := &model.Article{
-		URL:         "https://example.com/1",
-		Description: "feed" + zwnj + "text",
-	}
-	policy := makePolicy(config.OnDetectExclude, 1000)
-	_, err := sanitizeArticle(a, policy)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if a.Description != "feedtext" {
-		t.Errorf("Description: got %q, want %q", a.Description, "feedtext")
 	}
 }
