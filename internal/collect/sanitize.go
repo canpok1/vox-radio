@@ -89,7 +89,7 @@ func containsInjectionPattern(s string) string {
 // sanitizeArticle cleans a in-place and returns (flagged, error).
 // flagged is true when an injection pattern was detected in any field.
 // On on_detect=error the function returns an error immediately on the first detection.
-// On on_detect=sanitize the caller is responsible for excluding the article entirely;
+// On on_detect=exclude the caller is responsible for excluding the article entirely;
 // this function does NOT modify any field on detection.
 func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (bool, error) {
 	// Phase 1: remove invisible chars from all text fields
