@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -69,10 +68,10 @@ func isInvisible(r rune) bool {
 
 // truncateBody limits body to at most maxChars runes.
 func truncateBody(body string, maxChars int) string {
-	if utf8.RuneCountInString(body) <= maxChars {
+	runes := []rune(body)
+	if len(runes) <= maxChars {
 		return body
 	}
-	runes := []rune(body)
 	return string(runes[:maxChars])
 }
 
@@ -80,8 +79,8 @@ func truncateBody(body string, maxChars int) string {
 // known prompt-injection phrase, or empty string if none matched.
 func containsInjectionPattern(s string) string {
 	for _, re := range injectionPatterns {
-		if loc := re.FindString(s); loc != "" {
-			return re.String()
+		if match := re.FindString(s); match != "" {
+			return match
 		}
 	}
 	return ""
@@ -113,11 +112,12 @@ func sanitizeArticle(a *model.Article, policy config.PromptInjectionConfig) (boo
 	}
 
 	flagged := false
+	onDetect := policy.EffectiveOnDetect()
 	for _, f := range fields {
 		if pat := containsInjectionPattern(*f.ptr); pat != "" {
 			flagged = true
-			if policy.EffectiveOnDetect() == config.OnDetectError {
-				return true, fmt.Errorf("prompt injection detected in article %s field %s (pattern: %s)", a.URL, f.name, pat)
+			if onDetect == config.OnDetectError {
+				return true, fmt.Errorf("prompt injection detected in article %s field %s (matched: %s)", a.URL, f.name, pat)
 			}
 			*f.ptr = ""
 		}
