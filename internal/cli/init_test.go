@@ -258,17 +258,8 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadEpisodeSpecStrict failed on sample: %v", err)
 	}
-	if err := spec.ValidateAssets(); err != nil {
-		t.Fatalf("ValidateAssets failed on sample: %v", err)
-	}
-	if err := spec.ValidateCast(); err != nil {
-		t.Fatalf("ValidateCast failed on sample: %v", err)
-	}
-	if err := spec.ValidateCasts(cfg.Characters); err != nil {
-		t.Fatalf("ValidateCasts failed on sample: %v", err)
-	}
-	if err := spec.ValidateCorners(); err != nil {
-		t.Fatalf("ValidateCorners failed on sample: %v", err)
+	if err := spec.Validate(cfg.Characters); err != nil {
+		t.Fatalf("Validate failed on sample: %v", err)
 	}
 
 	// 毎回の放送コーナーの length_sec 合計が 300 秒（尺不変）であること。
