@@ -30,10 +30,13 @@ func (c *Collector) fetchArticle(ctx context.Context, rawURL string) (*model.Art
 		return nil, fmt.Errorf("parse HTML: %w", err)
 	}
 
+	title := findTitle(doc)
+	body := findBody(doc)
 	return &model.Article{
-		URL:   rawURL,
-		Title: findTitle(doc),
-		Body:  findBody(doc),
+		DedupKey: dedupKey(rawURL, normalizeContent(title, body)),
+		URL:      rawURL,
+		Title:    title,
+		Body:     body,
 	}, nil
 }
 

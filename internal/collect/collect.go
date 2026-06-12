@@ -98,16 +98,16 @@ func (c *Collector) FetchFullText(ctx context.Context, url string) (string, erro
 }
 
 // RunAll collects articles per corner, skipping corners with no source.
-// excludedURLs is a list of URLs to skip when fetching from feeds (nil means no exclusion).
-func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedURLs []string) (model.Articles, error) {
+// excludedDedupKeys is a list of DedupKeys to skip when fetching from feeds (nil means no exclusion).
+func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error) {
 	logger := c.logger.With("step", "collect")
 	start := time.Now()
 
 	var excluded map[string]struct{}
-	if len(excludedURLs) > 0 {
-		excluded = make(map[string]struct{}, len(excludedURLs))
-		for _, u := range excludedURLs {
-			excluded[u] = struct{}{}
+	if len(excludedDedupKeys) > 0 {
+		excluded = make(map[string]struct{}, len(excludedDedupKeys))
+		for _, k := range excludedDedupKeys {
+			excluded[k] = struct{}{}
 		}
 	}
 

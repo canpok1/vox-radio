@@ -13,10 +13,11 @@ import (
 
 // ArticleEntry holds article data for a single episode history entry.
 type ArticleEntry struct {
-	Title   string   `json:"title"`
-	URL     string   `json:"url"`
-	Summary string   `json:"summary"`
-	Points  []string `json:"points"`
+	DedupKey string   `json:"dedup_key,omitempty"` // 重複判定キー（sha256:hex）。旧エントリでは空
+	Title    string   `json:"title"`
+	URL      string   `json:"url,omitempty"`
+	Summary  string   `json:"summary"`
+	Points   []string `json:"points"`
 }
 
 // CornerEntry holds corner data for a single episode history entry.
@@ -185,13 +186,15 @@ func Recent(entries []Entry, n int) []Entry {
 }
 
 // BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, rundown, and media info.
-// Rundown data (summary, points) is merged into the manifest's article references by URL.
+// Rundown data (summary, points) is merged into the manifest's article references by DedupKey.
 // bytes and durationSec are from mediainfo (0 if not available).
 func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int) Entry {
-	rdArticleByURL := make(map[string]model.RundownArticle)
+	rdArticleByDedupKey := make(map[string]model.RundownArticle)
 	for _, c := range rd.Corners {
 		for _, a := range c.Articles {
-			rdArticleByURL[a.URL] = a
+			if a.DedupKey != "" {
+				rdArticleByDedupKey[a.DedupKey] = a
+			}
 		}
 	}
 
@@ -200,11 +203,12 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		articles := make([]ArticleEntry, len(mc.Articles))
 		for j, ar := range mc.Articles {
 			ae := ArticleEntry{
-				Title:  ar.Title,
-				URL:    ar.URL,
-				Points: make([]string, 0),
+				DedupKey: ar.DedupKey,
+				Title:    ar.Title,
+				URL:      ar.URL,
+				Points:   make([]string, 0),
 			}
-			if rda, ok := rdArticleByURL[ar.URL]; ok {
+			if rda, ok := rdArticleByDedupKey[ar.DedupKey]; ok {
 				ae.Summary = rda.Summary
 				if rda.Points != nil {
 					ae.Points = rda.Points
@@ -336,6 +340,7 @@ func NextEpisodeNumber(entries []Entry) int {
 }
 
 // PastURLs extracts all unique article URLs from entries, in order.
+// Deprecated: Use PastDedupKeys for new code. PastURLs is kept for legacy cache entries.
 func PastURLs(entries []Entry) []string {
 	urls := make([]string, 0)
 	seen := make(map[string]bool)
@@ -350,4 +355,22 @@ func PastURLs(entries []Entry) []string {
 		}
 	}
 	return urls
+}
+
+// PastDedupKeys extracts all unique article DedupKeys from entries, in order.
+// Entries without a DedupKey (legacy) are skipped.
+func PastDedupKeys(entries []Entry) []string {
+	keys := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, e := range entries {
+		for _, corner := range e.Corners {
+			for _, a := range corner.Articles {
+				if a.DedupKey != "" && !seen[a.DedupKey] {
+					seen[a.DedupKey] = true
+					keys = append(keys, a.DedupKey)
+				}
+			}
+		}
+	}
+	return keys
 }

@@ -24,17 +24,27 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 
 	articles := make([]model.Article, 0, len(feed.Items))
 	for _, item := range feed.Items {
-		if _, skip := excluded[item.Link]; skip {
-			continue
-		}
 		body := item.Content
 		if body == "" {
 			body = item.Description
 		}
+		bodyText := extractTextFromHTML(body)
+
+		// GUID が非空なら識別材料として使い、空なら正規化本文にフォールバック
+		material := item.GUID
+		if material == "" {
+			material = normalizeContent(item.Title, bodyText)
+		}
+		key := dedupKey(url, material)
+
+		if _, skip := excluded[key]; skip {
+			continue
+		}
 		articles = append(articles, model.Article{
+			DedupKey:  key,
 			URL:       item.Link,
 			Title:     item.Title,
-			Body:      extractTextFromHTML(body),
+			Body:      bodyText,
 			Source:    source,
 			Author:    extractAuthor(item),
 			Published: extractPublished(item, c.loc),

@@ -25,25 +25,25 @@ func (m *mockClient) Complete(_ context.Context, req llm.CompletionRequest) (jso
 
 func TestLLMSelector_Select_Success(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
 	corner := config.CornerConfig{Title: "テックニュース", Content: "最新技術を紹介", LengthSec: 60}
 	articles := []model.Article{
-		{URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
-		{URL: "https://example.com/2", Title: "記事2", Body: "本文2"},
+		{DedupKey: "https://example.com/1", URL: "https://example.com/1", Title: "記事1", Body: "本文1"},
+		{DedupKey: "https://example.com/2", URL: "https://example.com/2", Title: "記事2", Body: "本文2"},
 	}
 
 	got, err := s.Select(context.Background(), corner, articles)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got.SelectedURLs) != 1 {
-		t.Errorf("SelectedURLs: got %d, want 1", len(got.SelectedURLs))
+	if len(got.SelectedIDs) != 1 {
+		t.Errorf("SelectedIDs: got %d, want 1", len(got.SelectedIDs))
 	}
-	if got.SelectedURLs[0] != "https://example.com/1" {
-		t.Errorf("SelectedURLs[0]: got %q, want %q", got.SelectedURLs[0], "https://example.com/1")
+	if got.SelectedIDs[0] != "https://example.com/1" {
+		t.Errorf("SelectedIDs[0]: got %q, want %q", got.SelectedIDs[0], "https://example.com/1")
 	}
 	if got.SelectionReason != "AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する" {
 		t.Errorf("SelectionReason: got %q, want %q", got.SelectionReason, "AIチップ記事が最も関連性が高く、コーナーの趣旨に合致する")
@@ -52,7 +52,7 @@ func TestLLMSelector_Select_Success(t *testing.T) {
 
 func TestLLMSelector_Select_PromptContainsCornerAppearance(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}}", 0)
 	s.SetCornerAppearance(4, 1) // 今回含め4回目・前回は第1回
@@ -74,7 +74,7 @@ func TestLLMSelector_Select_PromptContainsCornerAppearance(t *testing.T) {
 
 func TestLLMSelector_Select_NewCorner_OmitsLastEpisodeNumber(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}}", 0)
 	s.SetCornerAppearance(1, 0) // 新コーナー（今回が初出）
@@ -93,7 +93,7 @@ func TestLLMSelector_Select_NewCorner_OmitsLastEpisodeNumber(t *testing.T) {
 
 func TestLLMSelector_Select_PromptContainsCornerAndArticles(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 
@@ -127,7 +127,7 @@ func TestLLMSelector_Select_LLMError(t *testing.T) {
 
 func TestLLMSelector_SetCasts_PromptContainsCastInfo(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "キャスト: {{casts}} コーナー: {{corner}} 記事: {{articles}}", 0)
 	s.SetCasts([]model.RundownCast{
@@ -157,7 +157,7 @@ func TestLLMSelector_SetCasts_PromptContainsCastInfo(t *testing.T) {
 func TestLLMSelector_SetCasts_AppearanceCountIsConverted(t *testing.T) {
 	// appearance_count in prompt should be PastAppearanceCount() (new_count - 1), not the raw value
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "{{casts}}", 0)
 	s.SetCasts([]model.RundownCast{
@@ -178,7 +178,7 @@ func TestLLMSelector_SetCasts_AppearanceCountIsConverted(t *testing.T) {
 
 func TestLLMSelector_NoCasts_PromptHasEmptyArray(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "キャスト: {{casts}} コーナー: {{corner}} 記事: {{articles}}", 0)
 	// SetCasts not called
@@ -198,7 +198,7 @@ func TestLLMSelector_NoCasts_PromptHasEmptyArray(t *testing.T) {
 
 func TestLLMSelector_Select_PromptUsesSemanticFieldName(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"selected_urls":["https://example.com/1"],"selection_reason":"理由"}`),
+		response: json.RawMessage(`{"selected_ids":["https://example.com/1"],"selection_reason":"理由"}`),
 	}
 	s := sel.NewLLMSelector(mc, "コーナー: {{corner}} 記事: {{articles}}", 0)
 

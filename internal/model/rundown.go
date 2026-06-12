@@ -1,7 +1,8 @@
 package model
 
 type RundownArticle struct {
-	URL       string   `json:"url"`
+	DedupKey  string   `json:"dedup_key"`     // 重複判定キー（sha256:hex）
+	URL       string   `json:"url,omitempty"` // 表示用リンク（空可）
 	Title     string   `json:"title"`
 	Summary   string   `json:"summary"`
 	Points    []string `json:"points"`

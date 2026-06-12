@@ -4,11 +4,13 @@
       "corner_title": "今日のテックニュース",
       "articles": [
         {
+          "dedup_key": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
           "url": "https://example.com/article/1",
           "title": "AIチップの最新動向",
           "body": "新型AIチップが発表された。従来比2倍の性能を実現する。"
         },
         {
+          "dedup_key": "sha256:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
           "url": "https://example.com/article/2",
           "title": "オープンソース活動の活発化",
           "body": "オープンソースプロジェクトへの参加者が増加している。"

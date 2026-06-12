@@ -219,3 +219,34 @@ func TestBuildAudioTitle_WithoutEpisodeTitle(t *testing.T) {
 		t.Errorf("BuildAudioTitle = %q, want title %q", title, manifest.Title)
 	}
 }
+
+func TestBuildThreadBlocks_ArticleEmptyURL_NoSlackLinkSyntax(t *testing.T) {
+	manifest := makeManifest()
+	manifest.Summary = ""
+	manifest.Corners = []model.ManifestCorner{
+		{
+			Title: "テック",
+			Articles: []model.ArticleRef{
+				{Title: "URL無し記事", URL: ""},
+			},
+		},
+	}
+	tmpl := makeTemplate()
+
+	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
+
+	if len(blocks) == 0 {
+		t.Fatal("blocks must not be empty")
+	}
+	section, ok := blocks[0].(*slackgo.SectionBlock)
+	if !ok {
+		t.Fatalf("blocks[0] should be SectionBlock, got %T", blocks[0])
+	}
+	text := section.Text.Text
+	if strings.Contains(text, "<|") {
+		t.Errorf("article with empty URL must not produce broken Slack link '<|...>', got: %q", text)
+	}
+	if !strings.Contains(text, "URL無し記事") {
+		t.Errorf("article title should appear in output even when URL is empty, got: %q", text)
+	}
+}
