@@ -32,7 +32,7 @@ func Build(p BuildParams) model.Manifest {
 		rc := cornerMap[c.ID]
 		refs := make([]model.ArticleRef, 0, len(rc.Articles))
 		for _, a := range rc.Articles {
-			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
+			refs = append(refs, model.ArticleRef{DedupKey: a.DedupKey, Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
 		manifestCorners = append(manifestCorners, model.NewManifestCorner(
