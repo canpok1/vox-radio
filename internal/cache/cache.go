@@ -91,10 +91,7 @@ func (m *Manager) Load() ([]Entry, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("scan cache: %w", err)
 	}
-	if entries == nil {
-		return make([]Entry, 0), nil
-	}
-	return entries, nil
+	return model.NonNil(entries), nil
 }
 
 // Append loads existing entries, adds the new entry, compacts if needed, and writes back.
@@ -210,23 +207,14 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 			}
 			if rda, ok := rdArticleByDedupKey[ar.DedupKey]; ok {
 				ae.Summary = rda.Summary
-				if rda.Points != nil {
-					ae.Points = rda.Points
-				}
+				ae.Points = model.NonNil(rda.Points)
 			}
 			articles[j] = ae
 		}
-		points := mc.Points
-		if points == nil {
-			points = make([]string, 0)
-		}
-		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: points, Articles: articles}
+		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: model.NonNil(mc.Points), Articles: articles}
 	}
 
-	notes := m.ConversationNotes
-	if notes == nil {
-		notes = make([]model.ConversationNote, 0)
-	}
+	notes := model.NonNil(m.ConversationNotes)
 
 	casts := make([]CastEntry, len(m.Casts))
 	for i, c := range m.Casts {

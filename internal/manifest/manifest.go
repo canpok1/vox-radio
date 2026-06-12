@@ -35,28 +35,14 @@ func Build(p BuildParams) model.Manifest {
 			refs = append(refs, model.ArticleRef{Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
-		points := cs.Points
-		if points == nil {
-			points = make([]string, 0)
-		}
 		manifestCorners = append(manifestCorners, model.ManifestCorner{
 			ID:       c.ID,
 			Title:    c.Title,
 			Summary:  cs.Summary,
-			Points:   points,
+			Points:   model.NonNil(cs.Points),
 			Articles: refs,
 		})
 	}
-	notes := p.ConversationNotes
-	if notes == nil {
-		notes = make([]model.ConversationNote, 0)
-	}
-
-	casts := p.Rundown.Casts
-	if casts == nil {
-		casts = make([]model.RundownCast, 0)
-	}
-
 	return model.Manifest{
 		Title:             p.Program.Title,
 		EpisodeNumber:     p.EpisodeNumber,
@@ -66,7 +52,7 @@ func Build(p BuildParams) model.Manifest {
 		Datetime:          p.GeneratedAt.UTC().Format(time.RFC3339),
 		AudioFile:         p.AudioFile,
 		Corners:           manifestCorners,
-		ConversationNotes: notes,
-		Casts:             casts,
+		ConversationNotes: model.NonNil(p.ConversationNotes),
+		Casts:             model.NonNil(p.Rundown.Casts),
 	}
 }
