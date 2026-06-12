@@ -104,7 +104,7 @@ func newEpisodegenCmd() *cobra.Command {
 
 			collector := collect.New(nil, collect.WithLogger(logger), collect.WithLocation(loc), collect.WithSanitizePolicy(cfg.Security.PromptInjection))
 			summarizer := summarize.NewLLMSummarizer(llmClient, prompts["summarize"], stepTemp(cfg.LLM, "summarize"))
-			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, collector, excludedDedupKeys, rundown.WithLogger(logger))
+			rundowner := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, excludedDedupKeys, rundown.WithLogger(logger))
 			rundowner.SetCornerAppearances(cornerAppearances)
 
 			scripter := script.NewLLMScriptGenerator(

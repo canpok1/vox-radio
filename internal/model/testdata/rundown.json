@@ -9,7 +9,7 @@
           "dedup_key": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
           "url": "https://example.com/article/1",
           "title": "新型AIチップ発表",
-          "body": "最新のAIチップが発表され、従来比2倍の性能を実現した。電力効率も向上し2026年末に市場投入予定。",
+          "description": "最新のAIチップが発表され、従来比2倍の性能を実現した。電力効率も向上し2026年末に市場投入予定。",
           "points": [
             "従来比2倍の性能",
             "電力効率向上",
@@ -27,7 +27,7 @@
           "dedup_key": "sha256:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
           "url": "https://example.com/article/2",
           "title": "オープンソース参加者増加",
-          "body": "2025年のオープンソース活動が活発化し参加者数が増加した。企業からの貢献も拡大。",
+          "description": "2025年のオープンソース活動が活発化し参加者数が増加した。企業からの貢献も拡大。",
           "points": [
             "参加者数増加",
             "企業貢献増加"

@@ -94,15 +94,6 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 	return articles, nil
 }
 
-// FetchFullText fetches the full body text of the article at url.
-func (c *Collector) FetchFullText(ctx context.Context, url string) (string, error) {
-	article, err := c.fetchArticle(ctx, url)
-	if err != nil {
-		return "", err
-	}
-	return article.Body, nil
-}
-
 // RunAll collects articles per corner, skipping corners with no source.
 // excludedDedupKeys is a list of DedupKeys to skip when fetching from feeds (nil means no exclusion).
 func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error) {
@@ -137,7 +128,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 			return model.Articles{}, fmt.Errorf("collect corner %q: %w", corner.Title, err)
 		}
 		for _, a := range articles {
-			logger.Debug("記事取得", "title", a.Title, "url", a.URL, "chars", utf8.RuneCountInString(a.Body))
+			logger.Debug("記事取得", "title", a.Title, "url", a.URL, "chars", utf8.RuneCountInString(a.Text()))
 		}
 		totalArticles += len(articles)
 		result = append(result, model.CornerArticles{

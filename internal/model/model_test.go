@@ -67,8 +67,8 @@ func TestArticles_Fields(t *testing.T) {
 	if a.Title == "" {
 		t.Error("Title must not be empty")
 	}
-	if a.Body == "" {
-		t.Error("Body must not be empty")
+	if a.Text() == "" {
+		t.Error("Text() must not be empty (either Description or Body must be set)")
 	}
 }
 
@@ -322,8 +322,8 @@ func TestRundown_Fields(t *testing.T) {
 	if a.Title == "" {
 		t.Error("Article.Title must not be empty")
 	}
-	if a.Body == "" {
-		t.Error("Article.Body must not be empty")
+	if a.Text() == "" {
+		t.Error("Article.Text() must not be empty (either Description or Body must be set)")
 	}
 	if len(a.Points) == 0 {
 		t.Error("Article.Points must not be empty")
@@ -947,14 +947,14 @@ func TestNewXxx_PointsNormalization(t *testing.T) {
 		{
 			name: "NewRundownArticle/nil→empty non-nil",
 			getPoints: func() []string {
-				return model.NewRundownArticle("k", "u", "t", "s", nil, "src", "au", "pub").Points
+				return model.NewRundownArticle("k", "u", "t", "desc", "body", nil, "src", "au", "pub").Points
 			},
 			want: []string{},
 		},
 		{
 			name: "NewRundownArticle/non-nil→preserved",
 			getPoints: func() []string {
-				return model.NewRundownArticle("k", "u", "t", "s", []string{"p1", "p2"}, "src", "au", "pub").Points
+				return model.NewRundownArticle("k", "u", "t", "desc", "body", []string{"p1", "p2"}, "src", "au", "pub").Points
 			},
 			want: []string{"p1", "p2"},
 		},

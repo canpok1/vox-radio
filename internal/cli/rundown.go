@@ -66,7 +66,7 @@ func newRundownCmd() *cobra.Command {
 			flowDesigner := flow.NewLLMDesigner(llmClient, prompts["flow"], stepTemp(cfg.LLM, "flow"))
 			casts := selectCasts(p.Casts, episodeNumber, castAppearances)
 			selector.SetCasts(casts)
-			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, nil, rundown.WithLogger(logger))
+			rd := rundown.NewLLMRundowner(selector, summarizer, flowDesigner, nil, rundown.WithLogger(logger))
 			rd.SetCornerAppearances(cornerAppearances)
 
 			result, err := rd.Run(context.Background(), corners, articles, casts)

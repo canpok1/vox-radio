@@ -23,7 +23,7 @@
     かつ JSONファイル "work/02_rundown.json" の配列 "corners" の要素数は 2 である
     かつ JSONファイル "work/02_rundown.json" の配列 "corners.1.articles" の要素数は 2 である
     かつ JSONファイル "work/02_rundown.json" のキー "corners.0.flow" は空でない文字列である
-    かつ JSONファイル "work/02_rundown.json" のキー "corners.1.articles.0.body" は空でない文字列である
+    かつ JSONファイル "work/02_rundown.json" のキー "corners.1.articles.0.description" は空でない文字列である
 
   シナリオ: script は rundown から台本を生成する
     前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
