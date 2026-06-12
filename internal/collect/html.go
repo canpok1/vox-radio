@@ -33,7 +33,7 @@ func (c *Collector) fetchArticle(ctx context.Context, rawURL string) (*model.Art
 	title := findTitle(doc)
 	body := findBody(doc)
 	return &model.Article{
-		DedupKey: dedupKey(rawURL, normalizeContent(title, body)),
+		DedupKey: HTMLDedupKey(rawURL, title, body),
 		URL:      rawURL,
 		Title:    title,
 		Body:     body,
