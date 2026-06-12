@@ -1003,7 +1003,7 @@ func TestNewXxx_PointsNormalization(t *testing.T) {
 	}
 }
 
-func TestNewCornerSummary_SetsAllFields(t *testing.T) {
+func TestNewCornerSummary_SummaryPreserved(t *testing.T) {
 	cs := model.NewCornerSummary("summary text", nil)
 	if cs.Summary != "summary text" {
 		t.Errorf("Summary: got %q, want %q", cs.Summary, "summary text")
