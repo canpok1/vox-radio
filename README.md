@@ -2,11 +2,9 @@
 
 **設定ファイルを元に、ラジオ番組（ポッドキャスト）の音声を自動生成する CLI ツールです。**
 
-記事の収集から台本生成・音声合成・配信用ファイル出力までを一括で行います。
+原稿の生成に生成AI（Gemini）、音声の合成に VOICEVOX を利用します。
 
 ## インストール
-
-最新リリースのインストールスクリプトを実行します。
 
 ```bash
 curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
@@ -18,6 +16,22 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 すぐ動くサンプル設定で番組を 1 本作る最短手順です（サンプルの詳細は[設定方法](#設定方法)）。
 
+### 1. 前提条件を準備する
+
+**`GEMINI_API_KEY`** を [Google AI Studio](https://aistudio.google.com/) で取得し、環境変数に設定します。
+
+```bash
+export GEMINI_API_KEY=<your-key>
+```
+
+**VOICEVOX Engine** を起動します（既定 `http://localhost:50021`）。Docker なら次のとおりです（[公式アプリ](https://voicevox.hiroshiba.jp/)にも同梱）。
+
+```bash
+docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest
+```
+
+### 2. サンプルで番組を生成する
+
 ```bash
 # サンプル設定一式を sample/ に生成
 vox-radio init --sample
@@ -26,21 +40,21 @@ vox-radio init --sample
 vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
 ```
 
-**前提条件:**
-
-- **`GEMINI_API_KEY`** — [Google AI Studio](https://aistudio.google.com/) で取得し環境変数に設定（`export GEMINI_API_KEY=<your-key>`）
-- **VOICEVOX Engine** — Docker: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`、または [公式アプリ](https://voicevox.hiroshiba.jp/)に同梱（既定 `http://localhost:50021`）
-
 出力先は `output/<YYYYMMDDHHMMSS>/` です。
 
 ## 設定方法
 
-設定は 2 種類です。
+`vox-radio init` で次の設定ファイルが生成されます。
 
-| 種別 | ファイル | 内容 |
-|------|---------|------|
-| 共通設定 (config) | `vox-radio.yaml`（既定はカレントディレクトリ。`--config` で別パス指定可） | LLM / VOICEVOX URL / キャラカタログ |
-| エピソード仕様 (spec) | `episode-spec.yaml`（`--sample` 生成の `sample/episode-spec.yaml` も同形式） | program / corners（source でデータソース指定）/ アセット参照 |
+| ファイル | 内容 |
+|---|---|
+| `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラカタログ）。既定はカレントディレクトリ、`--config` で別パス指定可 |
+| `episode-spec.yaml` | エピソード仕様（program / corners / アセット参照） |
+| `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） |
+| `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） |
+| `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） |
+
+番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。
 
 `vox-radio init --sample` で生成されるサンプル設定は、ずんだもん・めたんが MC を務めるお天気番組（気象庁の防災情報XMLを利用）の記入済み一式です。音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コピー・編集して使えます。
 
