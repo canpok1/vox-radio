@@ -15,7 +15,7 @@ source フィールドのないコーナーはスキップされます。
 
 例:
   vox-radio episodegen collect --out work/articles.json
-  vox-radio episodegen collect --out work/articles.json --spec sample/episode-spec.yaml
+  vox-radio episodegen collect --out work/articles.json --spec episode-spec.yaml
 
 ```
 vox-radio episodegen collect [flags]

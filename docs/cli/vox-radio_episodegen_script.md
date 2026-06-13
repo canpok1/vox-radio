@@ -17,7 +17,7 @@ LLM を使って rundown から台本を生成する
 例:
   vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json
   vox-radio episodegen script --out work/intermediate/04_script.json --step write
-  vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json --spec sample/episode-spec.yaml
+  vox-radio episodegen script --in work/intermediate/02_rundown.json --out work/intermediate/04_script.json --spec episode-spec.yaml
 
 ```
 vox-radio episodegen script [flags]

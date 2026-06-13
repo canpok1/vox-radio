@@ -27,7 +27,7 @@ source フィールドのないコーナーはスキップされます。
 
 例:
   vox-radio episodegen collect --out work/articles.json
-  vox-radio episodegen collect --out work/articles.json --spec sample/episode-spec.yaml`,
+  vox-radio episodegen collect --out work/articles.json --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("collect", logDirFlag(cmd))
 			if err != nil {
