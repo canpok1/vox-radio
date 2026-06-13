@@ -41,41 +41,7 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 
 出力先は `output/<YYYYMMDDHHMMSS>/` です。
 
-## 設定方法
-
-設定は手動でも、コーディングエージェントに任せることもできます。`vox-radio init --sample` で生成される記入済みサンプル（ずんだもん・めたん MC のお天気番組。気象庁の防災情報XMLを利用）をコピー・編集するのが手軽です（音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例です）。
-
-### 手動で設定する
-
-`vox-radio init` でテンプレートを生成し（既存ファイルは上書きしません）、次のファイルを編集します。各フィールドの定義は「設定ファイルリファレンス」を参照してください。
-
-| ファイル | 内容 |
-|---|---|
-| `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラカタログ） |
-| `episode-spec.yaml` | エピソード仕様（program / corners / アセット参照） |
-| `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） |
-| `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） |
-| `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） |
-
-番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。
-
-```bash
-vox-radio init
-```
-
-### コーディングエージェントで設定する（おすすめ）
-
-Claude Code などのエージェントを使うなら、上記の編集をエージェントに任せられます。
-
-```bash
-vox-radio install --skills
-```
-
-エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）が `.claude/skills/vox-radio/` に入ります。あとは「ラジオ番組の設定を作って」と依頼すれば、`init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
-
 ## 使い方
-
-### ラジオ番組の生成
 
 vox-radio は次の 6 段のパイプライン（処理の連なり）で番組を生成します。各段は前段の出力を受け取って次へ渡します。
 
@@ -114,7 +80,29 @@ vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out 
 
 ログは既定で `.vox-radio/logs/` に出力されます。
 
-### アセット（音声演出）
+## 設定方法
+
+設定は手動でも、コーディングエージェントに任せることもできます。`vox-radio init --sample` で生成される記入済みサンプル（ずんだもん・めたん MC のお天気番組。気象庁の防災情報XMLを利用）をコピー・編集するのが手軽です（音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例です）。
+
+### 手動で設定する
+
+`vox-radio init` でテンプレートを生成し（既存ファイルは上書きしません）、次のファイルを編集します。各フィールドの定義は「[設定ファイルリファレンス](#設定ファイルリファレンス)」を参照してください。
+
+| ファイル | 内容 |
+|---|---|
+| `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラクター） |
+| `episode-spec.yaml` | エピソード仕様（番組情報・コーナー・アセット参照） |
+| `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） |
+| `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） |
+| `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） |
+
+番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。
+
+```bash
+vox-radio init
+```
+
+#### アセット（音声演出）
 
 ジングル（イントロ/アウトロ）・効果音（SE）・BGM を番組に組み込めます（`assemble` で合成）。
 
@@ -130,15 +118,9 @@ vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp
 
 各フィールドの詳細は[アセット設定リファレンス](internal/cli/skills/vox-radio/references/assets.md)を参照。
 
-### 過去回の記憶（キャッシュ）と `program.id`
+#### キャラクター（キャラカタログとスタイル）
 
-過去回の履歴キャッシュは常に有効です（`vox-radio.yaml` の `cache` で保持件数・日数を調整可、無効化は不可）。実体は `program.id` をキーにした JSONL（`.vox-radio/cache/<program.id>.jsonl`）です。
-
-このため **`program.id` は必須**です。未設定だと `episodegen` / `episodegen check` でエラーになります。回番号・過去回参照・出演回数などが `program.id` 単位で記録されます。
-
-### キャラカタログとスタイル選択
-
-`vox-radio.yaml` の `characters` でキャラごとに複数の音声スタイルを定義できます。`default_style` は `style` 未指定時のフォールバックです。
+キャラカタログは、番組に出演させるキャラクターの一覧です。`vox-radio.yaml` の `characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
 
 ```yaml
 characters:
@@ -149,19 +131,37 @@ characters:
     personality: ["元気", "明るい"]
     default_style: ノーマル
     styles:
-      ノーマル: 3    # style名 → VOICEVOX speaker_id
+      ノーマル: 3    # スタイル名 → VOICEVOX の話者ID
       あまあま: 1
       なみだめ: 76
 ```
 
-`script` 生成時に LLM が感情に応じてスタイルを選び、`synth` が各行の `style` の `speaker_id` で合成します（未指定・不正時は `default_style`）。
+台本生成ではセリフの感情に応じてスタイルが選ばれ、音声合成はそのスタイルの声色で読み上げます。指定がない・不正なときは `default_style` が使われます。
 
-### 配信（feedgen / slackpost）
+#### 配信（feedgen / slackpost）
 
-- **RSS フィード** — `feedgen` がキャッシュ（`.jsonl`）と `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成（manifest・mp3 不要、状態は cache が正）
-- **Slack 配信** — `slackpost` が `manifest.json` と `slack-spec.yaml` で mp3 を Slack へ投稿。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後も二重投稿なしに再開
+生成した番組は次の方法で配信できます。
+
+- **RSS フィード** — `feedgen` が履歴キャッシュと `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成します（manifest・mp3 は不要）。
+- **Slack 配信** — `slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 を Slack へ投稿します。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
 
 各コマンドのフラグは[コマンド一覧](#コマンド一覧)を参照。
+
+#### 過去回の記憶（キャッシュ）
+
+vox-radio は、過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録します。これにより、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりできます。
+
+キャッシュは番組ごとに `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `episode-spec.yaml` の `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。放送回数・過去回の参照・出演回数などはすべて `program.id` 単位で記録されます。
+
+### コーディングエージェントで設定する（おすすめ）
+
+Claude Code などのエージェントを使うなら、上記の編集をエージェントに任せられます。
+
+```bash
+vox-radio install --skills
+```
+
+エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）が `.claude/skills/vox-radio/` に入ります。あとは「ラジオ番組の設定を作って」と依頼すれば、`init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
 
 ## コマンド一覧
 
