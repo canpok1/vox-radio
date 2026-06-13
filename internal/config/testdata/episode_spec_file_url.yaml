@@ -1,0 +1,26 @@
+program:
+  id: "test-program-file"
+
+casts:
+  zundamon:
+    type: regular
+    role: "MC"
+
+corners:
+  - id: "news"
+    title: "ニュースコーナー"
+    content: "テック記事を紹介"
+    cast:
+      zundamon: "司会"
+    length_sec: 30
+    source:
+      feeds:
+        - url: "file://feeds/feed.xml"
+          max_items: 3
+        - url: "file:///abs/feed.xml"
+          max_items: 3
+        - url: "https://example.com/rss.xml"
+          max_items: 3
+      articles:
+        - "file://articles/article.html"
+        - "https://example.com/articles/1"

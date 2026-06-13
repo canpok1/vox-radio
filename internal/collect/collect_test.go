@@ -853,3 +853,89 @@ func TestCollector_Run_RSS_OnDetectError_ReturnsError(t *testing.T) {
 		t.Error("on_detect=error should return error when injection detected")
 	}
 }
+
+func TestNew_DefaultClient_FileProtocol_Feed(t *testing.T) {
+	feedData := loadTestdata(t, "feed.xml")
+	tmp, err := os.CreateTemp("", "test-feed-*.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(feedData); err != nil {
+		t.Fatal(err)
+	}
+	tmp.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{{URL: "file://" + tmp.Name(), MaxItems: 1}},
+	}
+
+	c := collect.New(nil)
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error reading feed via file://: %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("expected at least 1 article from local file feed")
+	}
+}
+
+func TestNew_DefaultClient_FileProtocol_Article(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	tmp, err := os.CreateTemp("", "test-article-*.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(htmlData); err != nil {
+		t.Fatal(err)
+	}
+	tmp.Close()
+
+	cfg := config.FeedsConfig{
+		Articles: []string{"file://" + tmp.Name()},
+	}
+
+	c := collect.New(nil)
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error reading article via file://: %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("expected 1 article from local HTML file")
+	}
+}
+
+func TestNew_DefaultClient_FileProtocol_MissingFile(t *testing.T) {
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{{URL: "file:///nonexistent/path/feed.xml", MaxItems: 1}},
+	}
+
+	c := collect.New(nil)
+	_, err := c.Run(context.Background(), cfg, nil)
+	if err == nil {
+		t.Error("expected error for missing file, got nil")
+	}
+}
+
+func TestNew_DefaultClient_HTTPS_StillWorks(t *testing.T) {
+	rssData := loadTestdata(t, "feed.xml")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write(rssData)
+	}))
+	defer server.Close()
+
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+	}
+
+	c := collect.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("http:// feed should still work after file transport registration: %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("expected at least 1 article from http feed")
+	}
+}

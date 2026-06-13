@@ -120,14 +120,40 @@ corners:
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `feeds` | []FeedEntry | 任意 | RSS/Atom フィードのリスト |
-| `articles` | []string | 任意 | 個別記事 URL のリスト |
+| `articles` | []string | 任意 | 個別記事 URL のリスト。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
 
 ### `corners[].source.feeds[]` サブフィールド
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `url` | string | 必須 | フィードの URL |
+| `url` | string | 必須 | フィードの URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
 | `max_items` | int | 任意 | 過去使用URLを除外したうえで確保する最大記事数。デフォルト: 0（実質無制限）。除外で減った分はフィード内の後続記事で補う。 |
+
+### `file://` プロトコルによるローカルフィード・記事の読み込み
+
+アクセス制限などで RSS/Atom フィードに直接アクセスできない場合、手動ダウンロードした XML ファイルをローカルから読み込めます。`feeds[].url` および `articles[]` に `file://` プロトコルを使ったパスを指定します。
+
+**絶対パス指定**（そのまま使用）:
+
+```yaml
+source:
+  feeds:
+    - url: "file:///home/user/downloads/feed.xml"
+```
+
+**相対パス指定**（spec ファイルのディレクトリを基準に解決）:
+
+```yaml
+# /home/user/myshow/episode-spec.yaml に記述した場合、
+# /home/user/myshow/feeds/feed.xml を読み込む
+source:
+  feeds:
+    - url: "file://feeds/feed.xml"
+  articles:
+    - "file://articles/article.html"
+```
+
+> **注意**: ファイルが存在しない場合は `episodegen collect` 実行時にエラーになります。
 
 ## `casts` セクション（出演者名簿）
 

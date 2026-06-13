@@ -153,7 +153,7 @@ collect → rundown → script → synth → assemble → manifest
 | `init` | カレントディレクトリに `vox-radio.yaml`・`episode-spec.yaml`・`feed-spec.yaml`・`slack-spec.yaml`・`assets/assets.yaml` のテンプレートを生成する（初回セットアップ用）。`--sample` を付けると、ずんだもん・めたんMCのお天気番組（気象庁の防災情報XMLを利用）の「すぐ動くサンプル設定一式」を `sample/` に生成する |
 | `install --skills` | LLM エージェント向けスキルファイル（SKILL.md + references/*.md）を `.claude/skills/vox-radio/` にインストールする |
 | `episodegen` | collect → rundown → script → synth → assemble → manifest の全パイプラインを一括実行し 1 本のエピソードを生成する |
-| `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する |
+| `episodegen collect` | `corners[].source` に定義したフィード・URL からコーナーごとに記事を収集し `01_articles.json` を生成する。`https://` のほか `file://` でローカル XML ファイルも指定可能（アクセス制限がある場合に手動 DL した feed.xml をローカルから読み込む運用に対応） |
 | `episodegen rundown` | LLM が収集記事を選別し、コーナーごとの話の流れと要約を含む `02_rundown.json` を生成する（番組設計図） |
 | `episodegen script` | rundown を LLM に渡して台本 `04_script.json` を生成する（write → direct の多段パイプライン） |
 | `episodegen synth` | `04_script.json` をもとに VOICEVOX で音声クリップを合成する |

@@ -61,6 +61,26 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 		}
 		mergeAssets(&p.Assets, &assets)
 	}
+	for i := range p.Corners {
+		corner := &p.Corners[i]
+		if corner.Source == nil {
+			continue
+		}
+		for j := range corner.Source.Feeds {
+			resolved, err := resolveFileURL(specDir, corner.Source.Feeds[j].URL)
+			if err != nil {
+				return nil, err
+			}
+			corner.Source.Feeds[j].URL = resolved
+		}
+		for j, article := range corner.Source.Articles {
+			resolved, err := resolveFileURL(specDir, article)
+			if err != nil {
+				return nil, err
+			}
+			corner.Source.Articles[j] = resolved
+		}
+	}
 	return p, nil
 }
 
