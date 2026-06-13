@@ -97,16 +97,18 @@ vox-radio init --sample
 | ファイル | 内容 | リファレンス |
 |---|---|---|
 | `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラクター） | [vox-radio.md](internal/cli/skills/vox-radio/references/vox-radio.md) |
-| `episode-spec.yaml` | エピソード仕様（番組情報・コーナー・アセット参照） | [episode-spec.md](internal/cli/skills/vox-radio/references/episode-spec.md) |
+| `episode-spec.yaml` | エピソード設定（番組情報・コーナー・アセット参照） | [episode-spec.md](internal/cli/skills/vox-radio/references/episode-spec.md) |
 | `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） | [assets.md](internal/cli/skills/vox-radio/references/assets.md) |
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
 
 番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
-### キャラクター設定
+### 共通設定
 
-キャラカタログは、番組に出演させるキャラクターの一覧です。`vox-radio.yaml` の `characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
+`vox-radio.yaml` には番組全体で共通する設定を記載します。LLM・VOICEVOX の接続先のほか、出演キャラクター（キャラカタログ）と過去回キャッシュの設定を含みます。
+
+**キャラクター（キャラカタログ）** — 番組に出演させるキャラクターの一覧です。`characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
 
 ```yaml
 characters:
@@ -124,15 +126,15 @@ characters:
 
 台本生成ではセリフの感情に応じてスタイルが選ばれ、音声合成はそのスタイルの声色で読み上げます。指定がない・不正なときは `default_style` が使われます。
 
-### キャッシュ（過去回の記憶）
+**キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
 
-vox-radio は、過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録します。これにより、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりできます。
+### エピソード設定
 
-キャッシュは番組ごとに `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `episode-spec.yaml` の `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。放送回数・過去回の参照・出演回数などはすべて `program.id` 単位で記録されます。
+`episode-spec.yaml` は 1 回分の番組内容を定義します。番組タイトルなどの基本情報、コーナー（話題ブロック）とそのデータソース、使用するアセットの参照、キャッシュのキーになる `program.id`（必須）を記載します。
 
 ### アセット設定
 
-ジングル（イントロ/アウトロ）・効果音（SE）・BGM を番組に組み込めます（`assemble` で合成）。
+`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
@@ -144,14 +146,13 @@ vox-radio assets check assets/assets.yaml
 vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
 ```
 
-### 配信設定
+### RSS フィード生成設定
 
-生成した番組は次の方法で配信できます。
+`feed-spec.yaml` は RSS フィードの生成設定です。`feedgen` が履歴キャッシュとこの設定から RSS 2.0 + iTunes フィード（`feed.xml`）を生成します（manifest・mp3 は不要）。
 
-- **RSS フィード** — `feedgen` が履歴キャッシュと `feed-spec.yaml` から RSS 2.0 + iTunes フィード（`feed.xml`）を生成します（manifest・mp3 は不要）。
-- **Slack 配信** — `slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 を Slack へ投稿します。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
+### Slack 投稿設定
 
-各コマンドのフラグは[コマンド一覧](#コマンド一覧)を参照。
+`slack-spec.yaml` は Slack 配信の設定です。`slackpost` が `manifest.json` とこの設定をもとに mp3 を Slack へ投稿します。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
 
 ## 応用的な設定方法
 
