@@ -1,6 +1,6 @@
 # この番組の中身（コーナーの並び・長さ・台本づくりの指示）を決めるサンプルです。
 # 次のコマンドで番組を作れます:
-#   vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+#   vox-radio episodegen --spec episode-spec.yaml
 #
 # データソースには気象庁の防災情報XMLフィード（https://xml.kishou.go.jp/xmlpull.html）を使っています。
 # 気象庁ホームページのコンテンツは「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づき、
