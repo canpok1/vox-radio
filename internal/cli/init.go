@@ -40,14 +40,13 @@ func newInitCmd() *cobra.Command {
 
   vox-radio episodegen --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dstRoot := outputDir
-			if dstRoot == "" {
-				dstRoot = "."
+			if outputDir == "" {
+				outputDir = "."
 			}
 			if sample {
-				return writeEmbeddedTree(cmd, sampleFS, "templates-sample", dstRoot, false)
+				return writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false)
 			}
-			return writeEmbeddedTree(cmd, templatesFS, "templates", dstRoot, false)
+			return writeEmbeddedTree(cmd, templatesFS, "templates", outputDir, false)
 		},
 	}
 

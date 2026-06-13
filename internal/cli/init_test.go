@@ -12,6 +12,8 @@ import (
 	"github.com/canpok1/vox-radio/internal/slack"
 )
 
+var initTemplateFiles = []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"}
+
 func chdirTemp(t *testing.T) string {
 	t.Helper()
 	orig, err := os.Getwd()
@@ -53,7 +55,7 @@ func TestInitCmd_AllGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
+	for _, name := range initTemplateFiles {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
@@ -109,15 +111,14 @@ func TestInitCmd_EpisodeSpecExists_ConfigGenerated(t *testing.T) {
 func TestInitCmd_AllExist_NothingGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	allFiles := []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"}
-	for _, name := range allFiles {
+	for _, name := range initTemplateFiles {
 		writeTestFile(t, dir, name, existingContent)
 	}
 	_, err := runInitCmd(t)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range allFiles {
+	for _, name := range initTemplateFiles {
 		data, _ := os.ReadFile(filepath.Join(dir, name))
 		if string(data) != string(existingContent) {
 			t.Errorf("%s should not be overwritten", name)
@@ -230,13 +231,7 @@ func TestInitCmd_Sample_AllGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{
-		"vox-radio.yaml",
-		"episode-spec.yaml",
-		"feed-spec.yaml",
-		"slack-spec.yaml",
-		"assets/assets.yaml",
-	} {
+	for _, name := range initTemplateFiles {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
@@ -373,7 +368,7 @@ func TestInitCmd_OutputDir_Generated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
+	for _, name := range initTemplateFiles {
 		if _, err := os.Stat(filepath.Join(dir, "mydir", name)); os.IsNotExist(err) {
 			t.Errorf("mydir/%s was not generated", name)
 		}
@@ -387,7 +382,7 @@ func TestInitCmd_OutputDir_Empty_FallsbackToCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
+	for _, name := range initTemplateFiles {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
