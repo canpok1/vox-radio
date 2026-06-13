@@ -240,6 +240,13 @@ func TestCollector_Run_WarnOnEmptyFeed(t *testing.T) {
 	if !strings.Contains(buf.String(), "WARN") {
 		t.Errorf("expected WARN log for empty feed, got: %q", buf.String())
 	}
+	// ログにはURLではなくフィード名を表示する（emptyFeed のチャンネルタイトル）
+	if !strings.Contains(buf.String(), "Empty") {
+		t.Errorf("expected feed name in log, got: %q", buf.String())
+	}
+	if strings.Contains(buf.String(), cfg.Feeds[0].URL) {
+		t.Errorf("expected feed name instead of URL in log, but URL was present: %q", buf.String())
+	}
 }
 
 func TestCollector_Run_ExcludesURLsAndFillsFromLater(t *testing.T) {

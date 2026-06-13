@@ -22,6 +22,13 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 
 	source := feed.Title
 
+	// ログ表示用のフィード識別子。どのフィードか分かりやすいよう、URLではなく
+	// フィード名を表示する。フィード名が空のフィードもあるためURLにフォールバックする。
+	feedName := source
+	if feedName == "" {
+		feedName = url
+	}
+
 	articles := make([]model.Article, 0, len(feed.Items))
 	for _, item := range feed.Items {
 		body := item.Content
@@ -59,17 +66,11 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 	}
 
 	if len(articles) == 0 {
-		c.logger.Warn("feed returned 0 items", "url", url)
+		c.logger.Warn("feed returned 0 items", "feed", feedName)
 		return articles, nil
 	}
 
 	if maxItems > 0 && len(articles) < maxItems {
-		// どのフィードか分かりやすいよう、URLではなくフィード名を表示する。
-		// フィード名が空のフィードもあるため、その場合はURLにフォールバックする。
-		feedName := source
-		if feedName == "" {
-			feedName = url
-		}
 		c.logger.Warn("フィードの未使用記事が不足", "feed", feedName, "got", len(articles), "want", maxItems)
 	}
 
