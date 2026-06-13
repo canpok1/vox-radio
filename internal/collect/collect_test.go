@@ -249,6 +249,38 @@ func TestCollector_Run_WarnOnEmptyFeed(t *testing.T) {
 	}
 }
 
+func TestCollector_Run_WarnFallsBackToURLWhenFeedTitleEmpty(t *testing.T) {
+	// フィード名（title）が空のフィードでは、ログにURLをフォールバック表示する
+	noTitleFeed := `<?xml version="1.0"?><rss version="2.0"><channel></channel></rss>`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write([]byte(noTitleFeed))
+	}))
+	defer server.Close()
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	feedURL := server.URL + "/no-title.xml"
+	cfg := config.FeedsConfig{
+		Feeds: []config.FeedEntry{
+			{URL: feedURL, MaxItems: 5},
+		},
+	}
+
+	c := collect.New(server.Client(), collect.WithLogger(logger))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("expected no error for no-title feed, got: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("articles count: got %d, want 0", len(result))
+	}
+	if !strings.Contains(buf.String(), feedURL) {
+		t.Errorf("expected URL fallback in log when feed title is empty, got: %q", buf.String())
+	}
+}
+
 func TestCollector_Run_ExcludesURLsAndFillsFromLater(t *testing.T) {
 	// feed.xml has 3 articles: article/1, article/2, article/3
 	// Exclude article/1 by DedupKey; with maxItems=2 should return article/2 and article/3
