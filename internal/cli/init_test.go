@@ -223,9 +223,30 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	}
 }
 
+// TestInitCmd_Sample_AllGenerated: --sample alone outputs to current dir (breaking change).
 func TestInitCmd_Sample_AllGenerated(t *testing.T) {
 	dir := chdirTemp(t)
 	_, err := runInitCmd(t, "--sample")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{
+		"vox-radio.yaml",
+		"episode-spec.yaml",
+		"feed-spec.yaml",
+		"slack-spec.yaml",
+		"assets/assets.yaml",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
+	}
+}
+
+// TestInitCmd_Sample_WithOutputDir: --sample --output-dir sample reproduces the old behavior.
+func TestInitCmd_Sample_WithOutputDir(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--sample", "--output-dir", "sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -244,7 +265,7 @@ func TestInitCmd_Sample_AllGenerated(t *testing.T) {
 
 func TestInitCmd_Sample_Loadable(t *testing.T) {
 	dir := chdirTemp(t)
-	_, err := runInitCmd(t, "--sample")
+	_, err := runInitCmd(t, "--sample", "--output-dir", "sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -310,21 +331,21 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 func TestInitCmd_Sample_Skip(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")
-	writeTestFile(t, dir, "sample/episode-spec.yaml", existingContent)
+	writeTestFile(t, dir, "episode-spec.yaml", existingContent)
 	out, err := runInitCmd(t, "--sample")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	data, _ := os.ReadFile(filepath.Join(dir, "sample", "episode-spec.yaml"))
+	data, _ := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
 	if string(data) != string(existingContent) {
-		t.Error("sample/episode-spec.yaml should not be overwritten")
+		t.Error("episode-spec.yaml should not be overwritten")
 	}
 	if !strings.Contains(out, "skip") {
-		t.Errorf("expected skip message for sample/episode-spec.yaml, got: %s", out)
+		t.Errorf("expected skip message for episode-spec.yaml, got: %s", out)
 	}
 	// 他のファイルは生成される。
-	if _, err := os.Stat(filepath.Join(dir, "sample", "vox-radio.yaml")); os.IsNotExist(err) {
-		t.Error("sample/vox-radio.yaml was not generated")
+	if _, err := os.Stat(filepath.Join(dir, "vox-radio.yaml")); os.IsNotExist(err) {
+		t.Error("vox-radio.yaml was not generated")
 	}
 }
 
@@ -342,5 +363,45 @@ func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
 	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for slack-spec.yaml, got: %s", out)
+	}
+}
+
+// TestInitCmd_OutputDir_Generated: --output-dir DIR outputs to DIR/.
+func TestInitCmd_OutputDir_Generated(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--output-dir", "mydir")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, "mydir", name)); os.IsNotExist(err) {
+			t.Errorf("mydir/%s was not generated", name)
+		}
+	}
+}
+
+// TestInitCmd_OutputDir_Empty_FallsbackToCurrent: --output-dir "" falls back to current dir.
+func TestInitCmd_OutputDir_Empty_FallsbackToCurrent(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--output-dir", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
+	}
+}
+
+// TestInitCmd_OutputDir_NotExist_AutoCreated: non-existent output dir is auto-created.
+func TestInitCmd_OutputDir_NotExist_AutoCreated(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--output-dir", "new/nested/dir")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "new/nested/dir", "vox-radio.yaml")); os.IsNotExist(err) {
+		t.Error("vox-radio.yaml was not generated in nested directory")
 	}
 }
