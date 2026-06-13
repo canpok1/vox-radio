@@ -57,6 +57,8 @@
 | `url` | string | 必須 | VOICEVOX Engine のURL |
 | `presets` | *VoicevoxPresets | 任意 | 抑揚・音高・話速プリセット定義。省略時はコード組込みのデフォルトプリセットが適用される |
 
+`url` は環境変数 `VOX_RADIO_VOICEVOX_URL` で上書きできます。解決順は `VOX_RADIO_VOICEVOX_URL`（環境変数）> `voicevox.url` > 既定値 `http://localhost:50021` です。
+
 ### `voicevox.presets` サブフィールド
 
 | フィールド | 型 | 必須/任意 | 説明 |

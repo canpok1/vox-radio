@@ -6,21 +6,17 @@
 
 ## インストール
 
-最新リリースのインストールスクリプトを実行します（設置先は既定 `/usr/local/bin`、書き込み不可なら `sudo` にフォールバック）。
+最新リリースのインストールスクリプトを実行します。
 
 ```bash
-# 最新版をインストール
 curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
-
-# 設置先を変える場合は INSTALL_DIR を指定
-curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | INSTALL_DIR=$HOME/.local/bin bash
 ```
 
-特定バージョンは `latest/download` をタグに置き換えます（例: `releases/download/v0.0.16/install.sh`。一覧は [Releases](https://github.com/canpok1/vox-radio/releases)）。
+設置先の変更・特定バージョンの指定などは[インストールガイド](docs/installation.md)を参照してください。
 
 ## クイックスタート
 
-すぐ動くサンプル設定（ずんだもん・めたん MC のお天気番組。気象庁の防災情報XMLを利用）で番組を 1 本作る最短手順です。
+すぐ動くサンプル設定で番組を 1 本作る最短手順です（サンプルの詳細は[設定方法](#設定方法)）。
 
 ```bash
 # サンプル設定一式を sample/ に生成
@@ -35,7 +31,7 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 - **`GEMINI_API_KEY`** — [Google AI Studio](https://aistudio.google.com/) で取得し環境変数に設定（`export GEMINI_API_KEY=<your-key>`）
 - **VOICEVOX Engine** — Docker: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`、または [公式アプリ](https://voicevox.hiroshiba.jp/)に同梱（既定 `http://localhost:50021`）
 
-出力先は `output/<YYYYMMDDHHMMSS>/`。音声アセットは同梱しないため、サンプルの効果音・BGM はコメントアウト済みの記入例です。
+出力先は `output/<YYYYMMDDHHMMSS>/` です。
 
 ## 設定方法
 
@@ -46,7 +42,7 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 | 共通設定 (config) | `vox-radio.yaml`（既定はカレントディレクトリ。`--config` で別パス指定可） | LLM / VOICEVOX URL / キャラカタログ |
 | エピソード仕様 (spec) | `episode-spec.yaml`（`--sample` 生成の `sample/episode-spec.yaml` も同形式） | program / corners（source でデータソース指定）/ アセット参照 |
 
-VOICEVOX の URL は `VOX_RADIO_VOICEVOX_URL`（環境変数）> `voicevox.url` > 既定 `http://localhost:50021` の順で解決します。devcontainer では自動設定済みです。
+`vox-radio init --sample` で生成されるサンプル設定は、ずんだもん・めたんが MC を務めるお天気番組（気象庁の防災情報XMLを利用）の記入済み一式です。音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コピー・編集して使えます。
 
 ### コーディングエージェントで設定する（おすすめ）
 
@@ -60,12 +56,10 @@ vox-radio install --skills
 
 ### 手動で設定する
 
-```bash
-# テンプレートを生成（既存ファイルは上書きしない）
-vox-radio init
+`vox-radio init` でテンプレートを生成し（既存ファイルは上書きしません）、各ファイルを編集します。フィールド定義は「設定ファイルリファレンス」を参照してください。
 
-# 各ファイルを編集（フィールド定義は「設定ファイルリファレンス」を参照）後に実行
-vox-radio episodegen --spec episode-spec.yaml
+```bash
+vox-radio init
 ```
 
 ## 使い方
