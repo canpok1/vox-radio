@@ -1,3 +1,11 @@
+---
+paths:
+  - "**/*.yaml"
+  - "internal/cli/prompts/*.md"
+  - "internal/cli/templates-sample/**/*.yaml"
+  - "internal/config/testdata/*.yaml"
+---
+
 # 設定YAML・プロンプト編集ルール
 
 対象ファイル: `*.yaml` / `internal/cli/templates-sample/**/*.yaml` / `internal/cli/prompts/*.md` / `internal/config/testdata/*.yaml`
