@@ -182,7 +182,7 @@ characters:
 設定方法で説明した編集は、コーディングエージェントに任せることもできます。`vox-radio install --skills` は、エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）をインストールします。
 
 ```bash
-# Claude Code 向け（既定: .claude/skills/vox-radio/）
+# 既定: .claude/skills/vox-radio/
 vox-radio install --skills
 
 # 別のエージェントのスキルディレクトリへ展開する場合
