@@ -32,14 +32,14 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 ### 2. 番組を生成する
 
 ```bash
-# サンプル設定一式を sample/ に生成
-vox-radio init --sample --output-dir sample
+# サンプル設定一式をカレントディレクトリに生成
+vox-radio init --sample
 
 # サンプルでそのまま番組生成
-vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+vox-radio episodegen --spec episode-spec.yaml
 ```
 
-出力先は `output/<YYYYMMDDHHMMSS>/` です。
+番組は `output/episode.mp3` に生成されます（中間ファイルは `output/intermediate/`）。
 
 ## 使い方
 
@@ -73,12 +73,12 @@ vox-radio episodegen --spec episode-spec.yaml --out-dir output --log-dir output/
 各ステップは個別にも実行できます。
 
 ```bash
-vox-radio episodegen collect  --out work/01_articles.json --spec sample/episode-spec.yaml
-vox-radio episodegen rundown  --in work/01_articles.json --out work/02_rundown.json --spec sample/episode-spec.yaml
-vox-radio episodegen script   --in work/02_rundown.json --out work/04_script.json --spec sample/episode-spec.yaml
+vox-radio episodegen collect  --out work/01_articles.json --spec episode-spec.yaml
+vox-radio episodegen rundown  --in work/01_articles.json --out work/02_rundown.json --spec episode-spec.yaml
+vox-radio episodegen script   --in work/02_rundown.json --out work/04_script.json --spec episode-spec.yaml
 vox-radio episodegen synth    --in work/04_script.json --out-dir work/clips
-vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out work/episode.mp3 --spec sample/episode-spec.yaml
-vox-radio episodegen manifest --spec sample/episode-spec.yaml --rundown work/02_rundown.json --audio work/episode.mp3 --out work/manifest.json
+vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out work/episode.mp3 --spec episode-spec.yaml
+vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown.json --audio work/episode.mp3 --out work/manifest.json
 ```
 
 ログは既定で `.vox-radio/logs/` に出力されます。
@@ -110,8 +110,8 @@ vox-radio slackpost --manifest output/manifest.json --spec slack-spec.yaml
 # 設定テンプレートを生成
 vox-radio init
 
-# 記入済みサンプルを sample/ に生成（ずんだもん・めたんMCのお天気番組）
-vox-radio init --sample --output-dir sample
+# 記入済みサンプルを生成（ずんだもん・めたんMCのお天気番組）
+vox-radio init --sample
 ```
 
 `init` は次のファイルのテンプレートを生成します（既存ファイルは上書きしません）。各フィールドの定義は右列のリファレンスを参照してください。
@@ -124,7 +124,7 @@ vox-radio init --sample --output-dir sample
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
 
-番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample --output-dir sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
+番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
 ### 共通設定
 

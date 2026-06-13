@@ -14,8 +14,8 @@ collect → rundown → script → synth → assemble → manifest を一括実�
 
 例:
   vox-radio episodegen
-  vox-radio episodegen --out-dir output --spec sample/episode-spec.yaml
-  vox-radio --config /path/to/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+  vox-radio episodegen --out-dir output --spec episode-spec.yaml
+  vox-radio --config /path/to/vox-radio.yaml episodegen --spec episode-spec.yaml
 
 ```
 vox-radio episodegen [flags]

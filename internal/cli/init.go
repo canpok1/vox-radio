@@ -30,7 +30,7 @@ func newInitCmd() *cobra.Command {
 
 生成後は次のコマンドで番組生成を試せます:
 
-  vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
+  vox-radio episodegen --spec episode-spec.yaml
 
 既存ファイルは上書きを防ぐため個別にスキップされます。
 すべてのファイルがすでに存在する場合は何も生成されません。

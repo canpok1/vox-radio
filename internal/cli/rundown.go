@@ -28,7 +28,7 @@ func newRundownCmd() *cobra.Command {
 コーナー定義はエピソード仕様から取得します。
 
 例:
-  vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json --spec sample/episode-spec.yaml`,
+  vox-radio episodegen rundown --in work/intermediate/01_articles.json --out work/intermediate/02_rundown.json --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("rundown", logDirFlag(cmd))
 			if err != nil {
