@@ -87,7 +87,7 @@ collect → rundown → script → synth → assemble → manifest
 |----|------|
 | collect | コーナーごとにフィード・URL から記事を収集 |
 | rundown | LLM が記事を選別し番組設計図を生成 |
-| script | 番組設計図から台本を生成（write → direct の多段） |
+| script | 番組設計図から台本を生成（多段の LLM パイプライン） |
 | synth | VOICEVOX で音声クリップを合成 |
 | assemble | クリップとイントロ・アウトロを ffmpeg で結合し MP3 化 |
 | manifest | 配信用の番組情報（タイトル・要約・記事など）を JSON 出力 |
