@@ -179,15 +179,17 @@ characters:
 
 ## 応用的な設定方法
 
-設定方法で説明した編集は、コーディングエージェントに任せることもできます。`vox-radio install --skills` は **Claude Code 向け**に、エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）を `.claude/skills/vox-radio/` へインストールします。
+設定方法で説明した編集は、コーディングエージェントに任せることもできます。`vox-radio install --skills` は、エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）をインストールします。
 
 ```bash
+# Claude Code 向け（既定: .claude/skills/vox-radio/）
 vox-radio install --skills
+
+# 別のエージェントのスキルディレクトリへ展開する場合
+vox-radio install --skills --skills-dir <スキルディレクトリ>
 ```
 
 あとは「ラジオ番組の設定を作って」と依頼すれば、エージェントが `init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
-
-Claude Code 以外のコーディングエージェントを使う場合は、インストールされた `.claude/skills/vox-radio/` を、そのエージェントがスキルを読み込むディレクトリへ手動で移動してください。
 
 ## コマンド一覧
 
