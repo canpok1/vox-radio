@@ -118,10 +118,10 @@ vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out 
 
 ジングル（イントロ/アウトロ）・効果音（SE）・BGM を番組に組み込めます（`assemble` で合成）。
 
-1. `assets/` に音声ファイルを配置
-2. `assets/assets.yaml` で `jingle:` / `se:` / `bgm:` を定義（音量・フェード・ダッキング比などを指定）
-3. `episode-spec.yaml` の `assets_files` で参照し、コーナー単位で `start_audio` / `end_audio` / `bgm` を割り当て
-4. `assets check` で検証、`assets preview` で素材単体を確認
+1. 使う音声ファイルを `assets/` に置く
+2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
+3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する
+4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
 
 ```bash
 vox-radio assets check assets/assets.yaml
