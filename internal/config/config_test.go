@@ -1948,3 +1948,63 @@ func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadEpisodeSpec_FileURLResolution(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_file_url.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+
+	var sourceCorner *config.CornerConfig
+	for i := range spec.Corners {
+		if spec.Corners[i].Source != nil {
+			sourceCorner = &spec.Corners[i]
+			break
+		}
+	}
+	if sourceCorner == nil {
+		t.Fatal("no corner with source found")
+	}
+
+	absTestdata, err := filepath.Abs("testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	feeds := sourceCorner.Source.Feeds
+	if len(feeds) < 3 {
+		t.Fatalf("expected 3 feeds, got %d", len(feeds))
+	}
+
+	// relative file:// URL resolved to specDir-based absolute
+	wantRelFeed := "file://" + filepath.Join(absTestdata, "feeds/feed.xml")
+	if feeds[0].URL != wantRelFeed {
+		t.Errorf("feeds[0].URL (relative file://): got %q, want %q", feeds[0].URL, wantRelFeed)
+	}
+
+	// absolute file:// URL stays as-is
+	if feeds[1].URL != "file:///abs/feed.xml" {
+		t.Errorf("feeds[1].URL (absolute file://): got %q, want %q", feeds[1].URL, "file:///abs/feed.xml")
+	}
+
+	// https:// passthrough
+	if feeds[2].URL != "https://example.com/rss.xml" {
+		t.Errorf("feeds[2].URL (https://): got %q, want %q", feeds[2].URL, "https://example.com/rss.xml")
+	}
+
+	articles := sourceCorner.Source.Articles
+	if len(articles) < 2 {
+		t.Fatalf("expected 2 articles, got %d", len(articles))
+	}
+
+	// relative file:// article URL resolved
+	wantRelArticle := "file://" + filepath.Join(absTestdata, "articles/article.html")
+	if articles[0] != wantRelArticle {
+		t.Errorf("articles[0] (relative file://): got %q, want %q", articles[0], wantRelArticle)
+	}
+
+	// https:// article passthrough
+	if articles[1] != "https://example.com/articles/1" {
+		t.Errorf("articles[1] (https://): got %q, want %q", articles[1], "https://example.com/articles/1")
+	}
+}

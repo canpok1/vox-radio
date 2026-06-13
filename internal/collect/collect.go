@@ -40,10 +40,13 @@ func WithSanitizePolicy(p config.PromptInjectionConfig) Option {
 }
 
 // New creates a Collector. If client is nil, a client with retry-enabled
-// transport (exponential backoff on 5xx/429) is used.
+// transport (exponential backoff on 5xx/429) is used. The default client
+// also supports file:// URLs for loading locally saved feed/article files.
 func New(client *http.Client, opts ...Option) *Collector {
 	if client == nil {
-		client = httpretry.NewClient(0)
+		base := http.DefaultTransport.(*http.Transport).Clone()
+		base.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
+		client = &http.Client{Transport: httpretry.NewTransport(base)}
 	}
 	c := &Collector{
 		client: client,
