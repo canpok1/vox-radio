@@ -16,20 +16,16 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 すぐ動くサンプル設定で番組を 1 本作る最短手順です（サンプルの詳細は[設定方法](#設定方法)）。
 
-### 1. 前提条件を準備する
+### 1. 実行環境を整える
 
-**`GEMINI_API_KEY`** を [Google AI Studio](https://aistudio.google.com/) で取得し、環境変数に設定します。
+ラジオ番組の生成には Gemini（生成AI）と VOICEVOX が必要です。次の 2 つを準備します。
 
-```bash
-export GEMINI_API_KEY=<your-key>
-```
+- **`GEMINI_API_KEY`**: [Google AI Studio](https://aistudio.google.com/) で取得し、環境変数に設定します（`export GEMINI_API_KEY=<your-key>`）。
+- **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
+    - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
+    - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
 
-**VOICEVOX Engine** をいずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
-
-- [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
-- Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
-
-### 2. サンプルで番組を生成する
+### 2. 番組を生成する
 
 ```bash
 # サンプル設定一式を sample/ に生成
@@ -43,7 +39,9 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 
 ## 使い方
 
-vox-radio は次の 6 ステップで番組を生成します。各ステップは前のステップの出力を受け取って次へ渡します。
+### 番組生成
+
+記事の収集から音声合成までを自動で行い、1 本のエピソード（mp3）を生成します。処理は次の 6 ステップで進みます。各ステップは前のステップの出力を受け取って次へ渡します。
 
 ```
 collect → rundown → script → synth → assemble → manifest
@@ -76,9 +74,26 @@ vox-radio episodegen rundown  --in work/01_articles.json --out work/02_rundown.j
 vox-radio episodegen script   --in work/02_rundown.json --out work/04_script.json --spec sample/episode-spec.yaml
 vox-radio episodegen synth    --in work/04_script.json --out-dir work/clips
 vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out work/episode.mp3 --spec sample/episode-spec.yaml
+vox-radio episodegen manifest --spec sample/episode-spec.yaml --rundown work/02_rundown.json --audio work/episode.mp3 --out work/manifest.json
 ```
 
 ログは既定で `.vox-radio/logs/` に出力されます。
+
+### フィード生成
+
+配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。
+
+```bash
+vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.yaml
+```
+
+### Slack投稿
+
+生成した番組を Slack へ投稿します。`slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 をアップロードします。親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
+
+```bash
+vox-radio slackpost --manifest output/manifest.json --spec slack-spec.yaml
+```
 
 ## 設定方法
 
@@ -134,7 +149,7 @@ characters:
 
 ### アセット設定
 
-`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。
+`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。次の手順で設定を固めるのがおすすめです。
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
@@ -148,11 +163,11 @@ vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp
 
 ### RSS フィード生成設定
 
-`feed-spec.yaml` は RSS フィードの生成設定です。`feedgen` が履歴キャッシュとこの設定から RSS 2.0 + iTunes フィード（`feed.xml`）を生成します（manifest・mp3 は不要）。
+`feed-spec.yaml` には配信フィードの情報（言語・配信者名・連絡先・番組サイト URL・各エピソード音声の URL テンプレートなど）を設定します。生成は「[フィード生成](#フィード生成)」を参照してください。
 
 ### Slack 投稿設定
 
-`slack-spec.yaml` は Slack 配信の設定です。`slackpost` が `manifest.json` とこの設定をもとに mp3 を Slack へ投稿します。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
+`slack-spec.yaml` には投稿先チャンネルや各メッセージのテンプレートを設定します。Bot トークンは `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数から読み込まれます。投稿は「[Slack投稿](#slack投稿)」を参照してください。
 
 ## 応用的な設定方法
 
