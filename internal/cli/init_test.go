@@ -245,15 +245,9 @@ func TestInitCmd_Sample_WithOutputDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, name := range []string{
-		"sample/vox-radio.yaml",
-		"sample/episode-spec.yaml",
-		"sample/feed-spec.yaml",
-		"sample/slack-spec.yaml",
-		"sample/assets/assets.yaml",
-	} {
-		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
-			t.Errorf("%s was not generated", name)
+	for _, name := range initTemplateFiles {
+		if _, err := os.Stat(filepath.Join(dir, "sample", name)); os.IsNotExist(err) {
+			t.Errorf("sample/%s was not generated", name)
 		}
 	}
 }

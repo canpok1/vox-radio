@@ -40,9 +40,6 @@ func newInitCmd() *cobra.Command {
 
   vox-radio episodegen --spec episode-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if outputDir == "" {
-				outputDir = "."
-			}
 			if sample {
 				return writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false)
 			}
@@ -51,7 +48,7 @@ func newInitCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&sample, "sample", false, "ずんだもん・めたんMCのお天気番組サンプル一式のテンプレートを生成する")
-	cmd.Flags().StringVar(&outputDir, "output-dir", "", "テンプレートの出力先ディレクトリ（省略時はカレントディレクトリ）")
+	cmd.Flags().StringVar(&outputDir, "output-dir", ".", "テンプレートの出力先ディレクトリ（省略時はカレントディレクトリ）")
 
 	return cmd
 }

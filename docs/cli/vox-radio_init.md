@@ -33,7 +33,7 @@ vox-radio init [flags]
 
 ```
   -h, --help                help for init
-      --output-dir string   テンプレートの出力先ディレクトリ（省略時はカレントディレクトリ）
+      --output-dir string   テンプレートの出力先ディレクトリ（省略時はカレントディレクトリ） (default ".")
       --sample              ずんだもん・めたんMCのお天気番組サンプル一式のテンプレートを生成する
 ```
 
