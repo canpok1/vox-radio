@@ -19,6 +19,10 @@ func newCollectCmd() *cobra.Command {
 		Long: `corners[].source に定義された RSS/Atom フィードや Web URL から記事を収集し、
 本文テキストを抽出して articles.json に書き出します。
 
+source には https:// のほか file:// を指定でき、ローカルの XML ファイルを読み込めます。
+アクセス制限などで自動取得できないフィードを手動ダウンロードし、feed.xml をローカルから
+読み込む運用に対応します。
+
 source フィールドのないコーナーはスキップされます。
 
 例:

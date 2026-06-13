@@ -67,3 +67,4 @@
 | [0059](0059-drop-article-summary-pass-body-to-write.md) | rundown の記事要約を廃止し原文を write に引き渡す | 採用 | 2026-06-12 |
 | [0060](0060-drop-whole-article-on-injection-detection.md) | 注入検出記事をフィールド破棄でなく丸ごと除外する | 採用 | 2026-06-12 |
 | [0061](0061-drop-rundown-full-text-fetch-pass-feed-text.md) | rundown の全文取得を廃止しフィード由来テキストを description として write へ渡す（ADR-0059 改訂） | 採用 | 2026-06-12 |
+| [0062](0062-split-user-and-developer-docs.md) | ドキュメントを利用者向け(README)と開発者向け(docs/development)に分離する | 採用 | 2026-06-13 |
