@@ -93,7 +93,7 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 ### Slack投稿
 
-生成した番組を Slack へ投稿します。`slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 をアップロードします。親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
+生成した番組を Slack へ投稿します。`slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
 実行前に、Slack の Bot トークンを `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数に設定しておきます。
 
