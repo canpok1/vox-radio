@@ -42,7 +42,8 @@ func LoadConfigStrict(path string) (*Config, error) {
 }
 
 // LoadEpisodeSpec loads episode-specific settings from the given YAML file path.
-// Relative asset file paths are resolved relative to the spec file's directory.
+// Relative asset file paths and file:// URLs in corners[].source are resolved
+// relative to the spec file's directory.
 func LoadEpisodeSpec(path string) (*EpisodeSpec, error) {
 	return loadEpisodeSpecWith(path, false)
 }
@@ -86,7 +87,8 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 
 // LoadEpisodeSpecStrict loads episode-specific settings from the given YAML file path with strict parsing.
 // Unknown keys in the YAML will cause an error (detects typos).
-// Relative asset file paths are resolved relative to the spec file's directory.
+// Relative asset file paths and file:// URLs in corners[].source are resolved
+// relative to the spec file's directory.
 func LoadEpisodeSpecStrict(path string) (*EpisodeSpec, error) {
 	return loadEpisodeSpecWith(path, true)
 }
