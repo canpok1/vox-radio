@@ -40,15 +40,17 @@ rm -rf "$BACKUP_DIR"
 
 #### 1c. README の CLI セクション確認
 
-```bash
-# 実装側コマンド名（vox-radio ルートコマンドを除く）
-grep -h 'Use:' internal/cli/*.go | grep -v '"vox-radio"' | grep -oE '"[a-z-]+"' | tr -d '"' | sort -u
+README はコマンドを手書き表で持たず、`docs/cli/` の自動生成ドキュメントへリンクする方針（ADR-0062）。次の2点を確認する。
 
-# README のコマンドテーブル記載コマンド名（行頭が "| `コマンド名`" の行のみを対象）
-grep -E '^\| `[a-z-]+`' README.md | sed 's/^| `\([a-z-]*\)`.*/\1/' | sort -u
+```bash
+# (a) README の「コマンド一覧」が docs/cli/ へリンクしているか（リンクありが正）
+grep -n "docs/cli/vox-radio.md" README.md
+
+# (b) 手書きコマンド表が復活していないか（出力なしが正）
+grep -nE '^\| `[a-z-]+`' README.md
 ```
 
-実装にあって README に記載がないコマンドを特定する。
+(a) のリンクが欠落、または (b) に出力（手書きコマンド表の復活）があれば乖離として特定する。
 
 すべてのチェックで乖離がなければ「ドキュメント最新。修正不要。」と報告して終了する。
 

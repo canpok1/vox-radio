@@ -37,17 +37,17 @@ rm -rf "$BACKUP_DIR"
 
 ### 3. README の CLI セクション整合性確認
 
-`internal/cli/*.go` の全サブコマンドが README のコマンドテーブルに記載されているか確認する。
+README はコマンドを手書き表で持たず、`docs/cli/` の自動生成ドキュメントへリンクする方針（ADR-0062）。次の2点を確認する。
 
 ```bash
-# 実装側コマンド名（vox-radio ルートコマンドを除く）
-grep -h 'Use:' internal/cli/*.go | grep -v '"vox-radio"' | grep -oE '"[a-z-]+"' | tr -d '"' | sort -u
+# (a) README の「コマンド一覧」が docs/cli/ へリンクしているか（リンクありが正）
+grep -n "docs/cli/vox-radio.md" README.md
 
-# README のコマンドテーブル記載コマンド名（行頭が "| `コマンド名`" の行のみを対象）
-grep -E '^\| `[a-z-]+`' README.md | sed 's/^| `\([a-z-]*\)`.*/\1/' | sort -u
+# (b) 手書きコマンド表が復活していないか（出力なしが正）
+grep -nE '^\| `[a-z-]+`' README.md
 ```
 
-実装にあって README に記載がないコマンドを「不足」として報告する。
+(a) のリンクが無ければ「コマンド一覧の docs/cli リンクが欠落」と報告する。(b) に出力があれば「README に手書きコマンド表が復活（docs/cli へ一本化すべき）」と報告する。
 
 ## 出力形式
 
@@ -67,9 +67,9 @@ grep -E '^\| `[a-z-]+`' README.md | sed 's/^| `\([a-z-]*\)`.*/\1/' | sort -u
   - docs/cli/vox-radio_xxx.md
 
 ### 3. README CLI セクション
-- [OK] 全コマンドが記載されている
+- [OK] 「コマンド一覧」が docs/cli/ へリンクし、手書きコマンド表は無い
   または
-- [NG] 不足コマンド: xxx, yyy
+- [NG] docs/cli リンク欠落、または手書きコマンド表が復活している
 
 ### 総合判定
 - [乖離なし] ドキュメントは最新です
