@@ -82,7 +82,17 @@ vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out 
 
 ## 設定方法
 
-`vox-radio init` で設定ファイルのテンプレートを生成し（既存ファイルは上書きしません）、次のファイルを編集します。各フィールドの定義は右列のリファレンスを参照してください。
+設定ファイルは `vox-radio init` で生成します。
+
+```bash
+# 設定テンプレートを生成
+vox-radio init
+
+# 記入済みサンプルを sample/ に生成（ずんだもん・めたんMCのお天気番組）
+vox-radio init --sample
+```
+
+`init` は次のファイルのテンプレートを生成します（既存ファイルは上書きしません）。各フィールドの定義は右列のリファレンスを参照してください。
 
 | ファイル | 内容 | リファレンス |
 |---|---|---|
@@ -92,27 +102,7 @@ vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out 
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
 
-番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。
-
-```bash
-vox-radio init
-```
-
-記入済みのサンプルは `vox-radio init --sample` で生成できます（ずんだもん・めたん MC のお天気番組。音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例です）。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
-
-### アセット設定
-
-ジングル（イントロ/アウトロ）・効果音（SE）・BGM を番組に組み込めます（`assemble` で合成）。
-
-1. 使う音声ファイルを `assets/` に置く
-2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
-3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する
-4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
-
-```bash
-vox-radio assets check assets/assets.yaml
-vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
-```
+番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
 ### キャラクター設定
 
@@ -134,6 +124,26 @@ characters:
 
 台本生成ではセリフの感情に応じてスタイルが選ばれ、音声合成はそのスタイルの声色で読み上げます。指定がない・不正なときは `default_style` が使われます。
 
+### キャッシュ（過去回の記憶）
+
+vox-radio は、過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録します。これにより、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりできます。
+
+キャッシュは番組ごとに `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `episode-spec.yaml` の `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。放送回数・過去回の参照・出演回数などはすべて `program.id` 単位で記録されます。
+
+### アセット設定
+
+ジングル（イントロ/アウトロ）・効果音（SE）・BGM を番組に組み込めます（`assemble` で合成）。
+
+1. 使う音声ファイルを `assets/` に置く
+2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
+3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する
+4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
+
+```bash
+vox-radio assets check assets/assets.yaml
+vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
+```
+
 ### 配信設定
 
 生成した番組は次の方法で配信できます。
@@ -142,12 +152,6 @@ characters:
 - **Slack 配信** — `slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 を Slack へ投稿します。親メッセージ＋スレッド返信の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
 
 各コマンドのフラグは[コマンド一覧](#コマンド一覧)を参照。
-
-### キャッシュ（過去回の記憶）
-
-vox-radio は、過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録します。これにより、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりできます。
-
-キャッシュは番組ごとに `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `episode-spec.yaml` の `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。放送回数・過去回の参照・出演回数などはすべて `program.id` 単位で記録されます。
 
 ## 応用的な設定方法
 
