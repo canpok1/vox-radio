@@ -91,7 +91,10 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 をアップロードします。親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成で、タイムアウト後の再実行でも二重投稿なしに再開できます。
 
+実行前に、Slack の Bot トークンを `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数に設定しておきます。
+
 ```bash
+export SLACK_BOT_TOKEN=xoxb-...
 vox-radio slackpost --manifest output/manifest.json --spec slack-spec.yaml
 ```
 
@@ -154,12 +157,13 @@ characters:
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
 3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する
-4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
 
-```bash
-vox-radio assets check assets/assets.yaml
-vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
-```
+   ```bash
+   vox-radio assets check assets/assets.yaml
+   vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
+   ```
+
+4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
 
 ### RSS フィード生成設定
 
@@ -171,13 +175,15 @@ vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp
 
 ## 応用的な設定方法
 
-Claude Code などのコーディングエージェントを使うなら、設定方法で説明した編集をエージェントに任せられます。
+設定方法で説明した編集は、コーディングエージェントに任せることもできます。`vox-radio install --skills` は **Claude Code 向け**に、エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）を `.claude/skills/vox-radio/` へインストールします。
 
 ```bash
 vox-radio install --skills
 ```
 
-エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）が `.claude/skills/vox-radio/` に入ります。あとは「ラジオ番組の設定を作って」と依頼すれば、`init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
+あとは「ラジオ番組の設定を作って」と依頼すれば、エージェントが `init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
+
+Claude Code 以外のコーディングエージェントを使う場合は、インストールされた `.claude/skills/vox-radio/` を、そのエージェントがスキルを読み込むディレクトリへ手動で移動してください。
 
 ## コマンド一覧
 
