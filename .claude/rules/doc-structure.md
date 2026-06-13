@@ -1,3 +1,9 @@
+---
+paths:
+  - "README.md"
+  - "docs/**/*"
+---
+
 # ドキュメント構成ルール
 
 `README.md` または `docs/**` を変更したときは、[ADR-0062](../../docs/adr/0062-split-user-and-developer-docs.md) で定めた利用者向け/開発者向けの分離方針を維持すること。

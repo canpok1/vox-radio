@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.go"
+---
+
 # アーキテクチャ遵守ルール
 
 `.go` ファイルを追加・編集するときは、`docs/development/architecture.md` の層構造・依存ルールに従うこと。
