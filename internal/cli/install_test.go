@@ -88,3 +88,19 @@ func TestInstallCmd_SkillMdFrontmatter(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallCmd_SkillsDirFlag(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInstallCmd(t, "--skills", "--skills-dir", "custom/skill")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{
+		"custom/skill/vox-radio/SKILL.md",
+		"custom/skill/vox-radio/references/vox-radio.md",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
+	}
+}
