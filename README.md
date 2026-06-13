@@ -33,7 +33,7 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ```bash
 # サンプル設定一式を sample/ に生成
-vox-radio init --sample
+vox-radio init --sample --output-dir sample
 
 # サンプルでそのまま番組生成
 vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
@@ -111,7 +111,7 @@ vox-radio slackpost --manifest output/manifest.json --spec slack-spec.yaml
 vox-radio init
 
 # 記入済みサンプルを sample/ に生成（ずんだもん・めたんMCのお天気番組）
-vox-radio init --sample
+vox-radio init --sample --output-dir sample
 ```
 
 `init` は次のファイルのテンプレートを生成します（既存ファイルは上書きしません）。各フィールドの定義は右列のリファレンスを参照してください。
@@ -124,7 +124,7 @@ vox-radio init --sample
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
 
-番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
+番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample --output-dir sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
 ### 共通設定
 

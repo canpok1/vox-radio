@@ -1,17 +1,19 @@
 ## vox-radio init
 
-カレントディレクトリにテンプレート設定ファイルを生成する
+テンプレート設定ファイルを生成する
 
 ### Synopsis
 
 vox-radio.yaml（共通設定）・episode-spec.yaml（エピソード仕様）・feed-spec.yaml（フィード生成設定）・slack-spec.yaml（Slack 投稿設定）・assets/assets.yaml（アセット設定）を
-カレントディレクトリに生成します。
+生成します。出力先は --output-dir で指定します（省略時はカレントディレクトリ）。
 
 --sample を指定すると、ずんだもん・めたんが MC を務めるお天気番組（気象庁の防災情報XMLを利用）の
-「すぐ動くサンプル設定一式」を sample/ ディレクトリに生成します。生成されるのは
-sample/vox-radio.yaml・sample/episode-spec.yaml・sample/feed-spec.yaml・
-sample/slack-spec.yaml・sample/assets/assets.yaml の 5 ファイルです。生成後は次のコマンドで
-番組生成を試せます:
+「すぐ動くサンプル設定一式」のテンプレートを生成します。--sample を使っても出力先は --output-dir で
+決まり、省略時はカレントディレクトリです。旧来の sample/ 配下への出力は次のコマンドで再現できます:
+
+  vox-radio init --sample --output-dir sample
+
+生成後は次のコマンドで番組生成を試せます:
 
   vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
 
@@ -30,8 +32,9 @@ vox-radio init [flags]
 ### Options
 
 ```
-  -h, --help     help for init
-      --sample   ずんだもん・めたんMCのお天気番組サンプル一式を sample/ に生成する
+  -h, --help                help for init
+      --output-dir string   テンプレートの出力先ディレクトリ（省略時はカレントディレクトリ） (default ".")
+      --sample              ずんだもん・めたんMCのお天気番組サンプル一式のテンプレートを生成する
 ```
 
 ### Options inherited from parent commands

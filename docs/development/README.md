@@ -46,7 +46,7 @@ vox-radio --version
 
 ## 動作確認用サンプル実行
 
-`vox-radio init --sample` で生成される「すぐ動くサンプル設定一式」（`sample/`）を使ってパイプライン全体を試すには `make run-sample` を実行します。`make run-sample` は内部で `init --sample` を実行してから `sample/episode-spec.yaml` を生成・実行します。
+`vox-radio init --sample --output-dir sample` で生成される「すぐ動くサンプル設定一式」（`sample/`）を使ってパイプライン全体を試すには `make run-sample` を実行します。`make run-sample` は内部で `init --sample --output-dir sample` を実行してから `sample/episode-spec.yaml` を生成・実行します。
 
 ```bash
 make run-sample
