@@ -24,11 +24,10 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 export GEMINI_API_KEY=<your-key>
 ```
 
-**VOICEVOX Engine** を起動します（既定 `http://localhost:50021`）。Docker なら次のとおりです（[公式アプリ](https://voicevox.hiroshiba.jp/)にも同梱）。
+**VOICEVOX Engine** をいずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
 
-```bash
-docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest
-```
+- [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
+- Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
 
 ### 2. サンプルで番組を生成する
 
