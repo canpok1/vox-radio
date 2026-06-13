@@ -43,11 +43,15 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 
 ## 設定方法
 
-`vox-radio init` で次の設定ファイルが生成されます。
+設定は手動でも、コーディングエージェントに任せることもできます。`vox-radio init --sample` で生成される記入済みサンプル（ずんだもん・めたん MC のお天気番組。気象庁の防災情報XMLを利用）をコピー・編集するのが手軽です（音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例です）。
+
+### 手動で設定する
+
+`vox-radio init` でテンプレートを生成し（既存ファイルは上書きしません）、次のファイルを編集します。各フィールドの定義は「設定ファイルリファレンス」を参照してください。
 
 | ファイル | 内容 |
 |---|---|
-| `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラカタログ）。既定はカレントディレクトリ、`--config` で別パス指定可 |
+| `vox-radio.yaml` | 共通設定（LLM / VOICEVOX URL / キャラカタログ） |
 | `episode-spec.yaml` | エピソード仕様（program / corners / アセット参照） |
 | `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） |
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） |
@@ -55,11 +59,13 @@ vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.y
 
 番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。
 
-`vox-radio init --sample` で生成されるサンプル設定は、ずんだもん・めたんが MC を務めるお天気番組（気象庁の防災情報XMLを利用）の記入済み一式です。音声アセットは同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コピー・編集して使えます。
+```bash
+vox-radio init
+```
 
 ### コーディングエージェントで設定する（おすすめ）
 
-Claude Code などのエージェントを使うなら、設定作成をエージェントに任せられます。
+Claude Code などのエージェントを使うなら、上記の編集をエージェントに任せられます。
 
 ```bash
 vox-radio install --skills
@@ -67,17 +73,11 @@ vox-radio install --skills
 
 エージェントスキル（`SKILL.md` ＋ フィールド定義 `references/*.md`）が `.claude/skills/vox-radio/` に入ります。あとは「ラジオ番組の設定を作って」と依頼すれば、`init` →リファレンス参照で編集→ `check` 検証まで自動で仕上げます。
 
-### 手動で設定する
-
-`vox-radio init` でテンプレートを生成し（既存ファイルは上書きしません）、各ファイルを編集します。フィールド定義は「設定ファイルリファレンス」を参照してください。
-
-```bash
-vox-radio init
-```
-
 ## 使い方
 
-### パイプラインの実行
+### ラジオ番組の生成
+
+vox-radio は次の 6 段のパイプライン（処理の連なり）で番組を生成します。各段は前段の出力を受け取って次へ渡します。
 
 ```
 collect → rundown → script → synth → assemble → manifest
