@@ -64,7 +64,13 @@ func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, exc
 	}
 
 	if maxItems > 0 && len(articles) < maxItems {
-		c.logger.Warn("フィードの未使用記事が不足", "url", url, "got", len(articles), "want", maxItems)
+		// どのフィードか分かりやすいよう、URLではなくフィード名を表示する。
+		// フィード名が空のフィードもあるため、その場合はURLにフォールバックする。
+		feedName := source
+		if feedName == "" {
+			feedName = url
+		}
+		c.logger.Warn("フィードの未使用記事が不足", "feed", feedName, "got", len(articles), "want", maxItems)
 	}
 
 	return articles, nil

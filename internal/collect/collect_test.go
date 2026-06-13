@@ -318,6 +318,13 @@ func TestCollector_Run_WarnWhenInsufficientNonExcludedArticles(t *testing.T) {
 	if !strings.Contains(buf.String(), "WARN") {
 		t.Errorf("expected WARN log for insufficient articles, got: %q", buf.String())
 	}
+	// ログにはURLではなくフィード名を表示する（feed.xml のチャンネルタイトル）
+	if !strings.Contains(buf.String(), "テストフィード") {
+		t.Errorf("expected feed name in log, got: %q", buf.String())
+	}
+	if strings.Contains(buf.String(), feedURL) {
+		t.Errorf("expected feed name instead of URL in log, but URL was present: %q", buf.String())
+	}
 }
 
 func TestCollector_Run_UnlimitedWithExcludedDedupKeys(t *testing.T) {
