@@ -32,7 +32,9 @@ vox-radio init --sample
 vox-radio --config sample/vox-radio.yaml episodegen --spec sample/episode-spec.yaml
 ```
 
-- **前提条件:** `GEMINI_API_KEY` 環境変数と VOICEVOX Engine が必要です。
+- **前提条件:** 以下の 2 つが必要です。
+  - **`GEMINI_API_KEY`** — [Google AI Studio](https://aistudio.google.com/) で取得し、環境変数に設定します（`export GEMINI_API_KEY=<your-key>`）。
+  - **VOICEVOX Engine** — 音声合成エンジン。Docker なら `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`、または [VOICEVOX 公式サイト](https://voicevox.hiroshiba.jp/) のアプリに同梱されています（デフォルトで `http://localhost:50021` を使用）。
 - 出力先は `output/<YYYYMMDDHHMMSS>/` ディレクトリになります（例: `output/20260601053357/episode.mp3`）。
 - 音声アセットは同梱しないため、サンプルの効果音・BGM 設定はコメントアウトした記入例として入っています。
 
