@@ -6,17 +6,17 @@
 
 ## インストール
 
-[GitHub Releases](https://github.com/canpok1/vox-radio/releases) からインストールスクリプトを取得して実行します。
+最新リリースのインストールスクリプトを実行します。
 
 ```bash
-# リリースページから install.sh をダウンロードして実行（例: v0.0.1 の場合）
-curl -fsSL https://github.com/canpok1/vox-radio/releases/download/v0.0.1/install.sh | bash
+# 最新版をインストール
+curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
 
 # 設置先を変更する場合は環境変数 INSTALL_DIR を指定
-curl -fsSL https://github.com/canpok1/vox-radio/releases/download/v0.0.1/install.sh | INSTALL_DIR=$HOME/.local/bin bash
+curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | INSTALL_DIR=$HOME/.local/bin bash
 ```
 
-`v0.0.1` の部分はインストールしたいリリースタグに置き換えてください。
+特定のバージョンを入れたい場合は、URL の `latest/download` をリリースタグに置き換えます（例: `releases/download/v0.0.16/install.sh`）。利用可能なバージョンは [GitHub Releases](https://github.com/canpok1/vox-radio/releases) で確認できます。
 
 デフォルトの設置先は `/usr/local/bin` です。書き込み権限がない場合は自動で `sudo` にフォールバックします。
 
