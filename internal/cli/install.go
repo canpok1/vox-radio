@@ -10,8 +10,6 @@ import (
 //go:embed skills
 var skillsFS embed.FS
 
-const defaultSkillsDir = ".claude/skills"
-
 func newInstallCmd() *cobra.Command {
 	var installSkillsFlag bool
 	var force bool
@@ -28,20 +26,17 @@ func newInstallCmd() *cobra.Command {
 			if !installSkillsFlag {
 				return cmd.Help()
 			}
-			return runInstallSkills(cmd, skillsDir, force)
+			return runInstallSkills(cmd, filepath.Join(skillsDir, "vox-radio"), force)
 		},
 	}
 
 	cmd.Flags().BoolVar(&installSkillsFlag, "skills", false, "エージェントスキルを <skills-dir>/vox-radio/ にインストールする")
 	cmd.Flags().BoolVar(&force, "force", false, "既存ファイルを上書きする")
-	cmd.Flags().StringVar(&skillsDir, "skills-dir", defaultSkillsDir, "スキルのインストール先ディレクトリ（このディレクトリ下に vox-radio/ を作成する）")
+	cmd.Flags().StringVar(&skillsDir, "skills-dir", ".claude/skills", "スキルのインストール先ディレクトリ（このディレクトリ下に vox-radio/ を作成する）")
 
 	return cmd
 }
 
-func runInstallSkills(cmd *cobra.Command, skillsDir string, force bool) error {
-	const srcDir = "skills/vox-radio"
-	dstDir := filepath.Join(skillsDir, "vox-radio")
-
-	return writeEmbeddedTree(cmd, skillsFS, srcDir, dstDir, force)
+func runInstallSkills(cmd *cobra.Command, dstDir string, force bool) error {
+	return writeEmbeddedTree(cmd, skillsFS, "skills/vox-radio", dstDir, force)
 }
