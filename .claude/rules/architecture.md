@@ -1,6 +1,6 @@
 # アーキテクチャ遵守ルール
 
-`.go` ファイルを追加・編集するときは、`docs/architecture/architecture.md` の層構造・依存ルールに従うこと。
+`.go` ファイルを追加・編集するときは、`docs/development/architecture.md` の層構造・依存ルールに従うこと。
 
 - 層をまたぐ import を追加する前に、同ドキュメント §2 の依存ルール表と許容横断エッジを確認する
 - 違反する import・パス受け取り内部ロード・具象型を返す interface を新たに追加しない

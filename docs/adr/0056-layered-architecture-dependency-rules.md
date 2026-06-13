@@ -9,7 +9,7 @@
 
 ## 決定
 
-`docs/architecture/architecture.md` を新設し明文化する。
+`docs/development/architecture.md` を新設し明文化する。
 
 1. 層構造（cli → pipeline → ドメイン → config → model → 基盤）と許可 import を表で定義し `go list` で検証する
 2. 単一ドメイン専用 spec は各ドメインへ、共有設定のみ config へ置く
@@ -28,4 +28,4 @@
 
 - **spec ロードを config へ集約**: Slack 固有知識が config に漏れ肥大し、model 純粋化も未達のため却下
 - **暗黙ファイル契約の文書化のみ**: fake がファイルを書かないとテストが落ちる脆弱性が残り却下
-- **.claude/rules/ のみに配置**: 人間が見落としやすいため本体は docs/architecture/ に置く
+- **.claude/rules/ のみに配置**: 人間が見落としやすいため本体は docs/development/ に置く
