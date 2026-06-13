@@ -2,7 +2,7 @@
 
 **設定ファイルを元に、ラジオ番組（ポッドキャスト）の音声を自動生成する CLI ツールです。**
 
-原稿の生成に生成AI（Gemini）、音声の合成に VOICEVOX を利用します。
+原稿の生成に生成AI（Gemini を推奨）、音声の合成に VOICEVOX を利用します。
 
 ## インストール
 
@@ -18,9 +18,9 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ### 1. 実行環境を整える
 
-ラジオ番組の生成には Gemini（生成AI）と VOICEVOX が必要です。次の 2 つを準備します。
+ラジオ番組の生成には生成AIと VOICEVOX が必要です。次の 2 つを準備します。
 
-- **`GEMINI_API_KEY`**: [Google AI Studio](https://aistudio.google.com/) で取得し、環境変数に設定します（`export GEMINI_API_KEY=<your-key>`）。
+- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得し、環境変数 `GEMINI_API_KEY` に設定します（`export GEMINI_API_KEY=<your-key>`）。
 - **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
     - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
     - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
@@ -124,7 +124,7 @@ vox-radio init --sample
 
 ### 共通設定
 
-`vox-radio.yaml` には番組全体で共通する設定を記載します。LLM・VOICEVOX の接続先のほか、出演キャラクター（キャラカタログ）と過去回キャッシュの設定を含みます。
+`vox-radio.yaml` には番組全体で共通する設定を記載します。原稿生成に使う LLM（OpenAI 互換 API。Gemini を推奨。ほかに Dify にも対応）と VOICEVOX の接続先、出演キャラクター（キャラカタログ）、過去回キャッシュの設定を含みます。
 
 **キャラクター（キャラカタログ）** — 番組に出演させるキャラクターの一覧です。`characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
 
