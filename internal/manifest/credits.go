@@ -18,12 +18,15 @@ type CreditParams struct {
 // Returns a non-nil slice (empty when no credits found).
 // Order is first-seen (stable).
 func CollectCredits(p CreditParams) []string {
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 	credits := make([]string, 0)
 
 	add := func(credit string) {
-		if credit != "" && !seen[credit] {
-			seen[credit] = true
+		if credit == "" {
+			return
+		}
+		if _, ok := seen[credit]; !ok {
+			seen[credit] = struct{}{}
 			credits = append(credits, credit)
 		}
 	}

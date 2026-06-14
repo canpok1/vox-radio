@@ -49,7 +49,7 @@ type Entry struct {
 	Corners           []CornerEntry            `json:"corners"`
 	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
 	Casts             []CastEntry              `json:"casts"`
-	Credits           []string                 `json:"credits,omitempty"`
+	Credits           []string                 `json:"credits,omitempty"` // omitempty: backward compat with pre-credits cache entries (missing key → nil on read)
 }
 
 // Manager handles JSONL cache file operations for a single program.
