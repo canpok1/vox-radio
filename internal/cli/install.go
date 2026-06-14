@@ -21,7 +21,11 @@ func newInstallCmd() *cobra.Command {
 		Long: `vox-radio のエージェントスキルやリソースを現在のプロジェクトへインストールします。
 
 --skills フラグを指定すると、LLM エージェント向けのスキルファイル一式を
-<skills-dir>/vox-radio/ 配下にインストールします（既定: .claude/skills/vox-radio/）。`,
+<skills-dir>/vox-radio/ 配下にインストールします（既定: .claude/skills/vox-radio/）。
+
+このとき、インストール元バイナリのバージョンを <skills-dir>/vox-radio/.skill-version に
+記録します（スキルとバイナリの版ずれ検知に使用）。.skill-version は生成ファイルのため
+--force の有無に関わらず常に最新バージョンで上書きされます。`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !installSkillsFlag {
 				return cmd.Help()
@@ -38,5 +42,10 @@ func newInstallCmd() *cobra.Command {
 }
 
 func runInstallSkills(cmd *cobra.Command, dstDir string, force bool) error {
-	return writeEmbeddedTree(cmd, skillsFS, "skills/vox-radio", dstDir, force)
+	if err := writeEmbeddedTree(cmd, skillsFS, "skills/vox-radio", dstDir, force); err != nil {
+		return err
+	}
+	// 版スタンプはインストール元バイナリの版を記録する生成ファイル。
+	// スキルがバイナリとの版ずれを検知できるよう、--force の有無に関わらず常に上書きする。
+	return writeFile(cmd, filepath.Join(dstDir, ".skill-version"), []byte(version+"\n"), true)
 }
