@@ -51,6 +51,7 @@ vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yam
 | スコープ | プレースホルダ | manifest フィールド |
 |---------|----------------|---------------------|
 | 全体（header/summary/fallback） | `{title}` `{episode_number}` `{episode_title}` `{description}` `{summary}` `{datetime}` `{audio_file}` | `Manifest` の各 json タグ |
+| 全体（header/summary/fallback） | `{credit}` | `Manifest.Credits` を改行結合した文字列。credits が空のとき空文字列に置換される |
 | コーナー（`corner`） | `{corner_title}` `{corner_summary}` `{articles}` | `ManifestCorner.Title` / `.Summary` / 記事展開 |
 | 記事（`article`） | `{title}` `{url}` | `ArticleRef.Title` / `.URL` |
 

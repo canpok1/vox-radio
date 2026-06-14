@@ -104,5 +104,6 @@
 | `personality` | []string | 任意 | 性格特徴（台本生成時に LLM へ渡す） |
 | `default_style` | string | 任意 | デフォルトの音声スタイル名（`styles` のキーと一致させること） |
 | `styles` | map[string]int | 任意 | スタイル名 → VOICEVOX 話者ID のマップ |
+| `credit` | string | 任意 | キャラクターのクレジット表記（例: `VOICEVOX:ずんだもん`）。設定すると manifest の `credits` へ自動収集される |
 
 `default_style` を指定した場合、その値は `styles` のキーとして存在しなければなりません（起動時検証あり）。
