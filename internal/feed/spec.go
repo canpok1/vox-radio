@@ -10,7 +10,10 @@ import (
 	"github.com/canpok1/vox-radio/internal/fileio"
 )
 
-const DefaultPublicDir = "public"
+const (
+	DefaultPublicDir     = "public"
+	DefaultCreditsHeader = "クレジット"
+)
 
 // FeedConfig holds RSS feed metadata for feed-spec.yaml.
 type FeedConfig struct {
@@ -26,10 +29,10 @@ type FeedConfig struct {
 	CreditsHeader    string `yaml:"credits_header,omitempty"`
 }
 
-// EffectiveCreditsHeader returns the configured credits section header, or "クレジット" if not set.
+// EffectiveCreditsHeader returns the configured credits section header, or DefaultCreditsHeader if not set.
 func (c FeedConfig) EffectiveCreditsHeader() string {
 	if c.CreditsHeader == "" {
-		return "クレジット"
+		return DefaultCreditsHeader
 	}
 	return c.CreditsHeader
 }

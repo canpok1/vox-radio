@@ -84,8 +84,8 @@ func TestLoadFeedSpec_FileNotExist(t *testing.T) {
 func TestFeedConfig_EffectiveCreditsHeader_DefaultWhenEmpty(t *testing.T) {
 	cfg := feed.FeedConfig{}
 	got := cfg.EffectiveCreditsHeader()
-	if got != "クレジット" {
-		t.Errorf("EffectiveCreditsHeader(): got %q, want %q", got, "クレジット")
+	if got != feed.DefaultCreditsHeader {
+		t.Errorf("EffectiveCreditsHeader(): got %q, want %q", got, feed.DefaultCreditsHeader)
 	}
 }
 
