@@ -181,7 +181,18 @@ func TestCollectCredits_NilLinksAndScript(t *testing.T) {
 
 func TestBuild_CreditsIncluded(t *testing.T) {
 	p := newMinimalBuildParams()
-	p.Credits = []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"}
+	p.Assets = config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{"bgm1": {Credit: "OtoLogic / CC BY 4.0"}},
+	}
+	p.Lines = &model.ScriptLines{
+		Corners: []model.CornerLines{{BGM: "bgm1", Lines: []model.Line{{Text: "テスト"}}}},
+	}
+	p.Rundown = model.Rundown{
+		Casts: []model.RundownCast{{CharacterID: "zundamon"}},
+	}
+	p.Characters = map[string]config.CharacterConfig{
+		"zundamon": {Credit: "VOICEVOX:ずんだもん"},
+	}
 
 	got := manifest.Build(p)
 	if len(got.Credits) != 2 {
@@ -189,6 +200,9 @@ func TestBuild_CreditsIncluded(t *testing.T) {
 	}
 	if got.Credits[0] != "OtoLogic / CC BY 4.0" {
 		t.Errorf("Credits[0] = %q, want %q", got.Credits[0], "OtoLogic / CC BY 4.0")
+	}
+	if got.Credits[1] != "VOICEVOX:ずんだもん" {
+		t.Errorf("Credits[1] = %q, want %q", got.Credits[1], "VOICEVOX:ずんだもん")
 	}
 }
 
