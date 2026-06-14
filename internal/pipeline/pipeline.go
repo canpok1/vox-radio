@@ -172,6 +172,13 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		ConversationNotes: programSummary.ConversationNotes,
 		EpisodeNumber:     opts.EpisodeNumber,
 		EpisodeTitle:      programSummary.EpisodeTitle,
+		Credits: manifest.CollectCredits(manifest.CreditParams{
+			Assets:     r.Spec.Assets,
+			Characters: chars,
+			Lines:      &scriptLines,
+			Script:     &scr,
+			Casts:      rundown.Casts,
+		}),
 	})
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)

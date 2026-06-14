@@ -562,6 +562,60 @@ func TestRunner_Run_SummaryBeforeAssemble(t *testing.T) {
 	}
 }
 
+func TestRunner_Run_ManifestIncludesAssetCredits(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "コーナー1", BGM: "bgm1", Lines: []model.Line{{Text: "テスト"}}},
+		},
+	}
+
+	r := newRunner(s)
+	r.Spec.Assets = config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{"bgm1": {Credit: "OtoLogic / CC BY 4.0"}},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(fileio.ManifestPath(outDir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if !strings.Contains(string(data), "OtoLogic / CC BY 4.0") {
+		t.Errorf("manifest should contain asset credit, got: %s", data)
+	}
+}
+
+func TestRunner_Run_ManifestIncludesCharacterCredits(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	casts := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "mc"},
+	}
+
+	r := newRunner(s)
+	r.Config = &config.Config{
+		Characters: map[string]config.CharacterConfig{
+			"zundamon": {Credit: "VOICEVOX:ずんだもん"},
+		},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir, Casts: casts}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(fileio.ManifestPath(outDir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if !strings.Contains(string(data), "VOICEVOX:ずんだもん") {
+		t.Errorf("manifest should contain character credit, got: %s", data)
+	}
+}
+
 func TestRunner_Run_EpisodeMetaPassedToAssembler(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
