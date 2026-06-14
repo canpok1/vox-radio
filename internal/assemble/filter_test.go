@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -2017,5 +2018,156 @@ func TestBuildFFmpegArgs_SilenceRemoveExplicitThreshold(t *testing.T) {
 				t.Errorf("filter_complex missing start_threshold=-40dB: %s", args.FilterComplex)
 			}
 		})
+	}
+}
+
+// --- metadata args tests ---
+
+func newMinimalContext() BuildContext {
+	return BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "テスト"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{{Index: 0, File: "clip_000.wav", DurationSec: 1.0}},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{},
+		PauseSec: 0.3,
+		OutPath:  "/out.mp3",
+	}
+}
+
+func hasOutputArg(outputArgs []string, needle string) bool {
+	return strings.Contains(strings.Join(outputArgs, " "), needle)
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_AllSet(t *testing.T) {
+	ctx := newMinimalContext()
+	ctx.Program = config.ProgramConfig{
+		Title:    "テストラジオ",
+		Author:   "テスト制作",
+		Timezone: "Asia/Tokyo",
+	}
+	ctx.Meta = model.EpisodeMeta{
+		Number:      5,
+		Title:       "今週の技術",
+		GeneratedAt: time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC),
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if !strings.Contains(out, "-id3v2_version 3") {
+		t.Errorf("OutputArgs missing -id3v2_version 3: %v", args.OutputArgs)
+	}
+	if !strings.Contains(out, "album=テストラジオ") {
+		t.Errorf("OutputArgs missing album=テストラジオ: %v", args.OutputArgs)
+	}
+	if !strings.Contains(out, "title=第5回 今週の技術") {
+		t.Errorf("OutputArgs missing title=第5回 今週の技術: %v", args.OutputArgs)
+	}
+	if !strings.Contains(out, "artist=テスト制作") {
+		t.Errorf("OutputArgs missing artist=テスト制作: %v", args.OutputArgs)
+	}
+	if !strings.Contains(out, "track=5") {
+		t.Errorf("OutputArgs missing track=5: %v", args.OutputArgs)
+	}
+	if !strings.Contains(out, "date=2026-06-14") {
+		t.Errorf("OutputArgs missing date=2026-06-14: %v", args.OutputArgs)
+	}
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_NoMetadata(t *testing.T) {
+	ctx := newMinimalContext()
+	// Program and Meta are zero values
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if strings.Contains(out, "-id3v2_version") {
+		t.Errorf("OutputArgs should not contain -id3v2_version when no metadata: %v", args.OutputArgs)
+	}
+	if strings.Contains(out, "-metadata") {
+		t.Errorf("OutputArgs should not contain -metadata when all fields empty: %v", args.OutputArgs)
+	}
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_EmptyTitle(t *testing.T) {
+	ctx := newMinimalContext()
+	ctx.Program = config.ProgramConfig{Author: "テスト制作"}
+	ctx.Meta = model.EpisodeMeta{Number: 3}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if strings.Contains(out, "album=") {
+		t.Errorf("OutputArgs should not contain album= when title is empty: %v", args.OutputArgs)
+	}
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_ZeroEpisodeNumber(t *testing.T) {
+	ctx := newMinimalContext()
+	ctx.Program = config.ProgramConfig{Title: "番組名"}
+	ctx.Meta = model.EpisodeMeta{Number: 0}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if strings.Contains(out, "track=") {
+		t.Errorf("OutputArgs should not contain track= when episode number is 0: %v", args.OutputArgs)
+	}
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_ZeroGeneratedAt(t *testing.T) {
+	ctx := newMinimalContext()
+	ctx.Program = config.ProgramConfig{Title: "番組名"}
+	// Meta.GeneratedAt is zero value
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if strings.Contains(out, "date=") {
+		t.Errorf("OutputArgs should not contain date= when GeneratedAt is zero: %v", args.OutputArgs)
+	}
+}
+
+func TestBuildFFmpegArgs_MetadataArgs_DateUsesTimezone(t *testing.T) {
+	ctx := newMinimalContext()
+	ctx.Program = config.ProgramConfig{
+		Title:    "番組名",
+		Timezone: "Asia/Tokyo", // UTC+9
+	}
+	// UTC 15:00 = JST 翌日 00:00 (still same day in JST), but UTC 23:00 = JST 翌日 08:00
+	ctx.Meta = model.EpisodeMeta{
+		Number:      1,
+		GeneratedAt: time.Date(2026, 6, 14, 23, 0, 0, 0, time.UTC), // 2026-06-15 08:00 JST
+	}
+
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	out := strings.Join(args.OutputArgs, " ")
+	if !strings.Contains(out, "date=2026-06-15") {
+		t.Errorf("OutputArgs: date should be 2026-06-15 (JST), got: %v", args.OutputArgs)
 	}
 }

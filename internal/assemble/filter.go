@@ -5,7 +5,9 @@ import (
 	"math"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -30,6 +32,8 @@ type BuildContext struct {
 	PauseSec    float64
 	OutPath     string
 	SEDurations map[string]float64 // duration in seconds per SE asset name (for sequential SE)
+	Program     config.ProgramConfig
+	Meta        model.EpisodeMeta
 }
 
 // FFmpegInput holds a single ffmpeg input file with optional pre-input options.
@@ -189,12 +193,44 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	// Peak limiter: prevents clipping after loudnorm.
 	b.addFilter(fmt.Sprintf("[norm_out]alimiter=limit=%.3f:level=0[out]", outputLimiterLimit))
 
+	outputArgs := []string{"-map", "[out]", "-c:a", "libmp3lame", "-q:a", "2"}
+	if metaArgs := buildMetadataArgs(bctx.Program, bctx.Meta); len(metaArgs) > 0 {
+		outputArgs = append(outputArgs, "-id3v2_version", "3")
+		outputArgs = append(outputArgs, metaArgs...)
+	}
+
 	return &FFmpegArgs{
 		Inputs:        b.inputs,
 		FilterComplex: strings.Join(b.filters, ";"),
-		OutputArgs:    []string{"-map", "[out]", "-c:a", "libmp3lame", "-q:a", "2"},
+		OutputArgs:    outputArgs,
 		OutputPath:    bctx.OutPath,
 	}, nil
+}
+
+// buildMetadataArgs constructs ffmpeg -metadata key=value pairs for ID3 tagging.
+// Empty values and zero numbers/times result in the corresponding tag being omitted.
+func buildMetadataArgs(program config.ProgramConfig, meta model.EpisodeMeta) []string {
+	var args []string
+	if program.Title != "" {
+		args = append(args, "-metadata", "album="+program.Title)
+	}
+	if title := model.EpisodeDisplayTitle(meta.Number, meta.Title, program.Title); title != "" {
+		args = append(args, "-metadata", "title="+title)
+	}
+	if program.Author != "" {
+		args = append(args, "-metadata", "artist="+program.Author)
+	}
+	if meta.Number > 0 {
+		args = append(args, "-metadata", "track="+strconv.Itoa(meta.Number))
+	}
+	if !meta.GeneratedAt.IsZero() {
+		loc, err := program.Location()
+		if err != nil {
+			loc = time.UTC
+		}
+		args = append(args, "-metadata", "date="+meta.GeneratedAt.In(loc).Format("2006-01-02"))
+	}
+	return args
 }
 
 // hasClips returns true if the speech timeline contains at least one clip item.
