@@ -85,7 +85,7 @@ vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown
 
 ### フィード生成
 
-配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。
+配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。既定では `public/feed.xml` に書き出されます（出力先は `feed-spec.yaml` で変更可）。
 
 ```bash
 vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.yaml
@@ -160,7 +160,7 @@ characters:
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
-3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する
+3. `assets check` で設定を検証し、`assets preview` で素材ごとの鳴り方を確認する（`--id` には手順 2 で登録済みの素材を指定します）
 
    ```bash
    vox-radio assets check assets/assets.yaml
