@@ -13,14 +13,14 @@ jingle:
     fade_out: 0.5                # 鳴り終わりの音量を下げる秒数
     trim_silence_threshold: -30  # 素材の前後の無音を取り除く閾値（dB）
     description: "番組冒頭で流すオープニングジングル"
-    credit: "OtoLogic / CC BY 4.0"
+    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
   ending:
     file: jingle/private-time-1.mp3
     fade_in: 0.5
     fade_out: 2.0
     trim_silence_threshold: -30
     description: "番組の最後で流すエンディングジングル"
-    credit: "OtoLogic / CC BY 4.0"
+    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
 
 # se = 場面の切り替えなどで鳴らす短い効果音。
 se:
@@ -28,17 +28,17 @@ se:
     file: se/accent-low.mp3
     volume: 0.8                  # 音量（1.0 が等倍）
     description: "話題の切り替わりや新コーナー導入時に使うアクセント音。ピロロンという効果音。"
-    credit: "OtoLogic / CC BY 4.0"
+    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
   onoma_syakiin:
     file: se/onoma-syakiin02-1-dry.mp3
     volume: 0.8
     description: "オノマトペのシャキーンという音。キレのある切り替えや決め台詞の後に使う。"
-    credit: "OtoLogic / CC BY 4.0"
+    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
   switch:
     file: se/scene-change08-3-fast.mp3
     volume: 0.8
     description: "シーンの切り替えに使う音。ワープするような効果音。"
-    credit: "OtoLogic / CC BY 4.0"
+    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
 
 # bgm = コーナー中ずっと流す背景音楽（セリフの下で小さく流します）。
 bgm:
@@ -48,4 +48,4 @@ bgm:
     duck_ratio: 3                # セリフ中にBGMを下げる強さ
     loop: true                   # コーナーの長さに合わせて繰り返すか
     description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"
-    credit: "BGMer"
+    credit: "BGMer https://bgmer.net"
