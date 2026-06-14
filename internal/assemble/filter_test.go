@@ -2171,3 +2171,57 @@ func TestBuildFFmpegArgs_MetadataArgs_DateUsesTimezone(t *testing.T) {
 		t.Errorf("OutputArgs: date should be 2026-06-15 (JST), got: %v", args.OutputArgs)
 	}
 }
+
+func TestAudioQualityArgs(t *testing.T) {
+	tests := []struct {
+		preset string
+		wantQA string // expected -q:a value
+	}{
+		{"high", "0"},
+		{"standard", "2"},
+		{"low", "5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.preset, func(t *testing.T) {
+			got := audioQualityArgs(tt.preset)
+			if len(got) != 2 || got[0] != "-q:a" || got[1] != tt.wantQA {
+				t.Errorf("audioQualityArgs(%q) = %v, want [\"-q:a\", %q]", tt.preset, got, tt.wantQA)
+			}
+		})
+	}
+}
+
+func TestBuildFFmpegArgs_AudioQuality(t *testing.T) {
+	tests := []struct {
+		name         string
+		audioQuality string
+		wantQA       string // expected -q:a value in OutputArgs
+	}{
+		{"未設定はstandard(-q:a 2)", "", "2"},
+		{"high は -q:a 0", "high", "0"},
+		{"standard は -q:a 2", "standard", "2"},
+		{"low は -q:a 5", "low", "5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := newMinimalContext()
+			ctx.Program = config.ProgramConfig{AudioQuality: tt.audioQuality}
+
+			args, err := BuildFFmpegArgs(ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			found := false
+			for i, a := range args.OutputArgs {
+				if a == "-q:a" && i+1 < len(args.OutputArgs) && args.OutputArgs[i+1] == tt.wantQA {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("OutputArgs: want -q:a %s, got %v", tt.wantQA, args.OutputArgs)
+			}
+		})
+	}
+}

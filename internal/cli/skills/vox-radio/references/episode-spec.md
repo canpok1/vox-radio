@@ -18,6 +18,7 @@
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
 | `chars_per_minute` | int | 任意 | 台本の文字数換算に使用する1分あたりの目安文字数。台本生成時の `length_sec` → 目標文字数換算に使用。未指定時はデフォルト 420（= 7文字/秒×60） |
+| `audio_quality` | string | 任意 | 生成 MP3 の音質プリセット。`high`（約245kbps）/ `standard`（約190kbps、**既定**）/ `low`（約130kbps）。未指定または空は `standard` として扱われる |
 
 ## `corners` セクション
 

@@ -20,6 +20,11 @@ program:
   # script_note: "記事を紹介する場合は記事タイトルを正確に伝えること。"
   # 番組まとめ文のおおよその文字数（省略すると 200 文字）。
   # summary_length: 200
+  # 生成 MP3 の音質プリセット（省略すると standard）。
+  #   high     → 約245kbps (VBR V0)
+  #   standard → 約190kbps (VBR V2) ※既定
+  #   low      → 約130kbps (VBR V5)
+  # audio_quality: "standard"
 
 # 出演者の一覧（番組に登場するキャラクターをここで宣言します）。
 # キーは vox-radio.yaml の characters のキーと合わせてください。

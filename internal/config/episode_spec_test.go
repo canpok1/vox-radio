@@ -22,6 +22,36 @@ func TestEpisodeSpec_ValidateProgram(t *testing.T) {
 			spec:    &config.EpisodeSpec{},
 			wantErr: true,
 		},
+		{
+			name:    "audio_quality が未設定の場合はエラーなし",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: ""}},
+			wantErr: false,
+		},
+		{
+			name:    "audio_quality=high はエラーなし",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: "high"}},
+			wantErr: false,
+		},
+		{
+			name:    "audio_quality=standard はエラーなし",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: "standard"}},
+			wantErr: false,
+		},
+		{
+			name:    "audio_quality=low はエラーなし",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: "low"}},
+			wantErr: false,
+		},
+		{
+			name:    "audio_quality が不正値の場合はエラー",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: "ultra"}},
+			wantErr: true,
+		},
+		{
+			name:    "audio_quality が大文字でもエラーなし（正規化後に判定）",
+			spec:    &config.EpisodeSpec{Program: config.ProgramConfig{ID: "p", AudioQuality: "HIGH"}},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
