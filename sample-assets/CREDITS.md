@@ -12,6 +12,5 @@
 
 ## 注意
 
-- `jingle/private-time-1.mp3` は opening / ending の両方で使用しています。
 - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja) の素材は利用時にクレジット表記が必要です。
 - 各提供元の規約は変更される場合があります。利用前に提供元URLで最新の規約を確認してください。
