@@ -925,3 +925,37 @@ func TestPastDedupKeys_EmptyEntries(t *testing.T) {
 		t.Errorf("PastDedupKeys: expected empty slice, got %d", len(got))
 	}
 }
+
+func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Credits:  []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	if len(got.Credits) != 2 {
+		t.Fatalf("Credits: got %d, want 2", len(got.Credits))
+	}
+	if got.Credits[0] != "OtoLogic / CC BY 4.0" {
+		t.Errorf("Credits[0] = %q, want %q", got.Credits[0], "OtoLogic / CC BY 4.0")
+	}
+	if got.Credits[1] != "VOICEVOX:ずんだもん" {
+		t.Errorf("Credits[1] = %q, want %q", got.Credits[1], "VOICEVOX:ずんだもん")
+	}
+}
+
+func TestBuildEntryFromManifest_CreditsNilWhenEmpty(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	// Credits が nil のままだと JSON で "null" になるため non-nil を保証
+	if got.Credits == nil {
+		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")
+	}
+}

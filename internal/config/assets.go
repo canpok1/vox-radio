@@ -26,6 +26,7 @@ type JingleEntry struct {
 	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`
 	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
 	Description          string   `yaml:"description,omitempty"`
+	Credit               string   `yaml:"credit,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
@@ -54,6 +55,7 @@ type SEEntry struct {
 	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
 	Overlay              *bool    `yaml:"overlay,omitempty"`                // nil=false (sequential); true=overlay on speech track
 	Description          string   `yaml:"description,omitempty"`
+	Credit               string   `yaml:"credit,omitempty"`
 }
 
 // EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
@@ -84,6 +86,7 @@ type BGMEntry struct {
 	FadeIn      *float64 `yaml:"fade_in,omitempty"`
 	FadeOut     *float64 `yaml:"fade_out,omitempty"`
 	Description string   `yaml:"description,omitempty"`
+	Credit      string   `yaml:"credit,omitempty"`
 }
 
 // EffectiveFadeIn returns the fade-in duration in seconds.

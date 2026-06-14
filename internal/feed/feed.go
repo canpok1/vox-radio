@@ -89,7 +89,7 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 		url := audioURL(cfg.Feed.AudioURLTemplate, e.EpisodeNumber, e.AudioFile)
 		item := rssItem{
 			Title:          itemTitle(e),
-			Description:    e.Summary,
+			Description:    itemDescription(e),
 			GUID:           rssGUID{IsPermaLink: "false", Value: "ep-" + strconv.Itoa(e.EpisodeNumber)},
 			PubDate:        pubDate(e.Datetime),
 			Enclosure:      rssEnclosure{URL: url, Length: e.Bytes, Type: "audio/mpeg"},
@@ -123,6 +123,15 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 		return "", fmt.Errorf("marshal feed xml: %w", err)
 	}
 	return xml.Header + string(out) + "\n", nil
+}
+
+// itemDescription builds the RSS item description by appending a credits section
+// to the episode summary when credits are present.
+func itemDescription(e cache.Entry) string {
+	if len(e.Credits) == 0 {
+		return e.Summary
+	}
+	return e.Summary + "\n\nクレジット\n" + strings.Join(e.Credits, "\n")
 }
 
 func audioURL(tmpl string, episodeNumber int, audioFile string) string {

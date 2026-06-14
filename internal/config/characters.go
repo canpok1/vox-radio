@@ -9,6 +9,7 @@ type CharacterConfig struct {
 	Personality  []string       `yaml:"personality"`
 	DefaultStyle string         `yaml:"default_style"`
 	Styles       map[string]int `yaml:"styles"`
+	Credit       string         `yaml:"credit,omitempty"`
 }
 
 // DefaultSpeakerID returns the VOICEVOX speaker ID for the character's default style.

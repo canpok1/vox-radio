@@ -202,3 +202,73 @@ func TestBuildFeed_EmptyEntries(t *testing.T) {
 		t.Errorf("BuildFeed: expected no <item> elements for empty entries\ngot:\n%s", got)
 	}
 }
+
+func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Title:         "タイトル",
+			Summary:       "番組の要約テキスト",
+			AudioFile:     "episode.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+			Credits:       []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"},
+		},
+	}
+
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+
+	// description にクレジット節が含まれること
+	if !strings.Contains(got, "番組の要約テキスト") {
+		t.Errorf("BuildFeed: expected summary in description\ngot:\n%s", got)
+	}
+	if !strings.Contains(got, "クレジット") {
+		t.Errorf("BuildFeed: expected credit section header in description\ngot:\n%s", got)
+	}
+	if !strings.Contains(got, "OtoLogic / CC BY 4.0") {
+		t.Errorf("BuildFeed: expected credit 'OtoLogic / CC BY 4.0' in description\ngot:\n%s", got)
+	}
+	if !strings.Contains(got, "VOICEVOX:ずんだもん") {
+		t.Errorf("BuildFeed: expected credit 'VOICEVOX:ずんだもん' in description\ngot:\n%s", got)
+	}
+}
+
+func TestBuildFeed_NoCreditsWhenEmpty(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Title:         "タイトル",
+			Summary:       "番組の要約テキスト",
+			AudioFile:     "episode.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+		},
+	}
+
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+
+	// credits が空のとき「クレジット」節が追加されないこと
+	if strings.Contains(got, "クレジット") {
+		t.Errorf("BuildFeed: should not contain credit section when credits is empty\ngot:\n%s", got)
+	}
+}

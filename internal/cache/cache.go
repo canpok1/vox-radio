@@ -49,6 +49,7 @@ type Entry struct {
 	Corners           []CornerEntry            `json:"corners"`
 	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
 	Casts             []CastEntry              `json:"casts"`
+	Credits           []string                 `json:"credits,omitempty"`
 }
 
 // Manager handles JSONL cache file operations for a single program.
@@ -231,6 +232,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		Corners:           corners,
 		ConversationNotes: m.ConversationNotes,
 		Casts:             casts,
+		Credits:           model.NonNil(m.Credits),
 	}
 }
 

@@ -250,3 +250,31 @@ func TestBuildThreadBlocks_ArticleEmptyURL_NoSlackLinkSyntax(t *testing.T) {
 		t.Errorf("article title should appear in output even when URL is empty, got: %q", text)
 	}
 }
+
+func TestBuildHeader_CreditPlaceholder(t *testing.T) {
+	m := makeManifest()
+	m.Credits = []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"}
+	tmpl := makeTemplate()
+	tmpl.Header = "{credit}"
+
+	got := slack.BuildHeader(m, tmpl)
+
+	want := "OtoLogic / CC BY 4.0\nVOICEVOX:ずんだもん"
+	if got != want {
+		t.Errorf("BuildHeader with {credit} = %q, want %q", got, want)
+	}
+}
+
+func TestBuildHeader_CreditPlaceholder_EmptyCredits(t *testing.T) {
+	m := makeManifest()
+	m.Credits = []string{}
+	tmpl := makeTemplate()
+	tmpl.Header = "タイトル: {title}\nクレジット: {credit}"
+
+	got := slack.BuildHeader(m, tmpl)
+
+	want := "タイトル: ずんだもんテックラジオ\nクレジット:"
+	if got != want {
+		t.Errorf("BuildHeader with empty credits = %q, want %q", got, want)
+	}
+}
