@@ -1,0 +1,45 @@
+# これは効果音やBGMを設定するファイルです（ジングル・SE・BGM）。
+# このパックに同梱した音声ファイルをそのまま参照しています。
+# 設定できているかは次のコマンドで確認できます:
+#   vox-radio assets check assets/assets.yaml
+# ファイルのパスは、このファイルがある場所を基準に探します。
+# 各素材の提供元・ライセンスは同梱の CREDITS.md を参照してください。
+
+# jingle = コーナーの区切りで流す短い音楽（流す間はセリフを止めます）。
+jingle:
+  opening:
+    file: jingle/private-time-1.mp3
+    fade_in: 0.5                 # 鳴り始めの音量を上げる秒数
+    fade_out: 0.5                # 鳴り終わりの音量を下げる秒数
+    trim_silence_threshold: -30  # 素材の前後の無音を取り除く閾値（dB）
+    description: "番組冒頭で流すオープニングジングル"
+  ending:
+    file: jingle/private-time-1.mp3
+    fade_in: 0.5
+    fade_out: 2.0
+    trim_silence_threshold: -30
+    description: "番組の最後で流すエンディングジングル"
+
+# se = 場面の切り替えなどで鳴らす短い効果音。
+se:
+  accent_low:
+    file: se/accent-low.mp3
+    volume: 0.8                  # 音量（1.0 が等倍）
+    description: "話題の切り替わりや新コーナー導入時に使うアクセント音。ピロロンという効果音。"
+  onoma_syakiin:
+    file: se/onoma-syakiin02-1-dry.mp3
+    volume: 0.8
+    description: "オノマトペのシャキーンという音。キレのある切り替えや決め台詞の後に使う。"
+  switch:
+    file: se/scene-change08-3-fast.mp3
+    volume: 0.8
+    description: "シーンの切り替えに使う音。ワープするような効果音。"
+
+# bgm = コーナー中ずっと流す背景音楽（セリフの下で小さく流します）。
+bgm:
+  coffee_break:
+    file: bgm/coffee-break-short.mp3
+    volume: 0.3                  # 音量（小さめにするとセリフが聞き取りやすい）
+    duck_ratio: 3                # セリフ中にBGMを下げる強さ
+    loop: true                   # コーナーの長さに合わせて繰り返すか
+    description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"

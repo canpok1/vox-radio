@@ -159,7 +159,18 @@ characters:
 
 ### アセット設定
 
-`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。次の手順で設定を固めるのがおすすめです。
+`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。
+
+> **サンプル音源パック（ジングル・効果音・BGM 入り）を使えば、下記の手順 1・2 を省けます。** インストール済みの vox-radio と同じバージョンのパックを取得・展開してください（[Releases ページ](https://github.com/canpok1/vox-radio/releases/latest)からブラウザでダウンロードしてもOK）。
+>
+> ```bash
+> curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
+> unzip vox-radio-sample-assets.zip
+> ```
+>
+> 展開後の `assets/`（設定済み `assets.yaml` と音源一式）を設定ファイル（`vox-radio.yaml` など）と同じ場所に置けばそのまま使えます。ライセンスは同梱の `CREDITS.md` を参照してください。
+
+次の手順で設定を固めるのがおすすめです。
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
