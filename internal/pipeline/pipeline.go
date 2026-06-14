@@ -43,7 +43,7 @@ type Synther interface {
 
 // Assembler produces an MP3 episode from clips and a script.
 type Assembler interface {
-	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) error
+	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error
 }
 
 // Options configures a single pipeline run.
@@ -54,7 +54,7 @@ type Options struct {
 	Casts         []model.RundownCast // confirmed cast for this episode; nil treated as empty
 }
 
-// Runner orchestrates the full collect→rundown→script→synth→assemble→manifest pipeline.
+// Runner orchestrates the full collect→rundown→script→synth→summary→assemble→manifest pipeline.
 type Runner struct {
 	Spec              *config.EpisodeSpec
 	Config            *config.Config
@@ -69,6 +69,8 @@ type Runner struct {
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
+// Order: collect → rundown → script → synth → summary → assemble → manifest.
+// Summary runs before assemble so that EpisodeTitle can be embedded in ID3 tags.
 func (r *Runner) Run(ctx context.Context, opts Options) error {
 	outDir := opts.OutDir
 
@@ -121,10 +123,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		clips = &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
 	}
 
-	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir)); err != nil {
-		return fmt.Errorf("assemble: %w", err)
-	}
-
+	// Summary runs before assemble: EpisodeTitle (from programSummary) is embedded in ID3 tags.
 	generatedAt := opts.GeneratedAt
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
@@ -150,6 +149,15 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 				cornerSummaries[cl.Title] = cs
 			}
 		}
+	}
+
+	episodeMeta := model.EpisodeMeta{
+		Number:      opts.EpisodeNumber,
+		Title:       programSummary.EpisodeTitle,
+		GeneratedAt: generatedAt,
+	}
+	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir), episodeMeta); err != nil {
+		return fmt.Errorf("assemble: %w", err)
 	}
 
 	m := manifest.Build(manifest.BuildParams{

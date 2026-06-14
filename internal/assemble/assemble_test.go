@@ -52,7 +52,7 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "out.mp3")
-	result, err := a.Run(context.Background(), script, clips, dir, outPath)
+	result, err := a.Run(context.Background(), script, clips, dir, outPath, model.EpisodeMeta{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestAssembler_Run_FFmpegError(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -106,7 +106,7 @@ func TestAssembler_Run_NoClips_Error(t *testing.T) {
 	clips := model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
 
 	dir := t.TempDir()
-	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err == nil {
 		t.Error("expected error for no clips, got nil")
 	}
@@ -128,7 +128,7 @@ func TestAssembler_Run_CreatesOutputDir(t *testing.T) {
 
 	outDir := filepath.Join(t.TempDir(), "nested", "output")
 	outPath := filepath.Join(outDir, "episode.mp3")
-	_, err := a.Run(context.Background(), script, clips, t.TempDir(), outPath)
+	_, err := a.Run(context.Background(), script, clips, t.TempDir(), outPath, model.EpisodeMeta{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestAssembler_Run_LogsStartAndComplete(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3")); err != nil {
+	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -236,7 +236,7 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3")); err != nil {
+	if _, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -298,7 +298,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err = a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err = a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestAssembler_Run_SE_DurationFetched(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestAssembler_Run_SE_DurationError(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"))
+	_, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
 	if err == nil {
 		t.Error("expected error when getDuration fails for SE, got nil")
 	}

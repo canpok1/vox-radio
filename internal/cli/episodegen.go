@@ -32,8 +32,8 @@ type assemblerAdapter struct {
 	inner *assemble.Assembler
 }
 
-func (a *assemblerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string) error {
-	_, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath)
+func (a *assemblerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error {
+	_, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath, meta)
 	return err
 }
 

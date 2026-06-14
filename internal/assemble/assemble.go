@@ -67,7 +67,7 @@ func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ..
 
 // Run assembles the given clips and script into an mp3 at outPath.
 // It returns the duration and file size of the resulting mp3.
-func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string) (*Result, error) {
+func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string, meta model.EpisodeMeta) (*Result, error) {
 	logger := a.logger.With("step", "assemble")
 	start := time.Now()
 
@@ -90,6 +90,8 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		PauseSec:    defaultPauseSec,
 		OutPath:     outPath,
 		SEDurations: seDurations,
+		Program:     a.Program,
+		Meta:        meta,
 	}
 
 	ffArgs, err := BuildFFmpegArgs(bctx)
