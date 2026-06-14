@@ -81,6 +81,29 @@ func TestLoadFeedSpec_FileNotExist(t *testing.T) {
 	}
 }
 
+func TestLoadFeedSpec_CreditsHeaderField(t *testing.T) {
+	content := `
+feed:
+  language: ja
+  author: Test Author
+  email: test@example.com
+  site_url: https://example.com/
+  audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
+  credits_header: Attributions
+output:
+  public: public
+`
+	path := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(content))
+
+	cfg, err := feed.LoadFeedSpec(path)
+	if err != nil {
+		t.Fatalf("LoadFeedSpec: unexpected error: %v", err)
+	}
+	if cfg.Feed.CreditsHeader != "Attributions" {
+		t.Errorf("Feed.CreditsHeader: got %q, want %q", cfg.Feed.CreditsHeader, "Attributions")
+	}
+}
+
 func TestFeedConfig_EffectiveCreditsHeader_DefaultWhenEmpty(t *testing.T) {
 	cfg := feed.FeedConfig{}
 	got := cfg.EffectiveCreditsHeader()
