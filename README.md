@@ -39,7 +39,7 @@ vox-radio init --sample
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
-番組は `output/episode.mp3` に生成されます（中間ファイルは `output/intermediate/`）。
+番組は `output/{program.id}_ep{NNN}.mp3` に生成されます（中間ファイルは `output/intermediate/`）。
 
 ## 使い方
 
@@ -69,7 +69,7 @@ vox-radio episodegen --spec episode-spec.yaml
 # 出力とログを1ツリーに集約する場合
 vox-radio episodegen --spec episode-spec.yaml --out-dir output --log-dir output/logs
 
-# 既存の episode.mp3 を上書きして再実行する場合
+# 既存の MP3 を上書きして再実行する場合
 vox-radio episodegen --spec episode-spec.yaml --force
 ```
 

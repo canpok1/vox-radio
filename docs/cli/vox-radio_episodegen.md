@@ -7,9 +7,9 @@
 collect → rundown → script → synth → assemble → manifest を一括実行します。
 
 中間ファイルは <out-dir>/intermediate/ に書き出され、
-最終的な episode.mp3 は <out-dir>/ 直下に配置されます。
+最終的な {program.id}_ep{NNN}.mp3 は <out-dir>/ 直下に配置されます。
 
-出力先に episode.mp3 が既に存在する場合はエラーで終了します。
+出力先に {program.id}_ep{NNN}.mp3 が既に存在する場合はエラーで終了します。
 上書きするには --force を指定してください。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
@@ -28,9 +28,9 @@ vox-radio episodegen [flags]
 ### Options
 
 ```
-      --force            既存の episode.mp3 を上書きする
+      --force            既存の {program.id}_ep{NNN}.mp3 を上書きする
   -h, --help             help for episodegen
-      --out-dir string   出力ディレクトリ（episode.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置） (default "output")
+      --out-dir string   出力ディレクトリ（{program.id}_ep{NNN}.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置） (default "output")
       --spec string      エピソード仕様 YAML ファイルのパス（必須）
 ```
 
