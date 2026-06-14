@@ -2111,6 +2111,10 @@ func TestBuildFFmpegArgs_MetadataArgs_EmptyTitle(t *testing.T) {
 	if strings.Contains(out, "album=") {
 		t.Errorf("OutputArgs should not contain album= when title is empty: %v", args.OutputArgs)
 	}
+	// EpisodeDisplayTitle(3, "", "") returns "第3回" so title tag is still set
+	if !strings.Contains(out, "title=第3回") {
+		t.Errorf("OutputArgs should contain title=第3回 when number=3 and program.title is empty: %v", args.OutputArgs)
+	}
 }
 
 func TestBuildFFmpegArgs_MetadataArgs_ZeroEpisodeNumber(t *testing.T) {

@@ -564,9 +564,8 @@ func TestRunner_Run_EpisodeMetaPassedToAssembler(t *testing.T) {
 	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{
 		summary: "要約",
+		notes:   make([]model.ConversationNote, 0),
 	}
-	// ProgramSummary stub returns EpisodeTitle "今週の技術"
-	s.sum.notes = make([]model.ConversationNote, 0)
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{
 		OutDir:        outDir,
