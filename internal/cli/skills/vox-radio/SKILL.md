@@ -23,10 +23,22 @@ vox-radio の設定ファイルを作成・修正するスキルです。
 | `feed-spec.yaml` | `references/feed-spec.md` | `vox-radio feedgen check` |
 | `slack-spec.yaml` | `references/slack-spec.md` | `vox-radio slackpost check` |
 
-> フィールド定義の正は `internal/config/config.go`（feed は `internal/model/feed_spec.go`）。
-> リファレンスと実コードが齟齬する場合はコードを優先してください。
+> リファレンスの記載と check コマンドの挙動が食い違う場合は、check コマンドの検証結果を正としてください。
+> 食い違いはスキルとバイナリの版ずれが原因のことがあります。下記「バージョン整合チェック」で版を揃えると解消します。
 
 ## ワークフロー
+
+### バージョン整合チェック（ワークフローの最初に実施）
+
+スキルファイルはインストール時のバイナリと同一バージョンで配布されます。バイナリだけを更新すると古いスキルが残り、リファレンスと実際の挙動が食い違うことがあります。作業を始める前に版ずれを確認してください。
+
+1. スキルディレクトリの `.skill-version`（インストール時に記録されたバイナリ版）を読む
+2. `vox-radio --version` で現在のバイナリ版を取得する（出力形式: `vox-radio version X.Y.Z`）
+3. 両者を比較し、以下に従う
+   - **いずれかが `dev`、または `.skill-version` が存在しない**: 比較不能（ローカルビルド等）。警告を出すだけで、そのまま作業を続行する
+   - **一致**: そのまま作業を続行する
+   - **バイナリが新しい**: `AskUserQuestion` で確認のうえ `vox-radio install --skills --force` を実行してスキル（と `.skill-version`）を再生成し、最新の references で作業を続行する
+   - **スキルが新しい（バイナリが古い）**: `AskUserQuestion` で確認のうえ、バイナリの更新手順（`scripts/install.sh` の再実行、または `go install`）を案内する。バイナリの自動更新は行わない（環境依存のため）
 
 ### モード判定
 
