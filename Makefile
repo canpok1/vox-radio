@@ -44,6 +44,7 @@ check-samples: build
 	./$(BINARY_NAME) assets check sample/assets/assets.yaml
 	./$(BINARY_NAME) feedgen check sample/feed-spec.yaml
 	./$(BINARY_NAME) slackpost check sample/slack-spec.yaml
+	./$(BINARY_NAME) assets check sample-assets/assets.yaml
 
 release-check:
 	goreleaser check

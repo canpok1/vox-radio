@@ -7,6 +7,9 @@ before:
     # また dist 配下は hook 後の空チェックに引っかかるため、dist の外へ出力する。
     - mkdir -p .extra-files
     - sh -c "sed 's/__VERSION__/{{ .Tag }}/g' scripts/install.sh > .extra-files/install.sh"
+    # sample-assets を zip 化して Release へ自動添付する。
+    # zip 直下に assets.yaml・jingle/se/bgm・README/CREDITS が並ぶよう sample-assets 配下で実行する。
+    - sh -c "rm -f .extra-files/vox-radio-sample-assets.zip && cd sample-assets && zip -r ../.extra-files/vox-radio-sample-assets.zip ."
 
 builds:
   - id: vox-radio
@@ -46,6 +49,7 @@ changelog:
 release:
   extra_files:
     - glob: .extra-files/install.sh
+    - glob: .extra-files/vox-radio-sample-assets.zip
   footer: >-
 
     ---
