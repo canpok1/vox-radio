@@ -69,3 +69,4 @@
 | [0061](0061-drop-rundown-full-text-fetch-pass-feed-text.md) | rundown の全文取得を廃止しフィード由来テキストを description として write へ渡す（ADR-0059 改訂） | 採用 | 2026-06-12 |
 | [0062](0062-split-user-and-developer-docs.md) | ドキュメントを利用者向け(README)と開発者向け(docs/development)に分離する | 採用 | 2026-06-13 |
 | [0063](0063-unify-init-output-dir-with-flag.md) | init の出力先を --output-dir に一本化し --sample の暗黙 sample/ 出力を廃止する（ADR-0041 改訂） | 採用 | 2026-06-13 |
+| [0064](0064-distribute-sample-assets-via-github-release.md) | サンプルアセット音源をリポジトリに同梱し GitHub Release へ自動添付する（ADR-0041 改訂） | 採用 | 2026-06-14 |
