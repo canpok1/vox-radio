@@ -73,7 +73,7 @@ type ProgramConfig struct {
 	// ID is required: it is the cache key (episodes are stored per program.id).
 	ID             string `yaml:"id"`
 	Title          string `yaml:"title"`
-	Author         string `yaml:"author,omitempty"`          // MP3 アーティストタグ（TPE1）に埋め込む番組作者名
+	Author         string `yaml:"author,omitempty"` // MP3 アーティストタグ（TPE1）に埋め込む番組作者名
 	Description    string `yaml:"description"`
 	Direction      string `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
 	ScriptNote     string `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
