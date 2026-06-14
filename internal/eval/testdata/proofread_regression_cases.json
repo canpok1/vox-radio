@@ -126,5 +126,50 @@
       }
     ],
     "expectation": "line_index=0 の「あたまつき」は連濁誤り（→ずつき）。line_index=1 の「でもげんきです」は正しい。corner_index=1, line_index=0 の「こんにちは」は熟字訓誤り（→きょう）。2件の修正を corrections に含めるべき。"
+  },
+  {
+    "name": "particle_ha_unconverted",
+    "category": "particle_wa_e",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "私はずんだ餅が好きです",
+        "converted_text": "わたしはずんだもちがすきです"
+      }
+    ],
+    "expectation": "助詞「は」が未置換（「わたしは」→正しくは「わたしわ」）。corrections に corner_index=0, line_index=0, text=\"わたしわずんだもちがすきです\" の修正を含めるべき。"
+  },
+  {
+    "name": "particle_he_unconverted",
+    "category": "particle_wa_e",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "学校へ行きます",
+        "converted_text": "がっこうへいきます"
+      }
+    ],
+    "expectation": "助詞「へ」が未置換（「がっこうへ」→正しくは「がっこうえ」）。corrections に corner_index=0, line_index=0, text=\"がっこうえいきます\" の修正を含めるべき。"
+  },
+  {
+    "name": "particle_ha_not_in_word",
+    "category": "particle_wa_e",
+    "lines": [
+      {
+        "corner_index": 0,
+        "line_index": 0,
+        "original_text": "話すことが大切です",
+        "converted_text": "はなすことがたいせつです"
+      },
+      {
+        "corner_index": 0,
+        "line_index": 1,
+        "original_text": "部屋へ戻ります",
+        "converted_text": "へやへもどります"
+      }
+    ],
+    "expectation": "line_index=0: 「はなす」は語の一部の「は」であり助詞でないため修正不要。line_index=1: 「へや」の「へ」は語の一部で修正不要だが、2番目の「へ」（助詞「へ」）は未置換（→正: 「えもどります」）。corrections に line_index=1 の修正（text=\"へやえもどります\"）のみを含めるべき。"
   }
 ]

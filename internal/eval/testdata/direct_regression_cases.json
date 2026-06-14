@@ -92,5 +92,27 @@
       ]
     },
     "expectation": "全3行（corner_index 0のline_index 0〜2）すべてにline_conversionsエントリが存在すること。本日→ほんじつ、AI→えーあい、LLM→えるえるえむ、GPT-4→じーぴーてーよん、Gemini→じぇみになどの読み変換が含まれること。"
+  },
+  {
+    "name": "particle_wa_e_conversion",
+    "category": "particle_reading",
+    "program_direction": "",
+    "corners": [
+      {
+        "title": "助詞変換テスト",
+        "lines": [
+          {"speaker_role": "zundamon", "text": "私はずんだ餅が好きなのだ"},
+          {"speaker_role": "metan", "text": "今日は学校へ行きましたわ"},
+          {"speaker_role": "zundamon", "text": "話すことは大切なのだ"},
+          {"speaker_role": "metan", "text": "部屋へ戻りましょうか"}
+        ]
+      }
+    ],
+    "asset_catalog": {
+      "se": [
+        {"name": "chime", "description": "コーナー開始を知らせるチャイム音"}
+      ]
+    },
+    "expectation": "助詞のかな置換が正しく行われること。「私は」の助詞「は」→「わたしわ」、「今日は」→「きょうわ」、「学校へ」の助詞「へ」→「がっこうえ」。語の一部の「は」「へ」は変えないこと: 「話す」→「はなす」（語中のは維持）、「部屋」→「へや」（語中のへ維持）。全4行のline_conversionsエントリが揃っていること。"
   }
 ]
