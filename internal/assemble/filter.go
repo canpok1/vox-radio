@@ -194,7 +194,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	b.addFilter(fmt.Sprintf("[norm_out]alimiter=limit=%.3f:level=0[out]", outputLimiterLimit))
 
 	outputArgs := []string{"-map", "[out]", "-c:a", "libmp3lame", "-q:a", "2"}
-	if metaArgs := buildMetadataArgs(bctx.Program, bctx.Meta); len(metaArgs) > 0 {
+	if metaArgs := buildMetadataArgs(bctx); len(metaArgs) > 0 {
 		outputArgs = append(outputArgs, "-id3v2_version", "3")
 		outputArgs = append(outputArgs, metaArgs...)
 	}
@@ -209,7 +209,9 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 
 // buildMetadataArgs constructs ffmpeg -metadata key=value pairs for ID3 tagging.
 // Empty values and zero numbers/times result in the corresponding tag being omitted.
-func buildMetadataArgs(program config.ProgramConfig, meta model.EpisodeMeta) []string {
+func buildMetadataArgs(bctx BuildContext) []string {
+	program := bctx.Program
+	meta := bctx.Meta
 	var args []string
 	if program.Title != "" {
 		args = append(args, "-metadata", "album="+program.Title)

@@ -547,32 +547,15 @@ func TestRunner_Run_SummaryBeforeAssemble(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
+	s.sum = &stubProgramSummarizer{err: errors.New("summary failed")}
 
-	// callOrder records which step ran and when
-	var callOrder []string
-	s.sum = &stubProgramSummarizer{}
-	origSummarize := s.sum
-	origSummarize.summary = "テスト要約"
-
-	// Use a custom assembler that records call order
-	type recordingAssembler struct {
-		inner *stubAssembler
-	}
-	ra := &recordingAssembler{inner: s.asm}
-	_ = ra // used below
-
-	// We verify ordering by checking that when ProgramSummarizer errors, Assembler is NOT called.
-	s2 := defaultStubs()
-	s2.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
-	s2.sum = &stubProgramSummarizer{err: errors.New("summary failed")}
-
-	if err := newRunner(s2).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
+	// When ProgramSummarizer fails, Assembler must NOT be called (summary runs before assemble).
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error when ProgramSummarizer fails")
 	}
-	if s2.asm.called {
+	if s.asm.called {
 		t.Error("Assembler should NOT be called when ProgramSummarizer fails (summary runs before assemble)")
 	}
-	_ = callOrder
 }
 
 func TestRunner_Run_EpisodeMetaPassedToAssembler(t *testing.T) {

@@ -2040,10 +2040,6 @@ func newMinimalContext() BuildContext {
 	}
 }
 
-func hasOutputArg(outputArgs []string, needle string) bool {
-	return strings.Contains(strings.Join(outputArgs, " "), needle)
-}
-
 func TestBuildFFmpegArgs_MetadataArgs_AllSet(t *testing.T) {
 	ctx := newMinimalContext()
 	ctx.Program = config.ProgramConfig{
