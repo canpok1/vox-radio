@@ -946,7 +946,7 @@ func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
 	}
 }
 
-func TestBuildEntryFromManifest_CreditsNilWhenEmpty(t *testing.T) {
+func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 	m := model.Manifest{
 		Title:    "エピソード",
 		Datetime: "2026-06-01T00:00:00Z",
