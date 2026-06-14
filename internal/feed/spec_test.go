@@ -81,6 +81,22 @@ func TestLoadFeedSpec_FileNotExist(t *testing.T) {
 	}
 }
 
+func TestFeedConfig_EffectiveCreditsHeader_DefaultWhenEmpty(t *testing.T) {
+	cfg := feed.FeedConfig{}
+	got := cfg.EffectiveCreditsHeader()
+	if got != "クレジット" {
+		t.Errorf("EffectiveCreditsHeader(): got %q, want %q", got, "クレジット")
+	}
+}
+
+func TestFeedConfig_EffectiveCreditsHeader_Custom(t *testing.T) {
+	cfg := feed.FeedConfig{CreditsHeader: "Credits"}
+	got := cfg.EffectiveCreditsHeader()
+	if got != "Credits" {
+		t.Errorf("EffectiveCreditsHeader(): got %q, want %q", got, "Credits")
+	}
+}
+
 func TestFeedSpec_EffectivePublicDir_Default(t *testing.T) {
 	cfg := feed.FeedSpec{}
 	got := cfg.EffectivePublicDir()

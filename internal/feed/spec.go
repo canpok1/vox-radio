@@ -23,6 +23,15 @@ type FeedConfig struct {
 	SiteURL          string `yaml:"site_url"`
 	AudioURLTemplate string `yaml:"audio_url_template"`
 	Credit           string `yaml:"credit"`
+	CreditsHeader    string `yaml:"credits_header,omitempty"`
+}
+
+// EffectiveCreditsHeader returns the configured credits section header, or "クレジット" if not set.
+func (c FeedConfig) EffectiveCreditsHeader() string {
+	if c.CreditsHeader == "" {
+		return "クレジット"
+	}
+	return c.CreditsHeader
 }
 
 // OutputConfig holds output settings for feed-spec.yaml.

@@ -17,6 +17,7 @@
 | `feed.explicit` | bool | 任意 | 露骨な表現の有無（itunes:explicit）。デフォルト: false |
 | `feed.cover_image_url` | string | 任意 | カバー画像 URL（itunes:image）。空文字でタグ省略 |
 | `feed.credit` | string | 任意 | 配信者クレジット表記（各 item の itunes:author）。空文字で省略 |
+| `feed.credits_header` | string | 任意 | `<description>` 内クレジット節の見出し文字列。デフォルト: `クレジット` |
 | `output.public` | string | 任意 | `feed.xml` を書き出すディレクトリ。デフォルト: `public` |
 
 必須フィールドの欠落・URL/email 形式・`audio_url_template` のプレースホルダ（`{episode_number}` / `{audio_file}`）は `vox-radio feedgen check` で検証されます。意味検証エラーは全件まとめて報告されます。

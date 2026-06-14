@@ -243,6 +243,40 @@ func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
 	}
 }
 
+func TestBuildFeed_CustomCreditsHeader(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+			CreditsHeader:    "Credits",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Title:         "タイトル",
+			Summary:       "番組の要約テキスト",
+			AudioFile:     "episode.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+			Credits:       []string{"OtoLogic / CC BY 4.0"},
+		},
+	}
+
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+
+	if !strings.Contains(got, "Credits") {
+		t.Errorf("BuildFeed: expected custom credits header 'Credits' in description\ngot:\n%s", got)
+	}
+	if strings.Contains(got, "クレジット") {
+		t.Errorf("BuildFeed: expected 'クレジット' to be replaced by custom header\ngot:\n%s", got)
+	}
+}
+
 func TestBuildFeed_NoCreditsWhenEmpty(t *testing.T) {
 	cfg := feed.FeedSpec{
 		Feed: feed.FeedConfig{
