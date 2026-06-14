@@ -232,7 +232,7 @@ func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
 	if !strings.Contains(got, "番組の要約テキスト") {
 		t.Errorf("BuildFeed: expected summary in description\ngot:\n%s", got)
 	}
-	if !strings.Contains(got, "クレジット") {
+	if !strings.Contains(got, feed.DefaultCreditsHeader) {
 		t.Errorf("BuildFeed: expected credit section header in description\ngot:\n%s", got)
 	}
 	if !strings.Contains(got, "OtoLogic / CC BY 4.0") {
@@ -240,6 +240,40 @@ func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
 	}
 	if !strings.Contains(got, "VOICEVOX:ずんだもん") {
 		t.Errorf("BuildFeed: expected credit 'VOICEVOX:ずんだもん' in description\ngot:\n%s", got)
+	}
+}
+
+func TestBuildFeed_CustomCreditsHeader(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+			CreditsHeader:    "Credits",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Title:         "タイトル",
+			Summary:       "番組の要約テキスト",
+			AudioFile:     "episode.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+			Credits:       []string{"OtoLogic / CC BY 4.0"},
+		},
+	}
+
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+
+	if !strings.Contains(got, "Credits") {
+		t.Errorf("BuildFeed: expected custom credits header 'Credits' in description\ngot:\n%s", got)
+	}
+	if strings.Contains(got, feed.DefaultCreditsHeader) {
+		t.Errorf("BuildFeed: expected %q to be replaced by custom header\ngot:\n%s", feed.DefaultCreditsHeader, got)
 	}
 }
 
@@ -268,7 +302,7 @@ func TestBuildFeed_NoCreditsWhenEmpty(t *testing.T) {
 	}
 
 	// credits が空のとき「クレジット」節が追加されないこと
-	if strings.Contains(got, "クレジット") {
+	if strings.Contains(got, feed.DefaultCreditsHeader) {
 		t.Errorf("BuildFeed: should not contain credit section when credits is empty\ngot:\n%s", got)
 	}
 }
