@@ -15,6 +15,7 @@
 | 内容 | 置き場所 |
 |---|---|
 | 利用者向け（インストール・設定・使い方） | ルート [`README.md`](../README.md)。インストール詳細は [`installation.md`](installation.md) |
+| 利用者向けの応用ガイド（手順が長く README に展開すると動線を阻害するもの） | [`guides/`](guides/)。README の「応用的な使い方」からリンクする |
 | 開発者・コントリビュート向け（環境構築・ビルド・テスト・評価・アーキテクチャ） | [`development/`](development/) |
 | CLI コマンド・フラグの説明 | cobra の `Short`/`Long` を編集し `make docs` で [`cli/`](cli/) を再生成（手書きしない） |
 | 設定ファイルのフィールド定義 | [`internal/cli/skills/vox-radio/references/`](../internal/cli/skills/vox-radio/references/)（`install --skills` で配布。ここが正） |
