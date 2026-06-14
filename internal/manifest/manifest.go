@@ -19,14 +19,25 @@ type BuildParams struct {
 	ConversationNotes []model.ConversationNote
 	EpisodeNumber     int
 	EpisodeTitle      string
-	Credits           []string
+	Assets            config.AssetsConfig
+	Characters        map[string]config.CharacterConfig
+	Lines             *model.ScriptLines
+	Script            *model.Script
 }
 
 // Build constructs a Manifest from BuildParams.
 // BuildParams.CornerSummaries maps corner title to its LLM-generated summary; nil means no corner summaries.
 // BuildParams.ConversationNotes contains non-rundown conversation information extracted from the episode.
 // BuildParams.EpisodeNumber 0 means unknown (omitted from manifest). BuildParams.EpisodeTitle "" means unknown (omitted).
+// Credits are collected internally from Assets/Characters/Lines/Script/Rundown.Casts.
 func Build(p BuildParams) model.Manifest {
+	credits := CollectCredits(CreditParams{
+		Assets:     p.Assets,
+		Characters: p.Characters,
+		Lines:      p.Lines,
+		Script:     p.Script,
+		Casts:      p.Rundown.Casts,
+	})
 	cornerMap := p.Rundown.CornerMap()
 	manifestCorners := make([]model.ManifestCorner, 0, len(p.Corners))
 	for _, c := range p.Corners {
@@ -51,6 +62,6 @@ func Build(p BuildParams) model.Manifest {
 		Corners:           manifestCorners,
 		ConversationNotes: model.NonNil(p.ConversationNotes),
 		Casts:             model.NonNil(p.Rundown.Casts),
-		Credits:           model.NonNil(p.Credits),
+		Credits:           model.NonNil(credits),
 	}
 }
