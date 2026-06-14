@@ -70,8 +70,9 @@ func newEpisodegenCmd() *cobra.Command {
 			defer func() { _ = logFile.Close() }()
 
 			if !force {
-				if _, err := os.Stat(fileio.EpisodePath(outDir)); err == nil {
-					return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", fileio.EpisodePath(outDir))
+				episodePath := fileio.EpisodePath(outDir)
+				if _, err := os.Stat(episodePath); err == nil {
+					return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", episodePath)
 				}
 			}
 
