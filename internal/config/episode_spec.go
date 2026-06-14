@@ -145,11 +145,14 @@ func (p *EpisodeSpec) CornerSummaryLength(title string) int {
 	return DefaultCornerSummaryLength
 }
 
-// ValidateProgram checks that program.id is set.
+// ValidateProgram checks that program.id is set and audio_quality (if set) is a valid preset.
 // program.id is the cache key (episodes are stored per program.id), so it is required.
 func (p *EpisodeSpec) ValidateProgram() error {
 	if p.Program.ID == "" {
 		return fmt.Errorf("program.id is required (it is the cache key for episode history)")
+	}
+	if q := p.Program.EffectiveAudioQuality(); !slices.Contains([]string{"high", "standard", "low"}, q) {
+		return fmt.Errorf("program.audio_quality: invalid preset %q (must be high, standard, or low)", p.Program.AudioQuality)
 	}
 	return nil
 }

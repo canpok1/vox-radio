@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	// DefaultCharsPerMinute is the default number of characters spoken per minute (= 7文字/秒×60),
@@ -12,6 +15,8 @@ const (
 	DefaultProgramTimezone = "Asia/Tokyo"
 	// DefaultCornerSummaryLength is the default summary length (chars) for per-corner summaries.
 	DefaultCornerSummaryLength = 100
+	// DefaultAudioQuality is the default audio quality preset ("standard" = VBR V2, ~190kbps).
+	DefaultAudioQuality = "standard"
 )
 
 // DurationSecToTargetChars converts a duration in seconds to an approximate target character count.
@@ -80,6 +85,7 @@ type ProgramConfig struct {
 	SummaryLength  int    `yaml:"summary_length,omitempty"`
 	Timezone       string `yaml:"timezone,omitempty"`         // IANA tz名。未設定時は DefaultProgramTimezone
 	CharsPerMinute int    `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute
+	AudioQuality   string `yaml:"audio_quality,omitempty"`    // 音質プリセット: "high" / "standard" / "low"。未設定時は DefaultAudioQuality
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.
@@ -96,6 +102,14 @@ func (p ProgramConfig) EffectiveCharsPerMinute() int {
 		return DefaultCharsPerMinute
 	}
 	return p.CharsPerMinute
+}
+
+// EffectiveAudioQuality returns the lowercased AudioQuality, falling back to DefaultAudioQuality.
+func (p ProgramConfig) EffectiveAudioQuality() string {
+	if p.AudioQuality == "" {
+		return DefaultAudioQuality
+	}
+	return strings.ToLower(p.AudioQuality)
 }
 
 // EffectiveTimezone returns Timezone, falling back to DefaultProgramTimezone.
