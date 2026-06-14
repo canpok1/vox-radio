@@ -32,11 +32,45 @@ func TestInstallCmd_SkillsGenerated(t *testing.T) {
 		".claude/skills/vox-radio/references/assets.md",
 		".claude/skills/vox-radio/references/feed-spec.md",
 		".claude/skills/vox-radio/references/slack-spec.md",
+		".claude/skills/vox-radio/.skill-version",
 	}
 	for _, name := range expectedFiles {
 		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
 			t.Errorf("%s was not generated", name)
 		}
+	}
+}
+
+func TestInstallCmd_SkillVersionStamp(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInstallCmd(t, "--skills")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".claude/skills/vox-radio/.skill-version"))
+	if err != nil {
+		t.Fatalf("read .skill-version: %v", err)
+	}
+	// テストビルドでは ldflags 未指定のため version は "dev"。
+	if got := strings.TrimSpace(string(data)); got != "dev" {
+		t.Errorf(".skill-version = %q, want %q", got, "dev")
+	}
+}
+
+func TestInstallCmd_SkillVersionStampAlwaysOverwritten(t *testing.T) {
+	dir := chdirTemp(t)
+	// 生成ファイルなので --force 無しでも常に現バイナリ版で上書きされる。
+	writeTestFile(t, dir, ".claude/skills/vox-radio/.skill-version", []byte("v0.0.0-stale\n"))
+	_, err := runInstallCmd(t, "--skills")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".claude/skills/vox-radio/.skill-version"))
+	if err != nil {
+		t.Fatalf("read .skill-version: %v", err)
+	}
+	if got := strings.TrimSpace(string(data)); got != "dev" {
+		t.Errorf(".skill-version = %q, want %q (should be overwritten without --force)", got, "dev")
 	}
 }
 
