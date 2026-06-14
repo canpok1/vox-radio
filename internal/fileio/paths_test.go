@@ -102,6 +102,26 @@ func TestDecodeYAML(t *testing.T) {
 	}
 }
 
+func TestEpisodeFileName(t *testing.T) {
+	tests := []struct {
+		programID     string
+		episodeNumber int
+		want          string
+	}{
+		{"morning-news", 1, "morning-news_ep001.mp3"},
+		{"morning-news", 12, "morning-news_ep012.mp3"},
+		{"morning-news", 123, "morning-news_ep123.mp3"},
+		{"morning-news", 1000, "morning-news_ep1000.mp3"},
+		{"my-tech-radio", 5, "my-tech-radio_ep005.mp3"},
+	}
+	for _, tt := range tests {
+		got := fileio.EpisodeFileName(tt.programID, tt.episodeNumber)
+		if got != tt.want {
+			t.Errorf("EpisodeFileName(%q, %d) = %q, want %q", tt.programID, tt.episodeNumber, got, tt.want)
+		}
+	}
+}
+
 func TestClipFileName(t *testing.T) {
 	tests := []struct {
 		n    int
@@ -135,7 +155,7 @@ func TestPaths(t *testing.T) {
 		{"LinesPath", fileio.LinesPath(outDir), filepath.Join(outDir, "intermediate", "03_lines.json")},
 		{"ProofreadPath", fileio.ProofreadPath(outDir), filepath.Join(outDir, "intermediate", "04_proofread.json")},
 		{"ScriptPath", fileio.ScriptPath(outDir), filepath.Join(outDir, "intermediate", "04_script.json")},
-		{"EpisodePath", fileio.EpisodePath(outDir), filepath.Join(outDir, "episode.mp3")},
+		{"EpisodePath", fileio.EpisodePath(outDir, "test-prog", 5), filepath.Join(outDir, "test-prog_ep005.mp3")},
 	}
 	for _, tt := range tests {
 		if tt.got != tt.want {

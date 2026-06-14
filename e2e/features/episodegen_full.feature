@@ -12,12 +12,12 @@
     もし "vox-radio episodegen --spec episode-spec.yaml --out-dir out" を実行する
     ならば 終了コードは 0 である
     かつ 標準出力に "pipeline complete" を含む
-    かつ ファイル "out/episode.mp3" のサイズは 0 より大きい
+    かつ ファイル "out/e2e-radio_ep001.mp3" のサイズは 0 より大きい
     かつ ファイル "out/intermediate/01_articles.json" が存在する
     かつ ファイル "out/intermediate/02_rundown.json" が存在する
     かつ ファイル "out/intermediate/03_lines.json" が存在する
     かつ ファイル "out/intermediate/04_script.json" が存在する
     かつ JSONファイル "out/manifest.json" のキー "title" は文字列 "E2Eテストラジオ" である
     かつ JSONファイル "out/manifest.json" のキー "episode_number" は数値 1 である
-    かつ JSONファイル "out/manifest.json" のキー "audio_file" は文字列 "episode.mp3" である
+    かつ JSONファイル "out/manifest.json" のキー "audio_file" は文字列 "e2e-radio_ep001.mp3" である
     かつ ファイル ".vox-radio/cache/e2e-radio.jsonl" の行数は 1 である

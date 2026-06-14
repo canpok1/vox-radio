@@ -18,7 +18,6 @@ const (
 	FileLines     = "03_lines.json"
 	FileProofread = "04_proofread.json"
 	FileScript    = "04_script.json"
-	FileEpisode   = "episode.mp3"
 	FileManifest  = "manifest.json"
 
 	DirIntermediate = "intermediate"
@@ -27,6 +26,10 @@ const (
 
 func ClipFileName(n int) string {
 	return fmt.Sprintf("clip_%03d.wav", n)
+}
+
+func EpisodeFileName(programID string, episodeNumber int) string {
+	return fmt.Sprintf("%s_ep%03d.mp3", programID, episodeNumber)
 }
 
 func IntermediateDir(outDir string) string {
@@ -48,8 +51,8 @@ func LinesPath(outDir string) string     { return intermediatePath(outDir, FileL
 func ProofreadPath(outDir string) string { return intermediatePath(outDir, FileProofread) }
 func ScriptPath(outDir string) string    { return intermediatePath(outDir, FileScript) }
 
-func EpisodePath(outDir string) string {
-	return filepath.Join(outDir, FileEpisode)
+func EpisodePath(outDir, programID string, episodeNumber int) string {
+	return filepath.Join(outDir, EpisodeFileName(programID, episodeNumber))
 }
 
 func ManifestPath(outDir string) string {

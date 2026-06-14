@@ -27,16 +27,22 @@ func TestEpisodegen_ExistingEpisodeCheck(t *testing.T) {
 			dir := chdirTemp(t)
 			outDir := filepath.Join(dir, "output")
 
+			// Generate valid config/spec via init command so loadConfigAndSpec succeeds.
+			if _, err := runInitCmd(t); err != nil {
+				t.Fatalf("init: %v", err)
+			}
+
 			if tt.episodeExists {
 				if err := os.MkdirAll(outDir, 0755); err != nil {
 					t.Fatalf("mkdir: %v", err)
 				}
-				if err := os.WriteFile(filepath.Join(outDir, "episode.mp3"), []byte("dummy"), 0600); err != nil {
+				// Template episode-spec.yaml has program.id="my-tech-radio"; no cache → episodeNumber=1.
+				if err := os.WriteFile(filepath.Join(outDir, "my-tech-radio_ep001.mp3"), []byte("dummy"), 0600); err != nil {
 					t.Fatalf("write episode: %v", err)
 				}
 			}
 
-			args := []string{"episodegen", "--spec", "/nonexistent/spec.yaml", "--out-dir", outDir}
+			args := []string{"episodegen", "--spec", "episode-spec.yaml", "--out-dir", outDir}
 			if tt.force {
 				args = append(args, "--force")
 			}

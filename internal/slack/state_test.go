@@ -39,15 +39,15 @@ func TestDefaultStatePath(t *testing.T) {
 }
 
 func TestPostState_Matches(t *testing.T) {
-	s := PostState{AudioFile: "episode.mp3", EpisodeNumber: 13}
+	s := PostState{AudioFile: "episode13.mp3", EpisodeNumber: 13}
 	tests := []struct {
 		name          string
 		audioFile     string
 		episodeNumber int
 		want          bool
 	}{
-		{"same audio and episode", "episode.mp3", 13, true},
-		{"different episode_number", "episode.mp3", 14, false},
+		{"same audio and episode", "episode13.mp3", 13, true},
+		{"different episode_number", "episode13.mp3", 14, false},
 		{"different audio_file", "other.mp3", 13, false},
 		{"both different", "other.mp3", 99, false},
 	}

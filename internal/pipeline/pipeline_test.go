@@ -198,7 +198,10 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 
-	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+	r := newRunner(s)
+	r.Spec.Program.ID = "test-prog"
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir, EpisodeNumber: 5}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -208,8 +211,9 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 	if s.asm.capturedClipsDir != fileio.ClipsDir(outDir) {
 		t.Errorf("Assembler.Run clipsDir = %q, want %q", s.asm.capturedClipsDir, fileio.ClipsDir(outDir))
 	}
-	if s.asm.capturedOutPath != fileio.EpisodePath(outDir) {
-		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, fileio.EpisodePath(outDir))
+	wantPath := fileio.EpisodePath(outDir, "test-prog", 5)
+	if s.asm.capturedOutPath != wantPath {
+		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, wantPath)
 	}
 }
 

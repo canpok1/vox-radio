@@ -89,7 +89,7 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 | `intermediate/03_lines.json` | script(write) | 元表記のセリフ（`model.ScriptLines`） |
 | `intermediate/04_script.json` | script(direct) | 演出済み台本（`model.Script`） |
 | `intermediate/clips/` + `clips.json` | synth | 音声クリップ（`model.ClipsMeta`） |
-| `output/episode.mp3` | assemble | 完成音声 |
+| `output/{program.id}_ep{NNN}.mp3` | assemble | 完成音声 |
 | `output/manifest.json` | manifest | エピソードマニフェスト（`model.Manifest`） |
 
 - **パス・ファイル名は `internal/fileio/paths.go` の定数・関数のみ使用する。**`"03_lines.json"` 等のリテラル直書きを禁止する（`fileio.FileLines` 等の定数を使う）。

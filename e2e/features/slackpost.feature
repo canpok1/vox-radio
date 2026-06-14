@@ -6,7 +6,7 @@
   背景:
     前提 テスト用設定一式を配置する
     かつ fixture "manifest.json" をファイル "manifest.json" として配置する
-    かつ ファイル "episode.mp3" を以下の内容で作成する:
+    かつ ファイル "e2e-radio_ep001.mp3" を以下の内容で作成する:
       """
       dummy-mp3-content
       """
@@ -34,7 +34,7 @@
     かつ ファイル "manifest.slackpost-state.json" を以下の内容で作成する:
       """
       {
-        "audio_file": "episode.mp3",
+        "audio_file": "e2e-radio_ep001.mp3",
         "episode_number": 1,
         "channel": "C0123456789",
         "file_id": "F-RESUME-01",
@@ -53,7 +53,7 @@
     かつ ファイル "manifest.slackpost-state.json" を以下の内容で作成する:
       """
       {
-        "audio_file": "episode.mp3",
+        "audio_file": "e2e-radio_ep001.mp3",
         "episode_number": 1,
         "channel": "C0123456789",
         "file_id": "F-DONE-01",

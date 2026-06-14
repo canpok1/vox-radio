@@ -156,7 +156,8 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Title:       programSummary.EpisodeTitle,
 		GeneratedAt: generatedAt,
 	}
-	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), fileio.EpisodePath(outDir), episodeMeta); err != nil {
+	episodePath := fileio.EpisodePath(outDir, r.Spec.Program.ID, opts.EpisodeNumber)
+	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), episodePath, episodeMeta); err != nil {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
@@ -164,7 +165,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Program:           r.Spec.Program,
 		Corners:           r.Spec.Corners,
 		Rundown:           rundown,
-		AudioFile:         fileio.FileEpisode,
+		AudioFile:         fileio.EpisodeFileName(r.Spec.Program.ID, opts.EpisodeNumber),
 		GeneratedAt:       generatedAt,
 		Summary:           programSummary.Summary,
 		CornerSummaries:   cornerSummaries,

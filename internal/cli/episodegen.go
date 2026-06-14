@@ -49,9 +49,9 @@ func newEpisodegenCmd() *cobra.Command {
 		Long: `collect → rundown → script → synth → assemble → manifest を一括実行します。
 
 中間ファイルは <out-dir>/intermediate/ に書き出され、
-最終的な episode.mp3 は <out-dir>/ 直下に配置されます。
+最終的な {program.id}_ep{NNN}.mp3 は <out-dir>/ 直下に配置されます。
 
-出力先に episode.mp3 が既に存在する場合はエラーで終了します。
+出力先に {program.id}_ep{NNN}.mp3 が既に存在する場合はエラーで終了します。
 上書きするには --force を指定してください。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
@@ -69,16 +69,22 @@ func newEpisodegenCmd() *cobra.Command {
 			}
 			defer func() { _ = logFile.Close() }()
 
-			if !force {
-				episodePath := fileio.EpisodePath(outDir)
-				if _, err := os.Stat(episodePath); err == nil {
-					return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", episodePath)
-				}
-			}
-
 			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
 			if err != nil {
 				return err
+			}
+
+			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
+			entries, episodeNumber, err := loadCacheEntries(p.Program.ID)
+			if err != nil {
+				return err
+			}
+
+			if !force {
+				episodePath := fileio.EpisodePath(outDir, p.Program.ID, episodeNumber)
+				if _, err := os.Stat(episodePath); err == nil {
+					return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", episodePath)
+				}
 			}
 
 			llmClient := newLLMClient(cfg)
@@ -96,11 +102,6 @@ func newEpisodegenCmd() *cobra.Command {
 			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 			writer.SetRecordedAt(time.Now(), loc)
 
-			// program.id is required (validated in loadConfigAndSpec), so the cache is always used.
-			entries, episodeNumber, err := loadCacheEntries(p.Program.ID)
-			if err != nil {
-				return err
-			}
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 			excludedDedupKeys := cache.PastDedupKeys(entries)
@@ -152,17 +153,17 @@ func newEpisodegenCmd() *cobra.Command {
 				return err
 			}
 
-			if err := appendToCache(cacheMgr, p.Program.ID, outDir, cfg.Cache, logger); err != nil {
+			if err := appendToCache(cacheMgr, p.Program.ID, outDir, episodeNumber, cfg.Cache, logger); err != nil {
 				logger.Warn("cache append failed (non-fatal)", "err", err)
 			}
 
-			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir))
+			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir, p.Program.ID, episodeNumber))
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&outDir, "out-dir", "output", "出力ディレクトリ（episode.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置）")
-	cmd.Flags().BoolVar(&force, "force", false, "既存の episode.mp3 を上書きする")
+	cmd.Flags().StringVar(&outDir, "out-dir", "output", "出力ディレクトリ（{program.id}_ep{NNN}.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置）")
+	cmd.Flags().BoolVar(&force, "force", false, "既存の {program.id}_ep{NNN}.mp3 を上書きする")
 	registerSpecFlag(cmd, &specPath)
 
 	cmd.AddCommand(
@@ -178,7 +179,7 @@ func newEpisodegenCmd() *cobra.Command {
 	return cmd
 }
 
-func appendToCache(mgr *cache.Manager, programID string, outDir string, cacheCfg config.CacheConfig, logger *slog.Logger) error {
+func appendToCache(mgr *cache.Manager, programID string, outDir string, episodeNumber int, cacheCfg config.CacheConfig, logger *slog.Logger) error {
 	var m model.Manifest
 	if err := fileio.ReadJSON(fileio.ManifestPath(outDir), &m); err != nil {
 		return fmt.Errorf("read manifest: %w", err)
@@ -188,7 +189,7 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, cacheCfg
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	episodePath := fileio.EpisodePath(outDir)
+	episodePath := fileio.EpisodePath(outDir, programID, episodeNumber)
 	var bytes int64
 	var durationSec int
 	if b, err := mediainfo.FileSize(episodePath); err != nil {

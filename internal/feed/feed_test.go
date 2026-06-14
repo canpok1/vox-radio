@@ -34,7 +34,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			Title:         "テストラジオ",
 			Summary:       "エピソード1の概要",
 			Description:   "番組説明テキスト",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         12345678,
 			DurationSec:   1800,
 		},
@@ -46,7 +46,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			Title:         "テストラジオ",
 			Summary:       "エピソード2の概要",
 			Description:   "番組説明テキスト",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         23456789,
 			DurationSec:   2100,
 		},
@@ -92,7 +92,7 @@ func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
 			EpisodeNumber: 42,
 			Title:         "タイトル",
 			Summary:       "要約",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 		},
@@ -103,7 +103,7 @@ func TestBuildFeed_AudioURLTemplateSubstitution(t *testing.T) {
 		t.Fatalf("BuildFeed: %v", err)
 	}
 
-	wantURL := "https://host.example/ep-42/episode.mp3"
+	wantURL := "https://host.example/ep-42/morning-news_ep001.mp3"
 	if !strings.Contains(got, wantURL) {
 		t.Errorf("BuildFeed: expected URL %q in output\ngot:\n%s", wantURL, got)
 	}
@@ -122,7 +122,7 @@ func TestBuildFeed_GUID(t *testing.T) {
 			EpisodeNumber: 5,
 			Title:         "タイトル",
 			Summary:       "要約",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 		},
@@ -152,7 +152,7 @@ func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
 			Title:         "古いタイトル",
 			Description:   "古い番組説明",
 			Summary:       "古い要約",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 		},
@@ -163,7 +163,7 @@ func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
 			Title:         "最新タイトル",
 			Description:   "最新番組説明",
 			Summary:       "最新要約",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         2000,
 			DurationSec:   700,
 		},
@@ -216,7 +216,7 @@ func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
 			EpisodeNumber: 1,
 			Title:         "タイトル",
 			Summary:       "番組の要約テキスト",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 			Credits:       []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"},
@@ -257,7 +257,7 @@ func TestBuildFeed_CustomCreditsHeader(t *testing.T) {
 			EpisodeNumber: 1,
 			Title:         "タイトル",
 			Summary:       "番組の要約テキスト",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 			Credits:       []string{"OtoLogic / CC BY 4.0"},
@@ -290,7 +290,7 @@ func TestBuildFeed_NoCreditsWhenEmpty(t *testing.T) {
 			EpisodeNumber: 1,
 			Title:         "タイトル",
 			Summary:       "番組の要約テキスト",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 		},

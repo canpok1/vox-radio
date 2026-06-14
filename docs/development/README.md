@@ -52,7 +52,7 @@ vox-radio --version
 make run-sample
 ```
 
-出力先は `output/<YYYYMMDDHHMMSS>/` ディレクトリになります（例: `output/20260601053357/episode.mp3`）。
+出力先は `output/<YYYYMMDDHHMMSS>/` ディレクトリになります（例: `output/20260601053357/my-tech-radio_ep001.mp3`）。
 
 プロファイルや出力先を変更する場合は `PROFILE` / `OUT_DIR` 変数で上書きできます。
 
