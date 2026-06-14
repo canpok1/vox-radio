@@ -12,6 +12,7 @@
 |---|---|---|---|
 | `id` | string | 必須 | 番組を識別するID。キャッシュファイル名（`.vox-radio/cache/{id}.jsonl`）とキャッシュエントリの記録キーに使用。日替わりコーナーやゲストの登場回もこのIDをキーに数える |
 | `title` | string | 任意 | 番組タイトル |
+| `author` | string | 任意 | 番組の作者名。生成 MP3 のアーティストタグ（ID3 TPE1）に埋め込まれる。空の場合はタグが省略される |
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用）。RSSフィード・Slack通知にも露出する公開フィールド |
 | `direction` | string | 任意 | 番組全体の演出方針（direct ステップのみに渡る）。SE・pause の挿入タイミングに関する指示。台本生成・manifest・feed・Slack には渡されない |
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
