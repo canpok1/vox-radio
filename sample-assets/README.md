@@ -17,17 +17,14 @@ CREDITS.md       # 各音源の提供元・ライセンス
 
 ## 使い方
 
-vox-radio は番組設定（`assets/assets.yaml`）からアセットを読み込みます。このパックを番組の `assets/` ディレクトリに展開して使います。
+このパックを、番組の設定ファイルがあるディレクトリで `assets/` に展開して使います。
 
 ```bash
 unzip vox-radio-sample-assets.zip -d assets
 vox-radio assets check assets/assets.yaml
 ```
 
-次に、番組設定（`episode-spec.yaml`）でこのアセットを使うよう参照し、各コーナーに割り当てます。
-
-- `assets_files` に `assets/assets.yaml` を登録する。
-- 各コーナーの開始/終了に鳴らすジングル・効果音や、コーナー中に流す BGM を割り当てる。設定済みのIDは `assets.yaml` を参照（ジングル: `opening`/`ending`、効果音: `accent_low`/`onoma_syakiin`/`switch`、BGM: `coffee_break`）。
+次に、エピソード設定（`episode-spec.yaml`）でこのアセット設定を参照し（`assets_files` に `assets/assets.yaml` を登録）、各コーナーに割り当てます。設定済みのIDは `assets.yaml` を参照してください（ジングル: `opening`/`ending`、効果音: `accent_low`/`onoma_syakiin`/`switch`、BGM: `coffee_break`）。
 
 設定フィールドの詳細は vox-radio スキルのリファレンスを参照してください（アセット定義は `references/assets.md`、コーナーへの割り当ては `references/episode-spec.md`）。
 

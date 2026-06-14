@@ -161,14 +161,14 @@ characters:
 
 `assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。
 
-> **サンプル音源パック（ジングル・効果音・BGM 入り）を使えば、下記の手順 1・2 を省けます。** インストール済みの vox-radio と同じバージョンのパックを取得・展開してください（[Releases ページ](https://github.com/canpok1/vox-radio/releases/latest)からブラウザでダウンロードしてもOK）。
+> **サンプル音源パック（ジングル・効果音・BGM 入り）を使えば、下記の手順 1・2 を省けます。** インストール済みの vox-radio と同じバージョンのパックを取得します（[Releases ページ](https://github.com/canpok1/vox-radio/releases)からお使いのバージョンを選んでダウンロードしてもOK）。設定ファイル（`vox-radio.yaml` など）のあるディレクトリで展開してください。
 >
 > ```bash
 > curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
 > unzip vox-radio-sample-assets.zip -d assets
 > ```
 >
-> これで設定ファイル（`vox-radio.yaml` など）と同じ場所に `assets/assets.yaml`（音源登録済み）が用意され、そのまま使えます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
+> `assets/assets.yaml`（音源登録済み）が用意されるので、下記の手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
 
 次の手順で設定を固めるのがおすすめです。
 
