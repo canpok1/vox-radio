@@ -159,18 +159,7 @@ characters:
 
 ### アセット設定
 
-`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。
-
-> **サンプル音源パック（ジングル・効果音・BGM 入り）を使えば、下記の手順 1・2 を省けます。** インストール済みの vox-radio と同じバージョンのパックを取得します（[Releases ページ](https://github.com/canpok1/vox-radio/releases)からお使いのバージョンを選んでダウンロードしてもOK）。設定ファイル（`vox-radio.yaml` など）のあるディレクトリで展開してください。
->
-> ```bash
-> curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
-> unzip vox-radio-sample-assets.zip -d assets
-> ```
->
-> `assets/assets.yaml`（音源登録済み）が用意されるので、下記の手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
-
-次の手順で設定を固めるのがおすすめです。
+`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。次の手順で設定を固めるのがおすすめです。
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる
@@ -182,6 +171,15 @@ characters:
    ```
 
 4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
+
+> **サンプル音源パックを使う場合**: 自分で音源を用意しなくても、ジングル・効果音・BGM 入りのサンプルパックを使えば上記の手順 1・2 を省けます。インストール済みの vox-radio と同じバージョンのパックを取得し（[Releases ページ](https://github.com/canpok1/vox-radio/releases)からお使いのバージョンを選んでダウンロードしてもOK）、設定ファイル（`vox-radio.yaml` など）のあるディレクトリで展開してください。
+>
+> ```bash
+> curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
+> unzip vox-radio-sample-assets.zip -d assets
+> ```
+>
+> `assets/assets.yaml`（音源登録済み）が用意されるので、手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
 
 ### RSS フィード生成設定
 
