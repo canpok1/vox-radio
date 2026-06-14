@@ -115,6 +115,15 @@ func (s *stubCornerSummarizer) SummarizeCorner(_ context.Context, _ model.Corner
 
 // --- helpers ---
 
+func mustReadManifest(t *testing.T, outDir string) string {
+	t.Helper()
+	data, err := os.ReadFile(fileio.ManifestPath(outDir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	return string(data)
+}
+
 type stubs struct {
 	col  *stubCollector
 	rnd  *stubRundowner
@@ -335,13 +344,9 @@ func TestRunner_Run_ManifestIncludesSummary(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	manifestPath := fileio.ManifestPath(outDir)
-	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	if !strings.Contains(string(data), wantSummary) {
-		t.Errorf("manifest should contain summary %q, got: %s", wantSummary, data)
+	got := mustReadManifest(t, outDir)
+	if !strings.Contains(got, wantSummary) {
+		t.Errorf("manifest should contain summary %q, got: %s", wantSummary, got)
 	}
 }
 
@@ -408,12 +413,9 @@ func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	data, err := os.ReadFile(fileio.ManifestPath(outDir))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	if !strings.Contains(string(data), "コーナー要約テスト") {
-		t.Errorf("manifest should contain corner summary, got: %s", data)
+	got := mustReadManifest(t, outDir)
+	if !strings.Contains(got, "コーナー要約テスト") {
+		t.Errorf("manifest should contain corner summary, got: %s", got)
 	}
 }
 
@@ -502,16 +504,12 @@ func TestRunner_Run_ManifestIncludesConversationNotes(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	manifestPath := fileio.ManifestPath(outDir)
-	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
+	got := mustReadManifest(t, outDir)
+	if !strings.Contains(got, "カフェにハマっている") {
+		t.Errorf("manifest should contain conversation note, got: %s", got)
 	}
-	if !strings.Contains(string(data), "カフェにハマっている") {
-		t.Errorf("manifest should contain conversation note, got: %s", string(data))
-	}
-	if !strings.Contains(string(data), `"conversation_notes"`) {
-		t.Errorf("manifest should contain conversation_notes field, got: %s", string(data))
+	if !strings.Contains(got, `"conversation_notes"`) {
+		t.Errorf("manifest should contain conversation_notes field, got: %s", got)
 	}
 }
 
@@ -559,6 +557,54 @@ func TestRunner_Run_SummaryBeforeAssemble(t *testing.T) {
 	}
 	if s.asm.called {
 		t.Error("Assembler should NOT be called when ProgramSummarizer fails (summary runs before assemble)")
+	}
+}
+
+func TestRunner_Run_ManifestIncludesAssetCredits(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{
+		Corners: []model.CornerLines{
+			{Title: "コーナー1", BGM: "bgm1", Lines: []model.Line{{Text: "テスト"}}},
+		},
+	}
+
+	r := newRunner(s)
+	r.Spec.Assets = config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{"bgm1": {Credit: "OtoLogic / CC BY 4.0"}},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := mustReadManifest(t, outDir)
+	if !strings.Contains(got, "OtoLogic / CC BY 4.0") {
+		t.Errorf("manifest should contain asset credit, got: %s", got)
+	}
+}
+
+func TestRunner_Run_ManifestIncludesCharacterCredits(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	casts := []model.RundownCast{
+		{CharacterID: "zundamon", Role: "MC", Type: "mc"},
+	}
+
+	r := newRunner(s)
+	r.Config = &config.Config{
+		Characters: map[string]config.CharacterConfig{
+			"zundamon": {Credit: "VOICEVOX:ずんだもん"},
+		},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir, Casts: casts}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := mustReadManifest(t, outDir)
+	if !strings.Contains(got, "VOICEVOX:ずんだもん") {
+		t.Errorf("manifest should contain character credit, got: %s", got)
 	}
 }
 
