@@ -19,6 +19,7 @@ type BuildParams struct {
 	ConversationNotes []model.ConversationNote
 	EpisodeNumber     int
 	EpisodeTitle      string
+	Credits           []string
 }
 
 // Build constructs a Manifest from BuildParams.
@@ -50,5 +51,6 @@ func Build(p BuildParams) model.Manifest {
 		Corners:           manifestCorners,
 		ConversationNotes: model.NonNil(p.ConversationNotes),
 		Casts:             model.NonNil(p.Rundown.Casts),
+		Credits:           model.NonNil(p.Credits),
 	}
 }

@@ -101,4 +101,5 @@ type Manifest struct {
 	Corners           []ManifestCorner   `json:"corners"`
 	ConversationNotes []ConversationNote `json:"conversation_notes"`
 	Casts             []RundownCast      `json:"casts"`
+	Credits           []string           `json:"credits"`
 }

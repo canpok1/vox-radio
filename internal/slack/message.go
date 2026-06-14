@@ -134,6 +134,7 @@ func replacePlaceholders(s string, manifest model.Manifest) string {
 	s = strings.ReplaceAll(s, "{summary}", manifest.Summary)
 	s = strings.ReplaceAll(s, "{datetime}", manifest.Datetime)
 	s = strings.ReplaceAll(s, "{audio_file}", manifest.AudioFile)
+	s = strings.ReplaceAll(s, "{credit}", strings.Join(manifest.Credits, "\n"))
 	return s
 }
 

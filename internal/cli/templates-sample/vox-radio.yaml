@@ -112,6 +112,8 @@ characters:
       ヒソヒソ: 38
       ヘロヘロ: 75
       なみだめ: 76
+    # VOICEVOX 規約に従ったクレジット表記（任意。設定すると feed/Slack へ自動転記される）。
+    credit: "VOICEVOX:ずんだもん"
   zunko:
     name: 東北ずん子
     pronoun: 私
@@ -120,6 +122,7 @@ characters:
     default_style: ノーマル
     styles:
       ノーマル: 107
+    credit: "VOICEVOX:東北ずん子"
   metan:
     name: 四国めたん
     pronoun: わたくし
@@ -133,3 +136,4 @@ characters:
       セクシー: 4
       ささやき: 36
       ヒソヒソ: 37
+    credit: "VOICEVOX:四国めたん"
