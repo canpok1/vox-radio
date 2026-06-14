@@ -45,9 +45,9 @@ func TestPoster_Interface(t *testing.T) {
 func TestUploadParams_Fields(t *testing.T) {
 	params := slack.UploadParams{
 		Channel:        "C0123456789",
-		FilePath:       "/path/to/episode.mp3",
+		FilePath:       "/path/to/test-prog_ep001.mp3",
 		Title:          "Episode Title",
-		Filename:       "episode.mp3",
+		Filename:       "test-prog_ep001.mp3",
 		InitialComment: "🎙️ テスト番組",
 	}
 	if params.Channel == "" {

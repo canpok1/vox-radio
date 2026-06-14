@@ -17,7 +17,7 @@ func newMinimalBuildParams() manifest.BuildParams {
 	return manifest.BuildParams{
 		Program:     config.ProgramConfig{Title: "テスト番組", Description: "説明"},
 		Corners:     []config.CornerConfig{{Title: "コーナー1"}},
-		AudioFile:   "episode.mp3",
+		AudioFile:   "morning-news_ep001.mp3",
 		GeneratedAt: fixedTime,
 	}
 }
@@ -51,7 +51,7 @@ func TestBuild(t *testing.T) {
 			Program:     program,
 			Corners:     corners,
 			Rundown:     rundown,
-			AudioFile:   "episode.mp3",
+			AudioFile:   "morning-news_ep001.mp3",
 			GeneratedAt: fixedTime,
 		}
 	}
@@ -68,8 +68,8 @@ func TestBuild(t *testing.T) {
 
 	t.Run("audio_file is set", func(t *testing.T) {
 		got := manifest.Build(defaultParams())
-		if got.AudioFile != "episode.mp3" {
-			t.Errorf("AudioFile = %q, want %q", got.AudioFile, "episode.mp3")
+		if got.AudioFile != "morning-news_ep001.mp3" {
+			t.Errorf("AudioFile = %q, want %q", got.AudioFile, "morning-news_ep001.mp3")
 		}
 	})
 

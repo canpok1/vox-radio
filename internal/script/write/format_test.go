@@ -276,14 +276,14 @@ func TestFormatPastEpisodes_NewTechnicalFields_NotLeakedToLLM(t *testing.T) {
 			Datetime:    "2024-01-01T10:00:00Z",
 			Summary:     "エピソード概要",
 			Description: "番組説明テキスト",
-			AudioFile:   "episode.mp3",
+			AudioFile:   "morning-news_ep001.mp3",
 			Bytes:       12345678,
 			DurationSec: 1800,
 		},
 	}
 	got := formatPastEpisodes(eps)
 
-	for _, notWant := range []string{"番組説明テキスト", "episode.mp3", "12345678", "1800"} {
+	for _, notWant := range []string{"番組説明テキスト", "morning-news_ep001.mp3", "12345678", "1800"} {
 		if strings.Contains(got, notWant) {
 			t.Errorf("formatPastEpisodes() should NOT contain %q\ngot:\n%s", notWant, got)
 		}

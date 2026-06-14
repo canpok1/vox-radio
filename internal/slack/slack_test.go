@@ -464,7 +464,7 @@ func TestRun_IgnoresStateMismatch(t *testing.T) {
 // ⑤ episode_number が異なる場合は前の状態を無視して新規投稿
 func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 	dir := t.TempDir()
-	audioPath := filepath.Join(dir, "episode.mp3")
+	audioPath := filepath.Join(dir, "episode14.mp3")
 	_ = os.WriteFile(audioPath, []byte("fake mp3"), 0o644)
 	statePath := filepath.Join(dir, "state.json")
 
@@ -473,11 +473,11 @@ func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 		EpisodeNumber: 14,
 		EpisodeTitle:  "エピソード14",
 		Summary:       "",
-		AudioFile:     "episode.mp3",
+		AudioFile:     "episode14.mp3",
 		Corners:       []model.ManifestCorner{},
 	}
 
-	stateJSON := `{"audio_file":"episode.mp3","episode_number":13,"channel":"C_OLD","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
+	stateJSON := `{"audio_file":"episode13.mp3","episode_number":13,"channel":"C_OLD","file_id":"FILE_OLD","thread_ts":"TS_OLD","replied":true}`
 	_ = os.WriteFile(statePath, []byte(stateJSON), 0o644)
 
 	uploadCalled := false

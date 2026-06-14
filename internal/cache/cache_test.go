@@ -541,7 +541,7 @@ func TestBuildEntryFromManifest_NewFields_Populated(t *testing.T) {
 		Title:       "エピソード",
 		Datetime:    "2026-06-01T00:00:00Z",
 		Description: "番組説明テキスト",
-		AudioFile:   "episode.mp3",
+		AudioFile:   "morning-news_ep001.mp3",
 		Corners:     []model.ManifestCorner{},
 	}
 	rd := model.Rundown{}
@@ -551,8 +551,8 @@ func TestBuildEntryFromManifest_NewFields_Populated(t *testing.T) {
 	if got.Description != "番組説明テキスト" {
 		t.Errorf("Description: got %q, want %q", got.Description, "番組説明テキスト")
 	}
-	if got.AudioFile != "episode.mp3" {
-		t.Errorf("AudioFile: got %q, want %q", got.AudioFile, "episode.mp3")
+	if got.AudioFile != "morning-news_ep001.mp3" {
+		t.Errorf("AudioFile: got %q, want %q", got.AudioFile, "morning-news_ep001.mp3")
 	}
 	if got.Bytes != 12345678 {
 		t.Errorf("Bytes: got %d, want 12345678", got.Bytes)
@@ -643,7 +643,7 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 			Title:       "e1",
 			Summary:     "要約",
 			Description: "番組説明",
-			AudioFile:   "episode.mp3",
+			AudioFile:   "morning-news_ep001.mp3",
 			Bytes:       12345,
 			DurationSec: 600,
 			Corners:     []cache.CornerEntry{corner},
@@ -665,7 +665,7 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 	if e0.Description != "番組説明" {
 		t.Errorf("Compact: entry[0].Description: got %q, want 番組説明", e0.Description)
 	}
-	if e0.AudioFile != "episode.mp3" {
+	if e0.AudioFile != "morning-news_ep001.mp3" {
 		t.Errorf("Compact: entry[0].AudioFile: got %q, want episode.mp3", e0.AudioFile)
 	}
 	if e0.Bytes != 12345 {

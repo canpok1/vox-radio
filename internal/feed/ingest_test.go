@@ -54,7 +54,7 @@ func TestRun_GeneratesFeedXML(t *testing.T) {
 			Title:         "テストラジオ",
 			Summary:       "第1回概要",
 			Description:   "番組説明",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 			Bytes:         1000,
 			DurationSec:   600,
 		},
@@ -98,7 +98,7 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 			EpisodeNumber: 1,
 			Title:         "テストラジオ",
 			Summary:       "第1回概要",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 		},
 		{
 			ProgramID:     "other-radio",
@@ -106,7 +106,7 @@ func TestRun_AllEntriesIncluded_WhenProgramIDsDiffer(t *testing.T) {
 			EpisodeNumber: 2,
 			Title:         "別番組",
 			Summary:       "別番組概要",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 		},
 	}
 	writeCacheJSONL(t, cachePath, entries)
@@ -135,7 +135,7 @@ func TestRun_ErrorOnEpisodeNumberZero(t *testing.T) {
 			EpisodeNumber: 0,
 			Title:         "テストラジオ",
 			Summary:       "概要",
-			AudioFile:     "episode.mp3",
+			AudioFile:     "morning-news_ep001.mp3",
 		},
 	}
 	writeCacheJSONL(t, cachePath, entries)
