@@ -68,6 +68,9 @@ vox-radio episodegen --spec episode-spec.yaml
 
 # 出力とログを1ツリーに集約する場合
 vox-radio episodegen --spec episode-spec.yaml --out-dir output --log-dir output/logs
+
+# 既存の episode.mp3 を上書きして再実行する場合
+vox-radio episodegen --spec episode-spec.yaml --force
 ```
 
 各ステップは個別にも実行できます。
