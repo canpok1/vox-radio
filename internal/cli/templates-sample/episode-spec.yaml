@@ -27,6 +27,9 @@ program:
   # timezone: "Asia/Tokyo"
   # 台本生成時の1分あたり目安文字数。話速や BGM で実再生時間が前後する場合に調整する。省略時は 420（= 7文字/秒）。
   # chars_per_minute: 420
+  # 生成 MP3 の音質プリセット。省略時は standard（約190kbps VBR V2）。
+  #   high → 約245kbps / standard → 約190kbps（既定）/ low → 約130kbps
+  # audio_quality: "standard"
 
 # 出演者の一覧。ここに書いた人だけが番組に登場します。
 casts:
