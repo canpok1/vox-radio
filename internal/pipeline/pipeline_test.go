@@ -75,12 +75,14 @@ type stubAssembler struct {
 	called           bool
 	capturedClipsDir string
 	capturedOutPath  string
+	capturedMeta     model.EpisodeMeta
 }
 
-func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string) error {
+func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error {
 	s.called = true
 	s.capturedClipsDir = clipsDir
 	s.capturedOutPath = outPath
+	s.capturedMeta = meta
 	return s.err
 }
 
@@ -538,5 +540,59 @@ func TestRunner_Run_SkipsProofreadFile_WhenProofreadResultIsNil(t *testing.T) {
 
 	if _, err := os.Stat(fileio.ProofreadPath(outDir)); err == nil {
 		t.Errorf("proofread file should not exist when ProofreadResult is nil, but found %q", fileio.ProofreadPath(outDir))
+	}
+}
+
+func TestRunner_Run_SummaryBeforeAssemble(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
+
+	// callOrder records which step ran and when
+	var callOrder []string
+	s.sum = &stubProgramSummarizer{}
+	origSummarize := s.sum
+	origSummarize.summary = "テスト要約"
+
+	// Use a custom assembler that records call order
+	type recordingAssembler struct {
+		inner *stubAssembler
+	}
+	ra := &recordingAssembler{inner: s.asm}
+	_ = ra // used below
+
+	// We verify ordering by checking that when ProgramSummarizer errors, Assembler is NOT called.
+	s2 := defaultStubs()
+	s2.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
+	s2.sum = &stubProgramSummarizer{err: errors.New("summary failed")}
+
+	if err := newRunner(s2).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
+		t.Fatal("expected error when ProgramSummarizer fails")
+	}
+	if s2.asm.called {
+		t.Error("Assembler should NOT be called when ProgramSummarizer fails (summary runs before assemble)")
+	}
+	_ = callOrder
+}
+
+func TestRunner_Run_EpisodeMetaPassedToAssembler(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
+	s.sum = &stubProgramSummarizer{
+		summary: "要約",
+	}
+	// ProgramSummary stub returns EpisodeTitle "今週の技術"
+	s.sum.notes = make([]model.ConversationNote, 0)
+
+	if err := newRunner(s).Run(context.Background(), pipeline.Options{
+		OutDir:        outDir,
+		EpisodeNumber: 3,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if s.asm.capturedMeta.Number != 3 {
+		t.Errorf("EpisodeMeta.Number = %d, want 3", s.asm.capturedMeta.Number)
 	}
 }
