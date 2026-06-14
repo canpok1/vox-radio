@@ -19,6 +19,9 @@ const (
 	DefaultAudioQuality = "standard"
 )
 
+// ValidAudioQualityPresets lists all accepted values for program.audio_quality (lowercased).
+var ValidAudioQualityPresets = []string{"high", "standard", "low"}
+
 // DurationSecToTargetChars converts a duration in seconds to an approximate target character count.
 func DurationSecToTargetChars(sec, charsPerMinute int) int {
 	return sec * charsPerMinute / 60

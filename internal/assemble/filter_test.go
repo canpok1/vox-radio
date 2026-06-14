@@ -2184,15 +2184,8 @@ func TestAudioQualityArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.preset, func(t *testing.T) {
 			got := audioQualityArgs(tt.preset)
-			found := false
-			for i, a := range got {
-				if a == "-q:a" && i+1 < len(got) && got[i+1] == tt.wantQA {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("audioQualityArgs(%q) = %v, want -q:a %s", tt.preset, got, tt.wantQA)
+			if len(got) != 2 || got[0] != "-q:a" || got[1] != tt.wantQA {
+				t.Errorf("audioQualityArgs(%q) = %v, want [\"-q:a\", %q]", tt.preset, got, tt.wantQA)
 			}
 		})
 	}

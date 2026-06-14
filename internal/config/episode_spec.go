@@ -151,7 +151,7 @@ func (p *EpisodeSpec) ValidateProgram() error {
 	if p.Program.ID == "" {
 		return fmt.Errorf("program.id is required (it is the cache key for episode history)")
 	}
-	if q := p.Program.EffectiveAudioQuality(); !slices.Contains([]string{"high", "standard", "low"}, q) {
+	if q := p.Program.EffectiveAudioQuality(); !slices.Contains(ValidAudioQualityPresets, q) {
 		return fmt.Errorf("program.audio_quality: invalid preset %q (must be high, standard, or low)", p.Program.AudioQuality)
 	}
 	return nil
