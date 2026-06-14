@@ -193,7 +193,7 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 	// Peak limiter: prevents clipping after loudnorm.
 	b.addFilter(fmt.Sprintf("[norm_out]alimiter=limit=%.3f:level=0[out]", outputLimiterLimit))
 
-	outputArgs := []string{"-map", "[out]", "-c:a", "libmp3lame", "-q:a", "2"}
+	outputArgs := append([]string{"-map", "[out]", "-c:a", "libmp3lame"}, audioQualityArgs(bctx.Program.EffectiveAudioQuality())...)
 	if metaArgs := buildMetadataArgs(bctx); len(metaArgs) > 0 {
 		outputArgs = append(outputArgs, "-id3v2_version", "3")
 		outputArgs = append(outputArgs, metaArgs...)
@@ -205,6 +205,20 @@ func BuildFFmpegArgs(bctx BuildContext) (*FFmpegArgs, error) {
 		OutputArgs:    outputArgs,
 		OutputPath:    bctx.OutPath,
 	}, nil
+}
+
+// audioQualityArgs returns the ffmpeg VBR quality arguments for the given preset.
+// preset must be one of "high", "standard", "low" (values from config.DefaultAudioQuality etc.).
+// Unknown values fall back to "standard" (-q:a 2).
+func audioQualityArgs(preset string) []string {
+	switch preset {
+	case "high":
+		return []string{"-q:a", "0"}
+	case "low":
+		return []string{"-q:a", "5"}
+	default:
+		return []string{"-q:a", "2"}
+	}
 }
 
 // buildMetadataArgs constructs ffmpeg -metadata key=value pairs for ID3 tagging.
