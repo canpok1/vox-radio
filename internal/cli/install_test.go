@@ -41,20 +41,26 @@ func TestInstallCmd_SkillsGenerated(t *testing.T) {
 	}
 }
 
+// assertSkillVersion は install 後の .skill-version の内容が want と一致することを検証する。
+func assertSkillVersion(t *testing.T, dir, want string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, ".claude/skills/vox-radio/.skill-version"))
+	if err != nil {
+		t.Fatalf("read .skill-version: %v", err)
+	}
+	if got := strings.TrimSpace(string(data)); got != want {
+		t.Errorf(".skill-version = %q, want %q", got, want)
+	}
+}
+
 func TestInstallCmd_SkillVersionStamp(t *testing.T) {
 	dir := chdirTemp(t)
 	_, err := runInstallCmd(t, "--skills")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, ".claude/skills/vox-radio/.skill-version"))
-	if err != nil {
-		t.Fatalf("read .skill-version: %v", err)
-	}
 	// テストビルドでは ldflags 未指定のため version は "dev"。
-	if got := strings.TrimSpace(string(data)); got != "dev" {
-		t.Errorf(".skill-version = %q, want %q", got, "dev")
-	}
+	assertSkillVersion(t, dir, "dev")
 }
 
 func TestInstallCmd_SkillVersionStampAlwaysOverwritten(t *testing.T) {
@@ -65,13 +71,7 @@ func TestInstallCmd_SkillVersionStampAlwaysOverwritten(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, ".claude/skills/vox-radio/.skill-version"))
-	if err != nil {
-		t.Fatalf("read .skill-version: %v", err)
-	}
-	if got := strings.TrimSpace(string(data)); got != "dev" {
-		t.Errorf(".skill-version = %q, want %q (should be overwritten without --force)", got, "dev")
-	}
+	assertSkillVersion(t, dir, "dev")
 }
 
 func TestInstallCmd_SkillsExistingSkipped(t *testing.T) {
