@@ -165,10 +165,10 @@ characters:
 >
 > ```bash
 > curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
-> unzip vox-radio-sample-assets.zip
+> unzip vox-radio-sample-assets.zip -d assets
 > ```
 >
-> 展開後の `assets/`（設定済み `assets.yaml` と音源一式）を設定ファイル（`vox-radio.yaml` など）と同じ場所に置けばそのまま使えます。ライセンスは同梱の `CREDITS.md` を参照してください。
+> これで設定ファイル（`vox-radio.yaml` など）と同じ場所に `assets/assets.yaml`（音源登録済み）が用意され、そのまま使えます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
 
 次の手順で設定を固めるのがおすすめです。
 

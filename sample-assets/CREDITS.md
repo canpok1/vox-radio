@@ -4,11 +4,11 @@
 
 | ファイル | 素材名 | 提供元 | 提供元URL | ライセンス |
 | --- | --- | --- | --- | --- |
-| `assets/jingle/private-time-1.mp3` | プライベートタイム | OtoLogic | https://otologic.jp/free/jing/mid1.html | CC BY 4.0 |
-| `assets/bgm/coffee-break-short.mp3` | コーヒーブレイク（short版） | BGMer | https://bgmer.net/music/278 | [BGMer 利用規約](https://bgmer.net/terms) |
-| `assets/se/accent-low.mp3` | マルチアクセント05 | OtoLogic | https://otologic.jp/free/se/multi-accent01.html | CC BY 4.0 |
-| `assets/se/onoma-syakiin02-1-dry.mp3` | オノマトペ シャキーン02 | OtoLogic | https://otologic.jp/free/se/syakiin01.html | CC BY 4.0 |
-| `assets/se/scene-change08-3-fast.mp3` | 場面展開08 | OtoLogic | https://otologic.jp/free/se/scene_change01.html | CC BY 4.0 |
+| `bgm/coffee-break-short.mp3` | コーヒーブレイク（short版） | BGMer | https://bgmer.net/music/278 | [BGMer 利用規約](https://bgmer.net/terms) |
+| `jingle/private-time-1.mp3` | プライベートタイム | OtoLogic | https://otologic.jp/free/jing/mid1.html | CC BY 4.0 |
+| `se/accent-low.mp3` | マルチアクセント05 | OtoLogic | https://otologic.jp/free/se/multi-accent01.html | CC BY 4.0 |
+| `se/onoma-syakiin02-1-dry.mp3` | オノマトペ シャキーン02 | OtoLogic | https://otologic.jp/free/se/syakiin01.html | CC BY 4.0 |
+| `se/scene-change08-3-fast.mp3` | 場面展開08 | OtoLogic | https://otologic.jp/free/se/scene_change01.html | CC BY 4.0 |
 
 ## 注意
 
