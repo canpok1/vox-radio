@@ -29,7 +29,7 @@
 | `trim_silence` | bool | 任意 | 前後の無音を自動除去するかどうか。デフォルト: true |
 | `trim_silence_threshold` | float64 | 任意 | 無音判定の振幅閾値（dB、負値のみ）。デフォルト: -50。素材のノイズフロアに合わせて調整 |
 | `description` | string | 任意 | アセットの説明（「何の音か・いつ使うか」）。LLM が挿入タイミングを判断する際の手がかりになる |
-| `credit` | string | 任意 | 素材のクレジット表記（例: `OtoLogic / CC BY 4.0`）。設定すると manifest の `credits` へ自動収集され、feed の `<description>` と Slack の `{credit}` プレースホルダへ転記される |
+| `credit` | string | 任意 | 素材のクレジット表記（例: `OtoLogic https://otologic.jp / CC BY 4.0`）。設定すると manifest の `credits` へ自動収集され、feed の `<description>` と Slack の `{credit}` プレースホルダへ転記される |
 
 ジングルおよびコーナー境界 SE はコーナー毎に `corners[].start_audio` / `corners[].end_audio`（`type: jingle` または `type: se`）で設定します。script 生成ステップでコードがコーナー本編の前後へ確定的に挿入するため、生成された `04_script.json` にジングル/SEセグメントが含まれます。`type: jingle` は BGM を停止してから再生し、`type: se` は BGM を継続したまま BGM の下で再生します。BGM も `corners[].bgm` で同様にコーナー単位で管理します。
 

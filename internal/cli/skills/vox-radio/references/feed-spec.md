@@ -32,7 +32,7 @@
 {要約テキスト}
 
 クレジット
-OtoLogic / CC BY 4.0
+OtoLogic https://otologic.jp / CC BY 4.0
 VOICEVOX:ずんだもん
 ```
 
