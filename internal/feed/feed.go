@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
+	"github.com/canpok1/vox-radio/internal/model"
 )
 
 type rssRoot struct {
@@ -140,13 +141,7 @@ func audioURL(tmpl string, episodeNumber int, audioFile string) string {
 }
 
 func itemTitle(e cache.Entry) string {
-	if e.EpisodeNumber > 0 && e.EpisodeTitle != "" {
-		return fmt.Sprintf("第%d回 %s", e.EpisodeNumber, e.EpisodeTitle)
-	}
-	if e.EpisodeNumber > 0 {
-		return fmt.Sprintf("第%d回", e.EpisodeNumber)
-	}
-	return e.Title
+	return model.EpisodeDisplayTitle(e.EpisodeNumber, e.EpisodeTitle, e.Title)
 }
 
 func pubDate(datetime string) string {
