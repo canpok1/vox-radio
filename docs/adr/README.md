@@ -73,3 +73,4 @@
 | [0065](0065-propagate-asset-and-character-credits-to-outputs.md) | 使用したアセット・キャラクターのクレジットを manifest 経由で feed/Slack へ転記する | 採用 | 2026-06-14 |
 | [0066](0066-id3-tags-for-generated-mp3.md) | 生成 MP3 に ID3 タグを設定し、タイトル取得のため pipeline を並べ替える | 採用 | 2026-06-14 |
 | [0067](0067-descriptive-episode-mp3-filename.md) | 生成 MP3 のファイル名を {program.id}_ep{NNN}.mp3 にする（ADR-0026 改訂） | 採用 | 2026-06-14 |
+| [0068](0068-manifest-build-owns-credit-collection.md) | manifest.Build がクレジット収集を内包する | 採用 | 2026-06-14 |
