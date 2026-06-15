@@ -12,6 +12,7 @@ const (
 
 type ScriptSegment struct {
 	Type        SegmentType `json:"type"`
+	CornerID    string      `json:"corner_id,omitempty"`
 	SpeakerRole string      `json:"speaker_role,omitempty"`
 	Style       string      `json:"style,omitempty"`
 	Intonation  string      `json:"intonation,omitempty"`

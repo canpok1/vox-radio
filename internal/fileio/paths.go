@@ -18,6 +18,7 @@ const (
 	FileLines     = "03_lines.json"
 	FileProofread = "04_proofread.json"
 	FileScript    = "04_script.json"
+	FileTimeline  = "06_timeline.json"
 	FileManifest  = "manifest.json"
 
 	DirIntermediate = "intermediate"
@@ -50,6 +51,7 @@ func RundownPath(outDir string) string   { return intermediatePath(outDir, FileR
 func LinesPath(outDir string) string     { return intermediatePath(outDir, FileLines) }
 func ProofreadPath(outDir string) string { return intermediatePath(outDir, FileProofread) }
 func ScriptPath(outDir string) string    { return intermediatePath(outDir, FileScript) }
+func TimelinePath(outDir string) string  { return intermediatePath(outDir, FileTimeline) }
 
 func EpisodePath(outDir, programID string, episodeNumber int) string {
 	return filepath.Join(outDir, EpisodeFileName(programID, episodeNumber))

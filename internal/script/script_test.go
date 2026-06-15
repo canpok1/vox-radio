@@ -401,6 +401,24 @@ func TestBuildScriptLines_TransfersCornerAudio(t *testing.T) {
 	}
 }
 
+func TestBuildScriptLines_TransfersCornerID(t *testing.T) {
+	corners := []config.CornerConfig{
+		{ID: "opening", Title: "OP", Direction: "dir"},
+		{ID: "tech", Title: "Tech"},
+	}
+	lines := [][]model.Line{
+		{{SpeakerRole: "host", Text: "A"}},
+		{{SpeakerRole: "host", Text: "B"}},
+	}
+	got := script.BuildScriptLines(corners, lines)
+	if got[0].ID != "opening" {
+		t.Errorf("Corners[0].ID: got %q, want opening", got[0].ID)
+	}
+	if got[1].ID != "tech" {
+		t.Errorf("Corners[1].ID: got %q, want tech", got[1].ID)
+	}
+}
+
 func TestLLMScriptGenerator_Generate_PassesPreviousCornersAccumulated(t *testing.T) {
 	corners := []config.CornerConfig{
 		{Title: "C1", Content: "内容1", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15},

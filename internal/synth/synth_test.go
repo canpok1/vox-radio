@@ -614,3 +614,30 @@ func TestSynth_Run_LogsPerClipProgress(t *testing.T) {
 		t.Errorf("should log per-clip progress (2/2): %q", logs)
 	}
 }
+
+func TestSynth_Run_PropagatesCornerID(t *testing.T) {
+	s := newTestSynth()
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, CornerID: "opening", SpeakerRole: "zundamon", Text: "A"},
+			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "metan", Text: "B"},
+		},
+	}
+
+	dir := t.TempDir()
+	meta, err := s.Run(context.Background(), script, dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(meta.Clips) != 2 {
+		t.Fatalf("Clips: got %d, want 2", len(meta.Clips))
+	}
+	if meta.Clips[0].CornerID != "opening" {
+		t.Errorf("Clips[0].CornerID: got %q, want opening", meta.Clips[0].CornerID)
+	}
+	if meta.Clips[1].CornerID != "tech" {
+		t.Errorf("Clips[1].CornerID: got %q, want tech", meta.Clips[1].CornerID)
+	}
+}
