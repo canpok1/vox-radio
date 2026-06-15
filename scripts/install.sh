@@ -9,11 +9,11 @@
 #   bash install.sh --help
 #
 # 環境変数:
-#   INSTALL_DIR  バイナリ設置先ディレクトリ (デフォルト: /usr/local/bin)
+#   INSTALL_DIR  バイナリ設置先ディレクトリ (デフォルト: $HOME/.local/bin)
 set -euo pipefail
 
 REPO="canpok1/vox-radio"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 # リリース時に置換されるバージョンプレースホルダ
 VERSION="__VERSION__"
@@ -25,7 +25,7 @@ usage() {
   echo "リリースページから install.sh をダウンロードして実行してください。" >&2
   echo "" >&2
   echo "Environment variables:" >&2
-  echo "  INSTALL_DIR  Installation directory (default: /usr/local/bin)" >&2
+  echo "  INSTALL_DIR  Installation directory (default: \$HOME/.local/bin)" >&2
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -164,18 +164,36 @@ echo "チェックサム OK"
 tar -xzf "$WORK_DIR/$ASSET_NAME" -C "$WORK_DIR" vox-radio
 
 # ---- インストール ----
-if [[ ! -d "$INSTALL_DIR" ]]; then
-  echo "ERROR: INSTALL_DIR が存在しません: $INSTALL_DIR" >&2
+# 設置先を作成する（既存なら何もしない。$HOME/.local/bin はデフォルトでは無いことが多い）
+if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+  echo "ERROR: INSTALL_DIR を作成できません: $INSTALL_DIR" >&2
+  echo "       書き込み可能なディレクトリを INSTALL_DIR で指定してください。" >&2
   exit 1
 fi
 
-if [[ -w "$INSTALL_DIR" ]]; then
-  install -m 0755 "$WORK_DIR/vox-radio" "$INSTALL_DIR/vox-radio"
-else
-  echo "書き込み権限がないため sudo でインストールします..."
-  sudo install -m 0755 "$WORK_DIR/vox-radio" "$INSTALL_DIR/vox-radio"
+if [[ ! -w "$INSTALL_DIR" ]]; then
+  echo "ERROR: INSTALL_DIR に書き込み権限がありません: $INSTALL_DIR" >&2
+  echo "       書き込み可能なディレクトリを INSTALL_DIR で指定してください。" >&2
+  echo "       例: curl -fsSL <URL> | INSTALL_DIR=\$HOME/.local/bin bash" >&2
+  exit 1
 fi
+
+install -m 0755 "$WORK_DIR/vox-radio" "$INSTALL_DIR/vox-radio"
 
 echo ""
 echo "インストール完了: $INSTALL_DIR/vox-radio"
 "$INSTALL_DIR/vox-radio" --version
+
+# ---- PATH 案内 ----
+# INSTALL_DIR が PATH に含まれていなければ追加方法を案内する（設定ファイルは書き換えない）
+case ":${PATH}:" in
+  *":${INSTALL_DIR}:"*)
+    ;;
+  *)
+    echo ""
+    echo "注意: $INSTALL_DIR は PATH に含まれていません。"
+    echo "      vox-radio コマンドを使うには、以下を shell の設定ファイル（例: ~/.bashrc, ~/.zshrc）に追記してください。"
+    echo ""
+    echo "      export PATH=\"$INSTALL_DIR:\$PATH\""
+    ;;
+esac
