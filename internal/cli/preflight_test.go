@@ -6,10 +6,15 @@ import (
 	"testing"
 )
 
-func TestRequireMediaTools_AllPresent(t *testing.T) {
+func setLookPath(t *testing.T, fn func(string) (string, error)) {
+	t.Helper()
 	orig := lookPath
-	defer func() { lookPath = orig }()
-	lookPath = func(_ string) (string, error) { return "/usr/bin/tool", nil }
+	lookPath = fn
+	t.Cleanup(func() { lookPath = orig })
+}
+
+func TestRequireMediaTools_AllPresent(t *testing.T) {
+	setLookPath(t, func(_ string) (string, error) { return "/usr/bin/tool", nil })
 
 	if err := requireMediaTools(); err != nil {
 		t.Fatalf("expected nil, got %v", err)
@@ -17,14 +22,12 @@ func TestRequireMediaTools_AllPresent(t *testing.T) {
 }
 
 func TestRequireMediaTools_OneMissing(t *testing.T) {
-	orig := lookPath
-	defer func() { lookPath = orig }()
-	lookPath = func(name string) (string, error) {
+	setLookPath(t, func(name string) (string, error) {
 		if name == "ffprobe" {
 			return "", errors.New("not found")
 		}
 		return "/usr/bin/" + name, nil
-	}
+	})
 
 	err := requireMediaTools()
 	if err == nil {
@@ -39,9 +42,7 @@ func TestRequireMediaTools_OneMissing(t *testing.T) {
 }
 
 func TestRequireMediaTools_BothMissing(t *testing.T) {
-	orig := lookPath
-	defer func() { lookPath = orig }()
-	lookPath = func(_ string) (string, error) { return "", errors.New("not found") }
+	setLookPath(t, func(_ string) (string, error) { return "", errors.New("not found") })
 
 	err := requireMediaTools()
 	if err == nil {
