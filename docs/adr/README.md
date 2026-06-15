@@ -75,3 +75,4 @@
 | [0067](0067-descriptive-episode-mp3-filename.md) | 生成 MP3 のファイル名を {program.id}_ep{NNN}.mp3 にする（ADR-0026 改訂） | 採用 | 2026-06-14 |
 | [0068](0068-manifest-build-owns-credit-collection.md) | manifest.Build がクレジット収集を内包する | 採用 | 2026-06-14 |
 | [0069](0069-corner-level-duration-in-outputs.md) | コーナー単位の尺（実測）を成果物に追加し corner_id をパイプライン全体に伝播させる | 採用 | 2026-06-14 |
+| [0070](0070-keep-ffmpeg-over-mp3-alternatives.md) | mp3 エンコード代替を見送り ffmpeg 依存を維持する | 採用 | 2026-06-15 |
