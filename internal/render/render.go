@@ -7,6 +7,21 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+// stubFuncMap returns a FuncMap with the same signatures as the real FuncMap,
+// used for template syntax validation without a concrete manifest.
+func stubFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"corner":   func(id string) *model.ManifestCorner { return nil },
+		"hasLinks": func(c model.ManifestCorner) bool { return false },
+	}
+}
+
+// Parse validates the template syntax including the corner/hasLinks FuncMap.
+func Parse(tmplText string) error {
+	_, err := template.New("").Funcs(stubFuncMap()).Parse(tmplText)
+	return err
+}
+
 // Render executes the given text/template source with the manifest as data context.
 // FuncMap provides:
 //   - corner(id string) *model.ManifestCorner — returns the corner with the given ID (nil if not found)

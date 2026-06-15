@@ -12,31 +12,27 @@ import (
 
 const maxSectionRunes = 3000
 
-// BuildParent renders the parent template (mp3 upload initial comment).
-func BuildParent(manifest model.Manifest, tmplText string) (string, error) {
+func renderTemplate(manifest model.Manifest, tmplText string) (string, error) {
 	result, err := render.Render(tmplText, manifest)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(result), nil
+}
+
+// BuildParent renders the parent template (mp3 upload initial comment).
+func BuildParent(manifest model.Manifest, tmplText string) (string, error) {
+	return renderTemplate(manifest, tmplText)
 }
 
 // BuildFallback renders the fallback template (notification plain text).
 func BuildFallback(manifest model.Manifest, tmplText string) (string, error) {
-	result, err := render.Render(tmplText, manifest)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(result), nil
+	return renderTemplate(manifest, tmplText)
 }
 
 // BuildThread renders the thread body template to a single string.
 func BuildThread(manifest model.Manifest, tmplText string) (string, error) {
-	result, err := render.Render(tmplText, manifest)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(result), nil
+	return renderTemplate(manifest, tmplText)
 }
 
 // BuildAudioTitle returns the Slack file title for the audio upload.
@@ -59,15 +55,18 @@ func SplitIntoSectionBlocks(text string) []slackgo.Block {
 	lines := strings.Split(text, "\n")
 	var blocks []slackgo.Block
 	var current strings.Builder
+	var currentRunes int
 
 	for _, line := range lines {
 		lineWithNL := line + "\n"
-		newLen := utf8.RuneCountInString(current.String()) + utf8.RuneCountInString(lineWithNL)
-		if newLen > maxSectionRunes && current.Len() > 0 {
+		lineRunes := utf8.RuneCountInString(lineWithNL)
+		if currentRunes+lineRunes > maxSectionRunes && current.Len() > 0 {
 			blocks = append(blocks, newSectionBlock(strings.TrimRight(current.String(), "\n")))
 			current.Reset()
+			currentRunes = 0
 		}
 		current.WriteString(lineWithNL)
+		currentRunes += lineRunes
 	}
 
 	if s := strings.TrimRight(current.String(), "\n"); s != "" {

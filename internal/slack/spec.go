@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/template"
 
 	"github.com/canpok1/vox-radio/internal/fileio"
+	"github.com/canpok1/vox-radio/internal/render"
 )
 
 const (
@@ -80,14 +80,18 @@ func (c SlackChannelConfig) LoadTemplates(baseDir string) (LoadedTemplates, erro
 	return LoadedTemplates{Parent: parent, Thread: thread, Fallback: fallback}, nil
 }
 
+func resolvePath(path, baseDir string) string {
+	if !filepath.IsAbs(path) && baseDir != "" {
+		return filepath.Join(baseDir, path)
+	}
+	return path
+}
+
 func loadTemplateSrc(path, defaultText, baseDir string) (string, error) {
 	if path == "" {
 		return defaultText, nil
 	}
-	if !filepath.IsAbs(path) && baseDir != "" {
-		path = filepath.Join(baseDir, path)
-	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(resolvePath(path, baseDir))
 	if err != nil {
 		return "", err
 	}
@@ -134,16 +138,12 @@ func ValidateSlackSpec(spec SlackSpec) error {
 		if entry.path == "" {
 			continue
 		}
-		p := entry.path
-		if !filepath.IsAbs(p) && spec.BaseDir != "" {
-			p = filepath.Join(spec.BaseDir, p)
-		}
-		data, err := os.ReadFile(p)
+		data, err := os.ReadFile(resolvePath(entry.path, spec.BaseDir))
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", entry.field, err))
 			continue
 		}
-		if _, err := template.New("").Parse(string(data)); err != nil {
+		if err := render.Parse(string(data)); err != nil {
 			errs = append(errs, fmt.Errorf("%s: template parse error: %w", entry.field, err))
 		}
 	}

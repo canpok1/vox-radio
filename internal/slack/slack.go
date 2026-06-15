@@ -45,6 +45,11 @@ func Run(opts Options, poster Poster) error {
 	}
 	blocks := SplitIntoSectionBlocks(threadText)
 
+	fallback, err := BuildFallback(opts.Manifest, templates.Fallback)
+	if err != nil {
+		return fmt.Errorf("render fallback template: %w", err)
+	}
+
 	audioTitle := BuildAudioTitle(opts.Manifest)
 
 	if opts.DryRun {
@@ -113,10 +118,6 @@ func Run(opts Options, poster Poster) error {
 	}
 
 	if len(blocks) > 0 {
-		fallback, err := BuildFallback(opts.Manifest, templates.Fallback)
-		if err != nil {
-			return fmt.Errorf("render fallback template: %w", err)
-		}
 		if err := poster.PostThreadReply(ctx, ReplyParams{
 			Channel:  channel,
 			ThreadTS: state.ThreadTS,
