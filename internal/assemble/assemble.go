@@ -20,8 +20,9 @@ const defaultPauseSec = 0.3
 
 // Result holds the output metrics for an assembled episode.
 type Result struct {
-	DurationSec float64
-	Bytes       int64
+	DurationSec     float64
+	Bytes           int64
+	CornerDurations map[string]float64
 }
 
 // Assembler assembles speech clips and assets into a final mp3.
@@ -82,6 +83,11 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, err
 	}
 
+	jingleDurations, err := a.collectJingleDurations(script)
+	if err != nil {
+		return nil, err
+	}
+
 	bctx := BuildContext{
 		Script:      script,
 		Clips:       clips,
@@ -125,7 +131,33 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 
 	logger.Info(fmt.Sprintf("完了 (duration=%.1fs, %.2fMB, %.1fs)", dur, float64(size)/(1024*1024), time.Since(start).Seconds()))
 
-	return &Result{DurationSec: dur, Bytes: size}, nil
+	cornerDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations)
+
+	return &Result{DurationSec: dur, Bytes: size, CornerDurations: cornerDurations}, nil
+}
+
+// collectJingleDurations fetches duration (via getDuration) for each unique jingle asset
+// that appears in the script and is defined in AssetsConfig.Jingle.
+func (a *Assembler) collectJingleDurations(script model.Script) (map[string]float64, error) {
+	seen := make(map[string]struct{})
+	for _, seg := range script.Segments {
+		if seg.Type == model.SegmentTypeJingle && seg.AssetName != "" {
+			seen[seg.AssetName] = struct{}{}
+		}
+	}
+	durations := make(map[string]float64)
+	for name := range seen {
+		entry, ok := a.AssetsConfig.Jingle[name]
+		if !ok {
+			continue
+		}
+		dur, err := a.getDuration(entry.File)
+		if err != nil {
+			return nil, fmt.Errorf("get jingle duration for %q: %w", name, err)
+		}
+		durations[name] = dur
+	}
+	return durations, nil
 }
 
 // collectSEDurations fetches duration (via getDuration) for each unique SE asset
