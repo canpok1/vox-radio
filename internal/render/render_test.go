@@ -34,6 +34,38 @@ func makeManifest() model.Manifest {
 	}
 }
 
+// Parse
+
+func TestParse_ValidSyntax_NoError(t *testing.T) {
+	if err := render.Parse(`{{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}`); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestParse_InvalidSyntax_Error(t *testing.T) {
+	if err := render.Parse(`{{invalid`); err == nil {
+		t.Error("expected error for invalid template syntax")
+	}
+}
+
+func TestParse_WithCornerFunction_ValidSyntax(t *testing.T) {
+	// Templates using corner/hasLinks must pass Parse without FuncMap error.
+	if err := render.Parse(`{{with corner "news"}}{{.Title}}{{end}}`); err != nil {
+		t.Errorf("unexpected error for template using corner function: %v", err)
+	}
+	if err := render.Parse(`{{range .Corners}}{{if hasLinks .}}{{.Title}}{{end}}{{end}}`); err != nil {
+		t.Errorf("unexpected error for template using hasLinks function: %v", err)
+	}
+}
+
+func TestParse_EmptyTemplate_NoError(t *testing.T) {
+	if err := render.Parse(``); err != nil {
+		t.Errorf("unexpected error for empty template: %v", err)
+	}
+}
+
+// Render
+
 func TestRender_BasicTemplate(t *testing.T) {
 	m := makeManifest()
 	tmpl := `タイトル: {{.Title}}`
