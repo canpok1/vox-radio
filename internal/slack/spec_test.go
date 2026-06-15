@@ -204,6 +204,28 @@ func TestValidateSlackSpec_ValidTemplatePaths_Success(t *testing.T) {
 	}
 }
 
+func TestValidateSlackSpec_TemplateWithCornerFunction_Success(t *testing.T) {
+	dir := t.TempDir()
+	// Templates using corner/hasLinks must pass validation (render.Parse includes FuncMap).
+	tmplContent := `{{with corner "news"}}{{.Title}}{{end}}`
+	if err := os.WriteFile(filepath.Join(dir, "thread.tmpl"), []byte(tmplContent), 0o644); err != nil {
+		t.Fatalf("write template: %v", err)
+	}
+
+	spec := slack.SlackSpec{
+		Slack: slack.SlackChannelConfig{
+			Channel: "C0123456789",
+			Message: slack.MessagePaths{
+				Thread: "thread.tmpl",
+			},
+		},
+		BaseDir: dir,
+	}
+	if err := slack.ValidateSlackSpec(spec); err != nil {
+		t.Errorf("ValidateSlackSpec must accept template with corner function: %v", err)
+	}
+}
+
 func TestLoadTemplates_EmptyPaths_UsesDefaults(t *testing.T) {
 	config := slack.SlackChannelConfig{
 		Channel: "C0123456789",
