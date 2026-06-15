@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/cli"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 func writeManifestForRenderTest(t *testing.T, dir string) string {
@@ -38,19 +39,10 @@ func writeManifestForRenderTest(t *testing.T, dir string) string {
 	return path
 }
 
-func writeTemplateForRenderTest(t *testing.T, dir, content string) string {
-	t.Helper()
-	path := filepath.Join(dir, "test.tmpl")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write template: %v", err)
-	}
-	return path
-}
-
 func TestRenderCmd_BasicOutput(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForRenderTest(t, dir)
-	tmplPath := writeTemplateForRenderTest(t, dir, `{{.Title}} 第{{.EpisodeNumber}}回`)
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl", []byte(`{{.Title}} 第{{.EpisodeNumber}}回`))
 
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
@@ -67,8 +59,8 @@ func TestRenderCmd_BasicOutput(t *testing.T) {
 func TestRenderCmd_URLSkip(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForRenderTest(t, dir)
-	tmplPath := writeTemplateForRenderTest(t, dir,
-		`{{range .Corners}}{{range .Articles}}{{if .URL}}{{.Title}}{{end}}{{end}}{{end}}`)
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl",
+		[]byte(`{{range .Corners}}{{range .Articles}}{{if .URL}}{{.Title}}{{end}}{{end}}{{end}}`))
 
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
@@ -89,7 +81,7 @@ func TestRenderCmd_URLSkip(t *testing.T) {
 func TestRenderCmd_OutputFile(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForRenderTest(t, dir)
-	tmplPath := writeTemplateForRenderTest(t, dir, `{{.Title}}`)
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl", []byte(`{{.Title}}`))
 	outputPath := filepath.Join(dir, "out.txt")
 
 	cmd := cli.NewRootCmd()
@@ -107,8 +99,7 @@ func TestRenderCmd_OutputFile(t *testing.T) {
 }
 
 func TestRenderCmd_MissingManifest_Error(t *testing.T) {
-	dir := t.TempDir()
-	tmplPath := writeTemplateForRenderTest(t, dir, `{{.Title}}`)
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl", []byte(`{{.Title}}`))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"render", "--template", tmplPath})
@@ -142,7 +133,7 @@ func TestRenderCmd_TemplateFileNotFound_Error(t *testing.T) {
 func TestRenderCmd_TemplateParseError_Error(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForRenderTest(t, dir)
-	tmplPath := writeTemplateForRenderTest(t, dir, `{{.Title`) // 構文エラー
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl", []byte(`{{.Title`)) // 構文エラー
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"render", "--manifest", manifestPath, "--template", tmplPath})

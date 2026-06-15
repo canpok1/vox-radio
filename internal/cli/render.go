@@ -45,10 +45,7 @@ URL なし記事のスキップは {{if .URL}} でテンプレ側に表現でき
 			}
 
 			if outputPath != "" {
-				if err := writeStringToFile(outputPath, result); err != nil {
-					return err
-				}
-				return nil
+				return os.WriteFile(outputPath, []byte(result), 0o644)
 			}
 
 			_, err = fmt.Fprint(cmd.OutOrStdout(), result)
@@ -63,17 +60,4 @@ URL なし記事のスキップは {{if .URL}} でテンプレ側に表現でき
 	_ = cmd.MarkFlagRequired("template")
 
 	return cmd
-}
-
-func writeStringToFile(path, content string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create output file: %w", err)
-	}
-	_, writeErr := fmt.Fprint(f, content)
-	closeErr := f.Close()
-	if writeErr != nil {
-		return writeErr
-	}
-	return closeErr
 }
