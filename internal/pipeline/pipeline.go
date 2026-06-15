@@ -194,6 +194,8 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Characters:        chars,
 		Lines:             &scriptLines,
 		Script:            &scr,
+		Clips:             clips,
+		CornerDurations:   cornerDurations,
 	})
 	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)

@@ -353,6 +353,57 @@ func TestBuild_EpisodeNumberAndTitle(t *testing.T) {
 	})
 }
 
+func TestBuild_CornerDurationFields(t *testing.T) {
+	p := newMinimalBuildParams()
+	p.Corners = []config.CornerConfig{
+		{ID: "op", Title: "OP", LengthSec: 60},
+		{ID: "tech", Title: "Tech", LengthSec: 180},
+	}
+	p.Clips = &model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{CornerID: "op", DurationSec: 10.0, Text: "こんにちは"},   // 5 chars
+			{CornerID: "tech", DurationSec: 30.0, Text: "技術の話"},   // 4 chars
+			{CornerID: "tech", DurationSec: 20.0, Text: "もう少し"}, // 4 chars
+		},
+	}
+	p.CornerDurations = map[string]float64{"op": 12.5, "tech": 55.0}
+
+	got := manifest.Build(p)
+
+	// op corner
+	opC := got.Corners[0]
+	if opC.ID != "op" {
+		t.Fatalf("Corners[0].ID = %q, want op", opC.ID)
+	}
+	if opC.TargetSec != 60 {
+		t.Errorf("op.TargetSec = %d, want 60", opC.TargetSec)
+	}
+	if opC.SpeechSec != 10.0 {
+		t.Errorf("op.SpeechSec = %.1f, want 10.0", opC.SpeechSec)
+	}
+	if opC.DurationSec != 12.5 {
+		t.Errorf("op.DurationSec = %.1f, want 12.5", opC.DurationSec)
+	}
+	if opC.CharCount != 5 {
+		t.Errorf("op.CharCount = %d, want 5", opC.CharCount)
+	}
+
+	// tech corner
+	techC := got.Corners[1]
+	if techC.TargetSec != 180 {
+		t.Errorf("tech.TargetSec = %d, want 180", techC.TargetSec)
+	}
+	if techC.SpeechSec != 50.0 {
+		t.Errorf("tech.SpeechSec = %.1f, want 50.0", techC.SpeechSec)
+	}
+	if techC.DurationSec != 55.0 {
+		t.Errorf("tech.DurationSec = %.1f, want 55.0", techC.DurationSec)
+	}
+	if techC.CharCount != 8 {
+		t.Errorf("tech.CharCount = %d, want 8", techC.CharCount)
+	}
+}
+
 func TestBuild_DedupKeyCopiedToArticleRef(t *testing.T) {
 	p := newMinimalBuildParams()
 	p.Corners = []config.CornerConfig{
