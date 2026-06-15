@@ -1,35 +1,42 @@
 package slack
 
 import (
-	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	slackgo "github.com/slack-go/slack"
 
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/render"
 )
 
-// BuildHeader builds the initial comment text for the parent mp3 upload message.
-func BuildHeader(manifest model.Manifest, tmpl MessageTemplate) string {
-	s := tmpl.Header
-	s = replacePlaceholders(s, manifest)
+const maxSectionRunes = 3000
 
-	// remove empty episode title quotes
-	s = strings.ReplaceAll(s, "「」", "")
-
-	// remove 第0回 segment when episode number is 0
-	if manifest.EpisodeNumber == 0 {
-		s = removeEpisodeSegment(s)
+// BuildParent renders the parent template (mp3 upload initial comment).
+func BuildParent(manifest model.Manifest, tmplText string) (string, error) {
+	result, err := render.Render(tmplText, manifest)
+	if err != nil {
+		return "", err
 	}
-
-	return strings.TrimSpace(s)
+	return strings.TrimSpace(result), nil
 }
 
-// BuildFallback builds the fallback plain text for thread reply notifications.
-func BuildFallback(manifest model.Manifest, tmpl MessageTemplate) string {
-	s := tmpl.Fallback
-	s = replacePlaceholders(s, manifest)
-	return strings.TrimSpace(s)
+// BuildFallback renders the fallback template (notification plain text).
+func BuildFallback(manifest model.Manifest, tmplText string) (string, error) {
+	result, err := render.Render(tmplText, manifest)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(result), nil
+}
+
+// BuildThread renders the thread body template to a single string.
+func BuildThread(manifest model.Manifest, tmplText string) (string, error) {
+	result, err := render.Render(tmplText, manifest)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(result), nil
 }
 
 // BuildAudioTitle returns the Slack file title for the audio upload.
@@ -41,105 +48,38 @@ func BuildAudioTitle(manifest model.Manifest) string {
 	return manifest.Title
 }
 
-// BuildThreadBlocks builds the Block Kit blocks and fallback text for the thread reply.
-// Returns nil blocks when both summary and corners are empty (thread should be skipped).
-func BuildThreadBlocks(manifest model.Manifest, tmpl MessageTemplate) ([]slackgo.Block, string) {
+// SplitIntoSectionBlocks splits text into Slack Section blocks of at most
+// maxSectionRunes runes each. Splits occur at newline boundaries.
+// Returns nil when text is empty.
+func SplitIntoSectionBlocks(text string) []slackgo.Block {
+	if text == "" {
+		return nil
+	}
+
+	lines := strings.Split(text, "\n")
 	var blocks []slackgo.Block
+	var current strings.Builder
 
-	if manifest.Summary != "" {
-		summaryText := replacePlaceholders(tmpl.Summary, manifest)
-		blocks = append(blocks, slackgo.NewSectionBlock(
-			slackgo.NewTextBlockObject(slackgo.MarkdownType, summaryText, false, false),
-			nil, nil,
-		))
-	}
-
-	if len(manifest.Corners) > 0 {
-		if manifest.Summary != "" {
-			blocks = append(blocks, slackgo.NewDividerBlock())
-		}
-		for _, corner := range manifest.Corners {
-			text := buildCornerText(corner, tmpl)
-			blocks = append(blocks, slackgo.NewSectionBlock(
-				slackgo.NewTextBlockObject(slackgo.MarkdownType, text, false, false),
-				nil, nil,
-			))
-		}
-	}
-
-	if len(blocks) == 0 {
-		return nil, ""
-	}
-
-	fallback := BuildFallback(manifest, tmpl)
-	return blocks, fallback
-}
-
-func buildCornerText(corner model.ManifestCorner, tmpl MessageTemplate) string {
-	articlesText := buildArticlesText(corner.Articles, tmpl.Article)
-
-	s := tmpl.Corner
-	s = strings.ReplaceAll(s, "{corner_title}", corner.Title)
-	s = strings.ReplaceAll(s, "{corner_summary}", corner.Summary)
-	s = strings.ReplaceAll(s, "{articles}", articlesText)
-
-	// remove empty lines
-	lines := strings.Split(s, "\n")
-	var kept []string
 	for _, line := range lines {
-		if strings.TrimSpace(line) != "" {
-			kept = append(kept, line)
+		lineWithNL := line + "\n"
+		newLen := utf8.RuneCountInString(current.String()) + utf8.RuneCountInString(lineWithNL)
+		if newLen > maxSectionRunes && current.Len() > 0 {
+			blocks = append(blocks, newSectionBlock(strings.TrimRight(current.String(), "\n")))
+			current.Reset()
 		}
+		current.WriteString(lineWithNL)
 	}
-	return strings.Join(kept, "\n")
+
+	if s := strings.TrimRight(current.String(), "\n"); s != "" {
+		blocks = append(blocks, newSectionBlock(s))
+	}
+
+	return blocks
 }
 
-func buildArticlesText(articles []model.ArticleRef, articleTmpl string) string {
-	if len(articles) == 0 {
-		return ""
-	}
-	var parts []string
-	for _, a := range articles {
-		line := articleTmpl
-		if a.URL == "" {
-			// Remove Slack link wrappers "<{url}|...>" → inner text only
-			const open = "<{url}|"
-			for {
-				before, after, found := strings.Cut(line, open)
-				if !found {
-					break
-				}
-				inner, tail, ok := strings.Cut(after, ">")
-				if !ok {
-					break
-				}
-				line = before + inner + tail
-			}
-			line = strings.ReplaceAll(line, "{url}", "")
-		} else {
-			line = strings.ReplaceAll(line, "{url}", a.URL)
-		}
-		line = strings.ReplaceAll(line, "{title}", a.Title)
-		parts = append(parts, line)
-	}
-	return strings.Join(parts, "\n")
-}
-
-// replacePlaceholders replaces {placeholder} tokens with manifest field values.
-func replacePlaceholders(s string, manifest model.Manifest) string {
-	s = strings.ReplaceAll(s, "{title}", manifest.Title)
-	s = strings.ReplaceAll(s, "{episode_number}", strconv.Itoa(manifest.EpisodeNumber))
-	s = strings.ReplaceAll(s, "{episode_title}", manifest.EpisodeTitle)
-	s = strings.ReplaceAll(s, "{description}", manifest.Description)
-	s = strings.ReplaceAll(s, "{summary}", manifest.Summary)
-	s = strings.ReplaceAll(s, "{datetime}", manifest.Datetime)
-	s = strings.ReplaceAll(s, "{audio_file}", manifest.AudioFile)
-	s = strings.ReplaceAll(s, "{credit}", strings.Join(manifest.Credits, "\n"))
-	return s
-}
-
-// removeEpisodeSegment removes the 第0回 portion from a header string.
-// TrimSpace is applied by the caller (BuildHeader).
-func removeEpisodeSegment(s string) string {
-	return strings.ReplaceAll(s, "第0回", "")
+func newSectionBlock(text string) *slackgo.SectionBlock {
+	return slackgo.NewSectionBlock(
+		slackgo.NewTextBlockObject(slackgo.MarkdownType, text, false, false),
+		nil, nil,
+	)
 }

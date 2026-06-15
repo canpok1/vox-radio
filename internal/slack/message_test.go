@@ -3,6 +3,7 @@ package slack_test
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	slackgo "github.com/slack-go/slack"
 
@@ -19,6 +20,7 @@ func makeManifest() model.Manifest {
 		AudioFile:     "episode42.mp3",
 		Corners: []model.ManifestCorner{
 			{
+				ID:      "news",
 				Title:   "今週のニュース",
 				Summary: "各社の新モデル発表が相次いだ一週間でした。",
 				Articles: []model.ArticleRef{
@@ -27,6 +29,7 @@ func makeManifest() model.Manifest {
 				},
 			},
 			{
+				ID:      "deep",
 				Title:   "深掘りコーナー",
 				Summary: "エージェント設計のベストプラクティスを議論。",
 				Articles: []model.ArticleRef{
@@ -37,171 +40,307 @@ func makeManifest() model.Manifest {
 	}
 }
 
-func makeTemplate() slack.MessageTemplate {
-	return slack.MessageTemplate{
-		Header:   "🎙️ {title} 第{episode_number}回「{episode_title}」",
-		Fallback: "{title} 第{episode_number}回 を配信しました",
-		Summary:  "*今回のまとめ*\n{summary}",
-		Corner:   "*{corner_title}*\n{corner_summary}\n{articles}",
-		Article:  " • <{url}|{title}>",
+// BuildParent
+
+func TestBuildParent_FullManifest(t *testing.T) {
+	m := makeManifest()
+	tmpl := `🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}`
+
+	got, err := slack.BuildParent(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildParent: unexpected error: %v", err)
 	}
-}
-
-func TestBuildHeader_FullManifest(t *testing.T) {
-	manifest := makeManifest()
-	tmpl := makeTemplate()
-
-	header := slack.BuildHeader(manifest, tmpl)
-
 	want := "🎙️ ずんだもんテックラジオ 第42回「大規模言語モデルの最前線」"
-	if header != want {
-		t.Errorf("BuildHeader = %q, want %q", header, want)
+	if got != want {
+		t.Errorf("BuildParent = %q, want %q", got, want)
 	}
 }
 
-func TestBuildHeader_EmptyEpisodeTitle_RemovesEmptyQuotes(t *testing.T) {
-	manifest := makeManifest()
-	manifest.EpisodeTitle = ""
-	tmpl := makeTemplate()
+func TestBuildParent_EpisodeNumberZero_OmitsEpisodeSegment(t *testing.T) {
+	m := makeManifest()
+	m.EpisodeNumber = 0
+	tmpl := `🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}`
 
-	header := slack.BuildHeader(manifest, tmpl)
-
-	if header == "" {
-		t.Error("BuildHeader must not be empty")
+	got, err := slack.BuildParent(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildParent: unexpected error: %v", err)
 	}
-	if strings.Contains(header, "「」") {
-		t.Errorf("BuildHeader should not contain empty quotes 「」, got %q", header)
+	if strings.Contains(got, "第0回") {
+		t.Errorf("BuildParent should not contain 第0回 when EpisodeNumber is 0, got %q", got)
 	}
-}
-
-func TestBuildHeader_EpisodeNumberZero_RemovesEpisodeSegment(t *testing.T) {
-	manifest := makeManifest()
-	manifest.EpisodeNumber = 0
-	tmpl := makeTemplate()
-
-	header := slack.BuildHeader(manifest, tmpl)
-
-	if strings.Contains(header, "第0回") {
-		t.Errorf("BuildHeader should not contain 第0回, got %q", header)
-	}
-	if strings.Contains(header, "第") {
-		t.Errorf("BuildHeader should not contain episode segment when EpisodeNumber is 0, got %q", header)
+	if strings.Contains(got, "第") {
+		t.Errorf("BuildParent should not contain episode segment when EpisodeNumber is 0, got %q", got)
 	}
 }
 
-func TestBuildFallback(t *testing.T) {
-	manifest := makeManifest()
-	tmpl := makeTemplate()
+func TestBuildParent_EmptyEpisodeTitle_OmitsEmptyQuotes(t *testing.T) {
+	m := makeManifest()
+	m.EpisodeTitle = ""
+	tmpl := `🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}`
 
-	fallback := slack.BuildFallback(manifest, tmpl)
+	got, err := slack.BuildParent(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildParent: unexpected error: %v", err)
+	}
+	if strings.Contains(got, "「」") {
+		t.Errorf("BuildParent should not contain empty quotes 「」, got %q", got)
+	}
+	if got == "" {
+		t.Error("BuildParent must not be empty")
+	}
+}
 
+func TestBuildParent_InvalidTemplate_Error(t *testing.T) {
+	m := makeManifest()
+	_, err := slack.BuildParent(m, "{{invalid")
+	if err == nil {
+		t.Error("expected error for invalid template syntax")
+	}
+}
+
+func TestBuildParent_TrimsWhitespace(t *testing.T) {
+	m := makeManifest()
+	tmpl := "  {{.Title}}  "
+
+	got, err := slack.BuildParent(m, tmpl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != strings.TrimSpace(got) {
+		t.Errorf("BuildParent should trim whitespace, got %q", got)
+	}
+}
+
+// BuildFallback
+
+func TestBuildFallback_BasicRender(t *testing.T) {
+	m := makeManifest()
+	tmpl := `{{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}} を配信しました`
+
+	got, err := slack.BuildFallback(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildFallback: unexpected error: %v", err)
+	}
 	want := "ずんだもんテックラジオ 第42回 を配信しました"
-	if fallback != want {
-		t.Errorf("BuildFallback = %q, want %q", fallback, want)
+	if got != want {
+		t.Errorf("BuildFallback = %q, want %q", got, want)
 	}
 }
 
-func TestBuildThreadBlocks_WithSummaryAndCorners(t *testing.T) {
-	manifest := makeManifest()
-	tmpl := makeTemplate()
-
-	blocks, fallback := slack.BuildThreadBlocks(manifest, tmpl)
-
-	if fallback == "" {
-		t.Error("fallback must not be empty")
+func TestBuildFallback_InvalidTemplate_Error(t *testing.T) {
+	m := makeManifest()
+	_, err := slack.BuildFallback(m, "{{invalid")
+	if err == nil {
+		t.Error("expected error for invalid template syntax")
 	}
-	if len(blocks) == 0 {
-		t.Fatal("blocks must not be empty when summary and corners are present")
-	}
+}
 
-	// 要約 Section + Divider + コーナー Section×2 = 4ブロック以上
-	if len(blocks) < 4 {
-		t.Errorf("expected at least 4 blocks (summary+divider+corner×2), got %d", len(blocks))
-	}
+// BuildThread
 
-	// 最初のブロックは summary Section
-	firstSection, ok := blocks[0].(*slackgo.SectionBlock)
+func TestBuildThread_RendersTemplate(t *testing.T) {
+	m := makeManifest()
+	tmpl := `{{.Summary}}`
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildThread: unexpected error: %v", err)
+	}
+	if got != m.Summary {
+		t.Errorf("BuildThread = %q, want %q", got, m.Summary)
+	}
+}
+
+func TestBuildThread_URLSkip(t *testing.T) {
+	m := makeManifest()
+	m.Corners = []model.ManifestCorner{
+		{
+			Title: "テック",
+			Articles: []model.ArticleRef{
+				{Title: "URL付き記事", URL: "https://example.com"},
+				{Title: "URLなし記事", URL: ""},
+			},
+		},
+	}
+	tmpl := `{{range .Corners}}{{range .Articles}}{{if .URL}} • <{{.URL}}|{{.Title}}>
+{{end}}{{end}}{{end}}`
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildThread: unexpected error: %v", err)
+	}
+	if !strings.Contains(got, "URL付き記事") {
+		t.Errorf("BuildThread should contain URL付き記事, got: %q", got)
+	}
+	if strings.Contains(got, "URLなし記事") {
+		t.Errorf("BuildThread should NOT contain URLなし記事, got: %q", got)
+	}
+}
+
+func TestBuildThread_CornerFunction(t *testing.T) {
+	m := makeManifest()
+	tmpl := `{{with corner "news"}}コーナー: {{.Title}}{{end}}`
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildThread: unexpected error: %v", err)
+	}
+	if !strings.Contains(got, "今週のニュース") {
+		t.Errorf("BuildThread should contain corner title via corner function, got: %q", got)
+	}
+}
+
+func TestBuildThread_CornerFunctionNotFound_ReturnsEmpty(t *testing.T) {
+	m := makeManifest()
+	tmpl := `{{with corner "nonexistent"}}{{.Title}}{{end}}`
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildThread: unexpected error: %v", err)
+	}
+	if got != "" {
+		t.Errorf("BuildThread corner function with unknown ID should return empty, got: %q", got)
+	}
+}
+
+func TestBuildThread_HasLinksFunction(t *testing.T) {
+	m := model.Manifest{
+		Corners: []model.ManifestCorner{
+			{
+				ID:    "withlinks",
+				Title: "リンクあり",
+				Articles: []model.ArticleRef{
+					{Title: "A", URL: "https://example.com"},
+				},
+			},
+			{
+				ID:    "nolinks",
+				Title: "リンクなし",
+				Articles: []model.ArticleRef{
+					{Title: "B", URL: ""},
+				},
+			},
+		},
+	}
+	tmpl := `{{range .Corners}}{{if hasLinks .}}{{.Title}}
+{{end}}{{end}}`
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("BuildThread: unexpected error: %v", err)
+	}
+	if !strings.Contains(got, "リンクあり") {
+		t.Errorf("BuildThread should include corner with links, got: %q", got)
+	}
+	if strings.Contains(got, "リンクなし") {
+		t.Errorf("BuildThread should exclude corner without links, got: %q", got)
+	}
+}
+
+func TestBuildThread_InvalidTemplate_Error(t *testing.T) {
+	m := makeManifest()
+	_, err := slack.BuildThread(m, "{{invalid")
+	if err == nil {
+		t.Error("expected error for invalid template syntax")
+	}
+}
+
+func TestBuildThread_TrimsWhitespace(t *testing.T) {
+	m := makeManifest()
+	tmpl := "  {{.Title}}  "
+
+	got, err := slack.BuildThread(m, tmpl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != strings.TrimSpace(got) {
+		t.Errorf("BuildThread should trim whitespace, got %q", got)
+	}
+}
+
+// SplitIntoSectionBlocks
+
+func TestSplitIntoSectionBlocks_EmptyText_ReturnsNil(t *testing.T) {
+	blocks := slack.SplitIntoSectionBlocks("")
+	if len(blocks) != 0 {
+		t.Errorf("expected 0 blocks for empty text, got %d", len(blocks))
+	}
+}
+
+func TestSplitIntoSectionBlocks_ShortText_OneBlock(t *testing.T) {
+	text := "短いテキスト"
+	blocks := slack.SplitIntoSectionBlocks(text)
+	if len(blocks) != 1 {
+		t.Errorf("expected 1 block for short text, got %d", len(blocks))
+	}
+	section, ok := blocks[0].(*slackgo.SectionBlock)
 	if !ok {
-		t.Fatalf("blocks[0] should be SectionBlock, got %T", blocks[0])
+		t.Fatalf("block[0] should be SectionBlock, got %T", blocks[0])
 	}
-	if firstSection.Text == nil || firstSection.Text.Text == "" {
-		t.Error("first section text must not be empty")
-	}
-
-	// 2番目は Divider
-	_, ok = blocks[1].(*slackgo.DividerBlock)
-	if !ok {
-		t.Errorf("blocks[1] should be DividerBlock, got %T", blocks[1])
+	if section.Text.Text != text {
+		t.Errorf("section text: got %q, want %q", section.Text.Text, text)
 	}
 }
 
-func TestBuildThreadBlocks_EmptySummary_NoBummarySection(t *testing.T) {
-	manifest := makeManifest()
-	manifest.Summary = ""
-	tmpl := makeTemplate()
-
-	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
-
-	if len(blocks) == 0 {
-		t.Fatal("blocks must not be empty when corners are present")
+func TestSplitIntoSectionBlocks_LongText_MultipleBlocks(t *testing.T) {
+	// 100文字 * 35行 = 3500文字（3000文字超）
+	line := strings.Repeat("あ", 100)
+	var sb strings.Builder
+	for i := 0; i < 35; i++ {
+		sb.WriteString(line)
+		sb.WriteString("\n")
 	}
+	text := strings.TrimRight(sb.String(), "\n")
 
-	// 要約がないので最初のブロックは Divider ではなく Corner Section になる
-	_, isDivider := blocks[0].(*slackgo.DividerBlock)
-	if isDivider {
-		t.Error("first block should not be Divider when summary is empty")
+	blocks := slack.SplitIntoSectionBlocks(text)
+	if len(blocks) < 2 {
+		t.Errorf("expected multiple blocks for text > 3000 chars, got %d", len(blocks))
 	}
-}
-
-func TestBuildThreadBlocks_NoCorners_NoDivider(t *testing.T) {
-	manifest := makeManifest()
-	manifest.Corners = nil
-	tmpl := makeTemplate()
-
-	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
-
-	// コーナーが0件なので divider 以降は出ない
-	for _, b := range blocks {
-		if _, ok := b.(*slackgo.DividerBlock); ok {
-			t.Error("blocks should not contain Divider when no corners")
+	// 各ブロックは 3000 rune 以下
+	for i, b := range blocks {
+		section, ok := b.(*slackgo.SectionBlock)
+		if !ok {
+			t.Fatalf("block[%d] is not SectionBlock, got %T", i, b)
+		}
+		count := utf8.RuneCountInString(section.Text.Text)
+		if count > 3000 {
+			t.Errorf("block[%d] has %d runes, exceeds 3000", i, count)
 		}
 	}
 }
 
-func TestBuildThreadBlocks_BothEmpty_NilBlocks(t *testing.T) {
-	manifest := makeManifest()
-	manifest.Summary = ""
-	manifest.Corners = nil
-	tmpl := makeTemplate()
-
-	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
-
-	if len(blocks) != 0 {
-		t.Errorf("expected empty blocks when both summary and corners are empty, got %d blocks", len(blocks))
+func TestSplitIntoSectionBlocks_ExactlyAtLimit_OneBlock(t *testing.T) {
+	// ちょうど 3000 文字
+	text := strings.Repeat("a", 3000)
+	blocks := slack.SplitIntoSectionBlocks(text)
+	if len(blocks) != 1 {
+		t.Errorf("expected 1 block for exactly 3000 chars, got %d", len(blocks))
 	}
 }
 
-func TestBuildThreadBlocks_CornerEmptyArticles_NoArticleLines(t *testing.T) {
-	manifest := makeManifest()
-	manifest.Summary = ""
-	manifest.Corners = []model.ManifestCorner{
-		{Title: "タイトルのみ", Summary: "", Articles: nil},
+func TestSplitIntoSectionBlocks_AllBlocksWithinLimit(t *testing.T) {
+	// 長いテキストを作成
+	line := strings.Repeat("x", 200)
+	var sb strings.Builder
+	for i := 0; i < 30; i++ {
+		sb.WriteString(line)
+		sb.WriteString("\n")
 	}
-	tmpl := makeTemplate()
+	text := strings.TrimRight(sb.String(), "\n")
 
-	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
-
-	if len(blocks) == 0 {
-		t.Fatal("blocks must not be empty when corner title exists")
-	}
-	section, ok := blocks[0].(*slackgo.SectionBlock)
-	if !ok {
-		t.Fatalf("blocks[0] should be SectionBlock, got %T", blocks[0])
-	}
-	if section.Text == nil {
-		t.Error("section text must not be nil")
+	blocks := slack.SplitIntoSectionBlocks(text)
+	for i, b := range blocks {
+		section, ok := b.(*slackgo.SectionBlock)
+		if !ok {
+			t.Fatalf("block[%d] is not SectionBlock", i)
+		}
+		count := utf8.RuneCountInString(section.Text.Text)
+		if count > 3000 {
+			t.Errorf("block[%d] has %d runes, exceeds 3000", i, count)
+		}
 	}
 }
+
+// BuildAudioTitle (unchanged behavior)
 
 func TestBuildAudioTitle_WithEpisodeTitle(t *testing.T) {
 	manifest := makeManifest()
@@ -217,64 +356,5 @@ func TestBuildAudioTitle_WithoutEpisodeTitle(t *testing.T) {
 	title := slack.BuildAudioTitle(manifest)
 	if title != manifest.Title {
 		t.Errorf("BuildAudioTitle = %q, want title %q", title, manifest.Title)
-	}
-}
-
-func TestBuildThreadBlocks_ArticleEmptyURL_NoSlackLinkSyntax(t *testing.T) {
-	manifest := makeManifest()
-	manifest.Summary = ""
-	manifest.Corners = []model.ManifestCorner{
-		{
-			Title: "テック",
-			Articles: []model.ArticleRef{
-				{Title: "URL無し記事", URL: ""},
-			},
-		},
-	}
-	tmpl := makeTemplate()
-
-	blocks, _ := slack.BuildThreadBlocks(manifest, tmpl)
-
-	if len(blocks) == 0 {
-		t.Fatal("blocks must not be empty")
-	}
-	section, ok := blocks[0].(*slackgo.SectionBlock)
-	if !ok {
-		t.Fatalf("blocks[0] should be SectionBlock, got %T", blocks[0])
-	}
-	text := section.Text.Text
-	if strings.Contains(text, "<|") {
-		t.Errorf("article with empty URL must not produce broken Slack link '<|...>', got: %q", text)
-	}
-	if !strings.Contains(text, "URL無し記事") {
-		t.Errorf("article title should appear in output even when URL is empty, got: %q", text)
-	}
-}
-
-func TestBuildHeader_CreditPlaceholder(t *testing.T) {
-	m := makeManifest()
-	m.Credits = []string{"OtoLogic / CC BY 4.0", "VOICEVOX:ずんだもん"}
-	tmpl := makeTemplate()
-	tmpl.Header = "{credit}"
-
-	got := slack.BuildHeader(m, tmpl)
-
-	want := "OtoLogic / CC BY 4.0\nVOICEVOX:ずんだもん"
-	if got != want {
-		t.Errorf("BuildHeader with {credit} = %q, want %q", got, want)
-	}
-}
-
-func TestBuildHeader_CreditPlaceholder_EmptyCredits(t *testing.T) {
-	m := makeManifest()
-	m.Credits = []string{}
-	tmpl := makeTemplate()
-	tmpl.Header = "タイトル: {title}\nクレジット: {credit}"
-
-	got := slack.BuildHeader(m, tmpl)
-
-	want := "タイトル: ずんだもんテックラジオ\nクレジット:"
-	if got != want {
-		t.Errorf("BuildHeader with empty credits = %q, want %q", got, want)
 	}
 }

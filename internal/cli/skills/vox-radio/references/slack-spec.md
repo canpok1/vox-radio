@@ -38,27 +38,149 @@ vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yam
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `slack.channel` | string | 必須 | 投稿先チャンネル ID（`C` で始まる Slack のチャンネル ID） |
-| `slack.message.header` | string | 任意 | 親メッセージ（mp3 アップロード時の初期コメント）のテンプレート |
-| `slack.message.fallback` | string | 任意 | スレッド返信の通知用プレーンテキストのテンプレート |
-| `slack.message.summary` | string | 任意 | スレッド返信の要約 Section テンプレート（空のとき省略） |
-| `slack.message.corner` | string | 任意 | コーナー Section テンプレート |
-| `slack.message.article` | string | 任意 | 記事 1 件のテンプレート |
+| `slack.message.parent` | string | 任意 | 親メッセージ（mp3 アップロード初期コメント）のテンプレートファイルパス |
+| `slack.message.thread` | string | 任意 | スレッド返信本文のテンプレートファイルパス（3000 文字超は自動分割） |
+| `slack.message.fallback` | string | 任意 | スレッド通知用プレーンテキストのテンプレートファイルパス |
 
-`message.*` を省略した場合はコード側のデフォルトテンプレートが適用されます。
+`message.*` を省略した場合は組み込みのデフォルトテンプレートが使われます。
 
-## 利用可能なプレースホルダ
+## テンプレートファイルのパス指定
 
-| スコープ | プレースホルダ | manifest フィールド |
-|---------|----------------|---------------------|
-| 全体（header/summary/fallback） | `{title}` `{episode_number}` `{episode_title}` `{description}` `{summary}` `{datetime}` `{audio_file}` | `Manifest` の各 json タグ |
-| 全体（header/summary/fallback） | `{credit}` | `Manifest.Credits` を改行結合した文字列。credits が空のとき空文字列に置換される |
-| コーナー（`corner`） | `{corner_title}` `{corner_summary}` `{articles}` | `ManifestCorner.Title` / `.Summary` / 記事展開 |
-| 記事（`article`） | `{title}` `{url}` | `ArticleRef.Title` / `.URL` |
+- **相対パス**: `slack-spec.yaml` のあるディレクトリ基準で解決されます
+- **絶対パス**: そのまま使用されます
+
+```yaml
+slack:
+  channel: "C0123456789"
+  message:
+    parent: "slack-parent.tmpl"          # 相対パス（slack-spec.yaml と同じディレクトリ）
+    thread: "/abs/path/slack-thread.tmpl" # 絶対パス
+```
+
+`vox-radio init` を実行すると `slack-spec.yaml`・`slack-parent.tmpl`・`slack-thread.tmpl` が同時に生成されます。
+
+## テンプレートの書き方（Go text/template）
+
+テンプレートは Go 標準の [`text/template`](https://pkg.go.dev/text/template) 記法を使います。
+
+### データ文脈
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `.Title` | string | 番組タイトル |
+| `.EpisodeNumber` | int | 回番号（0 で偽扱い） |
+| `.EpisodeTitle` | string | サブタイトル |
+| `.Description` | string | 番組説明 |
+| `.Summary` | string | 全体要約 |
+| `.Datetime` | string | 配信日時 |
+| `.AudioFile` | string | 音声ファイル名 |
+| `.Credits` | []string | クレジット一覧 |
+| `.Corners` | []ManifestCorner | コーナー一覧（下記参照） |
+
+`ManifestCorner` のフィールド:
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `.ID` | string | コーナー ID |
+| `.Title` | string | コーナータイトル |
+| `.Summary` | string | コーナー要約 |
+| `.Points` | []string | 要点リスト |
+| `.Articles` | []ArticleRef | 記事一覧（下記参照） |
+
+`ArticleRef` のフィールド:
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `.Title` | string | 記事タイトル |
+| `.URL` | string | 記事 URL（空の場合がある） |
+
+### 利用可能なテンプレート関数
+
+| 関数 | 説明 |
+|---|---|
+| `corner "<id>"` | 指定 ID のコーナーを `*ManifestCorner` で返す（見つからない場合は `nil`） |
+| `hasLinks <corner>` | コーナーに URL 付き記事が 1 件以上あれば `true` |
+
+Go 標準の `eq` / `ne` / `if` / `range` / `with` 等もすべて使えます。
+
+### レシピ集
+
+#### 回番号・サブタイトルの条件付き表示
+
+```
+{{- /* EpisodeNumber が 0 のとき「第N回」を省略、EpisodeTitle が空のとき「」を省略 */}}
+🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}
+```
+
+#### URL なし記事のスキップ
+
+```
+{{range .Corners}}
+*{{.Title}}*
+{{.Summary}}
+{{range .Articles}}{{if .URL}} • <{{.URL}}|{{.Title}}>
+{{end}}{{end}}{{end}}
+```
+
+#### 特定コーナーを ID で取り出す
+
+```
+{{with corner "news"}}
+*{{.Title}}*
+{{.Summary}}
+{{end}}
+```
+
+#### 特定コーナーだけ別表記（`eq`/`ne`）
+
+```
+{{range .Corners}}
+{{if eq .ID "oheri"}}お便り: {{.Summary}}
+{{else}}*{{.Title}}*
+{{.Summary}}
+{{range .Articles}}{{if .URL}} • <{{.URL}}|{{.Title}}>{{end}}{{end}}
+{{end}}
+{{end}}
+```
+
+#### URL 付き記事があるコーナーだけ見出しを出す（`hasLinks`）
+
+```
+{{range .Corners}}{{if hasLinks .}}
+*{{.Title}}*
+{{range .Articles}}{{if .URL}} • <{{.URL}}|{{.Title}}>
+{{end}}{{end}}
+{{end}}{{end}}
+```
+
+#### クレジット表示
+
+```
+{{range .Credits}} • {{.}}
+{{end}}
+```
+
+### スレッドの 3000 文字自動分割
+
+`thread` テンプレートのレンダリング結果が 3000 文字（Rune）を超える場合、`vox-radio` は改行境界で自動的に複数の Section ブロックに分割します。テンプレート側での分割指定は不要です。
 
 ## 投稿フロー
 
 1. `vox-radio.yaml` から Bot トークンを環境変数で取得
 2. `manifest.json` を読み込み、mp3 パスを自動解決（manifest と同じディレクトリ + `audio_file`）
-3. `slack-spec.yaml` を読み込み・検証
+3. `slack-spec.yaml` を読み込み・検証（テンプレートファイルの存在・構文も検証）
 4. mp3 を Slack へアップロード（親メッセージ = mp3 + 初期コメント）
-5. 要約・コーナーをスレッドに返信（要約・コーナーが両方空の場合はスレッド投稿をスキップ）
+5. `thread` テンプレートをレンダリングし、3000 文字以下の Section ブロックに分割してスレッドに返信
+   （`thread` 結果が空のとき、スレッド投稿はスキップ）
+
+## 検証コマンド（slackpost check）
+
+```bash
+vox-radio slackpost check slack-spec.yaml
+```
+
+以下を検証します:
+
+- strict パース: 未知キー（typo）をエラー化
+- `slack.channel` の存在チェック
+- `slack.message.{parent,thread,fallback}` 指定時: ファイル存在・読み込み・`template.Parse` 構文検証

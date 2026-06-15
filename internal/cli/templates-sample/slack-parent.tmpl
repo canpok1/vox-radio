@@ -1,0 +1,8 @@
+{{/*
+  slack-parent.tmpl — 親メッセージ（mp3 アップロード時の最初のコメント）
+
+  データ文脈: manifest 全体（model.Manifest）
+  .EpisodeNumber が 0 のとき「第N回」は自動で消えます（{{if .EpisodeNumber}} が偽）
+  .EpisodeTitle が空のとき「」は自動で消えます（{{if .EpisodeTitle}} が偽）
+*/}}
+🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}

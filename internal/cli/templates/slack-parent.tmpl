@@ -1,0 +1,19 @@
+{{/*
+  slack-parent.tmpl — 親メッセージ（mp3 アップロード時の最初のコメント）
+
+  データ文脈: manifest 全体（model.Manifest）
+  利用可能な主なフィールド:
+    .Title          番組タイトル
+    .EpisodeNumber  回番号（0 のとき {{if .EpisodeNumber}} が偽になり「第N回」が消えます）
+    .EpisodeTitle   サブタイトル（空のとき {{if .EpisodeTitle}} が偽になり「」が消えます）
+    .Summary        要約
+    .Description    番組説明
+    .Datetime       配信日時
+    .AudioFile      音声ファイル名
+    .Credits        クレジット（[]string）— range または join で使えます
+    .Corners        コーナー一覧（[]ManifestCorner）— 各 Corner は .ID .Title .Summary .Articles
+  関数:
+    corner "<id>"   — 指定 ID のコーナーを返す（見つからない場合は nil）
+    hasLinks <c>    — コーナーに URL 付き記事が 1 件以上あれば true
+*/}}
+🎙️ {{.Title}}{{if .EpisodeNumber}} 第{{.EpisodeNumber}}回{{end}}{{if .EpisodeTitle}}「{{.EpisodeTitle}}」{{end}}

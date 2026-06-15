@@ -1,0 +1,23 @@
+{{/*
+  slack-thread.tmpl — スレッド返信本文（要約＋コーナー）
+
+  URL なし記事は {{if .URL}} でスキップします。
+  3000 文字超は vox-radio が自動で複数の Section ブロックに分割します。
+  corner "<id>" 関数で特定コーナーを取り出せます。
+  hasLinks <corner> 関数でリンクあり/なしを判定できます。
+*/}}
+{{- with .Summary}}*今回のまとめ*
+{{.}}
+{{- end}}
+{{- range .Corners}}
+
+*{{.Title}}*
+{{- with .Summary}}
+{{.}}
+{{- end}}
+{{- range .Articles}}
+{{- if .URL}}
+ • <{{.URL}}|{{.Title}}>
+{{- end}}
+{{- end}}
+{{- end}}

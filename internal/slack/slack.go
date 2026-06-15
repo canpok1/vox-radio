@@ -29,9 +29,22 @@ func Run(opts Options, poster Poster) error {
 		opts.Out = os.Stdout
 	}
 
-	tmpl := opts.Spec.Slack.EffectiveMessageTemplate()
-	header := BuildHeader(opts.Manifest, tmpl)
-	blocks, fallback := BuildThreadBlocks(opts.Manifest, tmpl)
+	templates, err := opts.Spec.Slack.LoadTemplates(opts.Spec.BaseDir)
+	if err != nil {
+		return fmt.Errorf("load templates: %w", err)
+	}
+
+	header, err := BuildParent(opts.Manifest, templates.Parent)
+	if err != nil {
+		return fmt.Errorf("render parent template: %w", err)
+	}
+
+	threadText, err := BuildThread(opts.Manifest, templates.Thread)
+	if err != nil {
+		return fmt.Errorf("render thread template: %w", err)
+	}
+	blocks := SplitIntoSectionBlocks(threadText)
+
 	audioTitle := BuildAudioTitle(opts.Manifest)
 
 	if opts.DryRun {
@@ -76,30 +89,34 @@ func Run(opts Options, poster Poster) error {
 		}
 	}
 
-	var err error
+	var runErr error
 	if needUpload {
-		state.FileID, err = poster.UploadAudio(ctx, UploadParams{
+		state.FileID, runErr = poster.UploadAudio(ctx, UploadParams{
 			Channel:        channel,
 			FilePath:       opts.AudioPath,
 			Title:          audioTitle,
 			Filename:       opts.Manifest.AudioFile,
 			InitialComment: header,
 		})
-		if err != nil {
-			return fmt.Errorf("upload audio: %w", err)
+		if runErr != nil {
+			return fmt.Errorf("upload audio: %w", runErr)
 		}
 		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 && state.ThreadTS == "" {
-		state.ThreadTS, err = poster.ResolveThreadTS(ctx, state.FileID, channel)
-		if err != nil {
-			return err
+		state.ThreadTS, runErr = poster.ResolveThreadTS(ctx, state.FileID, channel)
+		if runErr != nil {
+			return runErr
 		}
 		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 {
+		fallback, err := BuildFallback(opts.Manifest, templates.Fallback)
+		if err != nil {
+			return fmt.Errorf("render fallback template: %w", err)
+		}
 		if err := poster.PostThreadReply(ctx, ReplyParams{
 			Channel:  channel,
 			ThreadTS: state.ThreadTS,
