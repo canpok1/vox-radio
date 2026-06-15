@@ -18,7 +18,7 @@ func TestRootHelp(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	out := buf.String()
-	for _, sub := range []string{"init", "install", "episodegen", "config", "feedgen", "assets", "slackpost"} {
+	for _, sub := range []string{"init", "install", "episodegen", "config", "feedgen", "assets", "slackpost", "render"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("root help missing subcommand %q", sub)
 		}
