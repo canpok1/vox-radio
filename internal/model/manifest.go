@@ -93,6 +93,15 @@ type Timeline struct {
 	Corners []CornerTiming `json:"corners"`
 }
 
+// Map converts the ordered Corners slice to a map keyed by CornerID for fast lookup.
+func (t Timeline) Map() map[string]float64 {
+	m := make(map[string]float64, len(t.Corners))
+	for _, c := range t.Corners {
+		m[c.ID] = c.DurationSec
+	}
+	return m
+}
+
 // UnmarshalJSON implements json.Unmarshaler to normalize Points to a non-nil empty slice.
 func (c *ManifestCorner) UnmarshalJSON(data []byte) error {
 	type alias ManifestCorner

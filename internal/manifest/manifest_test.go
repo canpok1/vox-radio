@@ -361,8 +361,8 @@ func TestBuild_CornerDurationFields(t *testing.T) {
 	}
 	p.Clips = &model.ClipsMeta{
 		Clips: []model.ClipMeta{
-			{CornerID: "op", DurationSec: 10.0, Text: "こんにちは"},   // 5 chars
-			{CornerID: "tech", DurationSec: 30.0, Text: "技術の話"},   // 4 chars
+			{CornerID: "op", DurationSec: 10.0, Text: "こんにちは"},  // 5 chars
+			{CornerID: "tech", DurationSec: 30.0, Text: "技術の話"}, // 4 chars
 			{CornerID: "tech", DurationSec: 20.0, Text: "もう少し"}, // 4 chars
 		},
 	}

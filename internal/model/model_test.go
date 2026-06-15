@@ -988,6 +988,25 @@ func TestTimeline_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestTimeline_Map(t *testing.T) {
+	tl := model.Timeline{
+		Corners: []model.CornerTiming{
+			{ID: "opening", DurationSec: 30.5},
+			{ID: "tech", DurationSec: 65.2},
+		},
+	}
+	got := tl.Map()
+	if got["opening"] != 30.5 {
+		t.Errorf("opening: got %f, want 30.5", got["opening"])
+	}
+	if got["tech"] != 65.2 {
+		t.Errorf("tech: got %f, want 65.2", got["tech"])
+	}
+	if len(got) != 2 {
+		t.Errorf("len: got %d, want 2", len(got))
+	}
+}
+
 func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 	cl := model.CornerLines{
 		Title: "C1",

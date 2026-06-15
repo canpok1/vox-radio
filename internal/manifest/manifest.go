@@ -24,8 +24,8 @@ type BuildParams struct {
 	Characters        map[string]config.CharacterConfig
 	Lines             *model.ScriptLines
 	Script            *model.Script
-	Clips             *model.ClipsMeta          // optional; used to compute SpeechSec and CharCount per corner
-	CornerDurations   map[string]float64         // optional; keyed by CornerID, sets DurationSec per corner
+	Clips             *model.ClipsMeta   // optional; used to compute SpeechSec and CharCount per corner
+	CornerDurations   map[string]float64 // optional; keyed by CornerID, sets DurationSec per corner
 }
 
 // cornerClipStats computes per-corner speech duration and character count from ClipsMeta.
