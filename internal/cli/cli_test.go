@@ -240,3 +240,18 @@ func TestSubcommandHelp(t *testing.T) {
 		}
 	})
 }
+
+func TestManifestCmd_HasClipsAndTimelineFlags(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"episodegen", "manifest", "--help"})
+	_ = cmd.Execute()
+	out := buf.String()
+	if !strings.Contains(out, "--clips") {
+		t.Error("manifest --help should mention --clips flag")
+	}
+	if !strings.Contains(out, "--timeline") {
+		t.Error("manifest --help should mention --timeline flag")
+	}
+}
