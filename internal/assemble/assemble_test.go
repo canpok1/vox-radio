@@ -78,6 +78,39 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 	}
 }
 
+func TestAssembler_Run_ReturnsCornerDurations(t *testing.T) {
+	a := newTestAssembler(nil, 60.0, 1024)
+
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
+			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "host", Text: "B"},
+		},
+	}
+	clips := model.ClipsMeta{
+		Clips: []model.ClipMeta{
+			{Index: 0, File: "clip_000.wav", DurationSec: 2.0, CornerID: "op"},
+			{Index: 1, File: "clip_001.wav", DurationSec: 3.0, CornerID: "tech"},
+		},
+	}
+
+	dir := t.TempDir()
+	result, err := a.Run(context.Background(), script, clips, dir, filepath.Join(dir, "out.mp3"), model.EpisodeMeta{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.CornerDurations == nil {
+		t.Fatal("CornerDurations should not be nil")
+	}
+	if result.CornerDurations["op"] == 0 {
+		t.Error("op corner duration should be non-zero")
+	}
+	if result.CornerDurations["tech"] == 0 {
+		t.Error("tech corner duration should be non-zero")
+	}
+}
+
 func TestAssembler_Run_FFmpegError(t *testing.T) {
 	a := newTestAssembler(errors.New("ffmpeg failed"), 0, 0)
 

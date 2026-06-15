@@ -24,6 +24,7 @@ type CornerAudio struct {
 // Asset fields (StartAudio, EndAudio, BGM) and pause fields (StartPauseSec, EndPauseSec)
 // are transferred from CornerConfig and persisted in 03_lines.json for deterministic segment injection.
 type CornerLines struct {
+	ID            string       `json:"id,omitempty"`
 	Title         string       `json:"title"`
 	Direction     string       `json:"direction,omitempty"`
 	Lines         []Line       `json:"lines"`

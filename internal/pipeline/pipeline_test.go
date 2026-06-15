@@ -72,18 +72,19 @@ func (s *stubSynther) Run(_ context.Context, _ model.Script, outDir string) (*mo
 
 type stubAssembler struct {
 	err              error
+	cornerDurations  map[string]float64
 	called           bool
 	capturedClipsDir string
 	capturedOutPath  string
 	capturedMeta     model.EpisodeMeta
 }
 
-func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error {
+func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
 	s.called = true
 	s.capturedClipsDir = clipsDir
 	s.capturedOutPath = outPath
 	s.capturedMeta = meta
-	return s.err
+	return s.cornerDurations, s.err
 }
 
 type stubProgramSummarizer struct {
@@ -605,6 +606,43 @@ func TestRunner_Run_ManifestIncludesCharacterCredits(t *testing.T) {
 	got := mustReadManifest(t, outDir)
 	if !strings.Contains(got, "VOICEVOX:ずんだもん") {
 		t.Errorf("manifest should contain character credit, got: %s", got)
+	}
+}
+
+func TestRunner_Run_WritesTimeline(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	s.asm.cornerDurations = map[string]float64{"op": 12.5, "tech": 30.0}
+
+	r := newRunner(s)
+	r.Spec = &config.EpisodeSpec{
+		Corners: []config.CornerConfig{
+			{ID: "op", Title: "OP"},
+			{ID: "tech", Title: "技術"},
+		},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	timelinePath := fileio.TimelinePath(outDir)
+	if _, err := os.Stat(timelinePath); err != nil {
+		t.Fatalf("06_timeline.json should exist: %v", err)
+	}
+
+	var tl model.Timeline
+	if err := fileio.ReadJSON(timelinePath, &tl); err != nil {
+		t.Fatalf("read timeline: %v", err)
+	}
+	if len(tl.Corners) != 2 {
+		t.Fatalf("Corners: got %d, want 2", len(tl.Corners))
+	}
+	if tl.Corners[0].ID != "op" || tl.Corners[0].DurationSec != 12.5 {
+		t.Errorf("Corners[0]: got {%s %.1f}, want {op 12.5}", tl.Corners[0].ID, tl.Corners[0].DurationSec)
+	}
+	if tl.Corners[1].ID != "tech" || tl.Corners[1].DurationSec != 30.0 {
+		t.Errorf("Corners[1]: got {%s %.1f}, want {tech 30.0}", tl.Corners[1].ID, tl.Corners[1].DurationSec)
 	}
 }
 

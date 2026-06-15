@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"time"
+	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
@@ -23,6 +24,22 @@ type BuildParams struct {
 	Characters        map[string]config.CharacterConfig
 	Lines             *model.ScriptLines
 	Script            *model.Script
+	Clips             *model.ClipsMeta   // optional; used to compute SpeechSec and CharCount per corner
+	CornerDurations   map[string]float64 // optional; keyed by CornerID, sets DurationSec per corner
+}
+
+// cornerClipStats computes per-corner speech duration and character count from ClipsMeta.
+func cornerClipStats(clips *model.ClipsMeta) (speechSec map[string]float64, charCount map[string]int) {
+	speechSec = make(map[string]float64)
+	charCount = make(map[string]int)
+	if clips == nil {
+		return
+	}
+	for _, clip := range clips.Clips {
+		speechSec[clip.CornerID] += clip.DurationSec
+		charCount[clip.CornerID] += utf8.RuneCountInString(clip.Text)
+	}
+	return
 }
 
 // Build constructs a Manifest from BuildParams.
@@ -38,6 +55,7 @@ func Build(p BuildParams) model.Manifest {
 		Script:     p.Script,
 		Casts:      p.Rundown.Casts,
 	})
+	cornerSpeechSec, cornerCharCount := cornerClipStats(p.Clips)
 	cornerMap := p.Rundown.CornerMap()
 	manifestCorners := make([]model.ManifestCorner, 0, len(p.Corners))
 	for _, c := range p.Corners {
@@ -47,9 +65,12 @@ func Build(p BuildParams) model.Manifest {
 			refs = append(refs, model.ArticleRef{DedupKey: a.DedupKey, Title: a.Title, URL: a.URL})
 		}
 		cs := p.CornerSummaries[c.Title]
-		manifestCorners = append(manifestCorners, model.NewManifestCorner(
-			c.ID, c.Title, cs.Summary, cs.Points, refs,
-		))
+		mc := model.NewManifestCorner(c.ID, c.Title, cs.Summary, cs.Points, refs)
+		mc.TargetSec = c.LengthSec
+		mc.SpeechSec = cornerSpeechSec[c.ID]
+		mc.DurationSec = p.CornerDurations[c.ID]
+		mc.CharCount = cornerCharCount[c.ID]
+		manifestCorners = append(manifestCorners, mc)
 	}
 	return model.Manifest{
 		Title:             p.Program.Title,

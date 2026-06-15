@@ -62,11 +62,15 @@ func (p *ProgramSummary) UnmarshalJSON(data []byte) error {
 
 // ManifestCorner represents a corner in the manifest with its articles.
 type ManifestCorner struct {
-	ID       string       `json:"id"`
-	Title    string       `json:"title"`
-	Summary  string       `json:"summary"`
-	Points   []string     `json:"points"`
-	Articles []ArticleRef `json:"articles"`
+	ID          string       `json:"id"`
+	Title       string       `json:"title"`
+	Summary     string       `json:"summary"`
+	Points      []string     `json:"points"`
+	Articles    []ArticleRef `json:"articles"`
+	TargetSec   int          `json:"target_sec,omitempty"`
+	SpeechSec   float64      `json:"speech_sec,omitempty"`
+	DurationSec float64      `json:"duration_sec,omitempty"`
+	CharCount   int          `json:"char_count,omitempty"`
 }
 
 // NewManifestCorner creates a ManifestCorner with Points guaranteed non-nil.
@@ -75,6 +79,27 @@ func NewManifestCorner(id, title, summary string, points []string, articles []Ar
 		ID: id, Title: title, Summary: summary,
 		Points: NonNil(points), Articles: articles,
 	}
+}
+
+// CornerTiming holds the total playback duration for a single corner.
+type CornerTiming struct {
+	ID          string  `json:"id"`
+	DurationSec float64 `json:"duration_sec"`
+}
+
+// Timeline holds per-corner timing information produced by the assemble step.
+// Persisted as 06_timeline.json.
+type Timeline struct {
+	Corners []CornerTiming `json:"corners"`
+}
+
+// Map converts the ordered Corners slice to a map keyed by CornerID for fast lookup.
+func (t Timeline) Map() map[string]float64 {
+	m := make(map[string]float64, len(t.Corners))
+	for _, c := range t.Corners {
+		m[c.ID] = c.DurationSec
+	}
+	return m
 }
 
 // UnmarshalJSON implements json.Unmarshaler to normalize Points to a non-nil empty slice.

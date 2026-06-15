@@ -332,18 +332,21 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 	activeBGM := ""
 
 	for ci, corner := range corners {
+		cornerID := corner.ID
 		if corner.StartPauseSec > 0 {
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypePause,
+				CornerID:    cornerID,
 				DurationSec: corner.StartPauseSec,
 			})
 		}
 
-		segments = appendBoundaryAudio(segments, corner.StartAudio, corner.BGM, &activeBGM)
+		segments = appendBoundaryAudio(segments, corner.StartAudio, corner.BGM, &activeBGM, cornerID)
 
 		if corner.BGM != activeBGM {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeBGM,
+				CornerID:  cornerID,
 				AssetName: corner.BGM,
 			})
 			activeBGM = corner.BGM
@@ -356,6 +359,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			}
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,
+				CornerID:    cornerID,
 				SpeakerRole: line.SpeakerRole,
 				Style:       line.Style,
 				Intonation:  line.Intonation,
@@ -367,22 +371,25 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			for _, ins := range insertionMap[key] {
 				segments = append(segments, model.ScriptSegment{
 					Type:      ins.Type,
+					CornerID:  cornerID,
 					AssetName: ins.AssetName,
 				})
 			}
 			for _, p := range pauseMap[key] {
 				segments = append(segments, model.ScriptSegment{
 					Type:        model.SegmentTypePause,
+					CornerID:    cornerID,
 					DurationSec: p.DurationSec,
 				})
 			}
 		}
 
-		segments = appendBoundaryAudio(segments, corner.EndAudio, "", &activeBGM)
+		segments = appendBoundaryAudio(segments, corner.EndAudio, "", &activeBGM, cornerID)
 
 		if corner.EndPauseSec > 0 {
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypePause,
+				CornerID:    cornerID,
 				DurationSec: corner.EndPauseSec,
 			})
 		}
@@ -395,7 +402,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 // For type:jingle, emits a jingle segment and resets activeBGM.
 // For type:se, pre-emits BGM (if cornerBGM is non-empty and differs from activeBGM) then emits SE without resetting activeBGM.
 // Pass cornerBGM="" for end boundaries where BGM pre-emit is not desired.
-func appendBoundaryAudio(segments []model.ScriptSegment, audio *model.CornerAudio, cornerBGM string, activeBGM *string) []model.ScriptSegment {
+func appendBoundaryAudio(segments []model.ScriptSegment, audio *model.CornerAudio, cornerBGM string, activeBGM *string, cornerID string) []model.ScriptSegment {
 	if audio == nil {
 		return segments
 	}
@@ -403,6 +410,7 @@ func appendBoundaryAudio(segments []model.ScriptSegment, audio *model.CornerAudi
 	case model.SegmentTypeJingle:
 		segments = append(segments, model.ScriptSegment{
 			Type:      model.SegmentTypeJingle,
+			CornerID:  cornerID,
 			AssetName: audio.AssetName,
 		})
 		*activeBGM = ""
@@ -410,12 +418,14 @@ func appendBoundaryAudio(segments []model.ScriptSegment, audio *model.CornerAudi
 		if cornerBGM != "" && cornerBGM != *activeBGM {
 			segments = append(segments, model.ScriptSegment{
 				Type:      model.SegmentTypeBGM,
+				CornerID:  cornerID,
 				AssetName: cornerBGM,
 			})
 			*activeBGM = cornerBGM
 		}
 		segments = append(segments, model.ScriptSegment{
 			Type:      model.SegmentTypeSE,
+			CornerID:  cornerID,
 			AssetName: audio.AssetName,
 		})
 	}

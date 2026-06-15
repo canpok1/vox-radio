@@ -20,8 +20,9 @@ const defaultPauseSec = 0.3
 
 // Result holds the output metrics for an assembled episode.
 type Result struct {
-	DurationSec float64
-	Bytes       int64
+	DurationSec     float64
+	Bytes           int64
+	CornerDurations map[string]float64
 }
 
 // Assembler assembles speech clips and assets into a final mp3.
@@ -82,6 +83,11 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, err
 	}
 
+	jingleDurations, err := a.collectJingleDurations(script)
+	if err != nil {
+		return nil, err
+	}
+
 	bctx := BuildContext{
 		Script:      script,
 		Clips:       clips,
@@ -125,31 +131,54 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 
 	logger.Info(fmt.Sprintf("完了 (duration=%.1fs, %.2fMB, %.1fs)", dur, float64(size)/(1024*1024), time.Since(start).Seconds()))
 
-	return &Result{DurationSec: dur, Bytes: size}, nil
+	seSequentialDurations := make(map[string]float64, len(seDurations))
+	for name, dur := range seDurations {
+		if entry, ok := a.AssetsConfig.SE[name]; ok && !entry.EffectiveOverlay() {
+			seSequentialDurations[name] = dur
+		}
+	}
+	cornerDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations, seSequentialDurations)
+
+	return &Result{DurationSec: dur, Bytes: size, CornerDurations: cornerDurations}, nil
 }
 
-// collectSEDurations fetches duration (via getDuration) for each unique SE asset
-// that appears in the script and is defined in AssetsConfig.SE.
-func (a *Assembler) collectSEDurations(script model.Script) (map[string]float64, error) {
+// collectAssetDurations fetches the playback duration for each unique asset of segType
+// that appears in the script. getFile returns the file path for a given asset name (ok=false
+// means the asset is not in the config and should be skipped). errLabel is used in errors.
+func (a *Assembler) collectAssetDurations(script model.Script, segType model.SegmentType, getFile func(name string) (string, bool), errLabel string) (map[string]float64, error) {
 	seen := make(map[string]struct{})
 	for _, seg := range script.Segments {
-		if seg.Type == model.SegmentTypeSE && seg.AssetName != "" {
+		if seg.Type == segType && seg.AssetName != "" {
 			seen[seg.AssetName] = struct{}{}
 		}
 	}
 	durations := make(map[string]float64)
 	for name := range seen {
-		entry, ok := a.AssetsConfig.SE[name]
+		file, ok := getFile(name)
 		if !ok {
 			continue
 		}
-		dur, err := a.getDuration(entry.File)
+		dur, err := a.getDuration(file)
 		if err != nil {
-			return nil, fmt.Errorf("get SE duration for %q: %w", name, err)
+			return nil, fmt.Errorf("get %s duration for %q: %w", errLabel, name, err)
 		}
 		durations[name] = dur
 	}
 	return durations, nil
+}
+
+func (a *Assembler) collectJingleDurations(script model.Script) (map[string]float64, error) {
+	return a.collectAssetDurations(script, model.SegmentTypeJingle, func(name string) (string, bool) {
+		e, ok := a.AssetsConfig.Jingle[name]
+		return e.File, ok
+	}, "jingle")
+}
+
+func (a *Assembler) collectSEDurations(script model.Script) (map[string]float64, error) {
+	return a.collectAssetDurations(script, model.SegmentTypeSE, func(name string) (string, bool) {
+		e, ok := a.AssetsConfig.SE[name]
+		return e.File, ok
+	}, "SE")
 }
 
 // buildCmdArgs converts FFmpegArgs into a flat argument slice for exec.Command.

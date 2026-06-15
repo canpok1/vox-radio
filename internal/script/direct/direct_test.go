@@ -1406,3 +1406,56 @@ func TestLLMDirector_Direct_WithProofread_ReturnsBeforeFromOriginalWhenNoDirectC
 		t.Errorf("Before: got %q, want 頭突きするのだ (original text when no direct conversion)", pr.Corrections[0].Before)
 	}
 }
+
+func TestLLMDirector_Direct_PropagatesCornerID(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{
+		{ID: "opening", Title: "OP", Lines: []model.Line{{SpeakerRole: "host", Text: "こんにちは"}}},
+		{ID: "tech", Title: "Tech", Lines: []model.Line{{SpeakerRole: "host", Text: "技術の話"}}},
+	}
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	if got.Segments[0].CornerID != "opening" {
+		t.Errorf("Segments[0].CornerID: got %q, want opening", got.Segments[0].CornerID)
+	}
+	if got.Segments[1].CornerID != "tech" {
+		t.Errorf("Segments[1].CornerID: got %q, want tech", got.Segments[1].CornerID)
+	}
+}
+
+func TestLLMDirector_Direct_PropagatesCornerID_WithBoundaryAudio(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := []model.CornerLines{
+		{
+			ID:    "opening",
+			Title: "OP",
+			StartAudio: &model.CornerAudio{
+				Type:      model.SegmentTypeJingle,
+				AssetName: "jingle_open",
+			},
+			Lines: []model.Line{{SpeakerRole: "host", Text: "こんにちは"}},
+		},
+	}
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for i, seg := range got.Segments {
+		if seg.CornerID != "opening" {
+			t.Errorf("Segments[%d].CornerID: got %q, want opening", i, seg.CornerID)
+		}
+	}
+}

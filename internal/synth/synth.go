@@ -97,6 +97,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 			SpeakerRole: seg.SpeakerRole,
 			Style:       seg.Style,
 			Text:        seg.Text,
+			CornerID:    seg.CornerID,
 		})
 	}
 

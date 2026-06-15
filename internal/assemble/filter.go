@@ -568,6 +568,41 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 	return concatLabel
 }
 
+// computeCornerDurations calculates the estimated playback duration per corner.
+// Speech durations come from clips metadata; pauseAfter (defaultPauseSec) is added after each
+// clip unless the next speech segment has the same speaker role.
+// Explicit pause, sequential SE (non-overlay), and jingle durations are attributed by CornerID.
+// Overlay SE and BGM are excluded because they play concurrently with other audio.
+func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64, seSequentialDurations map[string]float64) map[string]float64 {
+	durations := make(map[string]float64)
+	clipIdx := 0
+	for i, seg := range script.Segments {
+		switch seg.Type {
+		case model.SegmentTypeSpeech:
+			if clipIdx < len(clips) {
+				d := clips[clipIdx].DurationSec
+				nextRole, hasNext := nextClipSpeakerRole(script.Segments, i)
+				if !hasNext || nextRole != seg.SpeakerRole {
+					d += pauseSec
+				}
+				durations[seg.CornerID] += d
+				clipIdx++
+			}
+		case model.SegmentTypePause:
+			durations[seg.CornerID] += seg.DurationSec
+		case model.SegmentTypeJingle:
+			if jingleDurations != nil {
+				durations[seg.CornerID] += jingleDurations[seg.AssetName]
+			}
+		case model.SegmentTypeSE:
+			if seSequentialDurations != nil {
+				durations[seg.CornerID] += seSequentialDurations[seg.AssetName]
+			}
+		}
+	}
+	return durations
+}
+
 // applySilenceTrim strips leading and trailing silence from currentLabel when enabled.
 // Trailing silence is removed via the areverse trick (same pattern as applyFadeOut).
 // Returns currentLabel unchanged when enabled is false.

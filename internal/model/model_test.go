@@ -806,6 +806,207 @@ func TestCastsForLLM_Empty(t *testing.T) {
 	}
 }
 
+func TestCornerLines_ID_RoundTrip(t *testing.T) {
+	cl := model.CornerLines{
+		ID:    "opening",
+		Title: "オープニング",
+		Lines: []model.Line{{SpeakerRole: "host", Text: "hello"}},
+	}
+	data, err := json.Marshal(cl)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if !strings.Contains(string(data), `"id":"opening"`) {
+		t.Errorf("id field missing in JSON: %s", string(data))
+	}
+	var got model.CornerLines
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if got.ID != "opening" {
+		t.Errorf("ID: got %q, want opening", got.ID)
+	}
+}
+
+func TestCornerLines_ID_OmittedWhenEmpty(t *testing.T) {
+	cl := model.CornerLines{
+		Title: "オープニング",
+		Lines: []model.Line{{SpeakerRole: "host", Text: "hello"}},
+	}
+	data, err := json.Marshal(cl)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if strings.Contains(string(data), `"id"`) {
+		t.Errorf("id field should be omitted when empty: %s", string(data))
+	}
+}
+
+func TestScriptSegment_CornerID_RoundTrip(t *testing.T) {
+	seg := model.ScriptSegment{
+		Type:        model.SegmentTypeSpeech,
+		CornerID:    "opening",
+		SpeakerRole: "host",
+		Text:        "hello",
+	}
+	data, err := json.Marshal(seg)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if !strings.Contains(string(data), `"corner_id":"opening"`) {
+		t.Errorf("corner_id field missing in JSON: %s", string(data))
+	}
+	var got model.ScriptSegment
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if got.CornerID != "opening" {
+		t.Errorf("CornerID: got %q, want opening", got.CornerID)
+	}
+}
+
+func TestScriptSegment_CornerID_OmittedWhenEmpty(t *testing.T) {
+	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "hello"}
+	data, err := json.Marshal(seg)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if strings.Contains(string(data), `"corner_id"`) {
+		t.Errorf("corner_id should be omitted when empty: %s", string(data))
+	}
+}
+
+func TestClipMeta_CornerID_RoundTrip(t *testing.T) {
+	clip := model.ClipMeta{
+		Index:       0,
+		File:        "clip_000.wav",
+		DurationSec: 2.5,
+		SpeakerRole: "host",
+		Text:        "hello",
+		CornerID:    "opening",
+	}
+	data, err := json.Marshal(clip)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if !strings.Contains(string(data), `"corner_id":"opening"`) {
+		t.Errorf("corner_id field missing in JSON: %s", string(data))
+	}
+	var got model.ClipMeta
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if got.CornerID != "opening" {
+		t.Errorf("CornerID: got %q, want opening", got.CornerID)
+	}
+}
+
+func TestClipMeta_CornerID_OmittedWhenEmpty(t *testing.T) {
+	clip := model.ClipMeta{Index: 0, File: "clip_000.wav", DurationSec: 2.5, SpeakerRole: "host", Text: "hello"}
+	data, err := json.Marshal(clip)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	if strings.Contains(string(data), `"corner_id"`) {
+		t.Errorf("corner_id should be omitted when empty: %s", string(data))
+	}
+}
+
+func TestManifestCorner_DurationFields_RoundTrip(t *testing.T) {
+	c := model.ManifestCorner{
+		ID:          "tech",
+		Title:       "テックニュース",
+		Points:      []string{"p1"},
+		Articles:    []model.ArticleRef{},
+		TargetSec:   60,
+		SpeechSec:   55.3,
+		DurationSec: 58.7,
+		CharCount:   420,
+	}
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var got model.ManifestCorner
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if got.TargetSec != 60 {
+		t.Errorf("TargetSec: got %d, want 60", got.TargetSec)
+	}
+	if got.SpeechSec != 55.3 {
+		t.Errorf("SpeechSec: got %f, want 55.3", got.SpeechSec)
+	}
+	if got.DurationSec != 58.7 {
+		t.Errorf("DurationSec: got %f, want 58.7", got.DurationSec)
+	}
+	if got.CharCount != 420 {
+		t.Errorf("CharCount: got %d, want 420", got.CharCount)
+	}
+}
+
+func TestManifestCorner_DurationFields_OmittedWhenZero(t *testing.T) {
+	c := model.ManifestCorner{ID: "c", Title: "T", Points: []string{}, Articles: []model.ArticleRef{}}
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	s := string(data)
+	for _, field := range []string{`"target_sec"`, `"speech_sec"`, `"duration_sec"`, `"char_count"`} {
+		if strings.Contains(s, field) {
+			t.Errorf("field %q should be omitted when zero: %s", field, s)
+		}
+	}
+}
+
+func TestTimeline_RoundTrip(t *testing.T) {
+	tl := model.Timeline{
+		Corners: []model.CornerTiming{
+			{ID: "opening", DurationSec: 30.5},
+			{ID: "tech", DurationSec: 65.2},
+		},
+	}
+	data, err := json.Marshal(tl)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var got model.Timeline
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(got.Corners) != 2 {
+		t.Fatalf("Corners: got %d, want 2", len(got.Corners))
+	}
+	if got.Corners[0].ID != "opening" {
+		t.Errorf("Corners[0].ID: got %q, want opening", got.Corners[0].ID)
+	}
+	if got.Corners[0].DurationSec != 30.5 {
+		t.Errorf("Corners[0].DurationSec: got %f, want 30.5", got.Corners[0].DurationSec)
+	}
+	if got.Corners[1].ID != "tech" {
+		t.Errorf("Corners[1].ID: got %q, want tech", got.Corners[1].ID)
+	}
+}
+
+func TestTimeline_Map(t *testing.T) {
+	tl := model.Timeline{
+		Corners: []model.CornerTiming{
+			{ID: "opening", DurationSec: 30.5},
+			{ID: "tech", DurationSec: 65.2},
+		},
+	}
+	got := tl.Map()
+	if got["opening"] != 30.5 {
+		t.Errorf("opening: got %f, want 30.5", got["opening"])
+	}
+	if got["tech"] != 65.2 {
+		t.Errorf("tech: got %f, want 65.2", got["tech"])
+	}
+	if len(got) != 2 {
+		t.Errorf("len: got %d, want 2", len(got))
+	}
+}
+
 func TestCornerLines_EmptyAssetFields_OmittedFromJSON(t *testing.T) {
 	cl := model.CornerLines{
 		Title: "C1",

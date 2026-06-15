@@ -8,6 +8,7 @@ type ClipMeta struct {
 	SpeakerRole string  `json:"speaker_role"`
 	Style       string  `json:"style,omitempty"`
 	Text        string  `json:"text"`
+	CornerID    string  `json:"corner_id,omitempty"`
 }
 
 // ClipsMeta holds all synthesized clips and their metadata

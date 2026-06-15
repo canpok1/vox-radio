@@ -2225,3 +2225,93 @@ func TestBuildFFmpegArgs_AudioQuality(t *testing.T) {
 		})
 	}
 }
+
+func TestComputeCornerDurations_BasicSpeech(t *testing.T) {
+	clips := []model.ClipMeta{
+		{Index: 0, DurationSec: 2.0, CornerID: "op"},
+		{Index: 1, DurationSec: 3.0, CornerID: "tech"},
+		{Index: 2, DurationSec: 1.5, CornerID: "tech"},
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
+			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "host", Text: "B"},
+			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "guest", Text: "C"},
+		},
+	}
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
+
+	// op: 2.0 (clip) + 0 pause (next speech seg has same speaker "host") = 2.0
+	wantOP := 2.0
+	if got["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	}
+	// tech: 3.0 (clip) + 0.3 (pauseAfter, next speaker "guest" differs) + 1.5 (clip) + 0.3 (last clip, no next) = 5.1
+	wantTech := 3.0 + defaultPauseSec + 1.5 + defaultPauseSec
+	if got["tech"] != wantTech {
+		t.Errorf("tech: got %.3f, want %.3f", got["tech"], wantTech)
+	}
+}
+
+func TestComputeCornerDurations_WithPauseSegment(t *testing.T) {
+	clips := []model.ClipMeta{
+		{Index: 0, DurationSec: 2.0, CornerID: "op"},
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypePause, CornerID: "op", DurationSec: 0.5},
+			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
+		},
+	}
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
+
+	// op: 0.5 (pause) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 2.8
+	wantOP := 0.5 + 2.0 + defaultPauseSec
+	if got["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	}
+}
+
+func TestComputeCornerDurations_WithJingle(t *testing.T) {
+	clips := []model.ClipMeta{
+		{Index: 0, DurationSec: 2.0, CornerID: "tech"},
+	}
+	jingleDurations := map[string]float64{"jingle_op": 5.0}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeJingle, CornerID: "op", AssetName: "jingle_op"},
+			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "host", Text: "A"},
+		},
+	}
+	got := computeCornerDurations(clips, script, defaultPauseSec, jingleDurations, nil)
+
+	if got["op"] != 5.0 {
+		t.Errorf("op: got %.3f, want 5.0", got["op"])
+	}
+	// tech: 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 2.3
+	wantTech := 2.0 + defaultPauseSec
+	if got["tech"] != wantTech {
+		t.Errorf("tech: got %.3f, want %.3f", got["tech"], wantTech)
+	}
+}
+
+func TestComputeCornerDurations_WithSequentialSE(t *testing.T) {
+	clips := []model.ClipMeta{
+		{Index: 0, DurationSec: 2.0, CornerID: "op"},
+	}
+	// seSequentialDurations: only non-overlay SE (already filtered by caller)
+	seSequentialDurations := map[string]float64{"chime": 1.0}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSE, CornerID: "op", AssetName: "chime"},
+			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
+		},
+	}
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, seSequentialDurations)
+
+	// op: 1.0 (SE) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 3.3
+	wantOP := 1.0 + 2.0 + defaultPauseSec
+	if got["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	}
+}
