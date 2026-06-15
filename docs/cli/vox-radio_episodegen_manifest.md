@@ -32,13 +32,15 @@ vox-radio episodegen manifest [flags]
 ### Options
 
 ```
-      --audio string     音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）
-  -h, --help             help for manifest
-      --lines string     03_lines.json のパス（任意）。指定すると LLM が元表記のセリフから番組要約・会話メモ・コーナー単位要約を生成する
-      --out string       manifest.json の出力先パス（必須）
-      --rundown string   02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
-      --script string    04_script.json のパス（任意）。指定すると SE アセットのクレジットを自動収集する
-      --spec string      エピソード仕様 YAML ファイルのパス（必須）
+      --audio string      音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）
+      --clips string      05_clips/clips.json のパス（任意）。指定するとコーナー別の speech_sec・char_count をマニフェストに追加する
+  -h, --help              help for manifest
+      --lines string      03_lines.json のパス（任意）。指定すると LLM が元表記のセリフから番組要約・会話メモ・コーナー単位要約を生成する
+      --out string        manifest.json の出力先パス（必須）
+      --rundown string    02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
+      --script string     04_script.json のパス（任意）。指定すると SE アセットのクレジットを自動収集する
+      --spec string       エピソード仕様 YAML ファイルのパス（必須）
+      --timeline string   06_timeline.json のパス（任意）。指定するとコーナー別の duration_sec をマニフェストに追加する
 ```
 
 ### Options inherited from parent commands
