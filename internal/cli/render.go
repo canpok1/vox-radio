@@ -45,7 +45,10 @@ URL なし記事のスキップは {{if .URL}} でテンプレ側に表現でき
 			}
 
 			if outputPath != "" {
-				return os.WriteFile(outputPath, []byte(result), 0o644)
+				if err := os.WriteFile(outputPath, []byte(result), 0o644); err != nil {
+					return fmt.Errorf("write output: %w", err)
+				}
+				return nil
 			}
 
 			_, err = fmt.Fprint(cmd.OutOrStdout(), result)

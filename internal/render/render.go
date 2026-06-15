@@ -9,7 +9,7 @@ import (
 
 // Render executes the given text/template source with the manifest as data context.
 // FuncMap provides:
-//   - corner(id string) model.ManifestCorner — returns the corner with the given ID (zero value if not found)
+//   - corner(id string) *model.ManifestCorner — returns the corner with the given ID (nil if not found)
 //   - hasLinks(c model.ManifestCorner) bool — returns true if any article has a non-empty URL
 func Render(tmplText string, m model.Manifest) (string, error) {
 	funcMap := template.FuncMap{
