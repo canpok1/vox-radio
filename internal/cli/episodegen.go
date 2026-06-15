@@ -27,14 +27,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// assemblerAdapter wraps *assemble.Assembler to satisfy pipeline.Assembler (which returns error only).
+// assemblerAdapter wraps *assemble.Assembler to satisfy pipeline.Assembler.
 type assemblerAdapter struct {
 	inner *assemble.Assembler
 }
 
-func (a *assemblerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error {
-	_, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath, meta)
-	return err
+func (a *assemblerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
+	result, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath, meta)
+	if err != nil {
+		return nil, err
+	}
+	return result.CornerDurations, nil
 }
 
 func newEpisodegenCmd() *cobra.Command {

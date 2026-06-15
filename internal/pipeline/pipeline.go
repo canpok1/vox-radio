@@ -42,8 +42,9 @@ type Synther interface {
 }
 
 // Assembler produces an MP3 episode from clips and a script.
+// Returns per-corner estimated durations (seconds) keyed by CornerID.
 type Assembler interface {
-	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) error
+	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error)
 }
 
 // Options configures a single pipeline run.
@@ -66,6 +67,18 @@ type Runner struct {
 	ProgramSummarizer ProgramSummarizer // optional; if nil, program summary is omitted from manifest
 	CornerSummarizer  CornerSummarizer  // optional; if nil, corner summaries are omitted from manifest
 	ExcludedDedupKeys []string          // DedupKeys to exclude from feed collection (past-used articles)
+}
+
+// writeTimeline builds a model.Timeline from per-corner durations and writes it to 06_timeline.json.
+func writeTimeline(outDir string, corners []config.CornerConfig, cornerDurations map[string]float64) error {
+	timings := make([]model.CornerTiming, 0, len(corners))
+	for _, c := range corners {
+		timings = append(timings, model.CornerTiming{
+			ID:          c.ID,
+			DurationSec: cornerDurations[c.ID],
+		})
+	}
+	return fileio.WriteJSON(fileio.TimelinePath(outDir), model.Timeline{Corners: timings})
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
@@ -157,8 +170,13 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		GeneratedAt: generatedAt,
 	}
 	episodePath := fileio.EpisodePath(outDir, r.Spec.Program.ID, opts.EpisodeNumber)
-	if err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), episodePath, episodeMeta); err != nil {
+	cornerDurations, err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), episodePath, episodeMeta)
+	if err != nil {
 		return fmt.Errorf("assemble: %w", err)
+	}
+
+	if err := writeTimeline(outDir, r.Spec.Corners, cornerDurations); err != nil {
+		return err
 	}
 
 	m := manifest.Build(manifest.BuildParams{
