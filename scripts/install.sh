@@ -164,13 +164,11 @@ echo "チェックサム OK"
 tar -xzf "$WORK_DIR/$ASSET_NAME" -C "$WORK_DIR" vox-radio
 
 # ---- インストール ----
-# 設置先が存在しなければ作成する（$HOME/.local/bin はデフォルトでは無いことが多い）
-if [[ ! -d "$INSTALL_DIR" ]]; then
-  if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
-    echo "ERROR: INSTALL_DIR を作成できません: $INSTALL_DIR" >&2
-    echo "       書き込み可能なディレクトリを INSTALL_DIR で指定してください。" >&2
-    exit 1
-  fi
+# 設置先を作成する（既存なら何もしない。$HOME/.local/bin はデフォルトでは無いことが多い）
+if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+  echo "ERROR: INSTALL_DIR を作成できません: $INSTALL_DIR" >&2
+  echo "       書き込み可能なディレクトリを INSTALL_DIR で指定してください。" >&2
+  exit 1
 fi
 
 if [[ ! -w "$INSTALL_DIR" ]]; then
