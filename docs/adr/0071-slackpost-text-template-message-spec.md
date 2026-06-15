@@ -1,6 +1,6 @@
 # 0071. slackpost のメッセージ整形を text/template ベースの2テンプレ構成へ刷新する
 
-- ステータス: 採用
+- ステータス: 採用（テンプレの持ち方は [ADR-0072](0072-render-command-and-template-file-reference.md) で改定: yaml インライン → テンプレファイルのパス参照）
 - 日付: 2026-06-15
 
 ## コンテキスト
