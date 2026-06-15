@@ -131,7 +131,13 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 
 	logger.Info(fmt.Sprintf("完了 (duration=%.1fs, %.2fMB, %.1fs)", dur, float64(size)/(1024*1024), time.Since(start).Seconds()))
 
-	cornerDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations)
+	seSequentialDurations := make(map[string]float64, len(seDurations))
+	for name, dur := range seDurations {
+		if entry, ok := a.AssetsConfig.SE[name]; ok && !entry.EffectiveOverlay() {
+			seSequentialDurations[name] = dur
+		}
+	}
+	cornerDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations, seSequentialDurations)
 
 	return &Result{DurationSec: dur, Bytes: size, CornerDurations: cornerDurations}, nil
 }

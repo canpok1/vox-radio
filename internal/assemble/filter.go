@@ -570,10 +570,10 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 
 // computeCornerDurations calculates the estimated playback duration per corner.
 // Speech durations come from clips metadata; pauseAfter (defaultPauseSec) is added after each
-// clip unless the next speech segment has the same speaker role within the same corner.
-// Explicit pause segments and jingle durations (if provided) are attributed by CornerID.
-// SE overlay and BGM segments are excluded as they play concurrently.
-func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64) map[string]float64 {
+// clip unless the next speech segment has the same speaker role.
+// Explicit pause, sequential SE (non-overlay), and jingle durations are attributed by CornerID.
+// Overlay SE and BGM are excluded because they play concurrently with other audio.
+func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64, seSequentialDurations map[string]float64) map[string]float64 {
 	durations := make(map[string]float64)
 	clipIdx := 0
 	for i, seg := range script.Segments {
@@ -593,6 +593,10 @@ func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSe
 		case model.SegmentTypeJingle:
 			if jingleDurations != nil {
 				durations[seg.CornerID] += jingleDurations[seg.AssetName]
+			}
+		case model.SegmentTypeSE:
+			if seSequentialDurations != nil {
+				durations[seg.CornerID] += seSequentialDurations[seg.AssetName]
 			}
 		}
 	}

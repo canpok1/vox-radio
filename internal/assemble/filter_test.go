@@ -2239,7 +2239,7 @@ func TestComputeCornerDurations_BasicSpeech(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "guest", Text: "C"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, nil)
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
 
 	// op: 2.0 (clip) + 0 pause (next speech seg has same speaker "host") = 2.0
 	wantOP := 2.0
@@ -2263,7 +2263,7 @@ func TestComputeCornerDurations_WithPauseSegment(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, nil)
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
 
 	// op: 0.5 (pause) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 2.8
 	wantOP := 0.5 + 2.0 + defaultPauseSec
@@ -2283,7 +2283,7 @@ func TestComputeCornerDurations_WithJingle(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "host", Text: "A"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, jingleDurations)
+	got := computeCornerDurations(clips, script, defaultPauseSec, jingleDurations, nil)
 
 	if got["op"] != 5.0 {
 		t.Errorf("op: got %.3f, want 5.0", got["op"])
@@ -2292,5 +2292,26 @@ func TestComputeCornerDurations_WithJingle(t *testing.T) {
 	wantTech := 2.0 + defaultPauseSec
 	if got["tech"] != wantTech {
 		t.Errorf("tech: got %.3f, want %.3f", got["tech"], wantTech)
+	}
+}
+
+func TestComputeCornerDurations_WithSequentialSE(t *testing.T) {
+	clips := []model.ClipMeta{
+		{Index: 0, DurationSec: 2.0, CornerID: "op"},
+	}
+	// seSequentialDurations: only non-overlay SE (already filtered by caller)
+	seSequentialDurations := map[string]float64{"chime": 1.0}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSE, CornerID: "op", AssetName: "chime"},
+			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
+		},
+	}
+	got := computeCornerDurations(clips, script, defaultPauseSec, nil, seSequentialDurations)
+
+	// op: 1.0 (SE) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 3.3
+	wantOP := 1.0 + 2.0 + defaultPauseSec
+	if got["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
 	}
 }

@@ -176,7 +176,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	}
 
 	if err := writeTimeline(outDir, r.Spec.Corners, cornerDurations); err != nil {
-		return err
+		return fmt.Errorf("write timeline: %w", err)
 	}
 
 	m := manifest.Build(manifest.BuildParams{
