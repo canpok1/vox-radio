@@ -51,6 +51,9 @@ func newEpisodegenCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		Long: `collect → rundown → script → synth → assemble → manifest を一括実行します。
 
+実行には ffmpeg および ffprobe が必要です。インストール手順は vox-radio の README を参照してください:
+https://github.com/canpok1/vox-radio#readme
+
 中間ファイルは <out-dir>/intermediate/ に書き出され、
 最終的な {program.id}_ep{NNN}.mp3 は <out-dir>/ 直下に配置されます。
 
@@ -71,6 +74,10 @@ func newEpisodegenCmd() *cobra.Command {
 				return fmt.Errorf("setup logger: %w", err)
 			}
 			defer func() { _ = logFile.Close() }()
+
+			if err := requireMediaTools(); err != nil {
+				return err
+			}
 
 			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
 			if err != nil {

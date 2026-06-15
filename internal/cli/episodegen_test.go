@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,6 +11,13 @@ import (
 )
 
 func TestEpisodegen_ExistingEpisodeCheck(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not installed")
+	}
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		t.Skip("ffprobe not installed")
+	}
+
 	tests := []struct {
 		name          string
 		episodeExists bool
