@@ -12,10 +12,16 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ## 設置先（INSTALL_DIR）
 
-既定の設置先は `/usr/local/bin` です。書き込み権限がない場合は自動で `sudo` にフォールバックします。別の場所に入れる場合は環境変数 `INSTALL_DIR` を指定します。
+既定の設置先は `$HOME/.local/bin` です。ユーザー権限のみで完結し、`sudo` は不要です。ディレクトリが無い場合は自動で作成します。別の場所（書き込み権限のあるディレクトリ）に入れる場合は環境変数 `INSTALL_DIR` を指定します。指定先に書き込み権限が無い場合はエラーで停止し、別ディレクトリの指定を促します。
 
 ```bash
-curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | INSTALL_DIR=$HOME/.local/bin bash
+curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | INSTALL_DIR=$HOME/bin bash
+```
+
+`$HOME/.local/bin` が `PATH` に含まれていない場合は、インストール後に表示される案内に従い、shell の設定ファイル（例: `~/.bashrc`, `~/.zshrc`）へ次の行を追記してください。
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ## バージョンの指定
