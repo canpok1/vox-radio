@@ -59,16 +59,28 @@ type rssEnclosure struct {
 	Type   string `xml:"type,attr"`
 }
 
+type channelMeta struct {
+	title       string
+	description string
+	author      string
+}
+
+func extractChannelMeta(entries []cache.Entry) channelMeta {
+	if len(entries) == 0 {
+		return channelMeta{}
+	}
+	e := entries[len(entries)-1]
+	return channelMeta{
+		title:       e.Title,
+		description: e.Description,
+		author:      e.Author,
+	}
+}
+
 // BuildFeed generates a podcast RSS 2.0 + iTunes feed XML from cache entries.
 // Channel title/description/author come from the latest entry. Items are ordered newest first.
 func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
-	var channelTitle, channelDescription, channelAuthor string
-	if len(entries) > 0 {
-		latest := entries[len(entries)-1]
-		channelTitle = latest.Title
-		channelDescription = latest.Description
-		channelAuthor = latest.Author
-	}
+	meta := extractChannelMeta(entries)
 
 	var cat *itunesCategory
 	if cfg.Feed.Category != "" {
@@ -103,11 +115,11 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 		Version:     "2.0",
 		XmlnsItunes: "http://www.itunes.com/dtds/podcast-1.0.dtd",
 		Channel: rssChannel{
-			Title:          channelTitle,
-			Description:    channelDescription,
+			Title:          meta.title,
+			Description:    meta.description,
 			Language:       cfg.Feed.Language,
 			Link:           cfg.Feed.SiteURL,
-			ItunesAuthor:   channelAuthor,
+			ItunesAuthor:   meta.author,
 			ItunesEmail:    cfg.Feed.Email,
 			ItunesCategory: cat,
 			ItunesExplicit: explicitStr,
