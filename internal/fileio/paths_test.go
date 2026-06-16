@@ -140,22 +140,32 @@ func TestClipFileName(t *testing.T) {
 	}
 }
 
-func TestPaths(t *testing.T) {
-	outDir := "/output"
+func TestEpisodeBaseName(t *testing.T) {
+	got := fileio.EpisodeBaseName("morning-news", 7)
+	if want := "morning-news_ep007"; got != want {
+		t.Errorf("EpisodeBaseName = %q, want %q", got, want)
+	}
+}
+
+func TestEpisodeLayout(t *testing.T) {
+	layout := fileio.EpisodeLayout{OutDir: "/output", ProgramID: "test-prog", EpisodeNumber: 5}
+	base := filepath.Join("/output", "intermediate", "test-prog_ep005")
 	tests := []struct {
 		name string
 		got  string
 		want string
 	}{
-		{"IntermediateDir", fileio.IntermediateDir(outDir), filepath.Join(outDir, "intermediate")},
-		{"ClipsDir", fileio.ClipsDir(outDir), filepath.Join(outDir, "intermediate", "05_clips")},
-		{"ArticlesPath", fileio.ArticlesPath(outDir), filepath.Join(outDir, "intermediate", "01_articles.json")},
-		{"SummariesPath", fileio.SummariesPath(outDir), filepath.Join(outDir, "intermediate", "02_summaries.json")},
-		{"RundownPath", fileio.RundownPath(outDir), filepath.Join(outDir, "intermediate", "02_rundown.json")},
-		{"LinesPath", fileio.LinesPath(outDir), filepath.Join(outDir, "intermediate", "03_lines.json")},
-		{"ProofreadPath", fileio.ProofreadPath(outDir), filepath.Join(outDir, "intermediate", "04_proofread.json")},
-		{"ScriptPath", fileio.ScriptPath(outDir), filepath.Join(outDir, "intermediate", "04_script.json")},
-		{"EpisodePath", fileio.EpisodePath(outDir, "test-prog", 5), filepath.Join(outDir, "test-prog_ep005.mp3")},
+		{"Episode", layout.Episode(), filepath.Join("/output", "test-prog_ep005.mp3")},
+		{"Manifest", layout.Manifest(), filepath.Join("/output", "test-prog_ep005_manifest.json")},
+		{"IntermediateDir", layout.IntermediateDir(), base},
+		{"ClipsDir", layout.ClipsDir(), filepath.Join(base, "05_clips")},
+		{"Articles", layout.Articles(), filepath.Join(base, "01_articles.json")},
+		{"Summaries", layout.Summaries(), filepath.Join(base, "02_summaries.json")},
+		{"Rundown", layout.Rundown(), filepath.Join(base, "02_rundown.json")},
+		{"Lines", layout.Lines(), filepath.Join(base, "03_lines.json")},
+		{"Proofread", layout.Proofread(), filepath.Join(base, "04_proofread.json")},
+		{"Script", layout.Script(), filepath.Join(base, "04_script.json")},
+		{"Timeline", layout.Timeline(), filepath.Join(base, "06_timeline.json")},
 	}
 	for _, tt := range tests {
 		if tt.got != tt.want {
@@ -238,17 +248,17 @@ func TestReadJSON_MissingFile(t *testing.T) {
 	}
 }
 
-func TestEnsureOutputDirs(t *testing.T) {
+func TestEpisodeLayout_EnsureDirs(t *testing.T) {
 	tmp := t.TempDir()
-	outDir := filepath.Join(tmp, "output")
+	layout := fileio.EpisodeLayout{OutDir: filepath.Join(tmp, "output"), ProgramID: "prog", EpisodeNumber: 1}
 
-	if err := fileio.EnsureOutputDirs(outDir); err != nil {
-		t.Fatalf("EnsureOutputDirs failed: %v", err)
+	if err := layout.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs failed: %v", err)
 	}
 	for _, dir := range []string{
-		outDir,
-		fileio.IntermediateDir(outDir),
-		fileio.ClipsDir(outDir),
+		layout.OutDir,
+		layout.IntermediateDir(),
+		layout.ClipsDir(),
 	} {
 		info, err := os.Stat(dir)
 		if err != nil {
@@ -258,5 +268,29 @@ func TestEnsureOutputDirs(t *testing.T) {
 		if !info.IsDir() {
 			t.Errorf("%q is not a directory", dir)
 		}
+	}
+}
+
+func TestEpisodeLayout_RemoveIntermediateDir(t *testing.T) {
+	tmp := t.TempDir()
+	layout := fileio.EpisodeLayout{OutDir: filepath.Join(tmp, "output"), ProgramID: "prog", EpisodeNumber: 1}
+
+	if err := layout.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs failed: %v", err)
+	}
+	if err := fileio.WriteJSON(layout.Rundown(), map[string]string{"k": "v"}); err != nil {
+		t.Fatalf("WriteJSON failed: %v", err)
+	}
+
+	if err := layout.RemoveIntermediateDir(); err != nil {
+		t.Fatalf("RemoveIntermediateDir failed: %v", err)
+	}
+	if _, err := os.Stat(layout.IntermediateDir()); !os.IsNotExist(err) {
+		t.Errorf("intermediate dir should be removed, stat err = %v", err)
+	}
+
+	// Idempotent: removing an absent directory is not an error.
+	if err := layout.RemoveIntermediateDir(); err != nil {
+		t.Errorf("RemoveIntermediateDir on absent dir should be nil, got %v", err)
 	}
 }

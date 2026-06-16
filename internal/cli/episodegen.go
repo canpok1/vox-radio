@@ -54,11 +54,12 @@ func newEpisodegenCmd() *cobra.Command {
 実行には ffmpeg および ffprobe が必要です。インストール手順は vox-radio の README を参照してください:
 https://github.com/canpok1/vox-radio#readme
 
-中間ファイルは <out-dir>/intermediate/ に書き出され、
-最終的な {program.id}_ep{NNN}.mp3 は <out-dir>/ 直下に配置されます。
+最終的な {program.id}_ep{NNN}.mp3 とマニフェスト {program.id}_ep{NNN}_manifest.json は
+<out-dir>/ 直下に、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置されます。
+回ごとに別名・別ディレクトリになるため、過去回の成果物は上書きされません。
 
-出力先に {program.id}_ep{NNN}.mp3 が既に存在する場合はエラーで終了します。
-上書きするには --force を指定してください。
+mp3・マニフェスト・中間ディレクトリのいずれかが既に存在する場合はエラーで終了します。
+上書きするには --force を指定してください（--force 指定時は中間ディレクトリを削除して作り直します）。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの voicevox.url より優先して VOICEVOX エンジンの URL を上書きできます。
@@ -90,10 +91,25 @@ https://github.com/canpok1/vox-radio#readme
 				return err
 			}
 
-			if !force {
-				episodePath := fileio.EpisodePath(outDir, p.Program.ID, episodeNumber)
-				if _, err := os.Stat(episodePath); err == nil {
-					return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", episodePath)
+			layout := fileio.EpisodeLayout{
+				OutDir:        outDir,
+				ProgramID:     p.Program.ID,
+				EpisodeNumber: episodeNumber,
+			}
+
+			if force {
+				// mp3 and manifest are single files overwritten in place by the
+				// pipeline, but the intermediate dir can accumulate stale files
+				// across runs (e.g. fewer corners), so remove it up front.
+				// RemoveAll is a no-op if it is absent.
+				if err := layout.RemoveIntermediateDir(); err != nil {
+					return fmt.Errorf("remove intermediate dir: %w", err)
+				}
+			} else {
+				for _, path := range []string{layout.Episode(), layout.Manifest(), layout.IntermediateDir()} {
+					if _, err := os.Stat(path); err == nil {
+						return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", path)
+					}
 				}
 			}
 
@@ -163,17 +179,17 @@ https://github.com/canpok1/vox-radio#readme
 				return err
 			}
 
-			if err := appendToCache(cacheMgr, p.Program.ID, outDir, episodeNumber, cfg.Cache, logger); err != nil {
+			if err := appendToCache(cacheMgr, layout, cfg.Cache, logger); err != nil {
 				logger.Warn("cache append failed (non-fatal)", "err", err)
 			}
 
-			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir, p.Program.ID, episodeNumber))
+			fmt.Printf("pipeline complete: episode at %s\n", layout.Episode())
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&outDir, "out-dir", "output", "出力ディレクトリ（{program.id}_ep{NNN}.mp3 をここに配置し、中間ファイルは <out-dir>/intermediate/ に配置）")
-	cmd.Flags().BoolVar(&force, "force", false, "既存の {program.id}_ep{NNN}.mp3 を上書きする")
+	cmd.Flags().StringVar(&outDir, "out-dir", "output", "出力ディレクトリ（{program.id}_ep{NNN}.mp3 と {program.id}_ep{NNN}_manifest.json をここに配置し、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置）")
+	cmd.Flags().BoolVar(&force, "force", false, "既存の出力（mp3・マニフェスト・中間ディレクトリ）を上書きする")
 	registerSpecFlag(cmd, &specPath)
 
 	cmd.AddCommand(
@@ -189,17 +205,17 @@ https://github.com/canpok1/vox-radio#readme
 	return cmd
 }
 
-func appendToCache(mgr *cache.Manager, programID string, outDir string, episodeNumber int, cacheCfg config.CacheConfig, logger *slog.Logger) error {
+func appendToCache(mgr *cache.Manager, layout fileio.EpisodeLayout, cacheCfg config.CacheConfig, logger *slog.Logger) error {
 	var m model.Manifest
-	if err := fileio.ReadJSON(fileio.ManifestPath(outDir), &m); err != nil {
+	if err := fileio.ReadJSON(layout.Manifest(), &m); err != nil {
 		return fmt.Errorf("read manifest: %w", err)
 	}
 	var rd model.Rundown
-	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+	if err := fileio.ReadJSON(layout.Rundown(), &rd); err != nil {
 		return fmt.Errorf("read rundown: %w", err)
 	}
 
-	episodePath := fileio.EpisodePath(outDir, programID, episodeNumber)
+	episodePath := layout.Episode()
 	var bytes int64
 	var durationSec int
 	if b, err := mediainfo.FileSize(episodePath); err != nil {
@@ -213,10 +229,10 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, episodeN
 		durationSec = int(d)
 	}
 
-	entry := cache.BuildEntryFromManifest(programID, m, rd, bytes, durationSec)
+	entry := cache.BuildEntryFromManifest(layout.ProgramID, m, rd, bytes, durationSec)
 	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
 		return err
 	}
-	logger.Info("cache entry appended", "program_id", programID)
+	logger.Info("cache entry appended", "program_id", layout.ProgramID)
 	return nil
 }

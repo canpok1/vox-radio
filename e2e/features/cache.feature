@@ -14,8 +14,8 @@
     もし "vox-radio episodegen --spec episode-spec.yaml --out-dir out2" を実行する
     ならば 終了コードは 0 である
     かつ ファイル ".vox-radio/cache/e2e-radio.jsonl" の行数は 2 である
-    かつ JSONファイル "out1/manifest.json" のキー "episode_number" は数値 1 である
-    かつ JSONファイル "out2/manifest.json" のキー "episode_number" は数値 2 である
+    かつ JSONファイル "out1/e2e-radio_ep001_manifest.json" のキー "episode_number" は数値 1 である
+    かつ JSONファイル "out2/e2e-radio_ep002_manifest.json" のキー "episode_number" は数値 2 である
 
   シナリオ: program.id のない仕様はエラーになる
     前提 モックLLMサーバーが起動している

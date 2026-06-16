@@ -19,54 +19,90 @@ const (
 	FileProofread = "04_proofread.json"
 	FileScript    = "04_script.json"
 	FileTimeline  = "06_timeline.json"
-	FileManifest  = "manifest.json"
 
 	DirIntermediate = "intermediate"
 	DirClips        = "05_clips"
+
+	// manifestSuffix is appended to the episode base name to form the manifest
+	// file name, e.g. "morning-news_ep001_manifest.json".
+	manifestSuffix = "_manifest.json"
 )
 
 func ClipFileName(n int) string {
 	return fmt.Sprintf("clip_%03d.wav", n)
 }
 
+// EpisodeBaseName returns the base name shared by an episode's outputs,
+// e.g. "morning-news_ep001".
+func EpisodeBaseName(programID string, episodeNumber int) string {
+	return fmt.Sprintf("%s_ep%03d", programID, episodeNumber)
+}
+
 func EpisodeFileName(programID string, episodeNumber int) string {
-	return fmt.Sprintf("%s_ep%03d.mp3", programID, episodeNumber)
+	return EpisodeBaseName(programID, episodeNumber) + ".mp3"
 }
 
-func IntermediateDir(outDir string) string {
-	return filepath.Join(outDir, DirIntermediate)
+// EpisodeLayout resolves the output paths for a single episode produced by the
+// episodegen pipeline. The manifest and intermediate files are namespaced by
+// EpisodeBaseName so that repeated runs do not overwrite past episodes'
+// artifacts.
+type EpisodeLayout struct {
+	OutDir        string
+	ProgramID     string
+	EpisodeNumber int
 }
 
-func ClipsDir(outDir string) string {
-	return filepath.Join(outDir, DirIntermediate, DirClips)
+func (l EpisodeLayout) baseName() string {
+	return EpisodeBaseName(l.ProgramID, l.EpisodeNumber)
 }
 
-func intermediatePath(outDir, file string) string {
-	return filepath.Join(outDir, DirIntermediate, file)
+// Episode returns the path to the final MP3, e.g. <out>/morning-news_ep001.mp3.
+func (l EpisodeLayout) Episode() string {
+	return filepath.Join(l.OutDir, l.baseName()+".mp3")
 }
 
-func ArticlesPath(outDir string) string  { return intermediatePath(outDir, FileArticles) }
-func SummariesPath(outDir string) string { return intermediatePath(outDir, FileSummaries) }
-func RundownPath(outDir string) string   { return intermediatePath(outDir, FileRundown) }
-func LinesPath(outDir string) string     { return intermediatePath(outDir, FileLines) }
-func ProofreadPath(outDir string) string { return intermediatePath(outDir, FileProofread) }
-func ScriptPath(outDir string) string    { return intermediatePath(outDir, FileScript) }
-func TimelinePath(outDir string) string  { return intermediatePath(outDir, FileTimeline) }
-
-func EpisodePath(outDir, programID string, episodeNumber int) string {
-	return filepath.Join(outDir, EpisodeFileName(programID, episodeNumber))
+// Manifest returns the manifest path, e.g. <out>/morning-news_ep001_manifest.json.
+func (l EpisodeLayout) Manifest() string {
+	return filepath.Join(l.OutDir, l.baseName()+manifestSuffix)
 }
 
-func ManifestPath(outDir string) string {
-	return filepath.Join(outDir, FileManifest)
+// IntermediateDir returns the per-episode intermediate directory,
+// e.g. <out>/intermediate/morning-news_ep001.
+func (l EpisodeLayout) IntermediateDir() string {
+	return filepath.Join(l.OutDir, DirIntermediate, l.baseName())
+}
+
+// ClipsDir returns the per-episode WAV clips directory.
+func (l EpisodeLayout) ClipsDir() string {
+	return filepath.Join(l.IntermediateDir(), DirClips)
+}
+
+func (l EpisodeLayout) intermediatePath(file string) string {
+	return filepath.Join(l.IntermediateDir(), file)
+}
+
+func (l EpisodeLayout) Articles() string  { return l.intermediatePath(FileArticles) }
+func (l EpisodeLayout) Summaries() string { return l.intermediatePath(FileSummaries) }
+func (l EpisodeLayout) Rundown() string   { return l.intermediatePath(FileRundown) }
+func (l EpisodeLayout) Lines() string     { return l.intermediatePath(FileLines) }
+func (l EpisodeLayout) Proofread() string { return l.intermediatePath(FileProofread) }
+func (l EpisodeLayout) Script() string    { return l.intermediatePath(FileScript) }
+func (l EpisodeLayout) Timeline() string  { return l.intermediatePath(FileTimeline) }
+
+// EnsureDirs creates the episode's intermediate and clips directories.
+func (l EpisodeLayout) EnsureDirs() error {
+	return os.MkdirAll(l.ClipsDir(), 0o755)
+}
+
+// RemoveIntermediateDir removes the episode's intermediate directory and all
+// its contents. It is used when overwriting an existing episode with --force so
+// that stale artifacts from a previous run do not linger.
+func (l EpisodeLayout) RemoveIntermediateDir() error {
+	return os.RemoveAll(l.IntermediateDir())
 }
 
 func EnsureDir(dir string) error {
 	return os.MkdirAll(dir, 0o755)
-}
-
-func EnsureOutputDirs(outDir string) error {
-	return os.MkdirAll(ClipsDir(outDir), 0o755)
 }
 
 // ReadJSON reads a JSON file at path and unmarshals it into v.
