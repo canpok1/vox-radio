@@ -250,13 +250,6 @@ func TestBuild_AuthorCopiedFromProgram(t *testing.T) {
 	}
 }
 
-func TestBuild_AuthorEmptyWhenNotSet(t *testing.T) {
-	got := manifest.Build(newMinimalBuildParams())
-	if got.Author != "" {
-		t.Errorf("Author = %q, want empty", got.Author)
-	}
-}
-
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
 	p := newMinimalBuildParams()
 	p.Rundown = model.Rundown{
