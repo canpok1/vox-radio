@@ -1,0 +1,46 @@
+program:
+  id: "test-program"
+  title: "コーナーデフォルトテスト"
+  description: "corner_defaults のテスト用"
+
+casts:
+  zundamon:
+    type: regular
+    role: "MC"
+
+corner_defaults:
+  bgm: talk_bgm
+  start_audio:
+    type: jingle
+    id: opening
+  start_pause_sec: 1.0
+  end_pause_sec: 2.0
+
+corners:
+  - id: "c1"
+    title: "コーナー1（継承）"
+    content: "デフォルトをそのまま継承するコーナー"
+    cast:
+      zundamon: "司会"
+    length_sec: 30
+
+  - id: "c2"
+    title: "コーナー2（上書き）"
+    content: "BGMとpauseを上書きするコーナー"
+    cast:
+      zundamon: "司会"
+    length_sec: 30
+    bgm: other_bgm
+    start_pause_sec: 3.0
+
+  - id: "c3"
+    title: "コーナー3（無効化）"
+    content: "BGMを無効化するコーナー"
+    cast:
+      zundamon: "司会"
+    length_sec: 30
+    bgm: ""
+    start_audio: {}
+
+assets_files:
+  - assets_corner_defaults.yaml

@@ -271,7 +271,7 @@ func checkCornerAssets(t *testing.T, spec *config.EpisodeSpec) {
 			t.Errorf("Corners[1].EndAudio.ID: got %q, want ending", corner1.EndAudio.ID)
 		}
 	}
-	if corner1.BGM == "" {
+	if corner1.BGM == nil || *corner1.BGM == "" {
 		t.Error("Corners[1].BGM must not be empty")
 	}
 }
@@ -286,7 +286,7 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 			name: "valid start_audio jingle",
 			spec: &config.EpisodeSpec{
 				Corners: []config.CornerConfig{
-					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"}, BGM: "talk_bgm"},
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"}, BGM: strPtr("talk_bgm")},
 				},
 				Assets: config.AssetsConfig{
 					Jingle: map[string]config.JingleEntry{"opening": {File: "opening.mp3"}},
@@ -373,7 +373,7 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 		{
 			name: "unknown bgm",
 			spec: &config.EpisodeSpec{
-				Corners: []config.CornerConfig{{Title: "C1", BGM: "nonexistent"}},
+				Corners: []config.CornerConfig{{Title: "C1", BGM: strPtr("nonexistent")}},
 				Assets: config.AssetsConfig{
 					Jingle: map[string]config.JingleEntry{},
 					BGM:    map[string]config.BGMEntry{},
@@ -1506,6 +1506,238 @@ func TestSEEntry_EffectiveOverlay(t *testing.T) {
 }
 
 func float64Ptr(v float64) *float64 { return &v }
+
+func strPtr(v string) *string { return &v }
+
+func TestCornerConfig_EffectiveBGM(t *testing.T) {
+	tests := []struct {
+		name string
+		bgm  *string
+		want string
+	}{
+		{name: "nil returns empty", bgm: nil, want: ""},
+		{name: "empty string returns empty (disabled)", bgm: strPtr(""), want: ""},
+		{name: "key returned as-is", bgm: strPtr("talk_bgm"), want: "talk_bgm"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{BGM: tt.bgm}
+			if got := c.EffectiveBGM(); got != tt.want {
+				t.Errorf("EffectiveBGM() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCornerConfig_EffectiveStartPauseSec(t *testing.T) {
+	tests := []struct {
+		name string
+		sec  *float64
+		want float64
+	}{
+		{name: "nil returns 0", sec: nil, want: 0},
+		{name: "explicit value returned", sec: float64Ptr(1.5), want: 1.5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{StartPauseSec: tt.sec}
+			if got := c.EffectiveStartPauseSec(); got != tt.want {
+				t.Errorf("EffectiveStartPauseSec() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCornerConfig_EffectiveEndPauseSec(t *testing.T) {
+	tests := []struct {
+		name string
+		sec  *float64
+		want float64
+	}{
+		{name: "nil returns 0", sec: nil, want: 0},
+		{name: "explicit value returned", sec: float64Ptr(2.0), want: 2.0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{EndPauseSec: tt.sec}
+			if got := c.EffectiveEndPauseSec(); got != tt.want {
+				t.Errorf("EffectiveEndPauseSec() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadEpisodeSpec_CornerDefaults_Inherits(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_corner_defaults.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+	c := spec.Corners[0]
+	// コーナー1はデフォルトを継承する
+	if c.BGM == nil || *c.BGM != "talk_bgm" {
+		got := "<nil>"
+		if c.BGM != nil {
+			got = *c.BGM
+		}
+		t.Errorf("Corners[0].BGM: got %q, want %q (inherited from corner_defaults)", got, "talk_bgm")
+	}
+	if c.StartAudio == nil {
+		t.Error("Corners[0].StartAudio: got nil, want non-nil (inherited from corner_defaults)")
+	} else {
+		if c.StartAudio.Type != "jingle" {
+			t.Errorf("Corners[0].StartAudio.Type: got %q, want jingle", c.StartAudio.Type)
+		}
+		if c.StartAudio.ID != "opening" {
+			t.Errorf("Corners[0].StartAudio.ID: got %q, want opening", c.StartAudio.ID)
+		}
+	}
+	if c.StartPauseSec == nil || *c.StartPauseSec != 1.0 {
+		var got interface{} = "<nil>"
+		if c.StartPauseSec != nil {
+			got = *c.StartPauseSec
+		}
+		t.Errorf("Corners[0].StartPauseSec: got %v, want 1.0 (inherited from corner_defaults)", got)
+	}
+	if c.EndPauseSec == nil || *c.EndPauseSec != 2.0 {
+		var got interface{} = "<nil>"
+		if c.EndPauseSec != nil {
+			got = *c.EndPauseSec
+		}
+		t.Errorf("Corners[0].EndPauseSec: got %v, want 2.0 (inherited from corner_defaults)", got)
+	}
+}
+
+func TestLoadEpisodeSpec_CornerDefaults_Overrides(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_corner_defaults.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+	c := spec.Corners[1]
+	// コーナー2はBGMとstart_pause_secを上書き
+	if c.BGM == nil || *c.BGM != "other_bgm" {
+		got := "<nil>"
+		if c.BGM != nil {
+			got = *c.BGM
+		}
+		t.Errorf("Corners[1].BGM: got %q, want %q (overridden)", got, "other_bgm")
+	}
+	if c.StartPauseSec == nil || *c.StartPauseSec != 3.0 {
+		var got interface{} = "<nil>"
+		if c.StartPauseSec != nil {
+			got = *c.StartPauseSec
+		}
+		t.Errorf("Corners[1].StartPauseSec: got %v, want 3.0 (overridden)", got)
+	}
+	// end_pause_sec はデフォルト継承
+	if c.EndPauseSec == nil || *c.EndPauseSec != 2.0 {
+		var got interface{} = "<nil>"
+		if c.EndPauseSec != nil {
+			got = *c.EndPauseSec
+		}
+		t.Errorf("Corners[1].EndPauseSec: got %v, want 2.0 (inherited)", got)
+	}
+}
+
+func TestLoadEpisodeSpec_CornerDefaults_Disables(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_corner_defaults.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+	c := spec.Corners[2]
+	// コーナー3はBGMを空文字で無効化
+	if c.BGM == nil || *c.BGM != "" {
+		got := "<nil>"
+		if c.BGM != nil {
+			got = *c.BGM
+		}
+		t.Errorf("Corners[2].BGM: got %q, want empty string (disabled)", got)
+	}
+	// start_audio は {} で無効化 → nil に正規化
+	if c.StartAudio != nil {
+		t.Errorf("Corners[2].StartAudio: got %+v, want nil (disabled by empty mapping)", c.StartAudio)
+	}
+}
+
+func TestLoadEpisodeSpec_CornerDefaults_BackwardCompat(t *testing.T) {
+	// corner_defaults なし既存 spec が従来通り動作する
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+	if spec.CornerDefaults != nil {
+		t.Error("CornerDefaults should be nil when not specified in YAML")
+	}
+	// BGMを持つコーナー（corners[1]）はそのままの値を保つ
+	if len(spec.Corners) < 2 {
+		t.Fatal("expected at least 2 corners in episode_spec.yaml")
+	}
+	c := spec.Corners[1]
+	if c.BGM == nil || *c.BGM != "talk_bgm" {
+		got := "<nil>"
+		if c.BGM != nil {
+			got = *c.BGM
+		}
+		t.Errorf("Corners[1].BGM: got %q, want talk_bgm (backward compat)", got)
+	}
+}
+
+func TestValidateAssets_CornerDefaults_EmptyBGM_Error(t *testing.T) {
+	spec := &config.EpisodeSpec{
+		CornerDefaults: &config.CornerDefaults{
+			BGM: strPtr(""),
+		},
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{},
+		},
+	}
+	if err := spec.ValidateAssets(); err == nil {
+		t.Error("ValidateAssets: expected error for corner_defaults.bgm empty string, got nil")
+	}
+}
+
+func TestValidateAssets_CornerDefaults_UnknownBGM_Error(t *testing.T) {
+	spec := &config.EpisodeSpec{
+		CornerDefaults: &config.CornerDefaults{
+			BGM: strPtr("nonexistent"),
+		},
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{},
+		},
+	}
+	if err := spec.ValidateAssets(); err == nil {
+		t.Error("ValidateAssets: expected error for corner_defaults.bgm with unknown key, got nil")
+	}
+}
+
+func TestValidateAssets_CornerDefaults_Valid(t *testing.T) {
+	spec := &config.EpisodeSpec{
+		CornerDefaults: &config.CornerDefaults{
+			BGM:        strPtr("talk_bgm"),
+			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
+		},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{"opening": {File: "opening.mp3"}},
+			BGM:    map[string]config.BGMEntry{"talk_bgm": {File: "bgm.mp3"}},
+		},
+	}
+	if err := spec.ValidateAssets(); err != nil {
+		t.Errorf("ValidateAssets: unexpected error for valid corner_defaults: %v", err)
+	}
+}
+
+func TestValidateAssets_CornerDefaults_EmptyStartAudioType_Error(t *testing.T) {
+	spec := &config.EpisodeSpec{
+		CornerDefaults: &config.CornerDefaults{
+			StartAudio: &config.AudioRef{Type: "", ID: ""},
+		},
+		Assets: config.AssetsConfig{
+			BGM: map[string]config.BGMEntry{},
+		},
+	}
+	if err := spec.ValidateAssets(); err == nil {
+		t.Error("ValidateAssets: expected error for corner_defaults.start_audio with empty type, got nil")
+	}
+}
 
 // --- SecurityConfig ---
 
