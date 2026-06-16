@@ -55,7 +55,7 @@ func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.
 	title := corner.Title
 	start := time.Now()
 	s.logger.Info("開始", "corner", title)
-	defer func() { s.logger.Info("完了", "corner", title, "elapsed_s", time.Since(start).Seconds()) }()
+	defer func() { s.logger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(start).Seconds()), "corner", title) }()
 
 	lines := make([]string, 0, len(corner.Lines))
 	for _, l := range corner.Lines {
