@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -335,6 +336,34 @@ func TestInitCmd_Sample_Skip(t *testing.T) {
 	// 他のファイルは生成される。
 	if _, err := os.Stat(filepath.Join(dir, "vox-radio.yaml")); os.IsNotExist(err) {
 		t.Error("vox-radio.yaml was not generated")
+	}
+}
+
+// TestSampleWithAssetsOverlay_TargetsExistInBase guards the overlay contract: every file in
+// the with-assets tree must override a file present in the base sample tree. --sample-with-assets
+// generates the base tree (skipping the overridden files) and then writes this overlay, so a
+// rename/move in the base tree would otherwise silently ship a sample missing the overlay.
+func TestSampleWithAssetsOverlay_TargetsExistInBase(t *testing.T) {
+	const base = "templates-sample"
+	const overlay = "templates-sample-with-assets"
+	err := filepath.WalkDir(overlay, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(overlay, path)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(filepath.Join(base, rel)); err != nil {
+			t.Errorf("overlay file %q has no counterpart in %s (overlay must override a base file): %v", rel, base, err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk overlay tree: %v", err)
 	}
 }
 
