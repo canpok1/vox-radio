@@ -1509,6 +1509,64 @@ func float64Ptr(v float64) *float64 { return &v }
 
 func strPtr(v string) *string { return &v }
 
+func TestCornerConfig_EffectiveBGM(t *testing.T) {
+	tests := []struct {
+		name string
+		bgm  *string
+		want string
+	}{
+		{name: "nil returns empty", bgm: nil, want: ""},
+		{name: "empty string returns empty (disabled)", bgm: strPtr(""), want: ""},
+		{name: "key returned as-is", bgm: strPtr("talk_bgm"), want: "talk_bgm"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{BGM: tt.bgm}
+			if got := c.EffectiveBGM(); got != tt.want {
+				t.Errorf("EffectiveBGM() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCornerConfig_EffectiveStartPauseSec(t *testing.T) {
+	tests := []struct {
+		name string
+		sec  *float64
+		want float64
+	}{
+		{name: "nil returns 0", sec: nil, want: 0},
+		{name: "explicit value returned", sec: float64Ptr(1.5), want: 1.5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{StartPauseSec: tt.sec}
+			if got := c.EffectiveStartPauseSec(); got != tt.want {
+				t.Errorf("EffectiveStartPauseSec() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCornerConfig_EffectiveEndPauseSec(t *testing.T) {
+	tests := []struct {
+		name string
+		sec  *float64
+		want float64
+	}{
+		{name: "nil returns 0", sec: nil, want: 0},
+		{name: "explicit value returned", sec: float64Ptr(2.0), want: 2.0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.CornerConfig{EndPauseSec: tt.sec}
+			if got := c.EffectiveEndPauseSec(); got != tt.want {
+				t.Errorf("EffectiveEndPauseSec() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoadEpisodeSpec_CornerDefaults_Inherits(t *testing.T) {
 	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_corner_defaults.yaml")
 	if err != nil {
