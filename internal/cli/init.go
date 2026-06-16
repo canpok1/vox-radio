@@ -37,6 +37,21 @@ func renderSampleEpisodeSpec(cmd *cobra.Command, dstDir string, withAssets bool,
 	return writeFile(cmd, filepath.Join(dstDir, "episode-spec.yaml"), buf.Bytes(), force)
 }
 
+func writeSampleFiles(cmd *cobra.Command, outputDir string, withAssets bool) error {
+	// assets/assets.yaml はパック展開に委ねるため生成しない（withAssets 時）。
+	// episode-spec.yaml はテンプレートから生成する。
+	skip := func(rel string) bool {
+		if rel == "episode-spec.yaml.tmpl" {
+			return true
+		}
+		return withAssets && strings.HasPrefix(rel, "assets/")
+	}
+	if err := writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, skip); err != nil {
+		return err
+	}
+	return renderSampleEpisodeSpec(cmd, outputDir, withAssets, false)
+}
+
 func newInitCmd() *cobra.Command {
 	var sample bool
 	var sampleWithAssets bool
@@ -79,25 +94,10 @@ func newInitCmd() *cobra.Command {
 				return fmt.Errorf("--sample と --sample-with-assets は同時に指定できません")
 			}
 			if sampleWithAssets {
-				// assets/assets.yaml はパック展開に委ねるため生成しない。
-				// episode-spec.yaml はテンプレートから音入り版を生成する。
-				skip := func(rel string) bool {
-					return rel == "episode-spec.yaml.tmpl" || strings.HasPrefix(rel, "assets/")
-				}
-				if err := writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, skip); err != nil {
-					return err
-				}
-				return renderSampleEpisodeSpec(cmd, outputDir, true, false)
+				return writeSampleFiles(cmd, outputDir, true)
 			}
 			if sample {
-				// episode-spec.yaml はテンプレートから生成する。
-				skip := func(rel string) bool {
-					return rel == "episode-spec.yaml.tmpl"
-				}
-				if err := writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, skip); err != nil {
-					return err
-				}
-				return renderSampleEpisodeSpec(cmd, outputDir, false, false)
+				return writeSampleFiles(cmd, outputDir, false)
 			}
 			return writeEmbeddedTree(cmd, templatesFS, "templates", outputDir, false, nil)
 		},

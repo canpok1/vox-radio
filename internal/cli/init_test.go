@@ -339,45 +339,34 @@ func TestInitCmd_Sample_Skip(t *testing.T) {
 	}
 }
 
-// TestInitCmd_Sample_EpisodeSpecMatchesGolden verifies that --sample produces an episode-spec.yaml
-// byte-identical to the golden file in testdata/. This guards against unintended template changes.
-func TestInitCmd_Sample_EpisodeSpecMatchesGolden(t *testing.T) {
-	// Read golden before chdirTemp changes the working directory.
-	want, err := os.ReadFile("testdata/episode-spec-without-assets.yaml")
-	if err != nil {
-		t.Fatalf("read golden: %v", err)
-	}
-	dir := chdirTemp(t)
-	if _, err := runInitCmd(t, "--sample"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	got, err := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
-	if err != nil {
-		t.Fatalf("read generated: %v", err)
-	}
-	if !bytes.Equal(got, want) {
-		t.Errorf("--sample episode-spec.yaml does not match testdata/episode-spec-without-assets.yaml golden\ngot:\n%s\nwant:\n%s", got, want)
-	}
-}
-
-// TestInitCmd_SampleWithAssets_EpisodeSpecMatchesGolden verifies that --sample-with-assets produces
-// an episode-spec.yaml byte-identical to the golden file in testdata/.
-func TestInitCmd_SampleWithAssets_EpisodeSpecMatchesGolden(t *testing.T) {
-	// Read golden before chdirTemp changes the working directory.
-	want, err := os.ReadFile("testdata/episode-spec-with-assets.yaml")
-	if err != nil {
-		t.Fatalf("read golden: %v", err)
-	}
-	dir := chdirTemp(t)
-	if _, err := runInitCmd(t, "--sample-with-assets"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	got, err := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
-	if err != nil {
-		t.Fatalf("read generated: %v", err)
-	}
-	if !bytes.Equal(got, want) {
-		t.Errorf("--sample-with-assets episode-spec.yaml does not match testdata/episode-spec-with-assets.yaml golden\ngot:\n%s\nwant:\n%s", got, want)
+// TestInitCmd_EpisodeSpecMatchesGolden verifies that --sample and --sample-with-assets each produce
+// an episode-spec.yaml byte-identical to the corresponding golden file in testdata/.
+func TestInitCmd_EpisodeSpecMatchesGolden(t *testing.T) {
+	for _, tc := range []struct {
+		flag   string
+		golden string
+	}{
+		{"--sample", "testdata/episode-spec-without-assets.yaml"},
+		{"--sample-with-assets", "testdata/episode-spec-with-assets.yaml"},
+	} {
+		t.Run(tc.flag, func(t *testing.T) {
+			// Read golden before chdirTemp changes the working directory.
+			want, err := os.ReadFile(tc.golden)
+			if err != nil {
+				t.Fatalf("read golden: %v", err)
+			}
+			dir := chdirTemp(t)
+			if _, err := runInitCmd(t, tc.flag); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got, err := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
+			if err != nil {
+				t.Fatalf("read generated: %v", err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("%s episode-spec.yaml does not match %s golden\ngot:\n%s\nwant:\n%s", tc.flag, tc.golden, got, want)
+			}
+		})
 	}
 }
 
