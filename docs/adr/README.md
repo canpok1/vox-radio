@@ -82,3 +82,4 @@
 | [0074](0074-unify-data-source-attribution-into-description-credits.md) | データソース帰属を description クレジット節に統合し feed.credit を廃止する | 採用 | 2026-06-16 |
 | [0075](0075-unify-author-source-to-program-config.md) | 番組の著者名の出典を番組設定に一本化する | 採用 | 2026-06-16 |
 | [0076](0076-pipeline-progress-log-convention.md) | パイプライン進捗ログの出力規約を定める | 採用 | 2026-06-16 |
+| [0077](0077-per-episode-output-layout.md) | episodegen の出力を回数別名・回ごとディレクトリにする | 採用 | 2026-06-16 |

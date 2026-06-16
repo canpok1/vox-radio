@@ -39,7 +39,7 @@ vox-radio init --sample
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
-番組は `output/{program.id}_ep{NNN}.mp3` に生成されます（中間ファイルは `output/intermediate/`）。
+番組は `output/{program.id}_ep{NNN}.mp3`、マニフェストは `output/{program.id}_ep{NNN}_manifest.json` に生成されます（中間ファイルは `output/intermediate/{program.id}_ep{NNN}/`）。回ごとに別名・別ディレクトリになるため、繰り返し実行しても過去回の成果物は上書きされません。
 
 ## 使い方
 
@@ -96,13 +96,13 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 ### Slack投稿
 
-生成した番組を Slack へ投稿します。`slackpost` が `manifest.json` と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
+生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
 実行前に、Slack の Bot トークンを `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数に設定しておきます。
 
 ```bash
 export SLACK_BOT_TOKEN=xoxb-...
-vox-radio slackpost --manifest output/manifest.json --spec slack-spec.yaml
+vox-radio slackpost --manifest output/{program.id}_ep{NNN}_manifest.json --spec slack-spec.yaml
 ```
 
 ## 設定方法

@@ -70,7 +70,7 @@ type Runner struct {
 }
 
 // writeTimeline builds a model.Timeline from per-corner durations and writes it to 06_timeline.json.
-func writeTimeline(outDir string, corners []config.CornerConfig, cornerDurations map[string]float64) error {
+func writeTimeline(layout fileio.EpisodeLayout, corners []config.CornerConfig, cornerDurations map[string]float64) error {
 	timings := make([]model.CornerTiming, 0, len(corners))
 	for _, c := range corners {
 		timings = append(timings, model.CornerTiming{
@@ -78,16 +78,20 @@ func writeTimeline(outDir string, corners []config.CornerConfig, cornerDurations
 			DurationSec: cornerDurations[c.ID],
 		})
 	}
-	return fileio.WriteJSON(fileio.TimelinePath(outDir), model.Timeline{Corners: timings})
+	return fileio.WriteJSON(layout.Timeline(), model.Timeline{Corners: timings})
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
 // Order: collect → rundown → script → synth → summary → assemble → manifest.
 // Summary runs before assemble so that EpisodeTitle can be embedded in ID3 tags.
 func (r *Runner) Run(ctx context.Context, opts Options) error {
-	outDir := opts.OutDir
+	layout := fileio.EpisodeLayout{
+		OutDir:        opts.OutDir,
+		ProgramID:     r.Spec.Program.ID,
+		EpisodeNumber: opts.EpisodeNumber,
+	}
 
-	if err := fileio.EnsureOutputDirs(outDir); err != nil {
+	if err := layout.EnsureDirs(); err != nil {
 		return fmt.Errorf("create output dirs: %w", err)
 	}
 
@@ -95,7 +99,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
 	}
-	if err := fileio.WriteJSON(fileio.ArticlesPath(outDir), articles); err != nil {
+	if err := fileio.WriteJSON(layout.Articles(), articles); err != nil {
 		return err
 	}
 
@@ -103,7 +107,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("rundown: %w", err)
 	}
-	if err := fileio.WriteJSON(fileio.RundownPath(outDir), rundown); err != nil {
+	if err := fileio.WriteJSON(layout.Rundown(), rundown); err != nil {
 		return err
 	}
 
@@ -116,19 +120,19 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
-	if err := fileio.WriteJSON(fileio.ScriptPath(outDir), scr); err != nil {
+	if err := fileio.WriteJSON(layout.Script(), scr); err != nil {
 		return err
 	}
-	if err := fileio.WriteJSON(fileio.LinesPath(outDir), scriptLines); err != nil {
+	if err := fileio.WriteJSON(layout.Lines(), scriptLines); err != nil {
 		return err
 	}
 	if pr != nil {
-		if err := fileio.WriteJSON(fileio.ProofreadPath(outDir), pr); err != nil {
+		if err := fileio.WriteJSON(layout.Proofread(), pr); err != nil {
 			return err
 		}
 	}
 
-	clips, err := r.Synther.Run(ctx, scr, fileio.ClipsDir(outDir))
+	clips, err := r.Synther.Run(ctx, scr, layout.ClipsDir())
 	if err != nil {
 		return fmt.Errorf("synth: %w", err)
 	}
@@ -169,13 +173,12 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Title:       programSummary.EpisodeTitle,
 		GeneratedAt: generatedAt,
 	}
-	episodePath := fileio.EpisodePath(outDir, r.Spec.Program.ID, opts.EpisodeNumber)
-	cornerDurations, err := r.Assembler.Run(ctx, scr, *clips, fileio.ClipsDir(outDir), episodePath, episodeMeta)
+	cornerDurations, err := r.Assembler.Run(ctx, scr, *clips, layout.ClipsDir(), layout.Episode(), episodeMeta)
 	if err != nil {
 		return fmt.Errorf("assemble: %w", err)
 	}
 
-	if err := writeTimeline(outDir, r.Spec.Corners, cornerDurations); err != nil {
+	if err := writeTimeline(layout, r.Spec.Corners, cornerDurations); err != nil {
 		return fmt.Errorf("write timeline: %w", err)
 	}
 
@@ -197,7 +200,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Clips:             clips,
 		CornerDurations:   cornerDurations,
 	})
-	if err := fileio.WriteJSON(fileio.ManifestPath(outDir), m); err != nil {
+	if err := fileio.WriteJSON(layout.Manifest(), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
