@@ -974,3 +974,36 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")
 	}
 }
+
+func TestLast_EmptySlice_ReturnsNil(t *testing.T) {
+	got := cache.Last([]cache.Entry{})
+	if got != nil {
+		t.Errorf("Last(empty): got %v, want nil", got)
+	}
+}
+
+func TestLast_SingleEntry_ReturnsThatEntry(t *testing.T) {
+	entries := []cache.Entry{{EpisodeNumber: 1}}
+	got := cache.Last(entries)
+	if got == nil {
+		t.Fatal("Last(single): got nil, want non-nil")
+	}
+	if got.EpisodeNumber != 1 {
+		t.Errorf("Last(single): EpisodeNumber got %d, want 1", got.EpisodeNumber)
+	}
+}
+
+func TestLast_MultipleEntries_ReturnsLastEntry(t *testing.T) {
+	entries := []cache.Entry{
+		{EpisodeNumber: 1},
+		{EpisodeNumber: 2},
+		{EpisodeNumber: 3},
+	}
+	got := cache.Last(entries)
+	if got == nil {
+		t.Fatal("Last(multiple): got nil, want non-nil")
+	}
+	if got.EpisodeNumber != 3 {
+		t.Errorf("Last(multiple): EpisodeNumber got %d, want 3", got.EpisodeNumber)
+	}
+}

@@ -66,10 +66,10 @@ type channelMeta struct {
 }
 
 func extractChannelMeta(entries []cache.Entry) channelMeta {
-	if len(entries) == 0 {
+	e := cache.Last(entries)
+	if e == nil {
 		return channelMeta{}
 	}
-	e := entries[len(entries)-1]
 	return channelMeta{
 		title:       e.Title,
 		description: e.Description,
