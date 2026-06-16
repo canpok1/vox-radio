@@ -22,13 +22,14 @@ func newTestLogger(t *testing.T) (*slog.Logger, *strings.Builder) {
 func TestStartStep_LogsStartMessage(t *testing.T) {
 	logger, buf := newTestLogger(t)
 
+	// StartStep を呼んだ直後の時点でバッファに開始ログが書かれていることを検証する。
+	// done は StartStep の契約上必ず呼ぶ必要があるため検証後に呼び出す。
 	done := logging.StartStep(context.Background(), logger, "開始")
-	defer done("")
-
 	lines := splitLogLines(buf.String())
 	if len(lines) < 1 || !strings.Contains(lines[0], "開始") {
 		t.Errorf("start message not found in %q", buf.String())
 	}
+	done("")
 }
 
 func TestStartStep_EmptySummary(t *testing.T) {
