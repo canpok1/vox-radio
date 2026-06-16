@@ -7,14 +7,16 @@ import (
 
 // CreditParams holds the data needed to collect credits from used assets and characters.
 type CreditParams struct {
-	Assets     config.AssetsConfig
-	Characters map[string]config.CharacterConfig
-	Lines      *model.ScriptLines // nil = skip
-	Script     *model.Script      // nil = skip
-	Casts      []model.RundownCast
+	ProgramCredits []string // 番組固定クレジット（先頭に追加される）
+	Assets         config.AssetsConfig
+	Characters     map[string]config.CharacterConfig
+	Lines          *model.ScriptLines // nil = skip
+	Script         *model.Script      // nil = skip
+	Casts          []model.RundownCast
 }
 
 // CollectCredits collects and deduplicates credits from used assets and characters.
+// ProgramCredits are prepended before asset/character credits.
 // Returns a non-nil slice (empty when no credits found).
 // Order is first-seen (stable).
 func CollectCredits(p CreditParams) []string {
@@ -29,6 +31,10 @@ func CollectCredits(p CreditParams) []string {
 			seen[credit] = struct{}{}
 			credits = append(credits, credit)
 		}
+	}
+
+	for _, c := range p.ProgramCredits {
+		add(c)
 	}
 
 	if p.Lines != nil {

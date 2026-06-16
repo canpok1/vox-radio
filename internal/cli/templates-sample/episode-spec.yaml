@@ -5,7 +5,7 @@
 # データソースには気象庁の防災情報XMLフィード（https://xml.kishou.go.jp/xmlpull.html）を使っています。
 # 気象庁ホームページのコンテンツは「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づき、
 # 出典を明記すれば複製・翻案・再配信が可能です（https://www.jma.go.jp/jma/kishou/info/coment.html）。
-# 配信時の出典表記は feed-spec.yaml の feed.credit に記入してあります。
+# 配信時の出典表記は program.credits に記入し、各エピソードの <description> 末尾クレジット節へ自動転記されます。
 
 program:
   # 番組を見分けるためのID【必須】。過去回の記憶や配信フィードの突き合わせに使います（変えなくてOK）。
@@ -30,6 +30,10 @@ program:
   # 生成 MP3 の音質プリセット。省略時は standard（約190kbps VBR V2）。
   #   high → 約245kbps / standard → 約190kbps（既定）/ low → 約130kbps
   # audio_quality: "standard"
+  # 番組固定クレジット（データソース帰属など）。各エピソードの <description> 末尾クレジット節へ自動追記される。省略可。
+  # サンプルは気象庁の防災情報XMLを加工して利用しているため、公共データ利用規約に沿って出典を明記しています。
+  credits:
+    - "気象庁「防災情報XML」（https://xml.kishou.go.jp/）を加工して作成"
 
 # 出演者の一覧。ここに書いた人だけが番組に登場します。
 casts:

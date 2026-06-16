@@ -7,7 +7,6 @@ feed:
   cover_image_url: "https://example.com/cover.jpg"
   site_url: "https://example.com"
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
-  credit: ""
 
 output:
   public: "public"

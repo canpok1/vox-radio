@@ -212,3 +212,68 @@ func TestBuild_CreditsNeverNil(t *testing.T) {
 		t.Error("Credits must be [] not nil")
 	}
 }
+
+func TestCollectCredits_FromProgramCredits(t *testing.T) {
+	params := manifest.CreditParams{
+		ProgramCredits: []string{"気象庁「防災情報XML」を加工して作成"},
+	}
+	got := manifest.CollectCredits(params)
+	if len(got) != 1 || got[0] != "気象庁「防災情報XML」を加工して作成" {
+		t.Errorf("CollectCredits() = %v, want [気象庁「防災情報XML」を加工して作成]", got)
+	}
+}
+
+func TestCollectCredits_ProgramCreditsDedup(t *testing.T) {
+	params := manifest.CreditParams{
+		ProgramCredits: []string{"OtoLogic / CC BY 4.0"},
+		Assets: config.AssetsConfig{
+			Jingle: map[string]config.JingleEntry{
+				"opening": {Credit: "OtoLogic / CC BY 4.0"},
+			},
+		},
+		Lines: &model.ScriptLines{
+			Corners: []model.CornerLines{
+				{StartAudio: &model.CornerAudio{Type: model.SegmentTypeJingle, AssetName: "opening"}},
+			},
+		},
+	}
+	got := manifest.CollectCredits(params)
+	if len(got) != 1 {
+		t.Errorf("CollectCredits() len = %d, want 1 (dedup)", len(got))
+	}
+}
+
+func TestCollectCredits_ProgramCreditsOrderFirst(t *testing.T) {
+	params := manifest.CreditParams{
+		ProgramCredits: []string{"プログラムクレジット"},
+		Characters: map[string]config.CharacterConfig{
+			"zundamon": {Credit: "VOICEVOX:ずんだもん"},
+		},
+		Casts: []model.RundownCast{
+			{CharacterID: "zundamon"},
+		},
+	}
+	got := manifest.CollectCredits(params)
+	if len(got) != 2 {
+		t.Fatalf("CollectCredits() len = %d, want 2", len(got))
+	}
+	if got[0] != "プログラムクレジット" {
+		t.Errorf("CollectCredits()[0] = %q, want program credit first", got[0])
+	}
+	if got[1] != "VOICEVOX:ずんだもん" {
+		t.Errorf("CollectCredits()[1] = %q, want character credit second", got[1])
+	}
+}
+
+func TestBuild_ProgramCreditsIncluded(t *testing.T) {
+	p := newMinimalBuildParams()
+	p.Program = config.ProgramConfig{
+		Title:       "テスト番組",
+		Description: "説明",
+		Credits:     []string{"気象庁「防災情報XML」を加工して作成"},
+	}
+	got := manifest.Build(p)
+	if len(got.Credits) != 1 || got.Credits[0] != "気象庁「防災情報XML」を加工して作成" {
+		t.Errorf("Build().Credits = %v, want [気象庁「防災情報XML」を加工して作成]", got.Credits)
+	}
+}
