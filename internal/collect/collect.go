@@ -10,6 +10,7 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/httpretry"
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
@@ -101,7 +102,6 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 // excludedDedupKeys is a list of DedupKeys to skip when fetching from feeds (nil means no exclusion).
 func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error) {
 	logger := c.logger.With("step", "collect")
-	start := time.Now()
 
 	var excluded map[string]struct{}
 	if len(excludedDedupKeys) > 0 {
@@ -118,7 +118,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 		}
 	}
 
-	logger.Info("開始")
+	done := logging.StartStep(logger, "開始")
 
 	result := make([]model.CornerArticles, 0, len(filtered))
 	totalArticles := 0
@@ -140,7 +140,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 		})
 	}
 
-	logger.Info(fmt.Sprintf("完了 (%d記事 / %dコーナー, %.1fs)", totalArticles, len(result), time.Since(start).Seconds()))
+	done(fmt.Sprintf("%d記事 / %dコーナー", totalArticles, len(result)))
 
 	return model.Articles{Corners: result}, nil
 }

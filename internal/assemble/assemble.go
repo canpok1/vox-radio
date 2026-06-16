@@ -9,9 +9,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 )
@@ -70,9 +70,7 @@ func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ..
 // It returns the duration and file size of the resulting mp3.
 func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string, meta model.EpisodeMeta) (*Result, error) {
 	logger := a.logger.With("step", "assemble")
-	start := time.Now()
-
-	logger.Info("開始")
+	done := logging.StartStep(logger, "開始")
 
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
@@ -129,7 +127,7 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 		return nil, fmt.Errorf("get file size: %w", err)
 	}
 
-	logger.Info(fmt.Sprintf("完了 (duration=%.1fs, %.2fMB, %.1fs)", dur, float64(size)/(1024*1024), time.Since(start).Seconds()))
+	done(fmt.Sprintf("duration=%.1fs, %.2fMB", dur, float64(size)/(1024*1024)))
 
 	seSequentialDurations := make(map[string]float64, len(seDurations))
 	for name, dur := range seDurations {

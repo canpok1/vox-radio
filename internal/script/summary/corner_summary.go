@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
@@ -53,9 +54,8 @@ type cornerSummaryResponse struct {
 // summaryLength specifies the target character count for the summary.
 func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error) {
 	title := corner.Title
-	start := time.Now()
-	s.logger.Info("開始", "corner", title)
-	defer func() { s.logger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(start).Seconds()), "corner", title) }()
+	done := logging.StartStep(s.logger, "開始", slog.String("corner", title))
+	defer func() { done("") }()
 
 	lines := make([]string, 0, len(corner.Lines))
 	for _, l := range corner.Lines {
