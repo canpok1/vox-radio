@@ -338,6 +338,59 @@ func TestInitCmd_Sample_Skip(t *testing.T) {
 	}
 }
 
+// TestInitCmd_SampleWithAssets_OmitsAssetsYaml: --sample-with-assets generates the shared
+// config files but not assets/assets.yaml (the sample-assets pack provides it).
+func TestInitCmd_SampleWithAssets_OmitsAssetsYaml(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--sample-with-assets")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); os.IsNotExist(err) {
+			t.Errorf("%s was not generated", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "assets", "assets.yaml")); !os.IsNotExist(err) {
+		t.Error("assets/assets.yaml should not be generated for --sample-with-assets (pack provides it)")
+	}
+}
+
+// TestInitCmd_SampleWithAssets_ValidatesAgainstPack: the generated episode-spec references the
+// pack ids (theme/switch/coffee_break) and validates once the pack's assets.yaml is present.
+func TestInitCmd_SampleWithAssets_ValidatesAgainstPack(t *testing.T) {
+	dir := chdirTemp(t)
+	_, err := runInitCmd(t, "--sample-with-assets")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// パック展開を模した最小 assets.yaml を用意する（theme/switch/coffee_break）。
+	assetsYAML := "jingle:\n  theme:\n    file: theme.mp3\n" +
+		"se:\n  switch:\n    file: switch.mp3\n    volume: 0.8\n" +
+		"bgm:\n  coffee_break:\n    file: bgm.mp3\n    volume: 0.3\n    duck_ratio: 0\n    loop: true\n"
+	writeTestFile(t, dir, "assets/assets.yaml", []byte(assetsYAML))
+
+	cfg, err := config.LoadConfig(filepath.Join(dir, "vox-radio.yaml"))
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	spec, err := config.LoadEpisodeSpecStrict(filepath.Join(dir, "episode-spec.yaml"))
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpecStrict failed: %v", err)
+	}
+	if err := spec.Validate(cfg.Characters); err != nil {
+		t.Fatalf("Validate failed (episode-spec must reference pack assets): %v", err)
+	}
+}
+
+// TestInitCmd_SampleAndSampleWithAssets_Conflict: the two sample flags are mutually exclusive.
+func TestInitCmd_SampleAndSampleWithAssets_Conflict(t *testing.T) {
+	chdirTemp(t)
+	if _, err := runInitCmd(t, "--sample", "--sample-with-assets"); err == nil {
+		t.Fatal("expected error when both --sample and --sample-with-assets are set")
+	}
+}
+
 func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
 	dir := chdirTemp(t)
 	existingContent := []byte("# existing")

@@ -1,0 +1,175 @@
+# この番組の中身（コーナーの並び・長さ・台本づくりの指示）を決めるサンプルです。
+# サンプル音源パック（sample-assets）のジングル・SE・BGM を各コーナーに割り当て済みです。
+# 別途パックを assets/ に展開してから、次のコマンドで音入りの番組を作れます:
+#   vox-radio episodegen --spec episode-spec.yaml
+#
+# データソースには気象庁の防災情報XMLフィード（https://xml.kishou.go.jp/xmlpull.html）を使っています。
+# 気象庁ホームページのコンテンツは「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づき、
+# 出典を明記すれば複製・翻案・再配信が可能です（https://www.jma.go.jp/jma/kishou/info/coment.html）。
+# 配信時の出典表記は program.credits に記入し、各エピソードの <description> 末尾クレジット節へ自動転記されます。
+
+program:
+  # 番組を見分けるためのID【必須】。過去回の記憶や配信フィードの突き合わせに使います（変えなくてOK）。
+  # 日替わりコーナーやゲストの登場回を正しく数えるためにも使われます。
+  id: "weather-radio"
+  # 番組タイトル。
+  title: "ずんだもんとめたんのお天気ラジオ"
+  # 番組の作者名（省略可）。生成 MP3 のアーティストタグ（ID3 TPE1）に埋め込まれます。
+  # author: "制作チーム名"
+  # 番組の紹介文。台本づくりの方向性として使われます。
+  description: "気象庁の気象警報・注意報をもとに、全国のお天気の注意ポイントに加え、地震・火山情報やお天気の豆知識を日替わりで、ずんだもんとめたんが5分でお届けするお天気情報番組。"
+  # 番組全体の演出方針。SE・pauseの挿入タイミングに関する指示。direct（音響演出）ステップのみに渡る。省略可。
+  # direction: "オープニングジングル後は必ずSEを流す。"
+  # 番組全体の台本指示。write（台本生成）ステップのみに渡る。RSSフィード・Slack通知には露出しない非公開フィールド。省略可。
+  # script_note: "記事を紹介する場合は記事タイトルを正確に伝えること。"
+  # 番組まとめ文のおおよその文字数。
+  summary_length: 200
+  # 番組のタイムゾーン（IANA tz名）。省略時は Asia/Tokyo。
+  # timezone: "Asia/Tokyo"
+  # 台本生成時の1分あたり目安文字数。話速や BGM で実再生時間が前後する場合に調整する。省略時は 420（= 7文字/秒）。
+  # chars_per_minute: 420
+  # 生成 MP3 の音質プリセット。省略時は standard（約190kbps VBR V2）。
+  #   high → 約245kbps / standard → 約190kbps（既定）/ low → 約130kbps
+  # audio_quality: "standard"
+  # 番組固定クレジット（データソース帰属など）。各エピソードの <description> 末尾クレジット節へ自動追記される。省略可。
+  # サンプルは気象庁の防災情報XMLを加工して利用しているため、公共データ利用規約に沿って出典を明記しています。
+  credits:
+    - "気象庁「防災情報XML」（https://xml.kishou.go.jp/）を加工して作成"
+
+# 出演者の一覧。ここに書いた人だけが番組に登場します。
+casts:
+  # ずんだもん（毎回出演のMC）
+  zundamon:
+    type: regular                    # regular = 毎回出演
+    role: "MC。進行役。各トピックに素朴な疑問やリアクションを返す聞き役。元気なボケ担当。"
+  # めたん（毎回出演のMC）
+  metan:
+    type: regular
+    role: "MC。お天気キャスター役。気象情報を選んで紹介・解説する主担当。落ち着いたツッコミ役。"
+  # ずん子（ときどき登場するゲスト）
+  zunko:
+    type: guest                      # guest = 決まった回だけ出演
+    role: "気象や防災の背景・豆知識を補足して深掘りする物知りゲスト。"
+    # 5回おきに出演、初回の出演は2回目。→ 第2,7,12,…回に登場。
+    condition:
+      every: 5                       # 5回おきに
+      offset: 2                      # 初回の出演は2回目
+
+# コーナー共通デフォルト。サンプル音源パック（sample-assets）のアセットを全コーナーに適用します。
+# 各コーナーで値を上書き可能。bgm: "" や end_audio: {} で個別に無効化できます。
+corner_defaults:
+  bgm: coffee_break                  # 全コーナーで流す BGM（assets.bgm のキー）
+  end_audio:                         # 各コーナー終了時の切り替え音（BGM を流したまま重ねて鳴らす）
+    type: se
+    id: switch
+
+# コーナーは書いた順に放送されます。length_sec は各コーナーのおおよその長さ（秒）です。
+# 各コーナーには id【必須・番組内で一意】を付けます。過去回をまたいでコーナーを同定し、
+# 「新コーナーです」「久しぶりの復活コーナー」などの扱い回数の演出に使います（タイトルを変えても id で履歴を追えます）。
+corners:
+  # オープニング（毎回放送）
+  - id: "opening"
+    title: "オープニング"
+    content: "明るく挨拶し、今日のラインナップ（全国の気象情報と日替わりコーナー）を軽く予告。"
+    direction: "テンポよく明るく。"   # 演出方針。direct（音響演出）ステップのみに渡る。省略可。
+    start_audio:                     # 番組の冒頭で流すテーマジングル（流す間は BGM を止めます）
+      type: jingle
+      id: theme
+    # コーナー個別の台本指示。write（台本生成）ステップのみに渡る。非公開フィールド。省略可。
+    # script_note: "挨拶は「こんにちは」で統一し、今日の天気の一言コメントを必ず入れること。"
+    cast:
+      zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
+      metan: "MC。ずんだもんに軽くツッコむ相棒。"
+    length_sec: 15
+    summary_length: 60
+    end_pause_sec: 2.0               # このコーナーの後に入れる無音（秒）。コーナーの切れ目に2秒の間。
+
+  # 全国の気象情報（毎回放送・メインコーナー）
+  - id: "weather-nationwide"
+    title: "全国の気象情報"
+    content: "気象庁の気象警報・注意報から注目の地域を2〜3つ選び、めたんがお天気キャスターとして噛み砕いて紹介・解説し、ずんだもんが素朴な疑問やリアクションで盛り上げる。同じ地域の重複した情報は1つにまとめる。"
+    cast:
+      metan: "MC。お天気キャスター役。気象情報を選んで紹介・解説する主担当。"
+      zundamon: "MC。素朴な疑問やリアクションを返す聞き役。ボケ担当。"
+    length_sec: 180
+    summary_length: 120
+    end_pause_sec: 2.0
+    # 気象情報の取得元（気象庁 防災情報XMLの随時フィード。警報・注意報など）。
+    source:
+      feeds:
+        - url: https://www.data.jma.go.jp/developer/xml/feed/extra.xml
+          max_items: 10              # このフィードから使う記事の最大本数
+
+  # ここから下の3つは日替わりコーナー。毎回どれか1つだけ放送されます。
+  # 回番号で出し分けるので、上の program.id（必須）をキーにした過去回の記憶を使います。
+  # 地震・火山コーナー
+  - id: "earthquake-volcano"
+    title: "地震・火山コーナー"
+    content: "最近の地震情報や火山の降灰予報・噴火警戒レベルを、めたんが紹介しずんだもんが驚いたり備えを考えたりする。"
+    cast:
+      metan: "MC。地震・火山情報を紹介・解説。"
+      zundamon: "MC。驚いたり備えを考えたりする聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は1回目。→ 第1,4,7,…回に放送。
+    condition:
+      every: 3                       # 3回おきに
+      offset: 1                      # 初回は1回目
+    # 地震・火山情報の取得元（気象庁 防災情報XMLの地震火山フィード）。
+    source:
+      feeds:
+        - url: https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml
+          max_items: 5
+
+  # お天気豆知識コーナー（データソースなし。AIが知識から話題を作ります）
+  - id: "weather-trivia"
+    title: "お天気豆知識"
+    content: "季節や気象にまつわる雑学・豆知識（例: 天気のことわざ、雲の種類、気象現象のしくみ）をめたんがやさしく紹介し、ずんだもんが驚いたり感心したりする。"
+    cast:
+      metan: "MC。お天気の雑学をやさしく紹介・解説。"
+      zundamon: "MC。驚いたり感心したりする聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は2回目。→ 第2,5,8,…回に放送。
+    condition:
+      every: 3
+      offset: 2
+
+  # 防災ワンポイント（データソースなし。AIが知識から話題を作ります）
+  - id: "disaster-tips"
+    title: "防災ワンポイント"
+    content: "日常でできる防災の備えや心得（例: 非常用持ち出し袋、家具の固定、避難経路の確認）をめたんがやさしく解説し、ずんだもんが今日からやってみたくなるよう盛り上げる。"
+    cast:
+      metan: "MC。防災の備えをやさしく解説。"
+      zundamon: "MC。実践したい気持ちになる聞き役。ボケ担当。"
+    length_sec: 90
+    summary_length: 80
+    end_pause_sec: 2.0
+    # 3回おきに放送、初回は3回目。→ 第3,6,9,…回に放送。
+    condition:
+      every: 3
+      offset: 0
+
+  # エンディング（毎回放送）
+  - id: "ending"
+    title: "エンディング"
+    content: "今日のまとめと次回予告。引き続き気象情報に気をつけてほしいと明るく締める。"
+    direction: "余韻を残しつつ明るく。"
+    end_audio:                       # 番組の最後で流すテーマジングル（共通デフォルトの切り替え音を上書き）
+      type: jingle
+      id: theme
+    cast:
+      zundamon: "MC。進行役。ボケ担当。"
+      metan: "MC。相棒。ツッコミ担当。"
+    length_sec: 15
+    summary_length: 60
+    # 末尾コーナーなので、この後の無音（end_pause_sec）は入れません。
+
+# 効果音やBGMの設定ファイル（ジングル・SE・BGM）の参照。
+# サンプル音源パック（sample-assets）を assets/ に展開すると assets/assets.yaml が用意されます。
+# 各コーナーへの音の割り当ては上の start_audio / end_audio / bgm で設定済みです。
+# 効果音やBGMが不要なら assets_files と各コーナーの音指定をコメントアウトするか削除してください。
+assets_files:
+  - assets/assets.yaml

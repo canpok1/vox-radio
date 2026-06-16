@@ -71,7 +71,11 @@ func writeFile(cmd *cobra.Command, path string, content []byte, force bool) erro
 // the relative directory structure. Directories are skipped (writeFile creates parents
 // as needed). Each file is written via writeFile, so existing files are skipped
 // individually when force is false. Used by both `init` and `install --skills`.
-func writeEmbeddedTree(cmd *cobra.Command, fsys fs.FS, srcRoot, dstRoot string, force bool) error {
+//
+// When skip is non-nil, files whose slash-separated relative path returns true are not
+// written. This lets callers overlay an alternate file (e.g. a different episode-spec)
+// or omit part of a shared template tree.
+func writeEmbeddedTree(cmd *cobra.Command, fsys fs.FS, srcRoot, dstRoot string, force bool, skip func(rel string) bool) error {
 	return fs.WalkDir(fsys, srcRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -82,6 +86,9 @@ func writeEmbeddedTree(cmd *cobra.Command, fsys fs.FS, srcRoot, dstRoot string, 
 		rel, err := filepath.Rel(srcRoot, path)
 		if err != nil {
 			return fmt.Errorf("rel path: %w", err)
+		}
+		if skip != nil && skip(filepath.ToSlash(rel)) {
+			return nil
 		}
 		content, err := fs.ReadFile(fsys, path)
 		if err != nil {
