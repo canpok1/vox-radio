@@ -5,7 +5,11 @@ PROFILE ?= sample/episode-spec.yaml
 OUT_DIR ?= output/$(shell date +%Y%m%d%H%M%S)
 
 setup:
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
+	# golangci-lint の go.mod は go ディレクティブを「最新-1」に固定するため、
+	# 素の go install（GOTOOLCHAIN=auto）だと古い Go でビルドされ、本モジュール
+	# （go.mod の go ディレクティブ）を lint しようとするとバージョン不整合で失敗する。
+	# 本モジュールが要求する Go バージョンでビルドさせるため GOTOOLCHAIN を明示する。
+	GOTOOLCHAIN=go$$(go list -m -f '{{.GoVersion}}') go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	go install github.com/goreleaser/goreleaser/v2@v2.14.3
 
 build:
