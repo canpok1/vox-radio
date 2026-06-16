@@ -42,7 +42,7 @@ func newInstallCmd() *cobra.Command {
 }
 
 func runInstallSkills(cmd *cobra.Command, dstDir string, force bool) error {
-	if err := writeEmbeddedTree(cmd, skillsFS, "skills/vox-radio", dstDir, force); err != nil {
+	if err := writeEmbeddedTree(cmd, skillsFS, "skills/vox-radio", dstDir, force, nil); err != nil {
 		return err
 	}
 	// 版スタンプはインストール元バイナリの版を記録する生成ファイル。

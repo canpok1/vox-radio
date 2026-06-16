@@ -83,3 +83,4 @@
 | [0075](0075-unify-author-source-to-program-config.md) | 番組の著者名の出典を番組設定に一本化する | 採用 | 2026-06-16 |
 | [0076](0076-pipeline-progress-log-convention.md) | パイプライン進捗ログの出力規約を定める | 採用 | 2026-06-16 |
 | [0077](0077-per-episode-output-layout.md) | episodegen の出力を回数別名・回ごとディレクトリにする | 採用 | 2026-06-16 |
+| [0078](0078-init-sample-with-assets-flag.md) | init --sample-with-assets で音入りサンプルを生成する | 採用 | 2026-06-16 |

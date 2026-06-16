@@ -7,29 +7,26 @@
 
 # jingle = コーナーの区切りで流す短い音楽（流す間はセリフを止めます）。
 jingle:
-  opening:
+  theme:
     file: jingle/private-time-1.mp3
-    fade_in: 0.5                 # 鳴り始めの音量を上げる秒数
-    fade_out: 0.5                # 鳴り終わりの音量を下げる秒数
+    fade_in: 0.0                 # 鳴り始めの音量を上げる秒数
+    fade_out: 0.0                # 鳴り終わりの音量を下げる秒数
     trim_silence_threshold: -30  # 素材の前後の無音を取り除く閾値（dB）
-    description: "番組冒頭で流すオープニングジングル"
-    credit: "OtoLogic https://otologic.jp / CC BY 4.0"
-  ending:
-    file: jingle/private-time-1.mp3
-    fade_in: 0.5
-    fade_out: 2.0
-    trim_silence_threshold: -30
-    description: "番組の最後で流すエンディングジングル"
+    # trim_silence: true         # 前後の無音を自動で取り除くか（省略時 true）
+    description: "番組の冒頭と最後で流すテーマジングル"
     credit: "OtoLogic https://otologic.jp / CC BY 4.0"
 
 # se = 場面の切り替えなどで鳴らす短い効果音。
 se:
-  accent_low:
+  accent:
     file: se/accent-low.mp3
     volume: 0.8                  # 音量（1.0 が等倍）
+    # trim_silence: true         # 前後の無音を自動で取り除くか（省略時 true）
+    # trim_silence_threshold: -50 # 無音とみなす閾値（dB）（省略時 -50）
+    # overlay: true              # セリフに重ねて鳴らすか（省略時 false＝鳴り終わってから次のセリフ）
     description: "話題の切り替わりや新コーナー導入時に使うアクセント音。ピロロンという効果音。"
     credit: "OtoLogic https://otologic.jp / CC BY 4.0"
-  onoma_syakiin:
+  syakiin:
     file: se/onoma-syakiin02-1-dry.mp3
     volume: 0.8
     description: "オノマトペのシャキーンという音。キレのある切り替えや決め台詞の後に使う。"
@@ -45,9 +42,12 @@ bgm:
   coffee_break:
     file: bgm/coffee-break-short.mp3
     volume: 0.3                  # 音量（小さめにするとセリフが聞き取りやすい）
-    duck_ratio: 3                # セリフ中にBGMを下げる強さ
+    duck_ratio: 0                # セリフ中にBGMを下げる強さ（0＝下げない）
     loop: true                   # コーナーの長さに合わせて繰り返すか
-    # trim_silence: true         # 前後の無音を除去しループの継ぎ目を自然にする（省略時 true）
-    # loop_gap_sec: 0            # ループの繰り返しの間に入れる無音秒数（省略時 0）
+    trim_silence: true           # 前後の無音を除去しループの継ぎ目を自然にする（省略時 true）
+    trim_silence_threshold: -30  # 無音とみなす閾値（dB）（省略時 -50）
+    loop_gap_sec: 0.5            # ループの繰り返しの間に入れる無音秒数（省略時 0）
+    # fade_in: 1.0               # 鳴り始めの音量を上げる秒数（省略時 1.0、0でフェードなし）
+    # fade_out: 1.0              # 鳴り終わりの音量を下げる秒数（省略時 1.0、0でフェードなし）
     description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"
     credit: "BGMer https://bgmer.net"

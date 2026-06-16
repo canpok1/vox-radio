@@ -1999,9 +1999,9 @@ func TestValidateAssetsConfig_InvalidField_Error(t *testing.T) {
 			},
 		},
 		{
-			name: "bgm duck_ratio less than 1",
+			name: "bgm duck_ratio negative",
 			assets: func(f string) *config.AssetsConfig {
-				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: 0}}}
+				return &config.AssetsConfig{BGM: map[string]config.BGMEntry{"bgm": {File: f, Volume: 0.3, DuckRatio: -1}}}
 			},
 		},
 		{
@@ -2146,11 +2146,12 @@ func TestBGMEntry_Validate(t *testing.T) {
 		entry   config.BGMEntry
 		wantErr bool
 	}{
-		{"valid minimum values", config.BGMEntry{Volume: 0, DuckRatio: 1}, false},
+		{"valid minimum values", config.BGMEntry{Volume: 0, DuckRatio: 0}, false},
 		{"valid typical values", config.BGMEntry{Volume: 0.3, DuckRatio: 8}, false},
 		{"volume negative", config.BGMEntry{Volume: -1, DuckRatio: 8}, true},
-		{"duck_ratio zero", config.BGMEntry{Volume: 0.3, DuckRatio: 0}, true},
-		{"duck_ratio less than 1", config.BGMEntry{Volume: 0.3, DuckRatio: 0.5}, true},
+		{"duck_ratio zero is valid (no ducking)", config.BGMEntry{Volume: 0.3, DuckRatio: 0}, false},
+		{"duck_ratio fractional is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 0.5}, false},
+		{"duck_ratio negative", config.BGMEntry{Volume: 0.3, DuckRatio: -0.5}, true},
 		{"fade_in nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: nil}, false},
 		{"fade_in zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: testutil.Ptr(0.0)}, false},
 		{"fade_in positive is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: testutil.Ptr(1.0)}, false},

@@ -67,7 +67,7 @@ func buildFileMissingAssetsYAML(t *testing.T) string {
 	return assetsPath
 }
 
-// buildInvalidValueAssetsYAML creates an assets.yaml with duck_ratio < 1.
+// buildInvalidValueAssetsYAML creates an assets.yaml with a negative duck_ratio.
 func buildInvalidValueAssetsYAML(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -81,7 +81,7 @@ func buildInvalidValueAssetsYAML(t *testing.T) string {
 		"  talk:\n" +
 		"    file: talk.mp3\n" +
 		"    volume: 0.3\n" +
-		"    duck_ratio: 0\n" +
+		"    duck_ratio: -1\n" +
 		"    loop: true\n"
 
 	assetsPath := filepath.Join(dir, "assets.yaml")

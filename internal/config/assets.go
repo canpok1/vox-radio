@@ -81,7 +81,7 @@ func (e SEEntry) Validate() error {
 type BGMEntry struct {
 	File                 string   `yaml:"file"`
 	Volume               float64  `yaml:"volume"`
-	DuckRatio            float64  `yaml:"duck_ratio"`
+	DuckRatio            float64  `yaml:"duck_ratio"` // sidechain compression ratio applied during speech; 0 = no ducking
 	Loop                 bool     `yaml:"loop"`
 	LoopGapSec           float64  `yaml:"loop_gap_sec"` // silence (seconds) inserted between loop iterations; only applies when loop is true
 	FadeIn               *float64 `yaml:"fade_in,omitempty"`
@@ -113,8 +113,8 @@ func (e BGMEntry) Validate() error {
 	if err := validateNonNegative("volume", e.Volume); err != nil {
 		return err
 	}
-	if e.DuckRatio < 1 {
-		return fmt.Errorf("duck_ratio: must be >= 1, got %v", e.DuckRatio)
+	if err := validateNonNegative("duck_ratio", e.DuckRatio); err != nil {
+		return err
 	}
 	if err := validateNonNegative("loop_gap_sec", e.LoopGapSec); err != nil {
 		return err

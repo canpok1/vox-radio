@@ -31,11 +31,29 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ### 2. 番組を生成する
 
+**音なし**と**音入り**のどちらか一方を選んで実行してください（同じディレクトリで両方を実行すると、`init` は既存ファイルを上書きしないため設定が混ざります）。
+
+**音なしで試す**
+
 ```bash
 # サンプル設定一式をカレントディレクトリに生成
 vox-radio init --sample
 
-# サンプルでそのまま番組生成
+# 番組生成
+vox-radio episodegen --spec episode-spec.yaml
+```
+
+**ジングル・効果音・BGM 入りで試す** — サンプル音源パックを展開し、各コーナーに音を割り当て済みの設定を生成します。
+
+```bash
+# サンプル音源パックを取得して assets/ に展開
+curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
+unzip vox-radio-sample-assets.zip -d assets
+
+# 音源パックを使う設定一式を生成（assets/assets.yaml はパックのものを使う）
+vox-radio init --sample-with-assets
+
+# 番組生成
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
@@ -167,7 +185,7 @@ characters:
 
    ```bash
    vox-radio assets check assets/assets.yaml
-   vox-radio assets preview assets/assets.yaml --id jingle:opening --out preview.mp3
+   vox-radio assets preview assets/assets.yaml --id jingle:theme --out preview.mp3
    ```
 
 4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
@@ -180,6 +198,8 @@ characters:
 > ```
 >
 > `assets/assets.yaml`（音源登録済み）が用意されるので、手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
+>
+> パック展開後に `vox-radio init --sample-with-assets` を実行すると、各コーナーへの割り当て（手順 4）まで済んだサンプル設定（`episode-spec.yaml` 等）が生成され、そのまま番組生成できます（クイックスタートの「音入りで試す」と同じ）。
 
 ### RSS フィード生成設定
 
