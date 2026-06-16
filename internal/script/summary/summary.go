@@ -96,7 +96,7 @@ type speechEntry struct {
 func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error) {
 	start := time.Now()
 	s.logger.Info("開始")
-	defer func() { s.logger.Info("完了", "elapsed_s", time.Since(start).Seconds()) }()
+	defer func() { s.logger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(start).Seconds())) }()
 
 	totalLines := lines.TotalLines()
 	entries := make([]speechEntry, 0, totalLines)

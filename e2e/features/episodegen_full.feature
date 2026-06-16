@@ -11,7 +11,7 @@
     かつ テスト用設定一式を配置する
     もし "vox-radio episodegen --spec episode-spec.yaml --out-dir out" を実行する
     ならば 終了コードは 0 である
-    かつ 標準出力に "pipeline complete" を含む
+    かつ 標準出力に "パイプライン完了" を含む
     かつ ファイル "out/e2e-radio_ep001.mp3" のサイズは 0 より大きい
     かつ ファイル "out/intermediate/e2e-radio_ep001/01_articles.json" が存在する
     かつ ファイル "out/intermediate/e2e-radio_ep001/02_rundown.json" が存在する

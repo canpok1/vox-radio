@@ -265,8 +265,23 @@ func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	}
 
 	logs := buf.String()
+	if !strings.Contains(logs, "開始") {
+		t.Errorf("should log start: %q", logs)
+	}
 	if !strings.Contains(logs, "完了") {
 		t.Errorf("should log complete: %q", logs)
+	}
+	// 各ステップ・サブステップで開始/完了をペアで出す（ADR-0076）
+	for _, step := range []string{"step=script", "step=script/write", "step=script/direct"} {
+		if !strings.Contains(logs, step) {
+			t.Errorf("should log %s: %q", step, logs)
+		}
+	}
+	if got := strings.Count(logs, "msg=開始"); got != 3 {
+		t.Errorf("expected 3 start logs (script, script/write, script/direct), got %d: %q", got, logs)
+	}
+	if got := strings.Count(logs, "msg=\"完了"); got != 3 {
+		t.Errorf("expected 3 complete logs (script, script/write, script/direct), got %d: %q", got, logs)
 	}
 }
 

@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/mediainfo"
 )
 
 const (
-	defaultPreviewMaxLengthSec = 30.0
-	dummyNarrationToneSec      = 2.0
-	dummyNarrationSilSec       = 1.0
-	dummyNarrationFreq         = 440
-	dummyNarrationSampleRate   = 44100
+	dummyNarrationToneSec    = 2.0
+	dummyNarrationSilSec     = 1.0
+	dummyNarrationFreq       = 440
+	dummyNarrationSampleRate = 44100
 )
 
 // PreviewContext holds the parameters for a single-asset preview.
@@ -26,23 +26,40 @@ type PreviewContext struct {
 	AssetKey     string // key in the assets map
 	Assets       config.AssetsConfig
 	OutPath      string
-	MaxLengthSec float64 // maximum output duration; <= 0 uses defaultPreviewMaxLengthSec
+	MaxLengthSec float64 // maximum output duration in seconds; <= 0 disables truncation (outputs full length)
+	// SourceDurationSec is the resolved duration of the source asset in seconds.
+	// It is only used to size the dummy narration for ducking when truncation is
+	// disabled (MaxLengthSec <= 0). Previewer.Run fills it via ffprobe when needed.
+	SourceDurationSec float64
 }
 
 // Previewer executes a single-asset preview via ffmpeg.
 type Previewer struct {
-	runFFmpeg func(ctx context.Context, args []string, w io.Writer) error
+	runFFmpeg   func(ctx context.Context, args []string, w io.Writer) error
+	getDuration func(path string) (float64, error)
 }
 
 // NewPreviewer creates a Previewer that calls ffmpeg.
 func NewPreviewer() *Previewer {
-	return &Previewer{runFFmpeg: runFFmpegCmd}
+	return &Previewer{runFFmpeg: runFFmpegCmd, getDuration: mediainfo.Duration}
 }
 
 // Run builds ffmpeg args for the preview context and executes ffmpeg.
 func (p *Previewer) Run(ctx context.Context, pctx PreviewContext, w io.Writer) error {
 	if err := os.MkdirAll(filepath.Dir(pctx.OutPath), 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	// When truncation is disabled, a ducking preview needs the source duration
+	// to size the dummy narration over the full length of the BGM.
+	if pctx.MaxLengthSec <= 0 && pctx.AssetType == "bgm" {
+		if entry, ok := pctx.Assets.BGM[pctx.AssetKey]; ok && entry.DuckRatio > 0 {
+			dur, err := p.getDuration(entry.File)
+			if err != nil {
+				return fmt.Errorf("probe bgm duration for ducking preview: %w", err)
+			}
+			pctx.SourceDurationSec = dur
+		}
 	}
 
 	ffArgs, err := BuildPreviewFFmpegArgs(pctx)
@@ -60,9 +77,7 @@ func (p *Previewer) Run(ctx context.Context, pctx PreviewContext, w io.Writer) e
 // Unlike BuildFFmpegArgs, loudnorm and alimiter are NOT applied.
 func BuildPreviewFFmpegArgs(ctx PreviewContext) (*FFmpegArgs, error) {
 	maxSec := ctx.MaxLengthSec
-	if maxSec <= 0 {
-		maxSec = defaultPreviewMaxLengthSec
-	}
+	truncate := maxSec > 0
 
 	b := &filterBuilder{}
 
@@ -84,7 +99,7 @@ func BuildPreviewFFmpegArgs(ctx PreviewContext) (*FFmpegArgs, error) {
 		return nil, err
 	}
 
-	if !trimApplied {
+	if truncate && !trimApplied {
 		trimLabel := "[preview_out]"
 		b.addFilter(fmt.Sprintf("%satrim=duration=%.3f%s", finalLabel, maxSec, trimLabel))
 		finalLabel = trimLabel
@@ -125,21 +140,30 @@ func buildSEPreview(b *filterBuilder, ctx PreviewContext) (string, error) {
 }
 
 // buildBGMPreview builds the filter chain for a BGM asset preview.
-// Returns the final label, whether max-length trim was already applied (loop=true), and any error.
+// Returns the final label, whether max-length trim was already applied, and any error.
+// When truncation is disabled (maxSec <= 0), loop is ignored so the source plays
+// once at its natural length instead of looping forever.
 func buildBGMPreview(b *filterBuilder, ctx PreviewContext, maxSec float64) (string, bool, error) {
 	entry, ok := ctx.Assets.BGM[ctx.AssetKey]
 	if !ok {
 		return "", false, fmt.Errorf("bgm %q not found in assets", ctx.AssetKey)
 	}
 
-	bgmIdx := addBGMInput(b, entry)
+	// Preview only loops when truncating; with truncation disabled the source plays
+	// once at its natural length. Shape the loop (trim/gap/aloop vs -stream_loop) against
+	// this effective loop flag so addBGMInput/applyBGMLoopShape match production behavior.
+	truncate := maxSec > 0
+	loopEntry := entry
+	loopEntry.Loop = entry.Loop && truncate
+
+	bgmIdx := addBGMInput(b, loopEntry)
 
 	key := "preview"
-	srcLabel := applyBGMLoopShape(b, fmt.Sprintf("[%d:a]", bgmIdx), key, entry)
+	srcLabel := applyBGMLoopShape(b, fmt.Sprintf("[%d:a]", bgmIdx), key, loopEntry)
 	volLabel := "[preview_bgm_vol]"
-	// For loop=true, chain atrim to stop the infinite loop at maxSec.
+	// For looping playback, chain atrim to stop the infinite loop at maxSec.
 	atrimSuffix := ""
-	if entry.Loop {
+	if loopEntry.Loop {
 		atrimSuffix = fmt.Sprintf(",atrim=duration=%.3f", maxSec)
 	}
 	b.addFilter(fmt.Sprintf("%svolume=%.2f%s%s", srcLabel, entry.Volume, atrimSuffix, volLabel))
@@ -149,14 +173,20 @@ func buildBGMPreview(b *filterBuilder, ctx PreviewContext, maxSec float64) (stri
 	label = applyFadeOut(b, label, key, entry.EffectiveFadeOut())
 
 	if entry.DuckRatio > 0 {
-		narrLabel := buildDummyNarration(b, maxSec)
+		// Size the dummy narration to the output length: maxSec when truncating,
+		// otherwise the full source duration resolved by Previewer.Run.
+		narrSec := maxSec
+		if !truncate {
+			narrSec = ctx.SourceDurationSec
+		}
+		narrLabel := buildDummyNarration(b, narrSec)
 		duckedLabel := "[preview_ducked]"
 		b.addFilter(fmt.Sprintf("%s%ssidechaincompress=threshold=0.02:ratio=%.1f%s",
 			label, narrLabel, entry.DuckRatio, duckedLabel))
 		label = duckedLabel
 	}
 
-	return label, entry.Loop, nil
+	return label, loopEntry.Loop, nil
 }
 
 // buildDummyNarration generates a repeating tone/silence pattern as a sidechain signal for ducking.
