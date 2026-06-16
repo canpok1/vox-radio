@@ -5,9 +5,10 @@
 
 # Slack 投稿の設定。
 slack:
-  # 投稿先チャンネルのID（"C" で始まる文字列）。自分のチャンネルIDに置き換えてください。
+  # 投稿先チャンネル ID を保持する環境変数名（必須）。
+  # 実行時に指定した環境変数からチャンネル ID（"C" で始まる文字列）を取得します。
   # チャンネルIDは Slack のチャンネル詳細画面の最下部などで確認できます。
-  channel: "C0123456789"
+  channel_env: SLACK_CHANNEL_ID
 
   # 投稿文テンプレートのファイルパス（省略すると組み込みのデフォルトテンプレートを使います）。
   # vox-radio init --sample で slack-parent.tmpl・slack-thread.tmpl が同時に生成されます。

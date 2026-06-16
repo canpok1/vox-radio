@@ -117,6 +117,7 @@ func (s *scenarioState) startSlack() error {
 	s.slack = newFakeSlack()
 	s.env["VOX_RADIO_SLACK_API_URL"] = s.slack.URL()
 	s.env["TEST_SLACK_BOT_TOKEN"] = "xoxb-e2e-test-token"
+	s.env["E2E_SLACK_CHANNEL"] = slackTestChannel
 	return nil
 }
 

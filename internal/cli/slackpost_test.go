@@ -12,10 +12,10 @@ import (
 	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
-func writeSlackSpecForTest(t *testing.T, dir, channel string) string {
+func writeSlackSpecForTest(t *testing.T, dir, channelEnvName string) string {
 	t.Helper()
 	content := `slack:
-  channel: "` + channel + `"
+  channel_env: "` + channelEnvName + `"
 `
 	path := filepath.Join(dir, "slack-spec.yaml")
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
@@ -73,7 +73,7 @@ slack:
 
 func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 	dir := t.TempDir()
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	specPath := writeSlackSpecForTest(t, dir, "SLACK_CHANNEL_ID")
 
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
@@ -88,21 +88,21 @@ func TestSlackpostCheck_ValidSpec_Success(t *testing.T) {
 	}
 }
 
-func TestSlackpostCheck_EmptyChannel_Error(t *testing.T) {
+func TestSlackpostCheck_EmptyChannelEnv_Error(t *testing.T) {
 	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`slack:
-  channel: ""
+  channel_env: ""
 `))
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "check", specPath})
 	if err := cmd.Execute(); err == nil {
-		t.Error("expected error for empty channel")
+		t.Error("expected error for empty channel_env")
 	}
 }
 
 func TestSlackpostCheck_UnknownKey_Error(t *testing.T) {
 	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`slack:
-  channel: "C0123456789"
+  channel_env: "SLACK_CHANNEL_ID"
 unknown_key: value
 `))
 
@@ -117,7 +117,7 @@ unknown_key: value
 func TestSlackpostCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
 	specPath := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(`program_id: my-radio
 slack:
-  channel: "C0123456789"
+  channel_env: "SLACK_CHANNEL_ID"
 `))
 
 	cmd := cli.NewRootCmd()
@@ -138,7 +138,7 @@ func TestSlackpostCheck_MissingSpecArg_Error(t *testing.T) {
 func TestSlackpost_DryRun_Success(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForTest(t, dir)
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	specPath := writeSlackSpecForTest(t, dir, "TEST_SLACK_CHANNEL")
 	configPath := writeConfigForSlackTest(t, dir)
 
 	t.Setenv("TEST_SLACKPOST_TOKEN", "xoxb-test")
@@ -166,7 +166,7 @@ func TestSlackpost_DryRun_Success(t *testing.T) {
 
 func TestSlackpost_MissingManifestFlag_Error(t *testing.T) {
 	dir := t.TempDir()
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	specPath := writeSlackSpecForTest(t, dir, "TEST_SLACK_CHANNEL")
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"slackpost", "--spec", specPath})
@@ -203,7 +203,7 @@ func TestRootHelp_ContainsSlackpost(t *testing.T) {
 func TestSlackpost_StateFlagAccepted_DryRunNoStateFile(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForTest(t, dir)
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	specPath := writeSlackSpecForTest(t, dir, "TEST_SLACK_CHANNEL")
 	configPath := writeConfigForSlackTest(t, dir)
 	t.Setenv("TEST_SLACKPOST_TOKEN", "xoxb-test")
 
@@ -234,9 +234,9 @@ func TestSlackpost_StateFlagAccepted_DryRunNoStateFile(t *testing.T) {
 func TestSlackpost_EmptyBotToken_Error(t *testing.T) {
 	dir := t.TempDir()
 	manifestPath := writeManifestForTest(t, dir)
-	specPath := writeSlackSpecForTest(t, dir, "C0123456789")
+	specPath := writeSlackSpecForTest(t, dir, "TEST_SLACK_CHANNEL")
 	configPath := writeConfigForSlackTest(t, dir)
-	// env var is NOT set
+	// env vars are NOT set
 
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{
@@ -247,5 +247,25 @@ func TestSlackpost_EmptyBotToken_Error(t *testing.T) {
 	})
 	if err := cmd.Execute(); err == nil {
 		t.Error("expected error when bot token env var is not set")
+	}
+}
+
+func TestSlackpost_EmptyChannelEnv_Error(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForTest(t, dir)
+	specPath := writeSlackSpecForTest(t, dir, "TEST_SLACK_CHANNEL")
+	configPath := writeConfigForSlackTest(t, dir)
+	t.Setenv("TEST_SLACKPOST_TOKEN", "xoxb-test")
+	// TEST_SLACK_CHANNEL is NOT set
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{
+		"--config", configPath,
+		"slackpost",
+		"--manifest", manifestPath,
+		"--spec", specPath,
+	})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when channel env var is not set")
 	}
 }

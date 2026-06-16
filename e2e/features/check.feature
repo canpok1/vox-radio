@@ -83,7 +83,7 @@
     前提 ファイル "broken-slack-spec.yaml" を以下の内容で作成する:
       """
       slack:
-        channel: ""
+        channel_env: ""
       """
     もし "vox-radio slackpost check broken-slack-spec.yaml" を実行する
     ならば 終了コードは 0 以外である

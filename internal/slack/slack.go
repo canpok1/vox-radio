@@ -16,6 +16,7 @@ type Options struct {
 	AudioPath string
 	Spec      SlackSpec
 	Token     string
+	Channel   string
 	APIURL    string
 	StatePath string
 	DryRun    bool
@@ -71,7 +72,7 @@ func Run(opts Options, poster Poster) error {
 	}
 
 	ctx := context.Background()
-	channel := opts.Spec.Slack.Channel
+	channel := opts.Channel
 	statePath := opts.StatePath
 
 	// Build a base state from the current manifest; update fields progressively as each

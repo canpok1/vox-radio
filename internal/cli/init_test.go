@@ -182,8 +182,8 @@ func TestInitCmd_GeneratedFilesLoadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadSlackSpec failed on generated template: %v", err)
 	}
-	if slackSpec.Slack.Channel == "" {
-		t.Error("slack-spec.yaml template should have a channel value")
+	if slackSpec.Slack.ChannelEnv == "" {
+		t.Error("slack-spec.yaml template should have a channel_env value")
 	}
 	if cfg.Slack.BotTokenEnv == "" {
 		t.Error("vox-radio.yaml template should have slack.bot_token_env set")
