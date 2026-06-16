@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/mediainfo"
 	"github.com/canpok1/vox-radio/internal/model"
 )
@@ -49,7 +49,6 @@ func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
 // It also writes clips.json with metadata including durations.
 func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*model.ClipsMeta, error) {
 	logger := s.logger.With("step", "synth")
-	start := time.Now()
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
@@ -62,7 +61,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		}
 	}
 
-	logger.Info(fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
+	done := logging.StartStep(ctx, logger, fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
 
 	var presets config.VoicevoxPresets
 	if s.Config != nil {
@@ -111,7 +110,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		return nil, fmt.Errorf("write clips.json: %w", err)
 	}
 
-	logger.Info(fmt.Sprintf("完了 (%dクリップ, %.1fs)", len(clips), time.Since(start).Seconds()))
+	done(fmt.Sprintf("%dクリップ", len(clips)))
 
 	return meta, nil
 }

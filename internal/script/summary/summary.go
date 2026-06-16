@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/canpok1/vox-radio/internal/logging"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
@@ -94,9 +94,8 @@ type speechEntry struct {
 
 // Summarize generates a program summary and conversation notes from the write-step output lines.
 func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error) {
-	start := time.Now()
-	s.logger.Info("開始")
-	defer func() { s.logger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(start).Seconds())) }()
+	done := logging.StartStep(ctx, s.logger, "開始")
+	defer func() { done("") }()
 
 	totalLines := lines.TotalLines()
 	entries := make([]speechEntry, 0, totalLines)
