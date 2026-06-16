@@ -198,26 +198,12 @@ func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line)
 			Lines:         cornerLines[i],
 			StartAudio:    audioRefToCornerAudio(corner.StartAudio),
 			EndAudio:      audioRefToCornerAudio(corner.EndAudio),
-			BGM:           derefStr(corner.BGM),
-			StartPauseSec: derefFloat64(corner.StartPauseSec),
-			EndPauseSec:   derefFloat64(corner.EndPauseSec),
+			BGM:           corner.EffectiveBGM(),
+			StartPauseSec: corner.EffectiveStartPauseSec(),
+			EndPauseSec:   corner.EffectiveEndPauseSec(),
 		}
 	}
 	return result
-}
-
-func derefStr(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-func derefFloat64(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
 }
 
 func audioRefToCornerAudio(ref *config.AudioRef) *model.CornerAudio {

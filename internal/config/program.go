@@ -87,6 +87,30 @@ func (c CornerConfig) EffectiveSummaryLength() int {
 	return c.SummaryLength
 }
 
+// EffectiveBGM returns the BGM key, or "" when nil (not set) or explicitly empty (disabled).
+func (c CornerConfig) EffectiveBGM() string {
+	if c.BGM == nil {
+		return ""
+	}
+	return *c.BGM
+}
+
+// EffectiveStartPauseSec returns the start pause duration, or 0 when nil.
+func (c CornerConfig) EffectiveStartPauseSec() float64 {
+	if c.StartPauseSec == nil {
+		return 0
+	}
+	return *c.StartPauseSec
+}
+
+// EffectiveEndPauseSec returns the end pause duration, or 0 when nil.
+func (c CornerConfig) EffectiveEndPauseSec() float64 {
+	if c.EndPauseSec == nil {
+		return 0
+	}
+	return *c.EndPauseSec
+}
+
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
 	// ID is required: it is the cache key (episodes are stored per program.id).

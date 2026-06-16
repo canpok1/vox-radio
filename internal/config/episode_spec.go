@@ -208,23 +208,20 @@ func validateCornerDefaults(d *CornerDefaults, assets *AssetsConfig) error {
 			return fmt.Errorf("corner_defaults.bgm: unknown bgm key %q", *d.BGM)
 		}
 	}
-	if d.StartAudio != nil {
-		if d.StartAudio.Type == "" {
-			return fmt.Errorf("corner_defaults.start_audio: type must not be empty (omit to disable)")
-		}
-		if err := validateAudioRef("corner_defaults", "start_audio", d.StartAudio, assets); err != nil {
-			return err
-		}
+	if err := validateDefaultAudioRef("corner_defaults", "start_audio", d.StartAudio, assets); err != nil {
+		return err
 	}
-	if d.EndAudio != nil {
-		if d.EndAudio.Type == "" {
-			return fmt.Errorf("corner_defaults.end_audio: type must not be empty (omit to disable)")
-		}
-		if err := validateAudioRef("corner_defaults", "end_audio", d.EndAudio, assets); err != nil {
-			return err
-		}
+	return validateDefaultAudioRef("corner_defaults", "end_audio", d.EndAudio, assets)
+}
+
+func validateDefaultAudioRef(parent, field string, ref *AudioRef, assets *AssetsConfig) error {
+	if ref == nil {
+		return nil
 	}
-	return nil
+	if ref.Type == "" {
+		return fmt.Errorf("%s.%s: type must not be empty (omit to disable)", parent, field)
+	}
+	return validateAudioRef(parent, field, ref, assets)
 }
 
 // Validate はすべてのバリデーションを実行する単一エントリポイント。
