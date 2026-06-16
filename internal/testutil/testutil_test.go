@@ -33,3 +33,58 @@ func TestWriteTempFile_FileIsCleanedUpAfterTest(t *testing.T) {
 		t.Errorf("expected file to be cleaned up, but it still exists: %s", savedPath)
 	}
 }
+
+func TestStrPtr(t *testing.T) {
+	tests := []struct {
+		name string
+		v    string
+	}{
+		{"empty string", ""},
+		{"non-empty string", "hello"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testutil.StrPtr(tt.v)
+			if *got != tt.v {
+				t.Errorf("*StrPtr(%q) = %q, want %q", tt.v, *got, tt.v)
+			}
+		})
+	}
+}
+
+func TestFloat64Ptr(t *testing.T) {
+	tests := []struct {
+		name string
+		v    float64
+	}{
+		{"zero", 0.0},
+		{"positive", 1.5},
+		{"negative", -0.5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testutil.Float64Ptr(tt.v)
+			if *got != tt.v {
+				t.Errorf("*Float64Ptr(%v) = %v, want %v", tt.v, *got, tt.v)
+			}
+		})
+	}
+}
+
+func TestBoolPtr(t *testing.T) {
+	tests := []struct {
+		name string
+		v    bool
+	}{
+		{"false", false},
+		{"true", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testutil.BoolPtr(tt.v)
+			if *got != tt.v {
+				t.Errorf("*BoolPtr(%v) = %v, want %v", tt.v, *got, tt.v)
+			}
+		})
+	}
+}
