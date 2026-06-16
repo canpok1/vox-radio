@@ -85,3 +85,4 @@
 | [0077](0077-per-episode-output-layout.md) | episodegen の出力を回数別名・回ごとディレクトリにする | 採用 | 2026-06-16 |
 | [0078](0078-init-sample-with-assets-flag.md) | init --sample-with-assets で音入りサンプルを生成する | 採用 | 2026-06-16 |
 | [0079](0079-templatize-sample-episode-spec.md) | サンプル episode-spec を text/template で単一ソース化する | 採用 | 2026-06-16 |
+| [0080](0080-slackpost-channel-via-env-var-name.md) | slackpost の投稿先チャンネルを環境変数名の間接指定にする | 採用 | 2026-06-16 |
