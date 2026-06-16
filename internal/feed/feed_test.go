@@ -348,13 +348,11 @@ func TestBuildFeed_ItemItunesAuthorNeverSet(t *testing.T) {
 		t.Fatalf("BuildFeed: %v", err)
 	}
 	// item レベルの itunes:author は出力されないこと（channel itunes:author は出る）
-	// channel itunes:author を除いたテキストで item の itunes:author を確認する
-	channelClose := "</channel>"
-	channelEnd := strings.Index(got, channelClose)
-	if channelEnd < 0 {
-		t.Fatalf("BuildFeed: </channel> not found in output")
+	itemStart := strings.Index(got, "<item>")
+	if itemStart < 0 {
+		t.Fatalf("BuildFeed: <item> not found in output")
 	}
-	itemSection := got[strings.Index(got, "<item>"):]
+	itemSection := got[itemStart:]
 	if strings.Contains(itemSection, "itunes:author") {
 		t.Errorf("BuildFeed: item section must NOT contain itunes:author\ngot items:\n%s", itemSection)
 	}
