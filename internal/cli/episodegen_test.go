@@ -10,16 +10,6 @@ import (
 	"github.com/canpok1/vox-radio/internal/cli"
 )
 
-func mustWriteFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
-}
-
 func TestEpisodegen_ExistingEpisodeCheck(t *testing.T) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("ffmpeg not installed")
@@ -60,9 +50,9 @@ func TestEpisodegen_ExistingEpisodeCheck(t *testing.T) {
 
 			switch tt.existing {
 			case "mp3":
-				mustWriteFile(t, filepath.Join(outDir, "my-tech-radio_ep001.mp3"), "dummy")
+				writeTestFile(t, outDir, "my-tech-radio_ep001.mp3", []byte("dummy"))
 			case "manifest":
-				mustWriteFile(t, filepath.Join(outDir, "my-tech-radio_ep001_manifest.json"), "{}")
+				writeTestFile(t, outDir, "my-tech-radio_ep001_manifest.json", []byte("{}"))
 			case "intermediate":
 				interDir := filepath.Join(outDir, "intermediate", "my-tech-radio_ep001")
 				if err := os.MkdirAll(interDir, 0755); err != nil {
