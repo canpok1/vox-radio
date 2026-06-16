@@ -1148,7 +1148,7 @@ func TestBuildFFmpegArgs_BGMLoop_TrimAndGap(t *testing.T) {
 	if siIdx < 0 || apadIdx < 0 || aloopIdx < 0 {
 		t.Fatalf("expected silenceremove, apad, aloop all present, filter: %s", args.FilterComplex)
 	}
-	if !(siIdx < apadIdx && apadIdx < aloopIdx) {
+	if siIdx >= apadIdx || apadIdx >= aloopIdx {
 		t.Errorf("expected order silenceremove < apad < aloop, got si=%d apad=%d aloop=%d", siIdx, apadIdx, aloopIdx)
 	}
 }
