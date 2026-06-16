@@ -40,6 +40,7 @@ type Entry struct {
 	Datetime          string                   `json:"datetime"`
 	EpisodeNumber     int                      `json:"episode_number,omitempty"`
 	EpisodeTitle      string                   `json:"episode_title,omitempty"`
+	Author            string                   `json:"author,omitempty"` // omitempty: backward compat with pre-author cache entries
 	Title             string                   `json:"title"`
 	Summary           string                   `json:"summary"`
 	Description       string                   `json:"description,omitempty"`
@@ -223,6 +224,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		Datetime:          m.Datetime,
 		EpisodeNumber:     m.EpisodeNumber,
 		EpisodeTitle:      m.EpisodeTitle,
+		Author:            m.Author,
 		Title:             m.Title,
 		Summary:           m.Summary,
 		Description:       m.Description,
