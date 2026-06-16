@@ -3,6 +3,7 @@ package cli_test
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -217,6 +218,70 @@ func TestAssetsPreview_InvalidType_Error(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown asset type in --id")
+	}
+}
+
+// TestAssetsPreview_SuppressesFFmpegLog_Success verifies that a successful preview
+// does not leak ffmpeg log output to the terminal (stderr) and instead prints a
+// concise user-facing success message to stdout, matching assemble/episodegen.
+func TestAssetsPreview_SuppressesFFmpegLog_Success(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not installed")
+	}
+
+	dir := t.TempDir()
+	jinglePath := filepath.Join(dir, "opening.wav")
+	if err := exec.Command("ffmpeg", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", jinglePath).Run(); err != nil {
+		t.Fatalf("generate test audio: %v", err)
+	}
+
+	yamlContent := "jingle:\n" +
+		"  opening:\n" +
+		"    file: opening.wav\n"
+	assetsPath := filepath.Join(dir, "assets.yaml")
+	if err := os.WriteFile(assetsPath, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("create assets.yaml: %v", err)
+	}
+
+	outPath := filepath.Join(dir, "preview.mp3")
+	logDir := filepath.Join(dir, "logs")
+
+	cmd := cli.NewRootCmd()
+	outBuf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	cmd.SetOut(outBuf)
+	cmd.SetErr(errBuf)
+	cmd.SetArgs([]string{"assets", "preview", assetsPath, "--id", "jingle:opening", "--out", outPath, "--log-dir", logDir})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v\nstderr: %s", err, errBuf.String())
+	}
+
+	// ffmpeg log must NOT leak to the terminal (stderr).
+	if strings.Contains(errBuf.String(), "ffmpeg") {
+		t.Errorf("ffmpeg log should not appear on stderr, got: %s", errBuf.String())
+	}
+	// A user-facing success message with the output path must appear on stdout.
+	if !strings.Contains(outBuf.String(), outPath) {
+		t.Errorf("expected success message with output path on stdout, got: %s", outBuf.String())
+	}
+	// The preview file must be created.
+	if _, err := os.Stat(outPath); err != nil {
+		t.Errorf("preview output not created: %v", err)
+	}
+	// The ffmpeg log must be captured in the log file (退避), not discarded.
+	logEntries, err := os.ReadDir(logDir)
+	if err != nil {
+		t.Fatalf("read log dir: %v", err)
+	}
+	if len(logEntries) == 0 {
+		t.Fatal("expected a log file to be created in the log dir")
+	}
+	logData, err := os.ReadFile(filepath.Join(logDir, logEntries[0].Name()))
+	if err != nil {
+		t.Fatalf("read log file: %v", err)
+	}
+	if !strings.Contains(string(logData), "ffmpeg") {
+		t.Errorf("ffmpeg log should be captured in the log file, got: %s", logData)
 	}
 }
 
