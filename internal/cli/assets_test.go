@@ -268,6 +268,21 @@ func TestAssetsPreview_SuppressesFFmpegLog_Success(t *testing.T) {
 	if _, err := os.Stat(outPath); err != nil {
 		t.Errorf("preview output not created: %v", err)
 	}
+	// The ffmpeg log must be captured in the log file (退避), not discarded.
+	logEntries, err := os.ReadDir(logDir)
+	if err != nil {
+		t.Fatalf("read log dir: %v", err)
+	}
+	if len(logEntries) == 0 {
+		t.Fatal("expected a log file to be created in the log dir")
+	}
+	logData, err := os.ReadFile(filepath.Join(logDir, logEntries[0].Name()))
+	if err != nil {
+		t.Fatalf("read log file: %v", err)
+	}
+	if !strings.Contains(string(logData), "ffmpeg") {
+		t.Errorf("ffmpeg log should be captured in the log file, got: %s", logData)
+	}
 }
 
 func TestAssetsPreview_KeyNotFound_Error(t *testing.T) {
