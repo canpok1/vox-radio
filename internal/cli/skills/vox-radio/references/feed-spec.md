@@ -9,7 +9,6 @@
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `feed.language` | string | 必須 | 言語コード（RSS channel language）。例: `ja` |
-| `feed.author` | string | 必須 | 配信者名（itunes:author） |
 | `feed.email` | string | 必須 | 連絡先メールアドレス（itunes:email） |
 | `feed.site_url` | string | 必須 | 番組サイト URL（RSS channel link） |
 | `feed.audio_url_template` | string | 必須 | 各エピソード音声ファイルの URL テンプレート。`{episode_number}` と `{audio_file}` が cache の値で置換される |
