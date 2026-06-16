@@ -1,7 +1,7 @@
 package cli_test
 
 import (
-	"io/fs"
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -339,31 +339,34 @@ func TestInitCmd_Sample_Skip(t *testing.T) {
 	}
 }
 
-// TestSampleWithAssetsOverlay_TargetsExistInBase guards the overlay contract: every file in
-// the with-assets tree must override a file present in the base sample tree. --sample-with-assets
-// generates the base tree (skipping the overridden files) and then writes this overlay, so a
-// rename/move in the base tree would otherwise silently ship a sample missing the overlay.
-func TestSampleWithAssetsOverlay_TargetsExistInBase(t *testing.T) {
-	const base = "templates-sample"
-	const overlay = "templates-sample-with-assets"
-	err := filepath.WalkDir(overlay, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(overlay, path)
-		if err != nil {
-			return err
-		}
-		if _, err := os.Stat(filepath.Join(base, rel)); err != nil {
-			t.Errorf("overlay file %q has no counterpart in %s (overlay must override a base file): %v", rel, base, err)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk overlay tree: %v", err)
+// TestInitCmd_EpisodeSpecMatchesGolden verifies that --sample and --sample-with-assets each produce
+// an episode-spec.yaml byte-identical to the corresponding golden file in testdata/.
+func TestInitCmd_EpisodeSpecMatchesGolden(t *testing.T) {
+	for _, tc := range []struct {
+		flag   string
+		golden string
+	}{
+		{"--sample", "testdata/episode-spec-without-assets.yaml"},
+		{"--sample-with-assets", "testdata/episode-spec-with-assets.yaml"},
+	} {
+		t.Run(tc.flag, func(t *testing.T) {
+			// Read golden before chdirTemp changes the working directory.
+			want, err := os.ReadFile(tc.golden)
+			if err != nil {
+				t.Fatalf("read golden: %v", err)
+			}
+			dir := chdirTemp(t)
+			if _, err := runInitCmd(t, tc.flag); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got, err := os.ReadFile(filepath.Join(dir, "episode-spec.yaml"))
+			if err != nil {
+				t.Fatalf("read generated: %v", err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("%s episode-spec.yaml does not match %s golden\ngot:\n%s\nwant:\n%s", tc.flag, tc.golden, got, want)
+			}
+		})
 	}
 }
 
