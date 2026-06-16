@@ -67,6 +67,23 @@ feed:
 	}
 }
 
+// feed.credit は廃止されたため、feedgen check で unknown key エラーになること
+func TestFeedgenCheck_CreditField_RaisesUnknownKey(t *testing.T) {
+	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`feed:
+  language: ja
+  email: test@example.com
+  site_url: https://example.com/
+  audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
+  credit: "some credit"
+`))
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"feedgen", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for credit (unknown key) in feedgen check, got nil")
+	}
+}
+
 func TestFeedgenCheck_MissingSpecArg_Error(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"feedgen", "check"})

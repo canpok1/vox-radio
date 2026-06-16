@@ -17,7 +17,6 @@
       <pubDate>Mon, 08 Jan 2024 01:00:00 +0000</pubDate>
       <enclosure url="https://example.com/releases/ep-2/morning-news_ep001.mp3" length="23456789" type="audio/mpeg"></enclosure>
       <itunes:duration>2100</itunes:duration>
-      <itunes:author>VOICEVOX:ずんだもん</itunes:author>
     </item>
     <item>
       <title>第1回 AIニュース特集</title>
@@ -26,7 +25,6 @@
       <pubDate>Mon, 01 Jan 2024 01:00:00 +0000</pubDate>
       <enclosure url="https://example.com/releases/ep-1/morning-news_ep001.mp3" length="12345678" type="audio/mpeg"></enclosure>
       <itunes:duration>1800</itunes:duration>
-      <itunes:author>VOICEVOX:ずんだもん</itunes:author>
     </item>
   </channel>
 </rss>

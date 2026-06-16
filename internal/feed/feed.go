@@ -46,7 +46,6 @@ type rssItem struct {
 	PubDate        string       `xml:"pubDate"`
 	Enclosure      rssEnclosure `xml:"enclosure"`
 	ItunesDuration string       `xml:"itunes:duration"`
-	ItunesAuthor   string       `xml:"itunes:author,omitempty"`
 }
 
 type rssGUID struct {
@@ -96,9 +95,6 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 			PubDate:        pubDate(e.Datetime),
 			Enclosure:      rssEnclosure{URL: url, Length: e.Bytes, Type: "audio/mpeg"},
 			ItunesDuration: strconv.Itoa(e.DurationSec),
-		}
-		if cfg.Feed.Credit != "" {
-			item.ItunesAuthor = cfg.Feed.Credit
 		}
 		items = append(items, item)
 	}

@@ -114,16 +114,17 @@ func (c CornerConfig) EffectiveEndPauseSec() float64 {
 // ProgramConfig holds program-wide settings for content generation.
 type ProgramConfig struct {
 	// ID is required: it is the cache key (episodes are stored per program.id).
-	ID             string `yaml:"id"`
-	Title          string `yaml:"title"`
-	Author         string `yaml:"author,omitempty"` // MP3 アーティストタグ（TPE1）に埋め込む番組作者名
-	Description    string `yaml:"description"`
-	Direction      string `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
-	ScriptNote     string `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
-	SummaryLength  int    `yaml:"summary_length,omitempty"`
-	Timezone       string `yaml:"timezone,omitempty"`         // IANA tz名。未設定時は DefaultProgramTimezone
-	CharsPerMinute int    `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute
-	AudioQuality   string `yaml:"audio_quality,omitempty"`    // 音質プリセット: "high" / "standard" / "low"。未設定時は DefaultAudioQuality
+	ID             string   `yaml:"id"`
+	Title          string   `yaml:"title"`
+	Author         string   `yaml:"author,omitempty"` // MP3 アーティストタグ（TPE1）に埋め込む番組作者名
+	Description    string   `yaml:"description"`
+	Direction      string   `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
+	ScriptNote     string   `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
+	SummaryLength  int      `yaml:"summary_length,omitempty"`
+	Timezone       string   `yaml:"timezone,omitempty"`         // IANA tz名。未設定時は DefaultProgramTimezone
+	CharsPerMinute int      `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute
+	AudioQuality   string   `yaml:"audio_quality,omitempty"`    // 音質プリセット: "high" / "standard" / "low"。未設定時は DefaultAudioQuality
+	Credits        []string `yaml:"credits,omitempty"`          // 番組固定クレジット（データソース帰属など）。manifest.credits に統合される
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.

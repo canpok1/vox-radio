@@ -20,7 +20,6 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			CoverImageURL:    "https://example.com/cover.png",
 			SiteURL:          "https://example.com/",
 			AudioURLTemplate: "https://example.com/releases/ep-{episode_number}/{audio_file}",
-			Credit:           "VOICEVOX:ずんだもん",
 		},
 		Output: feed.OutputConfig{Public: "public"},
 	}
@@ -322,6 +321,42 @@ func TestBuildFeed_CustomCreditsHeader(t *testing.T) {
 	}
 	if strings.Contains(got, feed.DefaultCreditsHeader) {
 		t.Errorf("BuildFeed: expected %q to be replaced by custom header\ngot:\n%s", feed.DefaultCreditsHeader, got)
+	}
+}
+
+func TestBuildFeed_ItemItunesAuthorNeverSet(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Author:        "番組著者",
+			Title:         "タイトル",
+			Summary:       "要約",
+			AudioFile:     "ep001.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+		},
+	}
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+	// item レベルの itunes:author は出力されないこと（channel itunes:author は出る）
+	// channel itunes:author を除いたテキストで item の itunes:author を確認する
+	channelClose := "</channel>"
+	channelEnd := strings.Index(got, channelClose)
+	if channelEnd < 0 {
+		t.Fatalf("BuildFeed: </channel> not found in output")
+	}
+	itemSection := got[strings.Index(got, "<item>"):]
+	if strings.Contains(itemSection, "itunes:author") {
+		t.Errorf("BuildFeed: item section must NOT contain itunes:author\ngot items:\n%s", itemSection)
 	}
 }
 

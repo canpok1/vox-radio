@@ -28,7 +28,6 @@ feed:
   cover_image_url: https://example.com/cover.png
   site_url: https://example.com/
   audio_url_template: "https://github.com/owner/repo/releases/download/ep-{episode_number}/{audio_file}"
-  credit: "VOICEVOX:ずんだもん"
 output:
   public: public
 `
@@ -60,9 +59,6 @@ output:
 	wantTemplate := "https://github.com/owner/repo/releases/download/ep-{episode_number}/{audio_file}"
 	if cfg.Feed.AudioURLTemplate != wantTemplate {
 		t.Errorf("Feed.AudioURLTemplate: got %q, want %q", cfg.Feed.AudioURLTemplate, wantTemplate)
-	}
-	if cfg.Feed.Credit != "VOICEVOX:ずんだもん" {
-		t.Errorf("Feed.Credit: got %q, want %q", cfg.Feed.Credit, "VOICEVOX:ずんだもん")
 	}
 	if cfg.Output.Public != "public" {
 		t.Errorf("Output.Public: got %q, want %q", cfg.Output.Public, "public")
@@ -193,7 +189,6 @@ func TestValidateFeedSpec(t *testing.T) {
 			mutate: func(s *feed.FeedSpec) {
 				s.Feed.Category = ""
 				s.Feed.CoverImageURL = ""
-				s.Feed.Credit = ""
 				s.Output.Public = ""
 			},
 			wantErr: false,

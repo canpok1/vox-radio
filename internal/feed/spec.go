@@ -24,7 +24,6 @@ type FeedConfig struct {
 	CoverImageURL    string `yaml:"cover_image_url"`
 	SiteURL          string `yaml:"site_url"`
 	AudioURLTemplate string `yaml:"audio_url_template"`
-	Credit           string `yaml:"credit"`
 	CreditsHeader    string `yaml:"credits_header,omitempty"`
 }
 

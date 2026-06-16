@@ -1,6 +1,6 @@
 # 0065. 使用したアセット・キャラクターのクレジットを manifest 経由で feed/Slack へ転記する
 
-- ステータス: 採用
+- ステータス: 置換済み → [0074-unify-data-source-attribution-into-description-credits.md](0074-unify-data-source-attribution-into-description-credits.md)
 - 日付: 2026-06-14
 
 ## コンテキスト
