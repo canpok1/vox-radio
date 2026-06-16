@@ -8,6 +8,10 @@
 
 loudnorm/alimiter は適用されないため、各パラメータの素の効果を確認できます。
 
+デフォルトでは末尾の打ち切りを行わず素材の全長を出力します（30秒を超える BGM 全体を確認できます）。
+--max-length-sec に正の秒数を指定したときのみ、その長さで末尾を打ち切ります。
+loop=true の BGM は、--max-length-sec 未指定時はループせず素材を1回分出力します。
+
 例:
   vox-radio assets preview assets.yaml --id jingle:opening --out preview.mp3
   vox-radio assets preview assets.yaml --id bgm:talk --out preview.mp3 --max-length-sec 15
@@ -21,7 +25,7 @@ vox-radio assets preview <path> [flags]
 ```
   -h, --help                   help for preview
       --id string              {type}:{key} 形式の素材ID（type: jingle/se/bgm）（必須）
-      --max-length-sec float   プレビュー出力の最大長（秒）。出力がこれより長い場合に末尾を打ち切る (default 30)
+      --max-length-sec float   プレビュー出力の最大長（秒）。未指定（0以下）なら打ち切らず全長を出力し、正の値を指定したときのみその長さで末尾を打ち切る
       --out string             MP3 出力先パス（必須）
 ```
 
