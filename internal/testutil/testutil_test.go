@@ -45,9 +45,6 @@ func TestStrPtr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := testutil.StrPtr(tt.v)
-			if got == nil {
-				t.Fatal("StrPtr returned nil")
-			}
 			if *got != tt.v {
 				t.Errorf("*StrPtr(%q) = %q, want %q", tt.v, *got, tt.v)
 			}
@@ -67,9 +64,6 @@ func TestFloat64Ptr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := testutil.Float64Ptr(tt.v)
-			if got == nil {
-				t.Fatal("Float64Ptr returned nil")
-			}
 			if *got != tt.v {
 				t.Errorf("*Float64Ptr(%v) = %v, want %v", tt.v, *got, tt.v)
 			}
@@ -88,9 +82,6 @@ func TestBoolPtr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := testutil.BoolPtr(tt.v)
-			if got == nil {
-				t.Fatal("BoolPtr returned nil")
-			}
 			if *got != tt.v {
 				t.Errorf("*BoolPtr(%v) = %v, want %v", tt.v, *got, tt.v)
 			}
