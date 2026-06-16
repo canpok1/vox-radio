@@ -18,7 +18,6 @@ const (
 // FeedConfig holds RSS feed metadata for feed-spec.yaml.
 type FeedConfig struct {
 	Language         string `yaml:"language"`
-	Author           string `yaml:"author"`
 	Email            string `yaml:"email"`
 	Category         string `yaml:"category"`
 	Explicit         bool   `yaml:"explicit"`
@@ -84,9 +83,6 @@ func ValidateFeedSpec(spec FeedSpec) error {
 	// (b) required fields
 	if spec.Feed.Language == "" {
 		errs = append(errs, errors.New("feed.language is required"))
-	}
-	if spec.Feed.Author == "" {
-		errs = append(errs, errors.New("feed.author is required"))
 	}
 	if spec.Feed.Email == "" {
 		errs = append(errs, errors.New("feed.email is required"))

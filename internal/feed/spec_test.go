@@ -11,7 +11,6 @@ import (
 const validFeedSpecYAML = `
 feed:
   language: ja
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
@@ -23,7 +22,6 @@ func TestLoadFeedSpec_ValidYAML(t *testing.T) {
 	content := `
 feed:
   language: ja
-  author: testauthor
   email: test@example.com
   category: Technology
   explicit: false
@@ -43,9 +41,6 @@ output:
 
 	if cfg.Feed.Language != "ja" {
 		t.Errorf("Feed.Language: got %q, want %q", cfg.Feed.Language, "ja")
-	}
-	if cfg.Feed.Author != "testauthor" {
-		t.Errorf("Feed.Author: got %q, want %q", cfg.Feed.Author, "testauthor")
 	}
 	if cfg.Feed.Email != "test@example.com" {
 		t.Errorf("Feed.Email: got %q, want %q", cfg.Feed.Email, "test@example.com")
@@ -85,7 +80,6 @@ func TestLoadFeedSpec_CreditsHeaderField(t *testing.T) {
 	content := `
 feed:
   language: ja
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
@@ -175,7 +169,6 @@ func validSpec() feed.FeedSpec {
 	return feed.FeedSpec{
 		Feed: feed.FeedConfig{
 			Language:         "ja",
-			Author:           "Test Author",
 			Email:            "test@example.com",
 			SiteURL:          "https://example.com/",
 			AudioURLTemplate: "https://example.com/ep-{episode_number}/{audio_file}",
@@ -210,12 +203,6 @@ func TestValidateFeedSpec(t *testing.T) {
 			mutate:      func(s *feed.FeedSpec) { s.Feed.Language = "" },
 			wantErr:     true,
 			errContains: []string{"feed.language"},
-		},
-		{
-			name:        "missing author",
-			mutate:      func(s *feed.FeedSpec) { s.Feed.Author = "" },
-			wantErr:     true,
-			errContains: []string{"feed.author"},
 		},
 		{
 			name:        "missing email",
@@ -281,10 +268,10 @@ func TestValidateFeedSpec(t *testing.T) {
 			name: "multiple errors collected",
 			mutate: func(s *feed.FeedSpec) {
 				s.Feed.Language = ""
-				s.Feed.Author = ""
+				s.Feed.Email = ""
 			},
 			wantErr:     true,
-			errContains: []string{"feed.language", "feed.author"},
+			errContains: []string{"feed.language", "feed.email"},
 		},
 	}
 
