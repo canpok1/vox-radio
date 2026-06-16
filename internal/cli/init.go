@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/spf13/cobra"
 )
@@ -14,8 +17,25 @@ var templatesFS embed.FS
 //go:embed all:templates-sample
 var sampleFS embed.FS
 
-//go:embed all:templates-sample-with-assets
-var sampleWithAssetsFS embed.FS
+type sampleEpisodeSpecData struct {
+	WithAssets bool
+}
+
+func renderSampleEpisodeSpec(cmd *cobra.Command, dstDir string, withAssets bool, force bool) error {
+	tmplContent, err := sampleFS.ReadFile("templates-sample/episode-spec.yaml.tmpl")
+	if err != nil {
+		return fmt.Errorf("read episode-spec template: %w", err)
+	}
+	t, err := template.New("episode-spec").Parse(string(tmplContent))
+	if err != nil {
+		return fmt.Errorf("parse episode-spec template: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, sampleEpisodeSpecData{WithAssets: withAssets}); err != nil {
+		return fmt.Errorf("execute episode-spec template: %w", err)
+	}
+	return writeFile(cmd, filepath.Join(dstDir, "episode-spec.yaml"), buf.Bytes(), force)
+}
 
 func newInitCmd() *cobra.Command {
 	var sample bool
@@ -59,18 +79,25 @@ func newInitCmd() *cobra.Command {
 				return fmt.Errorf("--sample と --sample-with-assets は同時に指定できません")
 			}
 			if sampleWithAssets {
-				// 共通ファイルは templates-sample を再利用し、assets/assets.yaml はパック展開に
-				// 委ねるため生成しない。episode-spec.yaml はアセット割り当て済み版で上書きする。
+				// assets/assets.yaml はパック展開に委ねるため生成しない。
+				// episode-spec.yaml はテンプレートから音入り版を生成する。
 				skip := func(rel string) bool {
-					return rel == "episode-spec.yaml" || strings.HasPrefix(rel, "assets/")
+					return rel == "episode-spec.yaml.tmpl" || strings.HasPrefix(rel, "assets/")
 				}
 				if err := writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, skip); err != nil {
 					return err
 				}
-				return writeEmbeddedTree(cmd, sampleWithAssetsFS, "templates-sample-with-assets", outputDir, false, nil)
+				return renderSampleEpisodeSpec(cmd, outputDir, true, false)
 			}
 			if sample {
-				return writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, nil)
+				// episode-spec.yaml はテンプレートから生成する。
+				skip := func(rel string) bool {
+					return rel == "episode-spec.yaml.tmpl"
+				}
+				if err := writeEmbeddedTree(cmd, sampleFS, "templates-sample", outputDir, false, skip); err != nil {
+					return err
+				}
+				return renderSampleEpisodeSpec(cmd, outputDir, false, false)
 			}
 			return writeEmbeddedTree(cmd, templatesFS, "templates", outputDir, false, nil)
 		},
