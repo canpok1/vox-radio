@@ -9,9 +9,8 @@ import (
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
-
-func boolPtr(v bool) *bool { return &v }
 
 // hasStreamLoop reports whether the input with the given path has -stream_loop -1 in its PreOptions.
 func hasStreamLoop(inputs []FFmpegInput, path string) bool {
@@ -152,7 +151,7 @@ func TestBuildFFmpegArgs_SESegment(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: testutil.BoolPtr(true)},
 			},
 		},
 		PauseSec: 0.5,
@@ -852,7 +851,7 @@ func TestBuildFFmpegArgs_SEAfterPause_HasShiftedOffset(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: boolPtr(true)},
+				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: testutil.BoolPtr(true)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1347,7 +1346,7 @@ func TestBuildFFmpegArgs_SameSpeakerContinuation_SEOffsetConsistent(t *testing.T
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: boolPtr(true)},
+				"chime": {File: "/assets/chime.wav", Volume: 1.0, Overlay: testutil.BoolPtr(true)},
 			},
 		},
 		PauseSec: 0.3,
@@ -1482,7 +1481,7 @@ func TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset(t *testing
 		Assets: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
 				"seq_se":     {File: "/assets/seq.wav", Volume: 1.0},
-				"overlay_se": {File: "/assets/overlay.wav", Volume: 1.0, Overlay: boolPtr(true)},
+				"overlay_se": {File: "/assets/overlay.wav", Volume: 1.0, Overlay: testutil.BoolPtr(true)},
 			},
 		},
 		SEDurations: map[string]float64{"seq_se": 1.5},
@@ -1500,8 +1499,6 @@ func TestBuildFFmpegArgs_SE_SequentialDurationAdvancesOverlaySEOffset(t *testing
 		t.Errorf("overlay SE adelay should be 7500ms (after sequential SE duration), filter: %s", args.FilterComplex)
 	}
 }
-
-func float64Ptr(v float64) *float64 { return &v }
 
 // --- golden test ---
 
@@ -1537,7 +1534,7 @@ func TestBuildFFmpegArgs_Golden_FilterComplex(t *testing.T) {
 				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, DuckRatio: 4.0},
 			},
 			SE: map[string]config.SEEntry{
-				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
+				"chime": {File: "/assets/chime.wav", Volume: 0.8, Overlay: testutil.BoolPtr(true)},
 			},
 			Jingle: map[string]config.JingleEntry{
 				"op": {File: "/assets/op.wav", FadeIn: 0.3},
@@ -1663,7 +1660,7 @@ func TestBuildSEOverlay_OneOverlayEvent(t *testing.T) {
 	events := []seEvent{{assetName: "chime", offsetMs: 2000}}
 	assets := config.AssetsConfig{
 		SE: map[string]config.SEEntry{
-			"chime": {File: "/chime.wav", Volume: 0.8, Overlay: boolPtr(true)},
+			"chime": {File: "/chime.wav", Volume: 0.8, Overlay: testutil.BoolPtr(true)},
 		},
 	}
 	outLabel := buildSEOverlay(b, events, assets, 0, "[input]")
@@ -1745,7 +1742,7 @@ func TestBuildFFmpegArgs_BGMFadeInOut_A1(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0.5), FadeOut: float64Ptr(0.5)},
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: testutil.Float64Ptr(0.5), FadeOut: testutil.Float64Ptr(0.5)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1825,7 +1822,7 @@ func TestBuildFFmpegArgs_BGMFadeDisabled_A5(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0), FadeOut: float64Ptr(0)},
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: testutil.Float64Ptr(0), FadeOut: testutil.Float64Ptr(0)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1866,8 +1863,8 @@ func TestBuildFFmpegArgs_BGMCrossfade_A2(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"bgm_a": {File: "/assets/bgm_a.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(0.5), FadeOut: float64Ptr(1.0)},
-				"bgm_b": {File: "/assets/bgm_b.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(1.0), FadeOut: float64Ptr(0.5)},
+				"bgm_a": {File: "/assets/bgm_a.mp3", Volume: 0.3, Loop: true, FadeIn: testutil.Float64Ptr(0.5), FadeOut: testutil.Float64Ptr(1.0)},
+				"bgm_b": {File: "/assets/bgm_b.mp3", Volume: 0.3, Loop: true, FadeIn: testutil.Float64Ptr(1.0), FadeOut: testutil.Float64Ptr(0.5)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1932,7 +1929,7 @@ func TestBuildFFmpegArgs_BGMShortClamp_A4(t *testing.T) {
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
 				// FadeIn=1.0 and FadeOut=1.0 both exceed half the BGM interval duration
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: float64Ptr(1.0), FadeOut: float64Ptr(1.0)},
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, FadeIn: testutil.Float64Ptr(1.0), FadeOut: testutil.Float64Ptr(1.0)},
 			},
 		},
 		PauseSec: 0.5,

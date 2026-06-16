@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 func TestDurationSecToTargetChars(t *testing.T) {
@@ -286,7 +287,7 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 			name: "valid start_audio jingle",
 			spec: &config.EpisodeSpec{
 				Corners: []config.CornerConfig{
-					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"}, BGM: strPtr("talk_bgm")},
+					{Title: "C1", StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"}, BGM: testutil.StrPtr("talk_bgm")},
 				},
 				Assets: config.AssetsConfig{
 					Jingle: map[string]config.JingleEntry{"opening": {File: "opening.mp3"}},
@@ -373,7 +374,7 @@ func TestValidateEpisodeSpecAssets(t *testing.T) {
 		{
 			name: "unknown bgm",
 			spec: &config.EpisodeSpec{
-				Corners: []config.CornerConfig{{Title: "C1", BGM: strPtr("nonexistent")}},
+				Corners: []config.CornerConfig{{Title: "C1", BGM: testutil.StrPtr("nonexistent")}},
 				Assets: config.AssetsConfig{
 					Jingle: map[string]config.JingleEntry{},
 					BGM:    map[string]config.BGMEntry{},
@@ -1452,16 +1453,14 @@ func TestLoadEpisodeSpecStrict_LegacyAssets_Error(t *testing.T) {
 	}
 }
 
-func boolPtr(v bool) *bool { return &v }
-
 func TestJingleEntry_EffectiveTrimSilence(t *testing.T) {
 	cases := []struct {
 		ptr  *bool
 		want bool
 	}{
 		{nil, true},
-		{boolPtr(false), false},
-		{boolPtr(true), true},
+		{testutil.BoolPtr(false), false},
+		{testutil.BoolPtr(true), true},
 	}
 	for _, c := range cases {
 		e := config.JingleEntry{TrimSilence: c.ptr}
@@ -1477,8 +1476,8 @@ func TestSEEntry_EffectiveTrimSilence(t *testing.T) {
 		want bool
 	}{
 		{nil, true},
-		{boolPtr(false), false},
-		{boolPtr(true), true},
+		{testutil.BoolPtr(false), false},
+		{testutil.BoolPtr(true), true},
 	}
 	for _, c := range cases {
 		e := config.SEEntry{TrimSilence: c.ptr}
@@ -1494,8 +1493,8 @@ func TestSEEntry_EffectiveOverlay(t *testing.T) {
 		want bool
 	}{
 		{nil, false},
-		{boolPtr(false), false},
-		{boolPtr(true), true},
+		{testutil.BoolPtr(false), false},
+		{testutil.BoolPtr(true), true},
 	}
 	for _, c := range cases {
 		e := config.SEEntry{Overlay: c.ptr}
@@ -1505,10 +1504,6 @@ func TestSEEntry_EffectiveOverlay(t *testing.T) {
 	}
 }
 
-func float64Ptr(v float64) *float64 { return &v }
-
-func strPtr(v string) *string { return &v }
-
 func TestCornerConfig_EffectiveBGM(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1516,8 +1511,8 @@ func TestCornerConfig_EffectiveBGM(t *testing.T) {
 		want string
 	}{
 		{name: "nil returns empty", bgm: nil, want: ""},
-		{name: "empty string returns empty (disabled)", bgm: strPtr(""), want: ""},
-		{name: "key returned as-is", bgm: strPtr("talk_bgm"), want: "talk_bgm"},
+		{name: "empty string returns empty (disabled)", bgm: testutil.StrPtr(""), want: ""},
+		{name: "key returned as-is", bgm: testutil.StrPtr("talk_bgm"), want: "talk_bgm"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1536,7 +1531,7 @@ func TestCornerConfig_EffectiveStartPauseSec(t *testing.T) {
 		want float64
 	}{
 		{name: "nil returns 0", sec: nil, want: 0},
-		{name: "explicit value returned", sec: float64Ptr(1.5), want: 1.5},
+		{name: "explicit value returned", sec: testutil.Float64Ptr(1.5), want: 1.5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1555,7 +1550,7 @@ func TestCornerConfig_EffectiveEndPauseSec(t *testing.T) {
 		want float64
 	}{
 		{name: "nil returns 0", sec: nil, want: 0},
-		{name: "explicit value returned", sec: float64Ptr(2.0), want: 2.0},
+		{name: "explicit value returned", sec: testutil.Float64Ptr(2.0), want: 2.0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1684,7 +1679,7 @@ func TestLoadEpisodeSpec_CornerDefaults_BackwardCompat(t *testing.T) {
 func TestValidateAssets_CornerDefaults_EmptyBGM_Error(t *testing.T) {
 	spec := &config.EpisodeSpec{
 		CornerDefaults: &config.CornerDefaults{
-			BGM: strPtr(""),
+			BGM: testutil.StrPtr(""),
 		},
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{},
@@ -1698,7 +1693,7 @@ func TestValidateAssets_CornerDefaults_EmptyBGM_Error(t *testing.T) {
 func TestValidateAssets_CornerDefaults_UnknownBGM_Error(t *testing.T) {
 	spec := &config.EpisodeSpec{
 		CornerDefaults: &config.CornerDefaults{
-			BGM: strPtr("nonexistent"),
+			BGM: testutil.StrPtr("nonexistent"),
 		},
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{},
@@ -1712,7 +1707,7 @@ func TestValidateAssets_CornerDefaults_UnknownBGM_Error(t *testing.T) {
 func TestValidateAssets_CornerDefaults_Valid(t *testing.T) {
 	spec := &config.EpisodeSpec{
 		CornerDefaults: &config.CornerDefaults{
-			BGM:        strPtr("talk_bgm"),
+			BGM:        testutil.StrPtr("talk_bgm"),
 			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
 		},
 		Assets: config.AssetsConfig{
@@ -1811,9 +1806,9 @@ func TestBGMEntry_EffectiveFadeIn(t *testing.T) {
 		want float64
 	}{
 		{"nil defaults to DefaultBGMFadeSec", nil, config.DefaultBGMFadeSec},
-		{"zero disables fade-in", float64Ptr(0.0), 0.0},
-		{"positive value used as-is", float64Ptr(2.0), 2.0},
-		{"negative clamped to zero", float64Ptr(-1.0), 0.0},
+		{"zero disables fade-in", testutil.Float64Ptr(0.0), 0.0},
+		{"positive value used as-is", testutil.Float64Ptr(2.0), 2.0},
+		{"negative clamped to zero", testutil.Float64Ptr(-1.0), 0.0},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -1832,9 +1827,9 @@ func TestBGMEntry_EffectiveFadeOut(t *testing.T) {
 		want float64
 	}{
 		{"nil defaults to DefaultBGMFadeSec", nil, config.DefaultBGMFadeSec},
-		{"zero disables fade-out", float64Ptr(0.0), 0.0},
-		{"positive value used as-is", float64Ptr(2.0), 2.0},
-		{"negative clamped to zero", float64Ptr(-1.0), 0.0},
+		{"zero disables fade-out", testutil.Float64Ptr(0.0), 0.0},
+		{"positive value used as-is", testutil.Float64Ptr(2.0), 2.0},
+		{"negative clamped to zero", testutil.Float64Ptr(-1.0), 0.0},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2026,8 +2021,8 @@ func TestJingleEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
 		want float64
 	}{
 		{"nil uses default", nil, -50.0},
-		{"explicit -40", float64Ptr(-40.0), -40.0},
-		{"explicit -47.5", float64Ptr(-47.5), -47.5},
+		{"explicit -40", testutil.Float64Ptr(-40.0), -40.0},
+		{"explicit -47.5", testutil.Float64Ptr(-47.5), -47.5},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2046,8 +2041,8 @@ func TestSEEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
 		want float64
 	}{
 		{"nil uses default", nil, -50.0},
-		{"explicit -40", float64Ptr(-40.0), -40.0},
-		{"explicit -47.5", float64Ptr(-47.5), -47.5},
+		{"explicit -40", testutil.Float64Ptr(-40.0), -40.0},
+		{"explicit -47.5", testutil.Float64Ptr(-47.5), -47.5},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2070,9 +2065,9 @@ func TestJingleEntry_Validate(t *testing.T) {
 		{"fade_in negative", config.JingleEntry{FadeIn: -1.0, FadeOut: 0}, true},
 		{"fade_out negative", config.JingleEntry{FadeIn: 0, FadeOut: -0.5}, true},
 		{"trim_silence_threshold nil is valid", config.JingleEntry{TrimSilenceThreshold: nil}, false},
-		{"trim_silence_threshold negative is valid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(-40.0)}, false},
-		{"trim_silence_threshold zero is invalid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(0.0)}, true},
-		{"trim_silence_threshold positive is invalid", config.JingleEntry{TrimSilenceThreshold: float64Ptr(1.0)}, true},
+		{"trim_silence_threshold negative is valid", config.JingleEntry{TrimSilenceThreshold: testutil.Float64Ptr(-40.0)}, false},
+		{"trim_silence_threshold zero is invalid", config.JingleEntry{TrimSilenceThreshold: testutil.Float64Ptr(0.0)}, true},
+		{"trim_silence_threshold positive is invalid", config.JingleEntry{TrimSilenceThreshold: testutil.Float64Ptr(1.0)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2094,9 +2089,9 @@ func TestSEEntry_Validate(t *testing.T) {
 		{"valid positive volume", config.SEEntry{Volume: 0.8}, false},
 		{"volume negative", config.SEEntry{Volume: -0.1}, true},
 		{"trim_silence_threshold nil is valid", config.SEEntry{TrimSilenceThreshold: nil}, false},
-		{"trim_silence_threshold negative is valid", config.SEEntry{TrimSilenceThreshold: float64Ptr(-40.0)}, false},
-		{"trim_silence_threshold zero is invalid", config.SEEntry{TrimSilenceThreshold: float64Ptr(0.0)}, true},
-		{"trim_silence_threshold positive is invalid", config.SEEntry{TrimSilenceThreshold: float64Ptr(1.0)}, true},
+		{"trim_silence_threshold negative is valid", config.SEEntry{TrimSilenceThreshold: testutil.Float64Ptr(-40.0)}, false},
+		{"trim_silence_threshold zero is invalid", config.SEEntry{TrimSilenceThreshold: testutil.Float64Ptr(0.0)}, true},
+		{"trim_silence_threshold positive is invalid", config.SEEntry{TrimSilenceThreshold: testutil.Float64Ptr(1.0)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2120,12 +2115,12 @@ func TestBGMEntry_Validate(t *testing.T) {
 		{"duck_ratio zero", config.BGMEntry{Volume: 0.3, DuckRatio: 0}, true},
 		{"duck_ratio less than 1", config.BGMEntry{Volume: 0.3, DuckRatio: 0.5}, true},
 		{"fade_in nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: nil}, false},
-		{"fade_in zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(0.0)}, false},
-		{"fade_in positive is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(1.0)}, false},
-		{"fade_in negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: float64Ptr(-1.0)}, true},
+		{"fade_in zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: testutil.Float64Ptr(0.0)}, false},
+		{"fade_in positive is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: testutil.Float64Ptr(1.0)}, false},
+		{"fade_in negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeIn: testutil.Float64Ptr(-1.0)}, true},
 		{"fade_out nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: nil}, false},
-		{"fade_out zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: float64Ptr(0.0)}, false},
-		{"fade_out negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: float64Ptr(-0.5)}, true},
+		{"fade_out zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: testutil.Float64Ptr(0.0)}, false},
+		{"fade_out negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: testutil.Float64Ptr(-0.5)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

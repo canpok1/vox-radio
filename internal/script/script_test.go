@@ -10,6 +10,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/write"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 // mock implementations
@@ -360,7 +361,7 @@ func TestBuildScriptLines_TransfersCornerAudio(t *testing.T) {
 			Title:      "OP",
 			Direction:  "dir",
 			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
-			BGM:        strPtr("bgm1"),
+			BGM:        testutil.StrPtr("bgm1"),
 		},
 		{
 			Title:    "ED",
@@ -819,5 +820,3 @@ func TestGenerate_ReturnsEmptyCorrections_WhenProofreadFoundNone(t *testing.T) {
 		t.Errorf("Corrections: got %d, want 0", len(got.Corrections))
 	}
 }
-
-func strPtr(v string) *string { return &v }
