@@ -35,7 +35,6 @@ func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 	// feed.language が欠落した feed-spec.yaml
 	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`feed:
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
@@ -56,7 +55,6 @@ func TestFeedgenCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
 	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`program_id: my-radio
 feed:
   language: ja
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"

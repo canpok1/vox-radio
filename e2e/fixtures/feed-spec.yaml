@@ -1,7 +1,6 @@
 # e2e テスト用のフィード生成設定。
 feed:
   language: "ja"
-  author: "E2Eテスター"
   email: "e2e@example.com"
   category: "Technology"
   explicit: false

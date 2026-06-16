@@ -61,7 +61,6 @@
       """
       feed:
         language: "ja"
-        author: "テスター"
         email: "test@example.com"
         category: "Technology"
         explicit: false

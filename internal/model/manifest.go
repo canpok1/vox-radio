@@ -119,6 +119,7 @@ type Manifest struct {
 	Title             string             `json:"title"`
 	EpisodeNumber     int                `json:"episode_number,omitempty"`
 	EpisodeTitle      string             `json:"episode_title,omitempty"`
+	Author            string             `json:"author,omitempty"`
 	Description       string             `json:"description"`
 	Summary           string             `json:"summary"`
 	Datetime          string             `json:"datetime"`

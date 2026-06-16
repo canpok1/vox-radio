@@ -926,6 +926,21 @@ func TestPastDedupKeys_EmptyEntries(t *testing.T) {
 	}
 }
 
+func TestBuildEntryFromManifest_AuthorCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Author:   "テスト配信者",
+		Corners:  []model.ManifestCorner{},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	if got.Author != "テスト配信者" {
+		t.Errorf("Author: got %q, want %q", got.Author, "テスト配信者")
+	}
+}
+
 func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
 	m := model.Manifest{
 		Title:    "エピソード",

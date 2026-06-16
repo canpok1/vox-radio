@@ -23,7 +23,7 @@ type rssChannel struct {
 	Description    string          `xml:"description"`
 	Language       string          `xml:"language"`
 	Link           string          `xml:"link"`
-	ItunesAuthor   string          `xml:"itunes:author"`
+	ItunesAuthor   string          `xml:"itunes:author,omitempty"`
 	ItunesEmail    string          `xml:"itunes:email"`
 	ItunesCategory *itunesCategory `xml:"itunes:category"`
 	ItunesExplicit string          `xml:"itunes:explicit"`
@@ -61,13 +61,14 @@ type rssEnclosure struct {
 }
 
 // BuildFeed generates a podcast RSS 2.0 + iTunes feed XML from cache entries.
-// Channel title/description come from the latest entry. Items are ordered newest first.
+// Channel title/description/author come from the latest entry. Items are ordered newest first.
 func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
-	var channelTitle, channelDescription string
+	var channelTitle, channelDescription, channelAuthor string
 	if len(entries) > 0 {
 		latest := entries[len(entries)-1]
 		channelTitle = latest.Title
 		channelDescription = latest.Description
+		channelAuthor = latest.Author
 	}
 
 	var cat *itunesCategory
@@ -110,7 +111,7 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 			Description:    channelDescription,
 			Language:       cfg.Feed.Language,
 			Link:           cfg.Feed.SiteURL,
-			ItunesAuthor:   cfg.Feed.Author,
+			ItunesAuthor:   channelAuthor,
 			ItunesEmail:    cfg.Feed.Email,
 			ItunesCategory: cat,
 			ItunesExplicit: explicitStr,

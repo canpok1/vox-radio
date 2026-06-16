@@ -7,8 +7,6 @@
 feed:
   # 番組の言語。
   language: "ja"
-  # 配信者の名前。
-  author: "あなたの名前"
   # 連絡先メールアドレス。
   email: "you@example.com"
   # ジャンル（Apple Podcasts などのカテゴリ）。不要なら空文字にするとタグが省かれます。

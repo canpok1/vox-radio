@@ -14,7 +14,6 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 	cfg := feed.FeedSpec{
 		Feed: feed.FeedConfig{
 			Language:         "ja",
-			Author:           "testauthor",
 			Email:            "test@example.com",
 			Category:         "Technology",
 			Explicit:         false,
@@ -31,6 +30,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			Datetime:      "2024-01-01T10:00:00+09:00",
 			EpisodeNumber: 1,
 			EpisodeTitle:  "AIニュース特集",
+			Author:        "testauthor",
 			Title:         "テストラジオ",
 			Summary:       "エピソード1の概要",
 			Description:   "番組説明テキスト",
@@ -43,6 +43,7 @@ func TestBuildFeed_GoldenOutput(t *testing.T) {
 			Datetime:      "2024-01-08T10:00:00+09:00",
 			EpisodeNumber: 2,
 			EpisodeTitle:  "Go言語特集",
+			Author:        "testauthor",
 			Title:         "テストラジオ",
 			Summary:       "エピソード2の概要",
 			Description:   "番組説明テキスト",
@@ -138,6 +139,50 @@ func TestBuildFeed_GUID(t *testing.T) {
 	}
 }
 
+func TestBuildFeed_ChannelAuthorFromLatestEntry(t *testing.T) {
+	cfg := feed.FeedSpec{
+		Feed: feed.FeedConfig{
+			AudioURLTemplate: "https://host.example/{episode_number}/{audio_file}",
+		},
+	}
+	entries := []cache.Entry{
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-01T00:00:00Z",
+			EpisodeNumber: 1,
+			Author:        "古い配信者",
+			Title:         "古いタイトル",
+			Summary:       "古い要約",
+			AudioFile:     "ep001.mp3",
+			Bytes:         1000,
+			DurationSec:   600,
+		},
+		{
+			ProgramID:     "radio",
+			Datetime:      "2024-01-08T00:00:00Z",
+			EpisodeNumber: 2,
+			Author:        "最新配信者",
+			Title:         "最新タイトル",
+			Summary:       "最新要約",
+			AudioFile:     "ep002.mp3",
+			Bytes:         2000,
+			DurationSec:   700,
+		},
+	}
+
+	got, err := feed.BuildFeed(cfg, entries)
+	if err != nil {
+		t.Fatalf("BuildFeed: %v", err)
+	}
+
+	if !strings.Contains(got, "最新配信者") {
+		t.Errorf("BuildFeed: channel itunes:author should be from latest entry '最新配信者'\ngot:\n%s", got)
+	}
+	if strings.Contains(got, "古い配信者") {
+		t.Errorf("BuildFeed: channel itunes:author should NOT be '古い配信者'\ngot:\n%s", got)
+	}
+}
+
 func TestBuildFeed_ChannelFromLatestEntry(t *testing.T) {
 	cfg := feed.FeedSpec{
 		Feed: feed.FeedConfig{
@@ -200,6 +245,9 @@ func TestBuildFeed_EmptyEntries(t *testing.T) {
 	}
 	if strings.Contains(got, "<item>") {
 		t.Errorf("BuildFeed: expected no <item> elements for empty entries\ngot:\n%s", got)
+	}
+	if strings.Contains(got, "itunes:author") {
+		t.Errorf("BuildFeed: itunes:author should be omitted when Author is empty\ngot:\n%s", got)
 	}
 }
 
