@@ -1,6 +1,6 @@
 # 0065. 使用したアセット・キャラクターのクレジットを manifest 経由で feed/Slack へ転記する
 
-- ステータス: 採用
+- ステータス: 置換済み → [0074-unify-data-source-attribution-into-description-credits.md](0074-unify-data-source-attribution-into-description-credits.md)
 - 日付: 2026-06-14
 
 ## コンテキスト
@@ -17,7 +17,7 @@
 - **Slack**: `{credit}` プレースホルダを追加し、テンプレートに置いた場合のみ出力する（任意）。
 - **manifest**: `credits` を常に保持し、feed/Slack 双方の供給源とする。
 
-既存の `feed.credit`（`<itunes:author>`）は配信者表記として残す（**ADR 0075 で廃止**。item `itunes:author` は省略し、データソース帰属は本決定のクレジット節へ統合する）。`credit` 未設定なら何も出力しない（後方互換）。
+既存の `feed.credit`（`<itunes:author>`）は配信者表記として残す。`credit` 未設定なら何も出力しない（後方互換）。
 
 ## 結果
 

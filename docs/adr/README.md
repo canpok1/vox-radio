@@ -70,7 +70,7 @@
 | [0062](0062-split-user-and-developer-docs.md) | ドキュメントを利用者向け(README)と開発者向け(docs/development)に分離する | 採用 | 2026-06-13 |
 | [0063](0063-unify-init-output-dir-with-flag.md) | init の出力先を --output-dir に一本化し --sample の暗黙 sample/ 出力を廃止する（ADR-0041 改訂） | 採用 | 2026-06-13 |
 | [0064](0064-distribute-sample-assets-via-github-release.md) | サンプルアセット音源をリポジトリに同梱し GitHub Release へ自動添付する（ADR-0041 改訂） | 採用 | 2026-06-14 |
-| [0065](0065-propagate-asset-and-character-credits-to-outputs.md) | 使用したアセット・キャラクターのクレジットを manifest 経由で feed/Slack へ転記する | 採用 | 2026-06-14 |
+| [0065](0065-propagate-asset-and-character-credits-to-outputs.md) | 使用したアセット・キャラクターのクレジットを manifest 経由で feed/Slack へ転記する | 置換済み | 2026-06-14 |
 | [0066](0066-id3-tags-for-generated-mp3.md) | 生成 MP3 に ID3 タグを設定し、タイトル取得のため pipeline を並べ替える | 採用 | 2026-06-14 |
 | [0067](0067-descriptive-episode-mp3-filename.md) | 生成 MP3 のファイル名を {program.id}_ep{NNN}.mp3 にする（ADR-0026 改訂） | 採用 | 2026-06-14 |
 | [0068](0068-manifest-build-owns-credit-collection.md) | manifest.Build がクレジット収集を内包する | 採用 | 2026-06-14 |
@@ -79,5 +79,5 @@
 | [0071](0071-slackpost-text-template-message-spec.md) | slackpost のメッセージ整形を text/template ベースの2テンプレ構成へ刷新する | 採用 | 2026-06-15 |
 | [0072](0072-render-command-and-template-file-reference.md) | 汎用 render コマンドを追加し、テンプレをファイルパス参照に統一する | 採用 | 2026-06-15 |
 | [0073](0073-corner-defaults-for-bgm-jingle-pause.md) | コーナーの BGM・ジングル・pause に番組共通デフォルト（corner_defaults）を導入する | 採用 | 2026-06-16 |
-| [0074](0074-unify-author-source-to-program-config.md) | 番組の著者名の出典を番組設定に一本化する | 採用 | 2026-06-16 |
-| [0075](0075-credit-placement-and-itunes-author-correction.md) | クレジット/帰属の記載先を整理し item itunes:author の用途違いを是正する | 採用 | 2026-06-16 |
+| [0074](0074-unify-data-source-attribution-into-description-credits.md) | データソース帰属を description クレジット節に統合し feed.credit を廃止する | 採用 | 2026-06-16 |
+| [0075](0075-unify-author-source-to-program-config.md) | 番組の著者名の出典を番組設定に一本化する | 採用 | 2026-06-16 |

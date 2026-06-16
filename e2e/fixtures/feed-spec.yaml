@@ -1,14 +1,12 @@
 # e2e テスト用のフィード生成設定。
 feed:
   language: "ja"
-  author: "E2Eテスター"
   email: "e2e@example.com"
   category: "Technology"
   explicit: false
   cover_image_url: "https://example.com/cover.jpg"
   site_url: "https://example.com"
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
-  credit: ""
 
 output:
   public: "public"

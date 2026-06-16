@@ -40,6 +40,7 @@ type Entry struct {
 	Datetime          string                   `json:"datetime"`
 	EpisodeNumber     int                      `json:"episode_number,omitempty"`
 	EpisodeTitle      string                   `json:"episode_title,omitempty"`
+	Author            string                   `json:"author,omitempty"` // omitempty: backward compat with pre-author cache entries
 	Title             string                   `json:"title"`
 	Summary           string                   `json:"summary"`
 	Description       string                   `json:"description,omitempty"`
@@ -223,6 +224,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		Datetime:          m.Datetime,
 		EpisodeNumber:     m.EpisodeNumber,
 		EpisodeTitle:      m.EpisodeTitle,
+		Author:            m.Author,
 		Title:             m.Title,
 		Summary:           m.Summary,
 		Description:       m.Description,
@@ -310,15 +312,23 @@ func CornerAppearances(entries []Entry) map[string]CornerAppearance {
 	})
 }
 
+// Last returns the last entry (most recent), or nil if entries is empty.
+func Last(entries []Entry) *Entry {
+	if len(entries) == 0 {
+		return nil
+	}
+	return &entries[len(entries)-1]
+}
+
 // NextEpisodeNumber returns the episode number to assign to the next episode.
 // If entries is empty, returns 1.
 // If the latest entry has EpisodeNumber > 0, returns that number + 1.
 // Otherwise (legacy entries without episode_number), returns len(entries) + 1.
 func NextEpisodeNumber(entries []Entry) int {
-	if len(entries) == 0 {
+	latest := Last(entries)
+	if latest == nil {
 		return 1
 	}
-	latest := entries[len(entries)-1]
 	if latest.EpisodeNumber > 0 {
 		return latest.EpisodeNumber + 1
 	}

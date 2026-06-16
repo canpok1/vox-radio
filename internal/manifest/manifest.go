@@ -49,11 +49,12 @@ func cornerClipStats(clips *model.ClipsMeta) (speechSec map[string]float64, char
 // Credits are collected internally from Assets/Characters/Lines/Script/Rundown.Casts.
 func Build(p BuildParams) model.Manifest {
 	credits := CollectCredits(CreditParams{
-		Assets:     p.Assets,
-		Characters: p.Characters,
-		Lines:      p.Lines,
-		Script:     p.Script,
-		Casts:      p.Rundown.Casts,
+		ProgramCredits: p.Program.Credits,
+		Assets:         p.Assets,
+		Characters:     p.Characters,
+		Lines:          p.Lines,
+		Script:         p.Script,
+		Casts:          p.Rundown.Casts,
 	})
 	cornerSpeechSec, cornerCharCount := cornerClipStats(p.Clips)
 	cornerMap := p.Rundown.CornerMap()
@@ -76,6 +77,7 @@ func Build(p BuildParams) model.Manifest {
 		Title:             p.Program.Title,
 		EpisodeNumber:     p.EpisodeNumber,
 		EpisodeTitle:      p.EpisodeTitle,
+		Author:            p.Program.Author,
 		Description:       p.Program.Description,
 		Summary:           p.Summary,
 		Datetime:          p.GeneratedAt.UTC().Format(time.RFC3339),

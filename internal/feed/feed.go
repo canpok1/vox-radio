@@ -23,7 +23,7 @@ type rssChannel struct {
 	Description    string          `xml:"description"`
 	Language       string          `xml:"language"`
 	Link           string          `xml:"link"`
-	ItunesAuthor   string          `xml:"itunes:author"`
+	ItunesAuthor   string          `xml:"itunes:author,omitempty"`
 	ItunesEmail    string          `xml:"itunes:email"`
 	ItunesCategory *itunesCategory `xml:"itunes:category"`
 	ItunesExplicit string          `xml:"itunes:explicit"`
@@ -46,7 +46,6 @@ type rssItem struct {
 	PubDate        string       `xml:"pubDate"`
 	Enclosure      rssEnclosure `xml:"enclosure"`
 	ItunesDuration string       `xml:"itunes:duration"`
-	ItunesAuthor   string       `xml:"itunes:author,omitempty"`
 }
 
 type rssGUID struct {
@@ -60,15 +59,28 @@ type rssEnclosure struct {
 	Type   string `xml:"type,attr"`
 }
 
-// BuildFeed generates a podcast RSS 2.0 + iTunes feed XML from cache entries.
-// Channel title/description come from the latest entry. Items are ordered newest first.
-func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
-	var channelTitle, channelDescription string
-	if len(entries) > 0 {
-		latest := entries[len(entries)-1]
-		channelTitle = latest.Title
-		channelDescription = latest.Description
+type channelMeta struct {
+	title       string
+	description string
+	author      string
+}
+
+func extractChannelMeta(entries []cache.Entry) channelMeta {
+	e := cache.Last(entries)
+	if e == nil {
+		return channelMeta{}
 	}
+	return channelMeta{
+		title:       e.Title,
+		description: e.Description,
+		author:      e.Author,
+	}
+}
+
+// BuildFeed generates a podcast RSS 2.0 + iTunes feed XML from cache entries.
+// Channel title/description/author come from the latest entry. Items are ordered newest first.
+func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
+	meta := extractChannelMeta(entries)
 
 	var cat *itunesCategory
 	if cfg.Feed.Category != "" {
@@ -96,9 +108,6 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 			Enclosure:      rssEnclosure{URL: url, Length: e.Bytes, Type: "audio/mpeg"},
 			ItunesDuration: strconv.Itoa(e.DurationSec),
 		}
-		if cfg.Feed.Credit != "" {
-			item.ItunesAuthor = cfg.Feed.Credit
-		}
 		items = append(items, item)
 	}
 
@@ -106,11 +115,11 @@ func BuildFeed(cfg FeedSpec, entries []cache.Entry) (string, error) {
 		Version:     "2.0",
 		XmlnsItunes: "http://www.itunes.com/dtds/podcast-1.0.dtd",
 		Channel: rssChannel{
-			Title:          channelTitle,
-			Description:    channelDescription,
+			Title:          meta.title,
+			Description:    meta.description,
 			Language:       cfg.Feed.Language,
 			Link:           cfg.Feed.SiteURL,
-			ItunesAuthor:   cfg.Feed.Author,
+			ItunesAuthor:   meta.author,
 			ItunesEmail:    cfg.Feed.Email,
 			ItunesCategory: cat,
 			ItunesExplicit: explicitStr,

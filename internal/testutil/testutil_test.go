@@ -33,3 +33,33 @@ func TestWriteTempFile_FileIsCleanedUpAfterTest(t *testing.T) {
 		t.Errorf("expected file to be cleaned up, but it still exists: %s", savedPath)
 	}
 }
+
+func TestPtr_ReturnsPointerToValue(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		cases := []string{"", "hello"}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%q) = %q, want %q", v, *got, v)
+			}
+		}
+	})
+	t.Run("float64", func(t *testing.T) {
+		cases := []float64{0.0, 1.5, -0.5}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%v) = %v, want %v", v, *got, v)
+			}
+		}
+	})
+	t.Run("bool", func(t *testing.T) {
+		cases := []bool{false, true}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%v) = %v, want %v", v, *got, v)
+			}
+		}
+	})
+}

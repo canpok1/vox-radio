@@ -9,14 +9,12 @@
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
 | `feed.language` | string | 必須 | 言語コード（RSS channel language）。例: `ja` |
-| `feed.author` | string | 必須 | 配信者名（itunes:author） |
 | `feed.email` | string | 必須 | 連絡先メールアドレス（itunes:email） |
 | `feed.site_url` | string | 必須 | 番組サイト URL（RSS channel link） |
 | `feed.audio_url_template` | string | 必須 | 各エピソード音声ファイルの URL テンプレート。`{episode_number}` と `{audio_file}` が cache の値で置換される |
 | `feed.category` | string | 任意 | iTunes カテゴリ。空文字でタグ省略 |
 | `feed.explicit` | bool | 任意 | 露骨な表現の有無（itunes:explicit）。デフォルト: false |
 | `feed.cover_image_url` | string | 任意 | カバー画像 URL（itunes:image）。空文字でタグ省略 |
-| `feed.credit` | string | 任意 | 配信者クレジット表記（各 item の itunes:author）。空文字で省略 |
 | `feed.credits_header` | string | 任意 | `<description>` 内クレジット節の見出し文字列。デフォルト: `クレジット` |
 | `output.public` | string | 任意 | `feed.xml` を書き出すディレクトリ。デフォルト: `public` |
 

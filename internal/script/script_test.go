@@ -10,6 +10,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script"
 	"github.com/canpok1/vox-radio/internal/script/write"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 // mock implementations
@@ -360,7 +361,7 @@ func TestBuildScriptLines_TransfersCornerAudio(t *testing.T) {
 			Title:      "OP",
 			Direction:  "dir",
 			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
-			BGM:        "bgm1",
+			BGM:        testutil.Ptr("bgm1"),
 		},
 		{
 			Title:    "ED",

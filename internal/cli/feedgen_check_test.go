@@ -35,7 +35,6 @@ func TestFeedgenCheck_UnknownKey_Error(t *testing.T) {
 func TestFeedgenCheck_MissingRequiredField_Error(t *testing.T) {
 	// feed.language が欠落した feed-spec.yaml
 	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`feed:
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
@@ -56,7 +55,6 @@ func TestFeedgenCheck_ProgramID_RaisesUnknownKey(t *testing.T) {
 	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`program_id: my-radio
 feed:
   language: ja
-  author: Test Author
   email: test@example.com
   site_url: https://example.com/
   audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
@@ -66,6 +64,23 @@ feed:
 	cmd.SetArgs([]string{"feedgen", "check", specPath})
 	if err := cmd.Execute(); err == nil {
 		t.Error("expected error for program_id (unknown key) in feedgen check, got nil")
+	}
+}
+
+// feed.credit は廃止されたため、feedgen check で unknown key エラーになること
+func TestFeedgenCheck_CreditField_RaisesUnknownKey(t *testing.T) {
+	specPath := testutil.WriteTempFile(t, "feed-spec.yaml", []byte(`feed:
+  language: ja
+  email: test@example.com
+  site_url: https://example.com/
+  audio_url_template: "https://example.com/ep-{episode_number}/{audio_file}"
+  credit: "some credit"
+`))
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"feedgen", "check", specPath})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error for credit (unknown key) in feedgen check, got nil")
 	}
 }
 

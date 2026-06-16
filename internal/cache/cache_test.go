@@ -926,6 +926,21 @@ func TestPastDedupKeys_EmptyEntries(t *testing.T) {
 	}
 }
 
+func TestBuildEntryFromManifest_AuthorCopied(t *testing.T) {
+	m := model.Manifest{
+		Title:    "エピソード",
+		Datetime: "2026-06-01T00:00:00Z",
+		Author:   "テスト配信者",
+		Corners:  []model.ManifestCorner{},
+	}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	if got.Author != "テスト配信者" {
+		t.Errorf("Author: got %q, want %q", got.Author, "テスト配信者")
+	}
+}
+
 func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
 	m := model.Manifest{
 		Title:    "エピソード",
@@ -957,5 +972,35 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 	// Credits が nil のままだと JSON で "null" になるため non-nil を保証
 	if got.Credits == nil {
 		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")
+	}
+}
+
+func TestLast(t *testing.T) {
+	tests := []struct {
+		name              string
+		entries           []cache.Entry
+		wantNil           bool
+		wantEpisodeNumber int
+	}{
+		{"empty", []cache.Entry{}, true, 0},
+		{"single", []cache.Entry{{EpisodeNumber: 1}}, false, 1},
+		{"multiple", []cache.Entry{{EpisodeNumber: 1}, {EpisodeNumber: 2}, {EpisodeNumber: 3}}, false, 3},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cache.Last(tc.entries)
+			if tc.wantNil {
+				if got != nil {
+					t.Errorf("got %v, want nil", got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("got nil, want non-nil")
+			}
+			if got.EpisodeNumber != tc.wantEpisodeNumber {
+				t.Errorf("EpisodeNumber got %d, want %d", got.EpisodeNumber, tc.wantEpisodeNumber)
+			}
+		})
 	}
 }

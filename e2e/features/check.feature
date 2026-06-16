@@ -61,14 +61,12 @@
       """
       feed:
         language: "ja"
-        author: "テスター"
         email: "test@example.com"
         category: "Technology"
         explicit: false
         cover_image_url: ""
         site_url: "https://example.com"
         audio_url_template: "https://example.com/episodes/fixed.mp3"
-        credit: ""
       output:
         public: "public"
       """

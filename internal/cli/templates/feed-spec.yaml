@@ -7,8 +7,6 @@
 feed:
   # 番組の言語。
   language: "ja"
-  # 配信者の名前。
-  author: "あなたの名前"
   # 連絡先メールアドレス。
   email: "you@example.com"
   # ジャンル（Apple Podcasts などのカテゴリ）。不要なら空文字にするとタグが省かれます。
@@ -22,8 +20,6 @@ feed:
   # 各回の音声ファイルのURLのひな型。
   # {episode_number}（回番号）と {audio_file}（音声ファイル名）が自動で置き換わります。
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
-  # 各回のクレジット表記。不要なら空文字にすると省かれます。
-  credit: ""
 
 # 出力先の設定。
 output:

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/testutil"
 )
 
 const testMaxLengthSec = 10.0
@@ -113,8 +114,8 @@ func TestBuildPreviewFFmpegArgs_BGM_ContainsExpectedFilters(t *testing.T) {
 			"talk": {
 				File:    "/audio/talk.mp3",
 				Volume:  0.3,
-				FadeIn:  float64Ptr(1.0),
-				FadeOut: float64Ptr(1.0),
+				FadeIn:  testutil.Ptr(1.0),
+				FadeOut: testutil.Ptr(1.0),
 			},
 		},
 	}

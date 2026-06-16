@@ -6,6 +6,9 @@ import (
 	"testing"
 )
 
+// Ptr returns a pointer to v.
+func Ptr[T any](v T) *T { return &v }
+
 // WriteTempFile writes content to a temp file named name inside t.TempDir() and returns its path.
 func WriteTempFile(t *testing.T, name string, content []byte) string {
 	t.Helper()

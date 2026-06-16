@@ -198,9 +198,9 @@ func BuildScriptLines(corners []config.CornerConfig, cornerLines [][]model.Line)
 			Lines:         cornerLines[i],
 			StartAudio:    audioRefToCornerAudio(corner.StartAudio),
 			EndAudio:      audioRefToCornerAudio(corner.EndAudio),
-			BGM:           corner.BGM,
-			StartPauseSec: corner.StartPauseSec,
-			EndPauseSec:   corner.EndPauseSec,
+			BGM:           corner.EffectiveBGM(),
+			StartPauseSec: corner.EffectiveStartPauseSec(),
+			EndPauseSec:   corner.EffectiveEndPauseSec(),
 		}
 	}
 	return result

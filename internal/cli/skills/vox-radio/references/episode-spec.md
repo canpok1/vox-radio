@@ -12,13 +12,14 @@
 |---|---|---|---|
 | `id` | string | 必須 | 番組を識別するID。キャッシュファイル名（`.vox-radio/cache/{id}.jsonl`）とキャッシュエントリの記録キーに使用。日替わりコーナーやゲストの登場回もこのIDをキーに数える |
 | `title` | string | 任意 | 番組タイトル |
-| `author` | string | 任意 | 番組の作者名。生成 MP3 のアーティストタグ（ID3 TPE1）に埋め込まれる。空の場合はタグが省略される |
+| `author` | string | 任意 | 番組の作者名。生成 MP3 のアーティストタグ（ID3 TPE1）と RSS フィードの channel `itunes:author` に使われる。空の場合はそれぞれ省略される |
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用）。RSSフィード・Slack通知にも露出する公開フィールド |
 | `direction` | string | 任意 | 番組全体の演出方針（direct ステップのみに渡る）。SE・pause の挿入タイミングに関する指示。台本生成・manifest・feed・Slack には渡されない |
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
 | `chars_per_minute` | int | 任意 | 台本の文字数換算に使用する1分あたりの目安文字数。台本生成時の `length_sec` → 目標文字数換算に使用。未指定時はデフォルト 420（= 7文字/秒×60） |
 | `audio_quality` | string | 任意 | 生成 MP3 の音質プリセット。`high`（約245kbps）/ `standard`（約190kbps、**既定**）/ `low`（約130kbps）。未指定または空は `standard` として扱われる |
+| `credits` | []string | 任意 | 番組固定クレジット。データソース帰属など番組全体に適用するクレジットをリストで記入する。各エピソードの `<description>` 末尾クレジット節へアセット・キャラクターのクレジットとともに自動追記される（重複排除あり） |
 
 ## `corners` セクション
 
@@ -215,6 +216,45 @@ casts:
     type: guest
     role: ゲストC
     condition: { every: 3, offset: 0 }   # 3回おきに出演、初回は3回目。→ 第3,6,9,… 回に出演。
+```
+
+## `corner_defaults` セクション（コーナー共通デフォルト）
+
+`corner_defaults` は全コーナーに共通で適用するデフォルト値を設定します。省略可能です。各コーナーで値を書けば上書きでき、空値（`""` や `{}`）を書けば無効化できます。
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `bgm` | string | 任意 | 全コーナーのデフォルト BGM キー名（`assets.bgm` のキーと一致させること） |
+| `start_audio` | AudioRef | 任意 | 全コーナーのデフォルト開始境界音声（`type`/`id` は `corners[].start_audio` と同様） |
+| `end_audio` | AudioRef | 任意 | 全コーナーのデフォルト終了境界音声（`type`/`id` は `corners[].end_audio` と同様） |
+| `start_pause_sec` | float64 | 任意 | 全コーナーのデフォルト開始前の無音時間（秒） |
+| `end_pause_sec` | float64 | 任意 | 全コーナーのデフォルト終了後の無音時間（秒） |
+
+### 継承・上書き・無効化の挙動
+
+| コーナーの設定 | 動作 |
+|---|---|
+| フィールドを書かない（省略） | `corner_defaults` の値を継承 |
+| 具体的な値を書く | `corner_defaults` の値を上書き |
+| `bgm: ""` または `start_audio: {}` / `end_audio: {}` と書く | 無効化（デフォルトを継承せず音声なし） |
+
+```yaml
+corner_defaults:
+  bgm: talk_bgm           # 全コーナーのデフォルトBGM
+  start_pause_sec: 1.0    # 全コーナーのデフォルト開始前の無音
+
+corners:
+  - id: "opening"
+    title: "オープニング"
+    # bgm・start_pause_sec を省略 → corner_defaults を継承
+
+  - id: "main"
+    title: "メイン"
+    bgm: special_bgm      # corner_defaults.bgm を上書き
+
+  - id: "ending"
+    title: "エンディング"
+    bgm: ""               # corner_defaults.bgm を無効化（BGMなし）
 ```
 
 ## `assets_files` フィールド

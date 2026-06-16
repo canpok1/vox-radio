@@ -241,6 +241,15 @@ func TestBuild(t *testing.T) {
 	})
 }
 
+func TestBuild_AuthorCopiedFromProgram(t *testing.T) {
+	p := newMinimalBuildParams()
+	p.Program.Author = "テスト配信者"
+	got := manifest.Build(p)
+	if got.Author != "テスト配信者" {
+		t.Errorf("Author = %q, want %q", got.Author, "テスト配信者")
+	}
+}
+
 func TestBuild_CastsCopiedFromRundown(t *testing.T) {
 	p := newMinimalBuildParams()
 	p.Rundown = model.Rundown{
