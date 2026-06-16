@@ -44,8 +44,8 @@ type MessagePaths struct {
 
 // SlackChannelConfig holds channel and message settings for a program.
 type SlackChannelConfig struct {
-	Channel string       `yaml:"channel"`
-	Message MessagePaths `yaml:"message"`
+	ChannelEnv string       `yaml:"channel_env"`
+	Message    MessagePaths `yaml:"message"`
 }
 
 // SlackSpec is the top-level structure for slack-spec.yaml.
@@ -123,8 +123,8 @@ func loadSlackSpecWith(path string, strict bool) (SlackSpec, error) {
 // exist and contain valid text/template syntax.
 func ValidateSlackSpec(spec SlackSpec) error {
 	var errs []error
-	if spec.Slack.Channel == "" {
-		errs = append(errs, errors.New("slack.channel is required"))
+	if spec.Slack.ChannelEnv == "" {
+		errs = append(errs, errors.New("slack.channel_env is required"))
 	}
 	m := spec.Slack.Message
 	for _, entry := range []struct {

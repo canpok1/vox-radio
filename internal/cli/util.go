@@ -194,6 +194,17 @@ func resolveCorners(corners []config.CornerConfig, episodeNumber int) []config.C
 	return config.ResolveCornersForEpisode(corners, episodeNumber)
 }
 
+// requireEnv returns the value of the environment variable named by name.
+// If the variable is unset or empty and dryRun is false, it returns an error.
+// In dry-run mode an empty value is allowed (the caller won't use it).
+func requireEnv(name string, dryRun bool) (string, error) {
+	v := os.Getenv(name)
+	if v == "" && !dryRun {
+		return "", fmt.Errorf("env var %q is not set", name)
+	}
+	return v, nil
+}
+
 func programCachePath(programID string) string {
 	return filepath.Join(".vox-radio", "cache", programID+".jsonl")
 }

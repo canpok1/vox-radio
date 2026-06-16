@@ -7,7 +7,7 @@ slack-spec.yaml を strict モードでフル検証する
 指定した slack-spec.yaml を strict モードでパースし、以下を検証します:
 
   (a) strict パース: 未知キー（typo）をエラー化
-  (b) 必須フィールド: slack.channel の存在チェック
+  (b) 必須フィールド: slack.channel_env の存在チェック
   (c) テンプレートファイル: slack.message.{parent,thread,fallback} 指定時にファイルの存在・読み込み・構文を検証
 
 成功時は標準出力に OK メッセージを出力し、ゼロで終了します。

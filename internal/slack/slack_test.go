@@ -39,7 +39,7 @@ func buildTestManifestWithSummary() model.Manifest {
 func buildTestSlackSpec() slack.SlackSpec {
 	return slack.SlackSpec{
 		Slack: slack.SlackChannelConfig{
-			Channel: "C0123456789",
+			ChannelEnv: "SLACK_CHANNEL_ID",
 		},
 	}
 }
@@ -129,6 +129,7 @@ func TestRun_MissingAudioFile_Error(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: filepath.Join(dir, "state.json"),
 		DryRun:    false,
 		Out:       os.Stdout,
@@ -157,6 +158,7 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		DryRun:    false,
 		Out:       &buf,
 	}, mock)
@@ -211,6 +213,7 @@ func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		DryRun:    false,
 		Out:       os.Stdout,
 	}, mock)
@@ -250,6 +253,7 @@ func TestRun_ResolveThreadTSFails_SavesStateAndReturnsError(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		DryRun:    false,
 		Out:       os.Stdout,
@@ -298,6 +302,7 @@ func TestRun_StateFile_HappyPath_RepliedTrue(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		Out:       io.Discard,
 	}, mock)
@@ -352,6 +357,7 @@ func TestRun_ResumeAfterTSTimeout_SkipsUploadAndPostsReply(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		Out:       io.Discard,
 	}
@@ -408,6 +414,7 @@ func TestRun_SkipsAllWhenAlreadyReplied(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		Out:       &buf,
 	}, mock)
@@ -450,6 +457,7 @@ func TestRun_IgnoresStateMismatch(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		Out:       io.Discard,
 	}, mock)
@@ -494,6 +502,7 @@ func TestRun_IgnoresStateWithDifferentEpisodeNumber(t *testing.T) {
 		AudioPath: audioPath,
 		Spec:      buildTestSlackSpec(),
 		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
 		StatePath: statePath,
 		Out:       &buf,
 	}, mock); err != nil {

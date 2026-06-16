@@ -12,12 +12,12 @@ import (
 
 const validSlackSpecYAML = `
 slack:
-  channel: "C0123456789"
+  channel_env: "SLACK_CHANNEL_ID"
 `
 
 const validSlackSpecWithPathsYAML = `
 slack:
-  channel: "C0123456789"
+  channel_env: "SLACK_CHANNEL_ID"
   message:
     parent: "slack-parent.tmpl"
     thread: "slack-thread.tmpl"
@@ -32,8 +32,8 @@ func TestLoadSlackSpec_ValidYAML(t *testing.T) {
 		t.Fatalf("LoadSlackSpec: unexpected error: %v", err)
 	}
 
-	if spec.Slack.Channel != "C0123456789" {
-		t.Errorf("Slack.Channel: got %q, want %q", spec.Slack.Channel, "C0123456789")
+	if spec.Slack.ChannelEnv != "SLACK_CHANNEL_ID" {
+		t.Errorf("Slack.ChannelEnv: got %q, want %q", spec.Slack.ChannelEnv, "SLACK_CHANNEL_ID")
 	}
 }
 
@@ -112,7 +112,7 @@ func TestLoadSlackSpecStrict_ProgramIDField_RaisesUnknownKey(t *testing.T) {
 func TestLoadSlackSpec_MessageOmitted_DefaultsToEmpty(t *testing.T) {
 	content := `
 slack:
-  channel: "C0123456789"
+  channel_env: "SLACK_CHANNEL_ID"
 `
 	path := testutil.WriteTempFile(t, "slack-spec.yaml", []byte(content))
 
@@ -128,28 +128,28 @@ slack:
 	}
 }
 
-func TestValidateSlackSpec_ValidChannel(t *testing.T) {
+func TestValidateSlackSpec_ValidChannelEnv(t *testing.T) {
 	spec := slack.SlackSpec{
-		Slack: slack.SlackChannelConfig{Channel: "C0123456789"},
+		Slack: slack.SlackChannelConfig{ChannelEnv: "SLACK_CHANNEL_ID"},
 	}
 	if err := slack.ValidateSlackSpec(spec); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestValidateSlackSpec_EmptyChannel_Error(t *testing.T) {
+func TestValidateSlackSpec_EmptyChannelEnv_Error(t *testing.T) {
 	spec := slack.SlackSpec{
-		Slack: slack.SlackChannelConfig{Channel: ""},
+		Slack: slack.SlackChannelConfig{ChannelEnv: ""},
 	}
 	if err := slack.ValidateSlackSpec(spec); err == nil {
-		t.Error("expected error for empty channel")
+		t.Error("expected error for empty channel_env")
 	}
 }
 
 func TestValidateSlackSpec_MissingTemplateFile_Error(t *testing.T) {
 	spec := slack.SlackSpec{
 		Slack: slack.SlackChannelConfig{
-			Channel: "C0123456789",
+			ChannelEnv: "SLACK_CHANNEL_ID",
 			Message: slack.MessagePaths{
 				Parent: "nonexistent-parent.tmpl",
 			},
@@ -171,7 +171,7 @@ func TestValidateSlackSpec_InvalidTemplateSyntax_Error(t *testing.T) {
 
 	spec := slack.SlackSpec{
 		Slack: slack.SlackChannelConfig{
-			Channel: "C0123456789",
+			ChannelEnv: "SLACK_CHANNEL_ID",
 			Message: slack.MessagePaths{
 				Parent: "bad.tmpl",
 			},
@@ -192,7 +192,7 @@ func TestValidateSlackSpec_ValidTemplatePaths_Success(t *testing.T) {
 
 	spec := slack.SlackSpec{
 		Slack: slack.SlackChannelConfig{
-			Channel: "C0123456789",
+			ChannelEnv: "SLACK_CHANNEL_ID",
 			Message: slack.MessagePaths{
 				Parent: "parent.tmpl",
 			},
@@ -214,7 +214,7 @@ func TestValidateSlackSpec_TemplateWithCornerFunction_Success(t *testing.T) {
 
 	spec := slack.SlackSpec{
 		Slack: slack.SlackChannelConfig{
-			Channel: "C0123456789",
+			ChannelEnv: "SLACK_CHANNEL_ID",
 			Message: slack.MessagePaths{
 				Thread: "thread.tmpl",
 			},
@@ -228,7 +228,7 @@ func TestValidateSlackSpec_TemplateWithCornerFunction_Success(t *testing.T) {
 
 func TestLoadTemplates_EmptyPaths_UsesDefaults(t *testing.T) {
 	config := slack.SlackChannelConfig{
-		Channel: "C0123456789",
+		ChannelEnv: "SLACK_CHANNEL_ID",
 	}
 	templates, err := config.LoadTemplates("")
 	if err != nil {
@@ -272,7 +272,7 @@ func TestLoadTemplates_WithFilePaths_ReadsFiles(t *testing.T) {
 	}
 
 	config := slack.SlackChannelConfig{
-		Channel: "C0123456789",
+		ChannelEnv: "SLACK_CHANNEL_ID",
 		Message: slack.MessagePaths{
 			Parent:   "parent.tmpl",
 			Thread:   "thread.tmpl",
@@ -304,7 +304,7 @@ func TestLoadTemplates_AbsolutePath(t *testing.T) {
 	}
 
 	config := slack.SlackChannelConfig{
-		Channel: "C0123456789",
+		ChannelEnv: "SLACK_CHANNEL_ID",
 		Message: slack.MessagePaths{
 			Parent: absPath, // absolute path
 		},
@@ -320,7 +320,7 @@ func TestLoadTemplates_AbsolutePath(t *testing.T) {
 
 func TestLoadTemplates_MissingFile_Error(t *testing.T) {
 	config := slack.SlackChannelConfig{
-		Channel: "C0123456789",
+		ChannelEnv: "SLACK_CHANNEL_ID",
 		Message: slack.MessagePaths{
 			Parent: "nonexistent.tmpl",
 		},

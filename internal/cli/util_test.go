@@ -312,3 +312,60 @@ func TestResolveLocation_InvalidTimezone_FallsBackToUTC(t *testing.T) {
 		t.Errorf("expected WARN log for invalid timezone, got: %q", buf.String())
 	}
 }
+
+func TestRequireEnv(t *testing.T) {
+	tests := []struct {
+		name    string
+		envName string
+		envVal  string
+		dryRun  bool
+		wantVal string
+		wantErr bool
+	}{
+		{
+			name:    "env set not dry-run",
+			envName: "TEST_REQUIRE_ENV_SET",
+			envVal:  "myvalue",
+			dryRun:  false,
+			wantVal: "myvalue",
+			wantErr: false,
+		},
+		{
+			name:    "env set dry-run",
+			envName: "TEST_REQUIRE_ENV_SET",
+			envVal:  "myvalue",
+			dryRun:  true,
+			wantVal: "myvalue",
+			wantErr: false,
+		},
+		{
+			name:    "env not set not dry-run",
+			envName: "TEST_REQUIRE_ENV_NOTSET",
+			dryRun:  false,
+			wantVal: "",
+			wantErr: true,
+		},
+		{
+			name:    "env not set dry-run",
+			envName: "TEST_REQUIRE_ENV_NOTSET",
+			dryRun:  true,
+			wantVal: "",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.envVal != "" {
+				t.Setenv(tt.envName, tt.envVal)
+			}
+			got, err := requireEnv(tt.envName, tt.dryRun)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("requireEnv() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.wantVal {
+				t.Errorf("requireEnv() = %q, want %q", got, tt.wantVal)
+			}
+		})
+	}
+}
