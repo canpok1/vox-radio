@@ -48,11 +48,12 @@ type CastConfig struct {
 // Data sources (feeds, articles) are defined per-corner in corners[].source.
 // Assets are loaded from the files listed in AssetsFiles and merged into Assets.
 type EpisodeSpec struct {
-	Program     ProgramConfig         `yaml:"program"`
-	Corners     []CornerConfig        `yaml:"corners"`
-	Casts       map[string]CastConfig `yaml:"casts,omitempty"` // 出演者名簿（旧 Guests を置換）
-	AssetsFiles []string              `yaml:"assets_files"`
-	Assets      AssetsConfig          `yaml:"-"`
+	Program        ProgramConfig         `yaml:"program"`
+	Corners        []CornerConfig        `yaml:"corners"`
+	Casts          map[string]CastConfig `yaml:"casts,omitempty"`           // 出演者名簿
+	CornerDefaults *CornerDefaults       `yaml:"corner_defaults,omitempty"` // コーナー共通デフォルト
+	AssetsFiles    []string              `yaml:"assets_files"`
+	Assets         AssetsConfig          `yaml:"-"`
 }
 
 // validateEpisodeCondition は EpisodeCondition の値が有効かを検証する共通ヘルパー。
@@ -170,8 +171,14 @@ func (p *EpisodeSpec) ValidateCast() error {
 	return nil
 }
 
-// ValidateAssets checks that corner-level audio/bgm keys reference existing assets.
+// ValidateAssets checks that corner_defaults and corner-level audio/bgm keys reference existing assets.
+// It must be called after resolveCornerDefaults so that inherited values are already applied.
 func (p *EpisodeSpec) ValidateAssets() error {
+	if p.CornerDefaults != nil {
+		if err := validateCornerDefaults(p.CornerDefaults, &p.Assets); err != nil {
+			return err
+		}
+	}
 	for _, corner := range p.Corners {
 		if corner.StartAudio != nil {
 			if err := validateAudioRef(corner.Title, "start_audio", corner.StartAudio, &p.Assets); err != nil {
@@ -183,10 +190,38 @@ func (p *EpisodeSpec) ValidateAssets() error {
 				return err
 			}
 		}
-		if corner.BGM != "" {
-			if _, ok := p.Assets.BGM[corner.BGM]; !ok {
-				return fmt.Errorf("corners[%q].bgm: unknown bgm key %q", corner.Title, corner.BGM)
+		if corner.BGM != nil && *corner.BGM != "" {
+			if _, ok := p.Assets.BGM[*corner.BGM]; !ok {
+				return fmt.Errorf("corners[%q].bgm: unknown bgm key %q", corner.Title, *corner.BGM)
 			}
+		}
+	}
+	return nil
+}
+
+func validateCornerDefaults(d *CornerDefaults, assets *AssetsConfig) error {
+	if d.BGM != nil {
+		if *d.BGM == "" {
+			return fmt.Errorf("corner_defaults.bgm: must not be empty (omit to inherit, set key to enable BGM)")
+		}
+		if _, ok := assets.BGM[*d.BGM]; !ok {
+			return fmt.Errorf("corner_defaults.bgm: unknown bgm key %q", *d.BGM)
+		}
+	}
+	if d.StartAudio != nil {
+		if d.StartAudio.Type == "" {
+			return fmt.Errorf("corner_defaults.start_audio: type must not be empty (omit to disable)")
+		}
+		if err := validateAudioRef("corner_defaults", "start_audio", d.StartAudio, assets); err != nil {
+			return err
+		}
+	}
+	if d.EndAudio != nil {
+		if d.EndAudio.Type == "" {
+			return fmt.Errorf("corner_defaults.end_audio: type must not be empty (omit to disable)")
+		}
+		if err := validateAudioRef("corner_defaults", "end_audio", d.EndAudio, assets); err != nil {
+			return err
 		}
 	}
 	return nil

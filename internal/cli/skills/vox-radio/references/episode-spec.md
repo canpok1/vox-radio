@@ -217,6 +217,45 @@ casts:
     condition: { every: 3, offset: 0 }   # 3回おきに出演、初回は3回目。→ 第3,6,9,… 回に出演。
 ```
 
+## `corner_defaults` セクション（コーナー共通デフォルト）
+
+`corner_defaults` は全コーナーに共通で適用するデフォルト値を設定します。省略可能です。各コーナーで値を書けば上書きでき、空値（`""` や `{}`）を書けば無効化できます。
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `bgm` | string | 任意 | 全コーナーのデフォルト BGM キー名（`assets.bgm` のキーと一致させること） |
+| `start_audio` | AudioRef | 任意 | 全コーナーのデフォルト開始境界音声（`type`/`id` は `corners[].start_audio` と同様） |
+| `end_audio` | AudioRef | 任意 | 全コーナーのデフォルト終了境界音声（`type`/`id` は `corners[].end_audio` と同様） |
+| `start_pause_sec` | float64 | 任意 | 全コーナーのデフォルト開始前の無音時間（秒） |
+| `end_pause_sec` | float64 | 任意 | 全コーナーのデフォルト終了後の無音時間（秒） |
+
+### 継承・上書き・無効化の挙動
+
+| コーナーの設定 | 動作 |
+|---|---|
+| フィールドを書かない（省略） | `corner_defaults` の値を継承 |
+| 具体的な値を書く | `corner_defaults` の値を上書き |
+| `bgm: ""` または `start_audio: {}` / `end_audio: {}` と書く | 無効化（デフォルトを継承せず音声なし） |
+
+```yaml
+corner_defaults:
+  bgm: talk_bgm           # 全コーナーのデフォルトBGM
+  start_pause_sec: 1.0    # 全コーナーのデフォルト開始前の無音
+
+corners:
+  - id: "opening"
+    title: "オープニング"
+    # bgm・start_pause_sec を省略 → corner_defaults を継承
+
+  - id: "main"
+    title: "メイン"
+    bgm: special_bgm      # corner_defaults.bgm を上書き
+
+  - id: "ending"
+    title: "エンディング"
+    bgm: ""               # corner_defaults.bgm を無効化（BGMなし）
+```
+
 ## `assets_files` フィールド
 
 `assets_files` はアセット設定ファイル（ジングル・SE・BGM を定義した YAML）のパスリストです。バイナリ素材は別途用意してください。

@@ -82,7 +82,42 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 			corner.Source.Articles[j] = resolved
 		}
 	}
+	resolveCornerDefaults(p)
 	return p, nil
+}
+
+// resolveCornerDefaults applies CornerDefaults to each corner that does not have
+// an explicit value set. Must be called after assets are merged.
+// After this call, an AudioRef with empty Type is normalized to nil (explicit disable).
+func resolveCornerDefaults(p *EpisodeSpec) {
+	if p.CornerDefaults == nil {
+		return
+	}
+	d := p.CornerDefaults
+	for i := range p.Corners {
+		c := &p.Corners[i]
+		if c.BGM == nil {
+			c.BGM = d.BGM
+		}
+		if c.StartAudio == nil {
+			c.StartAudio = d.StartAudio
+		}
+		if c.StartAudio != nil && c.StartAudio.Type == "" {
+			c.StartAudio = nil
+		}
+		if c.EndAudio == nil {
+			c.EndAudio = d.EndAudio
+		}
+		if c.EndAudio != nil && c.EndAudio.Type == "" {
+			c.EndAudio = nil
+		}
+		if c.StartPauseSec == nil {
+			c.StartPauseSec = d.StartPauseSec
+		}
+		if c.EndPauseSec == nil {
+			c.EndPauseSec = d.EndPauseSec
+		}
+	}
 }
 
 // LoadEpisodeSpecStrict loads episode-specific settings from the given YAML file path with strict parsing.

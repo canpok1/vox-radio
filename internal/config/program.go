@@ -49,6 +49,17 @@ type AudioRef struct {
 	ID   string `yaml:"id"`
 }
 
+// CornerDefaults defines program-level default values for corner audio/pause settings.
+// A nil CornerDefaults means no defaults (each corner is independent).
+// Individual corner fields override defaults when set; empty string or empty AudioRef disables the default.
+type CornerDefaults struct {
+	BGM           *string   `yaml:"bgm,omitempty"`
+	StartAudio    *AudioRef `yaml:"start_audio,omitempty"`
+	EndAudio      *AudioRef `yaml:"end_audio,omitempty"`
+	StartPauseSec *float64  `yaml:"start_pause_sec,omitempty"`
+	EndPauseSec   *float64  `yaml:"end_pause_sec,omitempty"`
+}
+
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
 	ID            string            `yaml:"id"` // コーナーを回をまたいで同定する安定キー（必須・番組内で一意）
@@ -62,9 +73,9 @@ type CornerConfig struct {
 	Source        *SourceConfig     `yaml:"source,omitempty"`
 	StartAudio    *AudioRef         `yaml:"start_audio,omitempty"`
 	EndAudio      *AudioRef         `yaml:"end_audio,omitempty"`
-	BGM           string            `yaml:"bgm,omitempty"`
-	StartPauseSec float64           `yaml:"start_pause_sec,omitempty"`
-	EndPauseSec   float64           `yaml:"end_pause_sec,omitempty"`
+	BGM           *string           `yaml:"bgm,omitempty"`
+	StartPauseSec *float64          `yaml:"start_pause_sec,omitempty"`
+	EndPauseSec   *float64          `yaml:"end_pause_sec,omitempty"`
 	Condition     *EpisodeCondition `yaml:"condition,omitempty"` // 出現条件（nil なら毎回出る固定コーナー）
 }
 
