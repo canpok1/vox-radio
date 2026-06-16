@@ -251,11 +251,13 @@ func TestBuildPreviewFFmpegArgs_DefaultMaxLength_NoTrim(t *testing.T) {
 	tests := []struct {
 		name      string
 		assetType string
+		assetKey  string
 		assets    config.AssetsConfig
 	}{
 		{
 			name:      "jingle",
 			assetType: "jingle",
+			assetKey:  "opening",
 			assets: config.AssetsConfig{
 				Jingle: map[string]config.JingleEntry{"opening": {File: "/audio/opening.mp3"}},
 			},
@@ -263,6 +265,7 @@ func TestBuildPreviewFFmpegArgs_DefaultMaxLength_NoTrim(t *testing.T) {
 		{
 			name:      "se",
 			assetType: "se",
+			assetKey:  "chime",
 			assets: config.AssetsConfig{
 				SE: map[string]config.SEEntry{"chime": {File: "/audio/chime.wav", Volume: 0.5}},
 			},
@@ -270,6 +273,7 @@ func TestBuildPreviewFFmpegArgs_DefaultMaxLength_NoTrim(t *testing.T) {
 		{
 			name:      "bgm",
 			assetType: "bgm",
+			assetKey:  "talk",
 			assets: config.AssetsConfig{
 				BGM: map[string]config.BGMEntry{"talk": {File: "/audio/talk.mp3", Volume: 0.3}},
 			},
@@ -278,15 +282,9 @@ func TestBuildPreviewFFmpegArgs_DefaultMaxLength_NoTrim(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			key := "opening"
-			if tt.assetType == "se" {
-				key = "chime"
-			} else if tt.assetType == "bgm" {
-				key = "talk"
-			}
 			ctx := PreviewContext{
 				AssetType:    tt.assetType,
-				AssetKey:     key,
+				AssetKey:     tt.assetKey,
 				Assets:       tt.assets,
 				OutPath:      "/out.mp3",
 				MaxLengthSec: 0, // default: truncation disabled
