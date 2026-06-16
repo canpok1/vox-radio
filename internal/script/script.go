@@ -55,6 +55,9 @@ func NewLLMScriptGenerator(
 func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error) {
 	start := time.Now()
 
+	scriptLogger := g.logger.With("step", "script")
+	scriptLogger.Info("開始")
+
 	cornerMap := rundown.CornerMap()
 
 	// コーナーごとのキャスト割り当てを生成（休演キャストを除外）
@@ -63,25 +66,31 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		allAssignments[i] = MergeCornerCast(corner, rundown.Casts)
 	}
 
-	g.logger.With("step", "script/write").Info("開始")
+	writeLogger := g.logger.With("step", "script/write")
+	writeStart := time.Now()
+	writeLogger.Info("開始")
 	cornerLines, err := WriteAll(ctx, g.writer, program, corners, allAssignments, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, model.ScriptLines{}, nil, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allAssignments, cornerMap, chars)
 	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: BuildScriptLines(corners, cornerLines)}
+	writeLogger.Info(fmt.Sprintf("完了 (%dコーナー, %.1fs)", len(corners), time.Since(writeStart).Seconds()))
 
-	g.logger.With("step", "script/direct").Info("開始")
+	directLogger := g.logger.With("step", "script/direct")
+	directStart := time.Now()
+	directLogger.Info("開始")
 	scr, pr, err := g.director.Direct(ctx, scriptLines.Corners, g.assetCatalog, program.Direction)
 	if err != nil {
 		return model.Script{}, model.ScriptLines{}, nil, fmt.Errorf("direct: %w", err)
 	}
 
 	if pr != nil {
-		g.logger.With("step", "script/direct").Info("校正完了", "count", len(pr.Corrections))
+		directLogger.Info("校正完了", "count", len(pr.Corrections))
 	}
+	directLogger.Info(fmt.Sprintf("完了 (%.1fs)", time.Since(directStart).Seconds()))
 
-	g.logger.With("step", "script").Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
+	scriptLogger.Info(fmt.Sprintf("完了 (%dセグメント, %.1fs)", len(scr.Segments), time.Since(start).Seconds()))
 
 	return scr, scriptLines, pr, nil
 }

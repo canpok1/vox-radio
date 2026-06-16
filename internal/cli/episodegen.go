@@ -164,10 +164,10 @@ https://github.com/canpok1/vox-radio#readme
 			}
 
 			if err := appendToCache(cacheMgr, p.Program.ID, outDir, episodeNumber, cfg.Cache, logger); err != nil {
-				logger.Warn("cache append failed (non-fatal)", "err", err)
+				logger.Warn("キャッシュ追記に失敗（処理は継続）", "err", err)
 			}
 
-			fmt.Printf("pipeline complete: episode at %s\n", fileio.EpisodePath(outDir, p.Program.ID, episodeNumber))
+			fmt.Printf("パイプライン完了: 番組を %s に出力しました\n", fileio.EpisodePath(outDir, p.Program.ID, episodeNumber))
 			return nil
 		},
 	}
@@ -203,12 +203,12 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, episodeN
 	var bytes int64
 	var durationSec int
 	if b, err := mediainfo.FileSize(episodePath); err != nil {
-		logger.Warn("mediainfo.FileSize failed (non-fatal)", "err", err)
+		logger.Warn("ファイルサイズ取得に失敗（処理は継続）", "err", err)
 	} else {
 		bytes = b
 	}
 	if d, err := mediainfo.Duration(episodePath); err != nil {
-		logger.Warn("mediainfo.Duration failed (non-fatal)", "err", err)
+		logger.Warn("再生時間取得に失敗（処理は継続）", "err", err)
 	} else {
 		durationSec = int(d)
 	}
@@ -217,6 +217,6 @@ func appendToCache(mgr *cache.Manager, programID string, outDir string, episodeN
 	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
 		return err
 	}
-	logger.Info("cache entry appended", "program_id", programID)
+	logger.Info("キャッシュに追記", "program_id", programID)
 	return nil
 }

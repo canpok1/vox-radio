@@ -539,14 +539,20 @@ func TestLLMRundowner_WithLogger_ExcludedArticlesLogFormat(t *testing.T) {
 	}
 
 	got := buf.String()
-	if !strings.Contains(got, "rundown: excluded past articles") {
-		t.Errorf("log output should contain 'rundown: excluded past articles', got: %q", got)
+	if !strings.Contains(got, "rundown: 過去回の記事を除外") {
+		t.Errorf("log output should contain 'rundown: 過去回の記事を除外', got: %q", got)
 	}
 	if !strings.Contains(got, "corner=今日のテックニュース") {
 		t.Errorf("log output should contain 'corner=今日のテックニュース', got: %q", got)
 	}
 	if !strings.Contains(got, "count=1") {
 		t.Errorf("log output should contain 'count=1', got: %q", got)
+	}
+	if !strings.Contains(got, "rundown: 開始") {
+		t.Errorf("log output should contain 'rundown: 開始', got: %q", got)
+	}
+	if !strings.Contains(got, "rundown: 完了") {
+		t.Errorf("log output should contain 'rundown: 完了', got: %q", got)
 	}
 }
 

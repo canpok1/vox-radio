@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
 	"github.com/canpok1/vox-radio/internal/config"
@@ -65,6 +66,9 @@ func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, des
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles, casts []model.RundownCast) (model.Rundown, error) {
+	start := time.Now()
+	r.logger.Info("開始")
+
 	articleMap := articles.CornerMap()
 	rundownCorners := make([]model.RundownCorner, 0, len(corners))
 
@@ -85,7 +89,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			}
 		}
 		if n := len(cornerArticles) - len(filtered); n > 0 {
-			r.logger.Info("excluded past articles", "corner", corner.Title, "count", n)
+			r.logger.Info("過去回の記事を除外", "corner", corner.Title, "count", n)
 		}
 		cornerArticles = filtered
 
@@ -158,5 +162,6 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 		rd.Corners[i].Flow = designed
 	}
 
+	r.logger.Info(fmt.Sprintf("完了 (%dコーナー, %.1fs)", len(corners), time.Since(start).Seconds()))
 	return rd, nil
 }
