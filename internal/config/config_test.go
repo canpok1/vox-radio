@@ -1487,6 +1487,23 @@ func TestSEEntry_EffectiveTrimSilence(t *testing.T) {
 	}
 }
 
+func TestBGMEntry_EffectiveTrimSilence(t *testing.T) {
+	cases := []struct {
+		ptr  *bool
+		want bool
+	}{
+		{nil, true},
+		{testutil.Ptr(false), false},
+		{testutil.Ptr(true), true},
+	}
+	for _, c := range cases {
+		e := config.BGMEntry{TrimSilence: c.ptr}
+		if got := e.EffectiveTrimSilence(); got != c.want {
+			t.Errorf("ptr=%v: got %v, want %v", c.ptr, got, c.want)
+		}
+	}
+}
+
 func TestSEEntry_EffectiveOverlay(t *testing.T) {
 	cases := []struct {
 		ptr  *bool
@@ -2054,6 +2071,26 @@ func TestSEEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
 	}
 }
 
+func TestBGMEntry_EffectiveTrimSilenceThresholdDB(t *testing.T) {
+	cases := []struct {
+		name string
+		ptr  *float64
+		want float64
+	}{
+		{"nil uses default", nil, -50.0},
+		{"explicit -40", testutil.Ptr(-40.0), -40.0},
+		{"explicit -47.5", testutil.Ptr(-47.5), -47.5},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := config.BGMEntry{TrimSilenceThreshold: c.ptr}
+			if got := e.EffectiveTrimSilenceThresholdDB(); got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestJingleEntry_Validate(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -2121,6 +2158,13 @@ func TestBGMEntry_Validate(t *testing.T) {
 		{"fade_out nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: nil}, false},
 		{"fade_out zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: testutil.Ptr(0.0)}, false},
 		{"fade_out negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, FadeOut: testutil.Ptr(-0.5)}, true},
+		{"loop_gap_sec zero is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, LoopGapSec: 0}, false},
+		{"loop_gap_sec positive is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, LoopGapSec: 2.0}, false},
+		{"loop_gap_sec negative", config.BGMEntry{Volume: 0.3, DuckRatio: 8, LoopGapSec: -0.5}, true},
+		{"trim_silence_threshold nil is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, TrimSilenceThreshold: nil}, false},
+		{"trim_silence_threshold negative is valid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, TrimSilenceThreshold: testutil.Ptr(-40.0)}, false},
+		{"trim_silence_threshold zero is invalid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, TrimSilenceThreshold: testutil.Ptr(0.0)}, true},
+		{"trim_silence_threshold positive is invalid", config.BGMEntry{Volume: 0.3, DuckRatio: 8, TrimSilenceThreshold: testutil.Ptr(1.0)}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
