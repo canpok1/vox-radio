@@ -361,7 +361,7 @@ func TestBuildScriptLines_TransfersCornerAudio(t *testing.T) {
 			Title:      "OP",
 			Direction:  "dir",
 			StartAudio: &config.AudioRef{Type: "jingle", ID: "opening"},
-			BGM:        testutil.StrPtr("bgm1"),
+			BGM:        testutil.Ptr("bgm1"),
 		},
 		{
 			Title:    "ED",

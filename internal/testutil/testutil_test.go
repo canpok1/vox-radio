@@ -34,57 +34,32 @@ func TestWriteTempFile_FileIsCleanedUpAfterTest(t *testing.T) {
 	}
 }
 
-func TestStrPtr(t *testing.T) {
-	tests := []struct {
-		name string
-		v    string
-	}{
-		{"empty string", ""},
-		{"non-empty string", "hello"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := testutil.StrPtr(tt.v)
-			if *got != tt.v {
-				t.Errorf("*StrPtr(%q) = %q, want %q", tt.v, *got, tt.v)
+func TestPtr_ReturnsPointerToValue(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		cases := []string{"", "hello"}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%q) = %q, want %q", v, *got, v)
 			}
-		})
-	}
-}
-
-func TestFloat64Ptr(t *testing.T) {
-	tests := []struct {
-		name string
-		v    float64
-	}{
-		{"zero", 0.0},
-		{"positive", 1.5},
-		{"negative", -0.5},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := testutil.Float64Ptr(tt.v)
-			if *got != tt.v {
-				t.Errorf("*Float64Ptr(%v) = %v, want %v", tt.v, *got, tt.v)
+		}
+	})
+	t.Run("float64", func(t *testing.T) {
+		cases := []float64{0.0, 1.5, -0.5}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%v) = %v, want %v", v, *got, v)
 			}
-		})
-	}
-}
-
-func TestBoolPtr(t *testing.T) {
-	tests := []struct {
-		name string
-		v    bool
-	}{
-		{"false", false},
-		{"true", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := testutil.BoolPtr(tt.v)
-			if *got != tt.v {
-				t.Errorf("*BoolPtr(%v) = %v, want %v", tt.v, *got, tt.v)
+		}
+	})
+	t.Run("bool", func(t *testing.T) {
+		cases := []bool{false, true}
+		for _, v := range cases {
+			got := testutil.Ptr(v)
+			if *got != v {
+				t.Errorf("*Ptr(%v) = %v, want %v", v, *got, v)
 			}
-		})
-	}
+		}
+	})
 }

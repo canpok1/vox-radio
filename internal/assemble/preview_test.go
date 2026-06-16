@@ -114,8 +114,8 @@ func TestBuildPreviewFFmpegArgs_BGM_ContainsExpectedFilters(t *testing.T) {
 			"talk": {
 				File:    "/audio/talk.mp3",
 				Volume:  0.3,
-				FadeIn:  testutil.Float64Ptr(1.0),
-				FadeOut: testutil.Float64Ptr(1.0),
+				FadeIn:  testutil.Ptr(1.0),
+				FadeOut: testutil.Ptr(1.0),
 			},
 		},
 	}
