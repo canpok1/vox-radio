@@ -79,3 +79,5 @@
 | [0071](0071-slackpost-text-template-message-spec.md) | slackpost のメッセージ整形を text/template ベースの2テンプレ構成へ刷新する | 採用 | 2026-06-15 |
 | [0072](0072-render-command-and-template-file-reference.md) | 汎用 render コマンドを追加し、テンプレをファイルパス参照に統一する | 採用 | 2026-06-15 |
 | [0073](0073-corner-defaults-for-bgm-jingle-pause.md) | コーナーの BGM・ジングル・pause に番組共通デフォルト（corner_defaults）を導入する | 採用 | 2026-06-16 |
+| [0074](0074-unify-author-source-to-program-config.md) | 番組の著者名の出典を番組設定に一本化する | 採用 | 2026-06-16 |
+| [0075](0075-credit-placement-and-itunes-author-correction.md) | クレジット/帰属の記載先を整理し item itunes:author の用途違いを是正する | 採用 | 2026-06-16 |

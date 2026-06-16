@@ -17,7 +17,7 @@
 - **Slack**: `{credit}` プレースホルダを追加し、テンプレートに置いた場合のみ出力する（任意）。
 - **manifest**: `credits` を常に保持し、feed/Slack 双方の供給源とする。
 
-既存の `feed.credit`（`<itunes:author>`）は配信者表記として残す。`credit` 未設定なら何も出力しない（後方互換）。
+既存の `feed.credit`（`<itunes:author>`）は配信者表記として残す（**ADR 0075 で廃止**。item `itunes:author` は省略し、データソース帰属は本決定のクレジット節へ統合する）。`credit` 未設定なら何も出力しない（後方互換）。
 
 ## 結果
 
