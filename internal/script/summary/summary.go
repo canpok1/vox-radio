@@ -94,7 +94,7 @@ type speechEntry struct {
 
 // Summarize generates a program summary and conversation notes from the write-step output lines.
 func (s *LLMProgramSummarizer) Summarize(ctx context.Context, lines model.ScriptLines) (model.ProgramSummary, error) {
-	done := logging.StartStep(s.logger, "開始")
+	done := logging.StartStep(ctx, s.logger, "開始")
 	defer func() { done("") }()
 
 	totalLines := lines.TotalLines()

@@ -66,7 +66,7 @@ func NewLLMRundowner(selector sel.Selector, summarizer summarize.Summarizer, des
 }
 
 func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, articles model.Articles, casts []model.RundownCast) (model.Rundown, error) {
-	done := logging.StartStep(r.logger, "開始")
+	done := logging.StartStep(ctx, r.logger, "開始")
 
 	articleMap := articles.CornerMap()
 	rundownCorners := make([]model.RundownCorner, 0, len(corners))

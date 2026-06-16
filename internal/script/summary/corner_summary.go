@@ -54,7 +54,7 @@ type cornerSummaryResponse struct {
 // summaryLength specifies the target character count for the summary.
 func (s *LLMCornerSummarizer) SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error) {
 	title := corner.Title
-	done := logging.StartStep(s.logger, "開始", slog.String("corner", title))
+	done := logging.StartStep(ctx, s.logger, "開始", slog.String("corner", title))
 	defer func() { done("") }()
 
 	lines := make([]string, 0, len(corner.Lines))

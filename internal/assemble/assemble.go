@@ -70,7 +70,7 @@ func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ..
 // It returns the duration and file size of the resulting mp3.
 func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string, meta model.EpisodeMeta) (*Result, error) {
 	logger := a.logger.With("step", "assemble")
-	done := logging.StartStep(logger, "開始")
+	done := logging.StartStep(ctx, logger, "開始")
 
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)

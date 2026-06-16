@@ -54,7 +54,7 @@ func NewLLMScriptGenerator(
 
 func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.ProgramConfig, rundown model.Rundown, corners []config.CornerConfig, chars map[string]config.CharacterConfig) (model.Script, model.ScriptLines, *model.ProofreadResult, error) {
 	scriptLogger := g.logger.With("step", "script")
-	scriptDone := logging.StartStep(scriptLogger, "開始")
+	scriptDone := logging.StartStep(ctx, scriptLogger, "開始")
 
 	cornerMap := rundown.CornerMap()
 
@@ -65,7 +65,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	}
 
 	writeLogger := g.logger.With("step", "script/write")
-	writeDone := logging.StartStep(writeLogger, "開始")
+	writeDone := logging.StartStep(ctx, writeLogger, "開始")
 	cornerLines, err := WriteAll(ctx, g.writer, program, corners, allAssignments, cornerMap, chars)
 	if err != nil {
 		return model.Script{}, model.ScriptLines{}, nil, err
@@ -75,7 +75,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 	writeDone(fmt.Sprintf("%dコーナー", len(corners)))
 
 	directLogger := g.logger.With("step", "script/direct")
-	directDone := logging.StartStep(directLogger, "開始")
+	directDone := logging.StartStep(ctx, directLogger, "開始")
 	scr, pr, err := g.director.Direct(ctx, scriptLines.Corners, g.assetCatalog, program.Direction)
 	if err != nil {
 		return model.Script{}, model.ScriptLines{}, nil, fmt.Errorf("direct: %w", err)

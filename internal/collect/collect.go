@@ -118,7 +118,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 		}
 	}
 
-	done := logging.StartStep(logger, "開始")
+	done := logging.StartStep(ctx, logger, "開始")
 
 	result := make([]model.CornerArticles, 0, len(filtered))
 	totalArticles := 0

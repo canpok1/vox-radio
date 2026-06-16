@@ -61,7 +61,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		}
 	}
 
-	done := logging.StartStep(logger, fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
+	done := logging.StartStep(ctx, logger, fmt.Sprintf("開始 (%dクリップ)", len(speechSegs)))
 
 	var presets config.VoicevoxPresets
 	if s.Config != nil {
