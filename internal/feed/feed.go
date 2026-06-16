@@ -23,7 +23,7 @@ type rssChannel struct {
 	Description    string          `xml:"description"`
 	Language       string          `xml:"language"`
 	Link           string          `xml:"link"`
-	ItunesAuthor   string          `xml:"itunes:author"`
+	ItunesAuthor   string          `xml:"itunes:author,omitempty"`
 	ItunesEmail    string          `xml:"itunes:email"`
 	ItunesCategory *itunesCategory `xml:"itunes:category"`
 	ItunesExplicit string          `xml:"itunes:explicit"`

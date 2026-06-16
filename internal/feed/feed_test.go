@@ -246,6 +246,9 @@ func TestBuildFeed_EmptyEntries(t *testing.T) {
 	if strings.Contains(got, "<item>") {
 		t.Errorf("BuildFeed: expected no <item> elements for empty entries\ngot:\n%s", got)
 	}
+	if strings.Contains(got, "itunes:author") {
+		t.Errorf("BuildFeed: itunes:author should be omitted when Author is empty\ngot:\n%s", got)
+	}
 }
 
 func TestBuildFeed_CreditsAppendedToDescription(t *testing.T) {
