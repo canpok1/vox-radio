@@ -47,5 +47,7 @@ bgm:
     volume: 0.3                  # 音量（小さめにするとセリフが聞き取りやすい）
     duck_ratio: 3                # セリフ中にBGMを下げる強さ
     loop: true                   # コーナーの長さに合わせて繰り返すか
+    # trim_silence: true         # 前後の無音を除去しループの継ぎ目を自然にする（省略時 true）
+    # loop_gap_sec: 0            # ループの繰り返しの間に入れる無音秒数（省略時 0）
     description: "雑談・ゆるい話題向けの落ち着いたカフェ風BGM"
     credit: "BGMer https://bgmer.net"
