@@ -12,7 +12,7 @@ ADR-0064 でサンプル音源パック（sample-assets）を GitHub Release で
 パック前提で音割り当て済みの設定を生成する `init --sample-with-assets` を追加する。
 
 - 生成物は `vox-radio.yaml` と割り当て済み `episode-spec.yaml`（＋ feed/slack）。`assets/assets.yaml` は生成せずパック展開に委ねる。
-- 共通ファイルは `templates-sample` を再利用し `episode-spec.yaml` のみオーバーレイする。`--sample` とは排他。
+- 共通ファイルは `templates-sample` を再利用し `episode-spec.yaml` のみオーバーレイする。`--sample` とは排他。（この生成メカニズムは ADR-0079 で text/template 単一ソース化に更新。）
 
 ## 結果
 
