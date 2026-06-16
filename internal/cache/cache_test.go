@@ -975,35 +975,32 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestLast_EmptySlice_ReturnsNil(t *testing.T) {
-	got := cache.Last([]cache.Entry{})
-	if got != nil {
-		t.Errorf("Last(empty): got %v, want nil", got)
+func TestLast(t *testing.T) {
+	tests := []struct {
+		name              string
+		entries           []cache.Entry
+		wantNil           bool
+		wantEpisodeNumber int
+	}{
+		{"empty", []cache.Entry{}, true, 0},
+		{"single", []cache.Entry{{EpisodeNumber: 1}}, false, 1},
+		{"multiple", []cache.Entry{{EpisodeNumber: 1}, {EpisodeNumber: 2}, {EpisodeNumber: 3}}, false, 3},
 	}
-}
-
-func TestLast_SingleEntry_ReturnsThatEntry(t *testing.T) {
-	entries := []cache.Entry{{EpisodeNumber: 1}}
-	got := cache.Last(entries)
-	if got == nil {
-		t.Fatal("Last(single): got nil, want non-nil")
-	}
-	if got.EpisodeNumber != 1 {
-		t.Errorf("Last(single): EpisodeNumber got %d, want 1", got.EpisodeNumber)
-	}
-}
-
-func TestLast_MultipleEntries_ReturnsLastEntry(t *testing.T) {
-	entries := []cache.Entry{
-		{EpisodeNumber: 1},
-		{EpisodeNumber: 2},
-		{EpisodeNumber: 3},
-	}
-	got := cache.Last(entries)
-	if got == nil {
-		t.Fatal("Last(multiple): got nil, want non-nil")
-	}
-	if got.EpisodeNumber != 3 {
-		t.Errorf("Last(multiple): EpisodeNumber got %d, want 3", got.EpisodeNumber)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cache.Last(tc.entries)
+			if tc.wantNil {
+				if got != nil {
+					t.Errorf("got %v, want nil", got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("got nil, want non-nil")
+			}
+			if got.EpisodeNumber != tc.wantEpisodeNumber {
+				t.Errorf("EpisodeNumber got %d, want %d", got.EpisodeNumber, tc.wantEpisodeNumber)
+			}
+		})
 	}
 }
