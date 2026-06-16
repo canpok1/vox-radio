@@ -76,6 +76,7 @@ func Build(p BuildParams) model.Manifest {
 		Title:             p.Program.Title,
 		EpisodeNumber:     p.EpisodeNumber,
 		EpisodeTitle:      p.EpisodeTitle,
+		Author:            p.Program.Author,
 		Description:       p.Program.Description,
 		Summary:           p.Summary,
 		Datetime:          p.GeneratedAt.UTC().Format(time.RFC3339),
