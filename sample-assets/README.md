@@ -24,7 +24,7 @@ unzip vox-radio-sample-assets.zip -d assets
 vox-radio assets check assets/assets.yaml
 ```
 
-次に、エピソード設定（`episode-spec.yaml`）でこのアセット設定を参照し（`assets_files` に `assets/assets.yaml` を登録）、各コーナーに割り当てます。設定済みのIDは `assets.yaml` を参照してください（ジングル: `opening`/`ending`、効果音: `accent_low`/`onoma_syakiin`/`switch`、BGM: `coffee_break`）。
+次に、エピソード設定（`episode-spec.yaml`）でこのアセット設定を参照し（`assets_files` に `assets/assets.yaml` を登録）、各コーナーに割り当てます。設定済みのIDは `assets.yaml` を参照してください（ジングル: `theme`、効果音: `accent`/`syakiin`/`switch`、BGM: `coffee_break`）。
 
 設定フィールドの詳細は vox-radio スキルのリファレンスを参照してください（アセット定義は `references/assets.md`、コーナーへの割り当ては `references/episode-spec.md`）。
 
