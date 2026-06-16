@@ -84,15 +84,15 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | ファイル | 書き手 | 内容 |
 |---|---|---|
-| `intermediate/01_articles.json` | collect | 収集記事（`model.Articles`） |
-| `intermediate/02_rundown.json` | rundown | 選別・フロー設計（`model.Rundown`） |
-| `intermediate/03_lines.json` | script(write) | 元表記のセリフ（`model.ScriptLines`） |
-| `intermediate/04_script.json` | script(direct) | 演出済み台本（`model.Script`） |
-| `intermediate/clips/` + `clips.json` | synth | 音声クリップ（`model.ClipsMeta`） |
+| `intermediate/{program.id}_ep{NNN}/01_articles.json` | collect | 収集記事（`model.Articles`） |
+| `intermediate/{program.id}_ep{NNN}/02_rundown.json` | rundown | 選別・フロー設計（`model.Rundown`） |
+| `intermediate/{program.id}_ep{NNN}/03_lines.json` | script(write) | 元表記のセリフ（`model.ScriptLines`） |
+| `intermediate/{program.id}_ep{NNN}/04_script.json` | script(direct) | 演出済み台本（`model.Script`） |
+| `intermediate/{program.id}_ep{NNN}/05_clips/` + `clips.json` | synth | 音声クリップ（`model.ClipsMeta`） |
 | `output/{program.id}_ep{NNN}.mp3` | assemble | 完成音声 |
-| `output/manifest.json` | manifest | エピソードマニフェスト（`model.Manifest`） |
+| `output/{program.id}_ep{NNN}_manifest.json` | manifest | エピソードマニフェスト（`model.Manifest`） |
 
-- **パス・ファイル名は `internal/fileio/paths.go` の定数・関数のみ使用する。**`"03_lines.json"` 等のリテラル直書きを禁止する（`fileio.FileLines` 等の定数を使う）。
+- **パス・ファイル名は `internal/fileio/paths.go` の定数・関数のみ使用する。**`"03_lines.json"` 等のリテラル直書きを禁止する（`fileio.FileLines` 等の定数を使う）。回数別の出力パス（mp3・マニフェスト・中間ファイル）は `fileio.EpisodeLayout` のメソッドで解決する。
 
 ## 6. エラー処理・ログ
 

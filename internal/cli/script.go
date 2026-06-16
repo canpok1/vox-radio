@@ -192,7 +192,7 @@ func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llm
 	}
 
 	if pr != nil {
-		prPath := fileio.ProofreadPath(workDir)
+		prPath := filepath.Join(workDir, fileio.FileProofread)
 		if err := writeJSON(prPath, pr); err != nil {
 			return err
 		}

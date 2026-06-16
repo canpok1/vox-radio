@@ -116,9 +116,15 @@ func (s *stubCornerSummarizer) SummarizeCorner(_ context.Context, _ model.Corner
 
 // --- helpers ---
 
+// outLayout returns the EpisodeLayout the Runner builds for tests using the
+// default stubs (empty program ID, episode number 0).
+func outLayout(outDir string) fileio.EpisodeLayout {
+	return fileio.EpisodeLayout{OutDir: outDir}
+}
+
 func mustReadManifest(t *testing.T, outDir string) string {
 	t.Helper()
-	data, err := os.ReadFile(fileio.ManifestPath(outDir))
+	data, err := os.ReadFile(outLayout(outDir).Manifest())
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
@@ -197,7 +203,8 @@ func TestRunner_Run_SavesIntermediateFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, path := range []string{fileio.ArticlesPath(outDir), fileio.RundownPath(outDir), fileio.ScriptPath(outDir), fileio.LinesPath(outDir), fileio.ManifestPath(outDir)} {
+	l := outLayout(outDir)
+	for _, path := range []string{l.Articles(), l.Rundown(), l.Script(), l.Lines(), l.Manifest()} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("expected file %q to exist: %v", path, err)
 		}
@@ -215,15 +222,15 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if s.syn.capturedDir != fileio.ClipsDir(outDir) {
-		t.Errorf("Synther.Run outDir = %q, want %q", s.syn.capturedDir, fileio.ClipsDir(outDir))
+	l := fileio.EpisodeLayout{OutDir: outDir, ProgramID: "test-prog", EpisodeNumber: 5}
+	if s.syn.capturedDir != l.ClipsDir() {
+		t.Errorf("Synther.Run outDir = %q, want %q", s.syn.capturedDir, l.ClipsDir())
 	}
-	if s.asm.capturedClipsDir != fileio.ClipsDir(outDir) {
-		t.Errorf("Assembler.Run clipsDir = %q, want %q", s.asm.capturedClipsDir, fileio.ClipsDir(outDir))
+	if s.asm.capturedClipsDir != l.ClipsDir() {
+		t.Errorf("Assembler.Run clipsDir = %q, want %q", s.asm.capturedClipsDir, l.ClipsDir())
 	}
-	wantPath := fileio.EpisodePath(outDir, "test-prog", 5)
-	if s.asm.capturedOutPath != wantPath {
-		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, wantPath)
+	if s.asm.capturedOutPath != l.Episode() {
+		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, l.Episode())
 	}
 }
 
@@ -359,7 +366,7 @@ func TestRunner_Run_SkipsSummaryWhenSummarizerIsNil(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	manifestPath := fileio.ManifestPath(outDir)
+	manifestPath := outLayout(outDir).Manifest()
 	if _, err := os.Stat(manifestPath); err != nil {
 		t.Fatalf("manifest should exist: %v", err)
 	}
@@ -428,7 +435,7 @@ func TestRunner_Run_SkipsCornerSummaryWhenSummarizerIsNil(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, err := os.Stat(fileio.ManifestPath(outDir)); err != nil {
+	if _, err := os.Stat(outLayout(outDir).Manifest()); err != nil {
 		t.Fatalf("manifest should exist: %v", err)
 	}
 }
@@ -461,7 +468,7 @@ func TestRunner_Run_CastsWrittenToRundown(t *testing.T) {
 
 	// rundown.json に Casts が書き込まれていること
 	var rd model.Rundown
-	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+	if err := fileio.ReadJSON(outLayout(outDir).Rundown(), &rd); err != nil {
 		t.Fatalf("read rundown: %v", err)
 	}
 	if len(rd.Casts) != 1 || rd.Casts[0].CharacterID != "metan" {
@@ -478,7 +485,7 @@ func TestRunner_Run_NoCastsRundownHasEmptySlice(t *testing.T) {
 	}
 
 	var rd model.Rundown
-	if err := fileio.ReadJSON(fileio.RundownPath(outDir), &rd); err != nil {
+	if err := fileio.ReadJSON(outLayout(outDir).Rundown(), &rd); err != nil {
 		t.Fatalf("read rundown: %v", err)
 	}
 	// Casts が nil でなく空スライスであること（JSON で null になるのを防ぐ）
@@ -527,8 +534,9 @@ func TestRunner_Run_WritesProofreadFile_WhenProofreadResultIsNotNil(t *testing.T
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, err := os.Stat(fileio.ProofreadPath(outDir)); err != nil {
-		t.Errorf("expected proofread file %q to exist: %v", fileio.ProofreadPath(outDir), err)
+	proofreadPath := outLayout(outDir).Proofread()
+	if _, err := os.Stat(proofreadPath); err != nil {
+		t.Errorf("expected proofread file %q to exist: %v", proofreadPath, err)
 	}
 }
 
@@ -541,8 +549,9 @@ func TestRunner_Run_SkipsProofreadFile_WhenProofreadResultIsNil(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, err := os.Stat(fileio.ProofreadPath(outDir)); err == nil {
-		t.Errorf("proofread file should not exist when ProofreadResult is nil, but found %q", fileio.ProofreadPath(outDir))
+	proofreadPath := outLayout(outDir).Proofread()
+	if _, err := os.Stat(proofreadPath); err == nil {
+		t.Errorf("proofread file should not exist when ProofreadResult is nil, but found %q", proofreadPath)
 	}
 }
 
@@ -626,7 +635,7 @@ func TestRunner_Run_WritesTimeline(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	timelinePath := fileio.TimelinePath(outDir)
+	timelinePath := outLayout(outDir).Timeline()
 	if _, err := os.Stat(timelinePath); err != nil {
 		t.Fatalf("06_timeline.json should exist: %v", err)
 	}
