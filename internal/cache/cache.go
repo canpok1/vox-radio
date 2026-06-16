@@ -312,15 +312,23 @@ func CornerAppearances(entries []Entry) map[string]CornerAppearance {
 	})
 }
 
+// Last returns the last entry (most recent), or nil if entries is empty.
+func Last(entries []Entry) *Entry {
+	if len(entries) == 0 {
+		return nil
+	}
+	return &entries[len(entries)-1]
+}
+
 // NextEpisodeNumber returns the episode number to assign to the next episode.
 // If entries is empty, returns 1.
 // If the latest entry has EpisodeNumber > 0, returns that number + 1.
 // Otherwise (legacy entries without episode_number), returns len(entries) + 1.
 func NextEpisodeNumber(entries []Entry) int {
-	if len(entries) == 0 {
+	latest := Last(entries)
+	if latest == nil {
 		return 1
 	}
-	latest := entries[len(entries)-1]
 	if latest.EpisodeNumber > 0 {
 		return latest.EpisodeNumber + 1
 	}

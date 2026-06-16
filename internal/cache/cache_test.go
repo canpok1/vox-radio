@@ -974,3 +974,33 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")
 	}
 }
+
+func TestLast(t *testing.T) {
+	tests := []struct {
+		name              string
+		entries           []cache.Entry
+		wantNil           bool
+		wantEpisodeNumber int
+	}{
+		{"empty", []cache.Entry{}, true, 0},
+		{"single", []cache.Entry{{EpisodeNumber: 1}}, false, 1},
+		{"multiple", []cache.Entry{{EpisodeNumber: 1}, {EpisodeNumber: 2}, {EpisodeNumber: 3}}, false, 3},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cache.Last(tc.entries)
+			if tc.wantNil {
+				if got != nil {
+					t.Errorf("got %v, want nil", got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("got nil, want non-nil")
+			}
+			if got.EpisodeNumber != tc.wantEpisodeNumber {
+				t.Errorf("EpisodeNumber got %d, want %d", got.EpisodeNumber, tc.wantEpisodeNumber)
+			}
+		})
+	}
+}
