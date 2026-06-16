@@ -483,12 +483,7 @@ func buildBGMIntervalParts(b *filterBuilder, run runData, assets config.AssetsCo
 		if !ok {
 			continue
 		}
-		var bgmIdx int
-		if entry.Loop {
-			bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
-		} else {
-			bgmIdx = b.addInput(entry.File)
-		}
+		bgmIdx := addBGMInput(b, entry)
 		intervalLabel := fmt.Sprintf("[run%d_bgm%d_raw]", runIdx, i)
 		endMs := interval.endMs
 		if endMs < 0 {
@@ -510,8 +505,9 @@ func buildBGMIntervalParts(b *filterBuilder, run runData, assets config.AssetsCo
 		fadeOut = min(fadeOut, half)
 
 		key := fmt.Sprintf("run%d_bgm%d", runIdx, i)
+		srcLabel := applyBGMLoopShape(b, fmt.Sprintf("[%d:a]", bgmIdx), key, entry)
 		trimLabel := fmt.Sprintf("[%s_trim]", key)
-		b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f,atrim=duration=%.3f%s", bgmIdx, entry.Volume, durationSec, trimLabel))
+		b.addFilter(fmt.Sprintf("%svolume=%.2f,atrim=duration=%.3f%s", srcLabel, entry.Volume, durationSec, trimLabel))
 		label := applyFadeIn(b, trimLabel, key, fadeIn)
 		label = applyFadeOut(b, label, key, fadeOut)
 		b.addFilter(fmt.Sprintf("%sadelay=%d|%d%s", label, interval.startMs, interval.startMs, intervalLabel))
@@ -601,6 +597,50 @@ func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSe
 		}
 	}
 	return durations
+}
+
+// bgmAloopSize is the aloop `size` (in samples) used when looping a BGM unit in the
+// filter graph. It is an upper bound large enough to buffer any realistic single BGM
+// file (~13.5h at 44.1kHz), so aloop loops the entire trimmed/padded unit. aloop only
+// buffers the samples it actually reads, so a large bound has no memory cost.
+const bgmAloopSize = 2147483647
+
+// bgmUsesFilterLoop reports whether a looping BGM must be looped in the filter graph
+// (via aloop) rather than at the input demuxer (-stream_loop). Filter-graph looping is
+// required when silence is trimmed or an inter-loop gap is inserted, so each iteration
+// is tight/seamless. Otherwise the cheaper -stream_loop input option is used (unchanged
+// legacy behavior).
+func bgmUsesFilterLoop(entry config.BGMEntry) bool {
+	return entry.Loop && (entry.EffectiveTrimSilence() || entry.LoopGapSec > 0)
+}
+
+// addBGMInput adds the BGM file as an ffmpeg input, attaching -stream_loop -1 only for
+// the legacy loop path (loop=true without silence trim or gap). Filter-graph looping and
+// non-looping BGM read the file once.
+func addBGMInput(b *filterBuilder, entry config.BGMEntry) int {
+	if entry.Loop && !bgmUsesFilterLoop(entry) {
+		return b.addInput(entry.File, "-stream_loop", "-1")
+	}
+	return b.addInput(entry.File)
+}
+
+// applyBGMLoopShape applies silence trimming, an optional inter-loop gap, and filter-graph
+// looping to a raw BGM input label, returning the resulting label. It is a no-op for the
+// legacy -stream_loop path and for non-looping BGM without silence trimming.
+// Order: silenceremove (trim) → apad (gap) → aloop (loop the trimmed+padded unit).
+func applyBGMLoopShape(b *filterBuilder, currentLabel, key string, entry config.BGMEntry) string {
+	label := applySilenceTrim(b, currentLabel, key, entry.EffectiveTrimSilence(), entry.EffectiveTrimSilenceThresholdDB())
+	if !bgmUsesFilterLoop(entry) {
+		return label
+	}
+	if entry.LoopGapSec > 0 {
+		gapLabel := fmt.Sprintf("[%s_gap]", key)
+		b.addFilter(fmt.Sprintf("%sapad=pad_dur=%.3f%s", label, entry.LoopGapSec, gapLabel))
+		label = gapLabel
+	}
+	loopLabel := fmt.Sprintf("[%s_loop]", key)
+	b.addFilter(fmt.Sprintf("%saloop=loop=-1:size=%d%s", label, bgmAloopSize, loopLabel))
+	return loopLabel
 }
 
 // applySilenceTrim strips leading and trailing silence from currentLabel when enabled.

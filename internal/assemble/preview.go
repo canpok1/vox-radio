@@ -149,24 +149,24 @@ func buildBGMPreview(b *filterBuilder, ctx PreviewContext, maxSec float64) (stri
 		return "", false, fmt.Errorf("bgm %q not found in assets", ctx.AssetKey)
 	}
 
+	// Preview only loops when truncating; with truncation disabled the source plays
+	// once at its natural length. Shape the loop (trim/gap/aloop vs -stream_loop) against
+	// this effective loop flag so addBGMInput/applyBGMLoopShape match production behavior.
 	truncate := maxSec > 0
-	loop := entry.Loop && truncate
+	loopEntry := entry
+	loopEntry.Loop = entry.Loop && truncate
 
-	var bgmIdx int
-	if loop {
-		bgmIdx = b.addInput(entry.File, "-stream_loop", "-1")
-	} else {
-		bgmIdx = b.addInput(entry.File)
-	}
+	bgmIdx := addBGMInput(b, loopEntry)
 
 	key := "preview"
+	srcLabel := applyBGMLoopShape(b, fmt.Sprintf("[%d:a]", bgmIdx), key, loopEntry)
 	volLabel := "[preview_bgm_vol]"
 	// For looping playback, chain atrim to stop the infinite loop at maxSec.
 	atrimSuffix := ""
-	if loop {
+	if loopEntry.Loop {
 		atrimSuffix = fmt.Sprintf(",atrim=duration=%.3f", maxSec)
 	}
-	b.addFilter(fmt.Sprintf("[%d:a]volume=%.2f%s%s", bgmIdx, entry.Volume, atrimSuffix, volLabel))
+	b.addFilter(fmt.Sprintf("%svolume=%.2f%s%s", srcLabel, entry.Volume, atrimSuffix, volLabel))
 	label := volLabel
 
 	label = applyFadeIn(b, label, key, entry.EffectiveFadeIn())
@@ -186,7 +186,7 @@ func buildBGMPreview(b *filterBuilder, ctx PreviewContext, maxSec float64) (stri
 		label = duckedLabel
 	}
 
-	return label, loop, nil
+	return label, loopEntry.Loop, nil
 }
 
 // buildDummyNarration generates a repeating tone/silence pattern as a sidechain signal for ducking.

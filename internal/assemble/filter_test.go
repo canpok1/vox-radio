@@ -228,7 +228,8 @@ func TestBuildFFmpegArgs_BGMSegment_StartsAndStops(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, DuckRatio: 4.0, Loop: true},
+				// TrimSilence disabled to exercise the legacy -stream_loop path (this test asserts stream_loop, not aloop).
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, DuckRatio: 4.0, Loop: true, TrimSilence: testutil.Ptr(false)},
 			},
 		},
 		PauseSec: 0.5,
@@ -925,7 +926,8 @@ func TestBuildFFmpegArgs_PauseSegment_BGMContinues(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+				// TrimSilence disabled to exercise the legacy -stream_loop path (this test asserts stream_loop, not aloop).
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, TrimSilence: testutil.Ptr(false)},
 			},
 		},
 		PauseSec: 0.5,
@@ -960,8 +962,9 @@ func TestBuildFFmpegArgs_PauseSegment_BGMContinues(t *testing.T) {
 	}
 }
 
-// TestBuildFFmpegArgs_BGMLoop_StreamLoop verifies that loop:true BGM uses -stream_loop -1
-// as a pre-input option instead of the aloop filter, enabling full-file looping.
+// TestBuildFFmpegArgs_BGMLoop_StreamLoop verifies that loop:true BGM with trim_silence
+// disabled and no inter-loop gap uses -stream_loop -1 as a pre-input option instead of
+// the aloop filter, enabling full-file looping (legacy path, unchanged behavior).
 func TestBuildFFmpegArgs_BGMLoop_StreamLoop(t *testing.T) {
 	ctx := BuildContext{
 		Script: model.Script{
@@ -978,7 +981,7 @@ func TestBuildFFmpegArgs_BGMLoop_StreamLoop(t *testing.T) {
 		ClipsDir: "/clips",
 		Assets: config.AssetsConfig{
 			BGM: map[string]config.BGMEntry{
-				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true},
+				"talk_bgm": {File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, TrimSilence: testutil.Ptr(false)},
 			},
 		},
 		PauseSec: 0.5,
@@ -1069,6 +1072,99 @@ func TestBuildFFmpegArgs_BGMStopThenPlay_BothIntervalsInOutput(t *testing.T) {
 				t.Errorf("BGM interval amix must use duration=longest (not duration=first): %s", f)
 			}
 		}
+	}
+}
+
+// bgmLoopShapeArgs builds FFmpegArgs for a single-run script with one looping/non-looping
+// BGM entry, used to assert the loop-shaping filter chain (silenceremove / apad / aloop).
+func bgmLoopShapeArgs(t *testing.T, entry config.BGMEntry) *FFmpegArgs {
+	t.Helper()
+	ctx := BuildContext{
+		Script: model.Script{
+			Segments: []model.ScriptSegment{
+				{Type: model.SegmentTypeBGM, AssetName: "talk_bgm"},
+				{Type: model.SegmentTypeSpeech, SpeakerRole: "host", Text: "with bgm"},
+			},
+		},
+		Clips: model.ClipsMeta{
+			Clips: []model.ClipMeta{{Index: 0, File: "clip_000.wav", DurationSec: 10.0}},
+		},
+		ClipsDir: "/clips",
+		Assets:   config.AssetsConfig{BGM: map[string]config.BGMEntry{"talk_bgm": entry}},
+		PauseSec: 0.5,
+		OutPath:  "/out.mp3",
+	}
+	args, err := BuildFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	return args
+}
+
+// TestBuildFFmpegArgs_BGMLoop_DefaultTrim_UsesAloop verifies that loop:true BGM with the
+// default (nil) trim_silence trims silence and loops in the filter graph (aloop), not via
+// -stream_loop, so the looped seam is seamless.
+func TestBuildFFmpegArgs_BGMLoop_DefaultTrim_UsesAloop(t *testing.T) {
+	args := bgmLoopShapeArgs(t, config.BGMEntry{File: "/assets/bgm.mp3", Volume: 0.3, Loop: true})
+	if hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
+		t.Errorf("loop:true BGM with default trim must NOT use -stream_loop, inputs: %v", args.Inputs)
+	}
+	if !strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("expected silenceremove for default trim_silence, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "aloop=loop=-1") {
+		t.Errorf("expected aloop=loop=-1 for filter-graph looping, filter: %s", args.FilterComplex)
+	}
+	if strings.Contains(args.FilterComplex, "apad") {
+		t.Errorf("no gap configured, apad must not appear, filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMLoop_Gap_UsesApadAloop verifies that loop_gap_sec>0 inserts an
+// inter-loop silence (apad) and switches to filter-graph looping even when trim is disabled.
+func TestBuildFFmpegArgs_BGMLoop_Gap_UsesApadAloop(t *testing.T) {
+	args := bgmLoopShapeArgs(t, config.BGMEntry{File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, LoopGapSec: 2.0, TrimSilence: testutil.Ptr(false)})
+	if hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
+		t.Errorf("loop:true BGM with gap must NOT use -stream_loop, inputs: %v", args.Inputs)
+	}
+	if strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("trim disabled: silenceremove must not appear, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "apad=pad_dur=2.000") {
+		t.Errorf("expected apad=pad_dur=2.000 for loop_gap_sec, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "aloop=loop=-1") {
+		t.Errorf("expected aloop=loop=-1 for filter-graph looping, filter: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMLoop_TrimAndGap verifies trim+gap together produce
+// silenceremove → apad → aloop in order.
+func TestBuildFFmpegArgs_BGMLoop_TrimAndGap(t *testing.T) {
+	args := bgmLoopShapeArgs(t, config.BGMEntry{File: "/assets/bgm.mp3", Volume: 0.3, Loop: true, LoopGapSec: 1.5, TrimSilence: testutil.Ptr(true)})
+	siIdx := strings.Index(args.FilterComplex, "silenceremove")
+	apadIdx := strings.Index(args.FilterComplex, "apad=pad_dur=1.500")
+	aloopIdx := strings.Index(args.FilterComplex, "aloop=loop=-1")
+	if siIdx < 0 || apadIdx < 0 || aloopIdx < 0 {
+		t.Fatalf("expected silenceremove, apad, aloop all present, filter: %s", args.FilterComplex)
+	}
+	if siIdx >= apadIdx || apadIdx >= aloopIdx {
+		t.Errorf("expected order silenceremove < apad < aloop, got si=%d apad=%d aloop=%d", siIdx, apadIdx, aloopIdx)
+	}
+}
+
+// TestBuildFFmpegArgs_BGMNoLoop_DefaultTrim_SilenceRemoveNoAloop verifies that loop:false BGM
+// with default trim trims silence but does NOT loop (no aloop, no stream_loop).
+func TestBuildFFmpegArgs_BGMNoLoop_DefaultTrim_SilenceRemoveNoAloop(t *testing.T) {
+	args := bgmLoopShapeArgs(t, config.BGMEntry{File: "/assets/bgm.mp3", Volume: 0.3, Loop: false})
+	if hasStreamLoop(args.Inputs, "/assets/bgm.mp3") {
+		t.Errorf("loop:false BGM must NOT use -stream_loop, inputs: %v", args.Inputs)
+	}
+	if !strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("expected silenceremove for default trim_silence, filter: %s", args.FilterComplex)
+	}
+	if strings.Contains(args.FilterComplex, "aloop") {
+		t.Errorf("loop:false BGM must NOT use aloop, filter: %s", args.FilterComplex)
 	}
 }
 

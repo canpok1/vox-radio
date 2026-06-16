@@ -154,9 +154,10 @@ func TestBuildPreviewFFmpegArgs_BGM_LoopTrue_UsesStreamLoop(t *testing.T) {
 	assets := config.AssetsConfig{
 		BGM: map[string]config.BGMEntry{
 			"bgm": {
-				File:   "/audio/bgm.mp3",
-				Volume: 0.5,
-				Loop:   true,
+				File:        "/audio/bgm.mp3",
+				Volume:      0.5,
+				Loop:        true,
+				TrimSilence: testutil.Ptr(false), // legacy -stream_loop path (trim/gap disabled)
 			},
 		},
 	}
@@ -178,6 +179,40 @@ func TestBuildPreviewFFmpegArgs_BGM_LoopTrue_UsesStreamLoop(t *testing.T) {
 	}
 	if !strings.Contains(args.FilterComplex, "atrim=duration=") {
 		t.Errorf("expected atrim=duration= in filter_complex for loop BGM, got: %s", args.FilterComplex)
+	}
+}
+
+// TestBuildPreviewFFmpegArgs_BGM_LoopDefaultTrim_UsesAloop verifies the preview mirrors the
+// production loop mechanism: loop=true with default trim_silence trims silence and loops via
+// aloop (not -stream_loop), and still caps the output at maxSec via atrim.
+func TestBuildPreviewFFmpegArgs_BGM_LoopDefaultTrim_UsesAloop(t *testing.T) {
+	assets := config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: "/audio/bgm.mp3", Volume: 0.5, Loop: true},
+		},
+	}
+	ctx := PreviewContext{
+		AssetType:    "bgm",
+		AssetKey:     "bgm",
+		Assets:       assets,
+		OutPath:      "/out.mp3",
+		MaxLengthSec: testMaxLengthSec,
+	}
+	args, err := BuildPreviewFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if hasStreamLoop(args.Inputs, "/audio/bgm.mp3") {
+		t.Errorf("loop:true BGM with default trim must NOT use -stream_loop, inputs: %v", args.Inputs)
+	}
+	if !strings.Contains(args.FilterComplex, "silenceremove") {
+		t.Errorf("expected silenceremove for default trim_silence, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "aloop=loop=-1") {
+		t.Errorf("expected aloop=loop=-1 for filter-graph looping, filter: %s", args.FilterComplex)
+	}
+	if !strings.Contains(args.FilterComplex, "atrim=duration=") {
+		t.Errorf("expected atrim=duration= to cap preview length, filter: %s", args.FilterComplex)
 	}
 }
 

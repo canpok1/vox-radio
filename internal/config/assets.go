@@ -79,14 +79,17 @@ func (e SEEntry) Validate() error {
 }
 
 type BGMEntry struct {
-	File        string   `yaml:"file"`
-	Volume      float64  `yaml:"volume"`
-	DuckRatio   float64  `yaml:"duck_ratio"`
-	Loop        bool     `yaml:"loop"`
-	FadeIn      *float64 `yaml:"fade_in,omitempty"`
-	FadeOut     *float64 `yaml:"fade_out,omitempty"`
-	Description string   `yaml:"description,omitempty"`
-	Credit      string   `yaml:"credit,omitempty"`
+	File                 string   `yaml:"file"`
+	Volume               float64  `yaml:"volume"`
+	DuckRatio            float64  `yaml:"duck_ratio"`
+	Loop                 bool     `yaml:"loop"`
+	LoopGapSec           float64  `yaml:"loop_gap_sec"` // silence (seconds) inserted between loop iterations; only applies when loop is true
+	FadeIn               *float64 `yaml:"fade_in,omitempty"`
+	FadeOut              *float64 `yaml:"fade_out,omitempty"`
+	TrimSilence          *bool    `yaml:"trim_silence,omitempty"`           // nil → on (default); trims leading/trailing silence so loops sound seamless
+	TrimSilenceThreshold *float64 `yaml:"trim_silence_threshold,omitempty"` // dB; nil → DefaultSilenceTrimThresholdDB
+	Description          string   `yaml:"description,omitempty"`
+	Credit               string   `yaml:"credit,omitempty"`
 }
 
 // EffectiveFadeIn returns the fade-in duration in seconds.
@@ -97,6 +100,14 @@ func (e BGMEntry) EffectiveFadeIn() float64 { return effectiveFadeSec(e.FadeIn) 
 // nil (unspecified) → DefaultBGMFadeSec; negative values are clamped to 0.
 func (e BGMEntry) EffectiveFadeOut() float64 { return effectiveFadeSec(e.FadeOut) }
 
+// EffectiveTrimSilence returns true when TrimSilence is nil (default on) or explicitly true.
+func (e BGMEntry) EffectiveTrimSilence() bool { return effectiveTrimSilence(e.TrimSilence) }
+
+// EffectiveTrimSilenceThresholdDB returns the threshold in dB; nil → DefaultSilenceTrimThresholdDB.
+func (e BGMEntry) EffectiveTrimSilenceThresholdDB() float64 {
+	return effectiveTrimSilenceThresholdDB(e.TrimSilenceThreshold)
+}
+
 // Validate checks that field values are in valid ranges.
 func (e BGMEntry) Validate() error {
 	if err := validateNonNegative("volume", e.Volume); err != nil {
@@ -105,10 +116,16 @@ func (e BGMEntry) Validate() error {
 	if e.DuckRatio < 1 {
 		return fmt.Errorf("duck_ratio: must be >= 1, got %v", e.DuckRatio)
 	}
+	if err := validateNonNegative("loop_gap_sec", e.LoopGapSec); err != nil {
+		return err
+	}
 	if err := validateOptionalNonNegative("fade_in", e.FadeIn); err != nil {
 		return err
 	}
-	return validateOptionalNonNegative("fade_out", e.FadeOut)
+	if err := validateOptionalNonNegative("fade_out", e.FadeOut); err != nil {
+		return err
+	}
+	return validateOptionalNegative("trim_silence_threshold", e.TrimSilenceThreshold)
 }
 
 type AssetsConfig struct {
