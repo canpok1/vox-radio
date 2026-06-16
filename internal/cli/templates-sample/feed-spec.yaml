@@ -20,6 +20,7 @@ feed:
   # 各回の音声ファイルのURLのひな型。
   # {episode_number}（回番号）と {audio_file}（音声ファイル名）が自動で置き換わります。
   audio_url_template: "https://example.com/episodes/{episode_number}/{audio_file}"
+
 # 出力先の設定。
 output:
   # feed.xml を書き出すフォルダ（省略すると public）。
