@@ -247,18 +247,73 @@ func TestBuildPreviewFFmpegArgs_BGM_NoDuckRatio_NoSidechain(t *testing.T) {
 	}
 }
 
-func TestBuildPreviewFFmpegArgs_DefaultMaxLengthSec_AppliesDefaultTrim(t *testing.T) {
+func TestBuildPreviewFFmpegArgs_DefaultMaxLength_NoTrim(t *testing.T) {
+	tests := []struct {
+		name      string
+		assetType string
+		assetKey  string
+		assets    config.AssetsConfig
+	}{
+		{
+			name:      "jingle",
+			assetType: "jingle",
+			assetKey:  "opening",
+			assets: config.AssetsConfig{
+				Jingle: map[string]config.JingleEntry{"opening": {File: "/audio/opening.mp3"}},
+			},
+		},
+		{
+			name:      "se",
+			assetType: "se",
+			assetKey:  "chime",
+			assets: config.AssetsConfig{
+				SE: map[string]config.SEEntry{"chime": {File: "/audio/chime.wav", Volume: 0.5}},
+			},
+		},
+		{
+			name:      "bgm",
+			assetType: "bgm",
+			assetKey:  "talk",
+			assets: config.AssetsConfig{
+				BGM: map[string]config.BGMEntry{"talk": {File: "/audio/talk.mp3", Volume: 0.3}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := PreviewContext{
+				AssetType:    tt.assetType,
+				AssetKey:     tt.assetKey,
+				Assets:       tt.assets,
+				OutPath:      "/out.mp3",
+				MaxLengthSec: 0, // default: truncation disabled
+			}
+
+			args, err := BuildPreviewFFmpegArgs(ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if strings.Contains(args.FilterComplex, "atrim=duration=") {
+				t.Errorf("expected no atrim when truncation disabled, got: %s", args.FilterComplex)
+			}
+		})
+	}
+}
+
+func TestBuildPreviewFFmpegArgs_DefaultMaxLength_LoopBGM_NoLoopNoTrim(t *testing.T) {
 	assets := config.AssetsConfig{
-		SE: map[string]config.SEEntry{
-			"chime": {File: "/audio/chime.wav", Volume: 0.5},
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: "/audio/bgm.mp3", Volume: 0.5, Loop: true},
 		},
 	}
 	ctx := PreviewContext{
-		AssetType:    "se",
-		AssetKey:     "chime",
+		AssetType:    "bgm",
+		AssetKey:     "bgm",
 		Assets:       assets,
 		OutPath:      "/out.mp3",
-		MaxLengthSec: 0, // use default (30s)
+		MaxLengthSec: 0, // default: truncation disabled
 	}
 
 	args, err := BuildPreviewFFmpegArgs(ctx)
@@ -266,8 +321,85 @@ func TestBuildPreviewFFmpegArgs_DefaultMaxLengthSec_AppliesDefaultTrim(t *testin
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.Contains(args.FilterComplex, "atrim=duration=30.000") {
-		t.Errorf("expected atrim=duration=30.000 for default max length, got: %s", args.FilterComplex)
+	if hasStreamLoop(args.Inputs, "/audio/bgm.mp3") {
+		t.Errorf("expected no -stream_loop for loop BGM when truncation disabled, inputs: %v", args.Inputs)
+	}
+	if strings.Contains(args.FilterComplex, "atrim=duration=") {
+		t.Errorf("expected no atrim for loop BGM when truncation disabled, got: %s", args.FilterComplex)
+	}
+}
+
+func TestBuildPreviewFFmpegArgs_DefaultMaxLength_Duck_UsesSourceDuration(t *testing.T) {
+	assets := config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: "/audio/bgm.mp3", Volume: 0.5, DuckRatio: 8.0},
+		},
+	}
+	ctx := PreviewContext{
+		AssetType:         "bgm",
+		AssetKey:          "bgm",
+		Assets:            assets,
+		OutPath:           "/out.mp3",
+		MaxLengthSec:      0, // default: truncation disabled
+		SourceDurationSec: 45.0,
+	}
+
+	args, err := BuildPreviewFFmpegArgs(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	fc := args.FilterComplex
+	if !strings.Contains(fc, "sidechaincompress") {
+		t.Errorf("expected sidechaincompress for duck_ratio>0, got: %s", fc)
+	}
+	// The dummy narration is trimmed to the source duration (45s).
+	if !strings.Contains(fc, "atrim=duration=45.000") {
+		t.Errorf("expected dummy narration trimmed to source duration 45.000, got: %s", fc)
+	}
+}
+
+func TestPreviewer_Run_DefaultMaxLength_Duck_ProbesSourceDuration(t *testing.T) {
+	dir := t.TempDir()
+	outPath := dir + "/out.mp3"
+
+	assets := config.AssetsConfig{
+		BGM: map[string]config.BGMEntry{
+			"bgm": {File: "/audio/bgm.mp3", Volume: 0.5, DuckRatio: 8.0},
+		},
+	}
+
+	var probedPath string
+	var capturedArgs []string
+	p := &Previewer{
+		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
+			capturedArgs = args
+			return nil
+		},
+		getDuration: func(path string) (float64, error) {
+			probedPath = path
+			return 45.0, nil
+		},
+	}
+
+	pctx := PreviewContext{
+		AssetType:    "bgm",
+		AssetKey:     "bgm",
+		Assets:       assets,
+		OutPath:      outPath,
+		MaxLengthSec: 0, // default: truncation disabled
+	}
+
+	if err := p.Run(context.Background(), pctx, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if probedPath != "/audio/bgm.mp3" {
+		t.Errorf("expected ffprobe on /audio/bgm.mp3, got: %q", probedPath)
+	}
+	joined := strings.Join(capturedArgs, " ")
+	if !strings.Contains(joined, "atrim=duration=45.000") {
+		t.Errorf("expected dummy narration trimmed to probed duration 45.000, got: %v", capturedArgs)
 	}
 }
 
