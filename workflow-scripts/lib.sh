@@ -11,7 +11,7 @@
 #           同じ瞬間に集中（同期）しないよう脱同期させる。
 #
 # 調整用パラメータ（環境変数で上書き可）:
-#   POLL_INTERVAL    ポーリングの基準間隔（秒, 既定 60）
+#   POLL_INTERVAL    ポーリングの基準間隔（秒, 既定 300）
 #   POLL_JITTER      基準間隔へ加算する 0..N 秒のランダム揺らぎ（既定 15）
 #   TD_MIN_GAP       td 呼び出し間の最小間隔（秒, 全ループ横断, 既定 3）
 #   TD_MAX_ATTEMPTS  td 失敗時の最大試行回数（既定 5）
@@ -20,7 +20,7 @@ _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _LOCK_DIR="${_LIB_DIR}/../.tmp/locks"
 mkdir -p "$_LOCK_DIR"
 
-POLL_INTERVAL="${POLL_INTERVAL:-60}"
+POLL_INTERVAL="${POLL_INTERVAL:-300}"
 POLL_JITTER="${POLL_JITTER:-15}"
 TD_MIN_GAP="${TD_MIN_GAP:-3}"
 TD_MAX_ATTEMPTS="${TD_MAX_ATTEMPTS:-5}"
