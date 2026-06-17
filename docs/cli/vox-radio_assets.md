@@ -19,8 +19,9 @@
 ### Options inherited from parent commands
 
 ```
-      --config string    共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
-      --log-dir string   ログ出力ディレクトリのパス (default ".vox-radio/logs")
+      --config string     共通設定 YAML ファイル（vox-radio.yaml）のパス (default "vox-radio.yaml")
+      --env-file string   環境変数を読み込む env ファイルのパス（未指定時は .env を自動読込、不在は無視） (default ".env")
+      --log-dir string    ログ出力ディレクトリのパス (default ".vox-radio/logs")
 ```
 
 ### SEE ALSO

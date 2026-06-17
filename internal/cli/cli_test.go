@@ -126,6 +126,19 @@ func TestSpecRequired(t *testing.T) {
 	}
 }
 
+func TestRootEnvFileFlag(t *testing.T) {
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"--help"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "--env-file") {
+		t.Error("root --help should list --env-file flag")
+	}
+}
+
 func TestRootCmdDisableAutoGenTag(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	if !cmd.DisableAutoGenTag {

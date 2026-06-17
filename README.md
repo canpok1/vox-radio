@@ -20,7 +20,13 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ラジオ番組の生成には生成AI・VOICEVOX・ffmpeg が必要です。次の 3 つを準備します。
 
-- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得し、環境変数 `GEMINI_API_KEY` に設定します（`export GEMINI_API_KEY=<your-key>`）。
+- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得し、カレントディレクトリに `.env` ファイルを作成してキーを書くと起動時に自動で読み込まれます。
+
+    ```
+    GEMINI_API_KEY=<your-key>
+    ```
+
+    OS やシェルに既に設定された環境変数は `.env` より優先されます。CI など環境ごとにファイルを切り替えたい場合は `--env-file <パス>` フラグを任意のコマンドに渡します。
 - **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
     - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
     - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
@@ -116,10 +122,17 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
-実行前に、Slack の Bot トークンを `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数に設定しておきます。
+実行前に、以下の環境変数を設定しておきます（`.env` に書くと毎回 export 不要です）。
+
+- **Bot トークン**: `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数
+- **投稿先チャンネル ID**: `slack-spec.yaml` の `slack.channel_env` で指定した環境変数
+
+```
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_CHANNEL=C0123456789
+```
 
 ```bash
-export SLACK_BOT_TOKEN=xoxb-...
 vox-radio slackpost --manifest output/{program.id}_ep{NNN}_manifest.json --spec slack-spec.yaml
 ```
 

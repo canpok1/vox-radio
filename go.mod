@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/cucumber/godog v0.15.1
+	github.com/joho/godotenv v1.5.1
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/safejob/dify-sdk-go v1.7.0-rc.1
 	github.com/slack-go/slack v0.24.0
