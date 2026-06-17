@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -19,10 +20,11 @@ func loadEnvFile(path string, explicit bool) error {
 	if explicit {
 		return godotenv.Load(path)
 	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	err := godotenv.Load(path)
+	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
-	return godotenv.Load(path)
+	return err
 }
 
 func NewRootCmd() *cobra.Command {
