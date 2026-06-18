@@ -1,0 +1,72 @@
+program:
+  id: "vox-radio-demo"
+  title: "ずんだもんとめたんのvox-radio紹介ラジオ"
+  description: "設定ファイルから生成AIとVOICEVOXでラジオ番組を自動生成するCLIツール vox-radio の機能を、ずんだもんとめたんがやさしく紹介するデモ番組。"
+  script_note: "vox-radio の機能を正確に紹介すること。VOICEVOX・生成AI(Gemini)・RSSフィード配信・Slack投稿・GitHub Actions・コーディングエージェント・CLI などの固有名詞は正しく言及する。番組生成の内部ステップ名や処理段階の細部には立ち入らず、利用者目線のうれしさで語る。専門用語はやさしく噛み砕いて説明する。番組全体を約3分に収めるため、各セリフは1〜2文で簡潔に、掛け合いは短くテンポよくまとめる。冗長な相槌や同じ説明の繰り返しは避ける。"
+  summary_length: 200
+  chars_per_minute: 240
+
+casts:
+  zundamon:
+    type: regular
+    role: "MC。進行役。素朴な疑問やリアクションで盛り上げる聞き役。元気なボケ担当。"
+  metan:
+    type: regular
+    role: "MC。vox-radio の機能を紹介・解説する主担当。落ち着いたツッコミ役。"
+
+corner_defaults:
+  bgm: coffee_break
+  end_audio:
+    type: se
+    id: switch
+
+corners:
+  - id: "opening"
+    title: "オープニング"
+    content: "明るく挨拶し、この番組がCLIツール vox-radio の機能紹介デモだと手短に伝える。vox-radio は設定ファイルを元に生成AIとVOICEVOXでラジオ番組(ポッドキャスト)の音声を自動生成するツールだと一言で紹介し、今日の流れをさっと予告する。"
+    direction: "テンポよく明るく。"
+    cast:
+      zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
+      metan: "MC。番組のねらいを紹介する相棒。"
+    length_sec: 15
+    summary_length: 60
+    start_audio:
+      type: jingle
+      id: theme
+    end_pause_sec: 1.5
+
+  - id: "how-it-works"
+    title: "vox-radioのしくみ"
+    content: "vox-radio で番組ができる流れを手短に紹介する。設定ファイルに番組のテーマ・出演キャラ・コーナー構成を書くと、台本は生成AIが自動で執筆し、音声はVOICEVOXのキャラクターボイスで読み上げ、1本のmp3に仕上がる。RSSフィードやWeb記事を素材にすれば最新の話題も扱える点に軽く触れ、コマンドひとつで完成することを強調する。"
+    cast:
+      metan: "MC。しくみをやさしく紹介・解説する主担当。"
+      zundamon: "MC。素朴な疑問やリアクションを返す聞き役。ボケ担当。"
+    length_sec: 45
+    summary_length: 100
+    end_pause_sec: 1.5
+
+  - id: "features"
+    title: "便利な機能たち"
+    content: "vox-radio の配信・演出まわりの便利機能を、各1つずつ一言で手短に紹介する。(1) BGM・ジングル・効果音で番組を演出できる(この番組にも使用)。(2) 作った番組をRSSフィードとして配信しポッドキャスト化できる。(3) Slackへ自動投稿でき、GitHub Actionsと組み合わせれば生成から投稿まで定期自動化できる。(4) コーディングエージェントに『番組を作って』と頼めば設定づくりを任せられる。各機能はテンポよく短く。"
+    cast:
+      metan: "MC。便利機能を順に紹介・解説する主担当。"
+      zundamon: "MC。へぇと感心したり使ってみたくなる聞き役。ボケ担当。"
+    length_sec: 55
+    summary_length: 100
+    end_pause_sec: 1.5
+
+  - id: "ending"
+    title: "エンディング"
+    content: "使い始め方を手短に案内して締める。インストールしてサンプル設定を生成し、コマンドひとつで自分だけの番組が作れることを伝え、ぜひ試してほしいと明るく締めくくる。"
+    direction: "余韻を残しつつ明るく。"
+    cast:
+      zundamon: "MC。進行役。ボケ担当。"
+      metan: "MC。相棒。ツッコミ担当。"
+    length_sec: 20
+    summary_length: 60
+    end_audio:
+      type: jingle
+      id: theme
+
+assets_files:
+  - ../sample-assets/assets.yaml
