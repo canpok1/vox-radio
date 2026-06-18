@@ -1,0 +1,22 @@
+pre-commit:
+  piped: true
+  commands:
+    block-protected-branch:
+      run: |
+        branch="$(git rev-parse --abbrev-ref HEAD)"
+        case "$branch" in
+          main|master)
+            echo "✋ $branch への直接コミットは禁止です。作業ブランチを作成してください。"
+            exit 1 ;;
+        esac
+    fmt:
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    lint:
+      glob: "*.go"
+      run: golangci-lint run {staged_files}
+pre-push:
+  commands:
+    test:
+      run: go test ./...
