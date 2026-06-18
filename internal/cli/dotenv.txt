@@ -1,0 +1,26 @@
+# vox-radio 環境変数テンプレート
+# コマンド実行時にカレントディレクトリの .env が自動で読み込まれます（OS の環境変数が優先）。
+# 必要な値を記入してください。変数名は vox-radio.yaml / slack-spec.yaml の *_env 設定に対応します。
+
+# --- 生成AI（必須） ---
+# 原稿生成に使う LLM の API キー。サンプルは Gemini 構成です（取得先: https://aistudio.google.com/）。
+# vox-radio.yaml の llm.openai.api_key_env で指定した環境変数名に合わせてください。
+GEMINI_API_KEY=
+
+# Dify を使う場合のみ（vox-radio.yaml で provider: dify-chat を選んだとき）。
+# llm.dify-chat.api_key_env で指定した環境変数名に合わせてください。
+# DIFY_API_KEY=
+
+# --- VOICEVOX（任意） ---
+# VOICEVOX Engine の接続先を上書きします。
+# 未設定時は vox-radio.yaml の voicevox.url、それも無ければ http://localhost:50021 を使います。
+# VOX_RADIO_VOICEVOX_URL=http://localhost:50021
+
+# --- Slack 投稿（slackpost を使う場合のみ） ---
+# Bot トークンと投稿先チャンネル ID。
+# それぞれ vox-radio.yaml の slack.bot_token_env、slack-spec.yaml の slack.channel_env に対応します。
+# SLACK_BOT_TOKEN=xoxb-...
+# SLACK_CHANNEL_ID=C0123456789
+
+# Slack API のベース URL を上書きします（通常は不要。テスト・モック用）。
+# VOX_RADIO_SLACK_API_URL=

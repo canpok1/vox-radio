@@ -20,13 +20,7 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ラジオ番組の生成には生成AI・VOICEVOX・ffmpeg が必要です。次の 3 つを準備します。
 
-- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得し、カレントディレクトリに `.env` ファイルを作成してキーを書くと起動時に自動で読み込まれます。
-
-    ```
-    GEMINI_API_KEY=<your-key>
-    ```
-
-    OS やシェルに既に設定された環境変数は `.env` より優先されます。CI など環境ごとにファイルを切り替えたい場合は `--env-file <パス>` フラグを任意のコマンドに渡します。
+- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得しておきます。
 - **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
     - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
     - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
@@ -35,21 +29,18 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
     - Ubuntu / Debian: `sudo apt-get install ffmpeg`
     - その他は [ffmpeg 公式サイト](https://ffmpeg.org/download.html)
 
-### 2. 番組を生成する
+### 2. 設定ファイルを用意する
 
-**音なし**と**音入り**のどちらか一方を選んで実行してください（同じディレクトリで両方を実行すると、`init` は既存ファイルを上書きしないため設定が混ざります）。
+**BGM・効果音なし**と**BGM・効果音あり**のどちらか一方を選んでください。
 
-**音なしで試す**
+**BGM・効果音なし**
 
 ```bash
 # サンプル設定一式をカレントディレクトリに生成
 vox-radio init --sample
-
-# 番組生成
-vox-radio episodegen --spec episode-spec.yaml
 ```
 
-**ジングル・効果音・BGM 入りで試す** — サンプル音源パックを展開し、各コーナーに音を割り当て済みの設定を生成します。
+**BGM・効果音あり** — サンプル音源パックを展開し、各コーナーに音を割り当て済みの設定を生成します。
 
 ```bash
 # サンプル音源パックを取得して assets/ に展開
@@ -58,12 +49,23 @@ unzip vox-radio-sample-assets.zip -d assets
 
 # 音源パックを使う設定一式を生成（assets/assets.yaml はパックのものを使う）
 vox-radio init --sample-with-assets
+```
 
-# 番組生成
+`init` で生成された `.env` の `GEMINI_API_KEY` 欄に、手順 1 で取得した API キーを記入します（実行時に自動で読み込まれます）。
+
+```
+GEMINI_API_KEY=<your-key>
+```
+
+サンプルはこのまま番組を生成できます。番組内容やキャラクターを変えたい場合は各設定ファイルを編集します（詳細は[設定方法](#設定方法)）。
+
+### 3. 番組を生成する
+
+```bash
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
-番組は `output/{program.id}_ep{NNN}.mp3`、マニフェストは `output/{program.id}_ep{NNN}_manifest.json` に生成されます（中間ファイルは `output/intermediate/{program.id}_ep{NNN}/`）。回ごとに別名・別ディレクトリになるため、繰り返し実行しても過去回の成果物は上書きされません。
+番組は `output/{program.id}_ep{NNN}.mp3` に生成されます（マニフェスト・中間ファイルも `output/` 配下に出力）。
 
 ## 使い方
 
@@ -122,7 +124,7 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
-実行前に、以下の環境変数を設定しておきます（`.env` に書くと毎回 export 不要です）。
+実行前に、以下の環境変数を設定しておきます（`init` 生成の `.env` に記入欄があります）。
 
 - **Bot トークン**: `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数
 - **投稿先チャンネル ID**: `slack-spec.yaml` の `slack.channel_env` で指定した環境変数
@@ -174,6 +176,9 @@ vox-radio init --sample
 | `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） | [assets.md](internal/cli/skills/vox-radio/references/assets.md) |
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
+| `.env` | 生成AI・VOICEVOX・Slack の環境変数テンプレート（記入欄を埋めて使用） | — |
+
+`slackpost` の投稿文テンプレート（`slack-parent.tmpl`・`slack-thread.tmpl`）は `template/` ディレクトリ配下に生成されます。
 
 番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
@@ -220,16 +225,9 @@ characters:
 
 4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
 
-> **サンプル音源パックを使う場合**: 自分で音源を用意しなくても、ジングル・効果音・BGM 入りのサンプルパックを使えば上記の手順 1・2 を省けます。インストール済みの vox-radio と同じバージョンのパックを取得し（[Releases ページ](https://github.com/canpok1/vox-radio/releases)からお使いのバージョンを選んでダウンロードしてもOK）、設定ファイル（`vox-radio.yaml` など）のあるディレクトリで展開してください。
+> **サンプル音源パックを使う場合**: 自分で音源を用意しなくても、ジングル・効果音・BGM 入りのサンプルパックを使えば上記の手順 1・2 を省けます。使い方は[クイックスタート](#クイックスタート)の「BGM・効果音あり」を参照してください。
 >
-> ```bash
-> curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
-> unzip vox-radio-sample-assets.zip -d assets
-> ```
->
-> `assets/assets.yaml`（音源登録済み）が用意されるので、手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
->
-> パック展開後に `vox-radio init --sample-with-assets` を実行すると、各コーナーへの割り当て（手順 4）まで済んだサンプル設定（`episode-spec.yaml` 等）が生成され、そのまま番組生成できます（クイックスタートの「音入りで試す」と同じ）。
+> パック展開後に `vox-radio init --sample-with-assets` を実行すると、各コーナーへの割り当て（手順 4）まで済んだサンプル設定（`episode-spec.yaml` 等）が生成され、そのまま番組生成できます（クイックスタートの「BGM・効果音あり」と同じ）。
 
 ### RSS フィード生成設定
 

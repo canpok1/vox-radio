@@ -11,15 +11,15 @@ slack:
 
   # 投稿文テンプレートのファイルパス（省略すると組み込みのデフォルトテンプレートを使います）。
   # パスは slack-spec.yaml のディレクトリ基準の相対パスか絶対パスで指定します。
-  # vox-radio init で slack-parent.tmpl・slack-thread.tmpl が同時に生成されます。
+  # vox-radio init で template/slack-parent.tmpl・template/slack-thread.tmpl が同時に生成されます。
   # テンプレートは Go 標準の text/template 記法を使います。
   # 利用可能な関数:
   #   corner "<id>"        — 指定 ID のコーナーを返す（見つからない場合は nil）
   #   hasLinks <corner>    — コーナーに URL 付き記事が 1 件以上あれば true
   message:
     # 親メッセージ（mp3 アップロード時の最初のコメント）のテンプレートファイル。
-    parent: "slack-parent.tmpl"
+    parent: "template/slack-parent.tmpl"
     # スレッド返信（要約＋コーナー）のテンプレートファイル。3000文字超は自動分割されます。
-    thread: "slack-thread.tmpl"
+    thread: "template/slack-thread.tmpl"
     # スレッド通知用プレーンテキストのテンプレートファイル（省略可）。
-    # fallback: "slack-fallback.tmpl"
+    # fallback: "template/slack-fallback.tmpl"

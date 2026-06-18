@@ -61,11 +61,11 @@ vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yam
 slack:
   channel_env: SLACK_CHANNEL_ID
   message:
-    parent: "slack-parent.tmpl"          # 相対パス（slack-spec.yaml と同じディレクトリ）
+    parent: "template/slack-parent.tmpl"  # 相対パス（slack-spec.yaml と同じディレクトリ基準）
     thread: "/abs/path/slack-thread.tmpl" # 絶対パス
 ```
 
-`vox-radio init` を実行すると `slack-spec.yaml`・`slack-parent.tmpl`・`slack-thread.tmpl` が同時に生成されます。
+`vox-radio init` を実行すると `slack-spec.yaml` と `template/slack-parent.tmpl`・`template/slack-thread.tmpl` が同時に生成されます。
 
 ## テンプレートの書き方（Go text/template）
 

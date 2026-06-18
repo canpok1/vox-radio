@@ -13,7 +13,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/slack"
 )
 
-var initTemplateFiles = []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml"}
+var initTemplateFiles = []string{"vox-radio.yaml", "episode-spec.yaml", "feed-spec.yaml", "slack-spec.yaml", "assets/assets.yaml", ".env"}
 
 func chdirTemp(t *testing.T) string {
 	t.Helper()
@@ -437,6 +437,94 @@ func TestInitCmd_SlackSpecExists_Skipped(t *testing.T) {
 	}
 	if !strings.Contains(out, "skip") {
 		t.Errorf("expected skip message for slack-spec.yaml, got: %s", out)
+	}
+}
+
+// TestInitCmd_EnvFileGenerated: init generates a .env template containing the
+// expected environment variable placeholders.
+func TestInitCmd_EnvFileGenerated(t *testing.T) {
+	dir := chdirTemp(t)
+	if _, err := runInitCmd(t); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".env"))
+	if err != nil {
+		t.Fatalf(".env was not generated: %v", err)
+	}
+	content := string(data)
+	for _, key := range []string{
+		"GEMINI_API_KEY",
+		"VOX_RADIO_VOICEVOX_URL",
+		"SLACK_BOT_TOKEN",
+		"SLACK_CHANNEL_ID",
+		"VOX_RADIO_SLACK_API_URL",
+	} {
+		if !strings.Contains(content, key) {
+			t.Errorf(".env template should mention %q", key)
+		}
+	}
+}
+
+// TestInitCmd_EnvFileGeneratedInAllModes: --sample and --sample-with-assets also generate .env.
+func TestInitCmd_EnvFileGeneratedInAllModes(t *testing.T) {
+	for _, flag := range []string{"--sample", "--sample-with-assets"} {
+		t.Run(flag, func(t *testing.T) {
+			dir := chdirTemp(t)
+			if _, err := runInitCmd(t, flag); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(dir, ".env")); os.IsNotExist(err) {
+				t.Errorf(".env was not generated for %s", flag)
+			}
+		})
+	}
+}
+
+// TestInitCmd_EnvExists_Skipped: an existing .env is not overwritten.
+func TestInitCmd_EnvExists_Skipped(t *testing.T) {
+	dir := chdirTemp(t)
+	existingContent := []byte("GEMINI_API_KEY=already-set")
+	writeTestFile(t, dir, ".env", existingContent)
+	out, err := runInitCmd(t)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	if string(data) != string(existingContent) {
+		t.Error(".env should not be overwritten")
+	}
+	if !strings.Contains(out, "skip") {
+		t.Errorf("expected skip message for .env, got: %s", out)
+	}
+}
+
+// TestInitCmd_SlackTemplatesUnderTemplateDir: the slack message templates are generated under
+// template/ and the generated slack-spec.yaml resolves them from there.
+func TestInitCmd_SlackTemplatesUnderTemplateDir(t *testing.T) {
+	dir := chdirTemp(t)
+	if _, err := runInitCmd(t); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// .tmpl files live under template/, not directly in the output dir.
+	for _, name := range []string{"slack-parent.tmpl", "slack-thread.tmpl"} {
+		if _, err := os.Stat(filepath.Join(dir, "template", name)); os.IsNotExist(err) {
+			t.Errorf("template/%s was not generated", name)
+		}
+		if _, err := os.Stat(filepath.Join(dir, name)); !os.IsNotExist(err) {
+			t.Errorf("%s should not be generated directly in output dir", name)
+		}
+	}
+	// slack-spec.yaml resolves the templates from template/ relative to itself.
+	spec, err := slack.LoadSlackSpec(filepath.Join(dir, "slack-spec.yaml"))
+	if err != nil {
+		t.Fatalf("LoadSlackSpec failed: %v", err)
+	}
+	loaded, err := spec.Slack.LoadTemplates(spec.BaseDir)
+	if err != nil {
+		t.Fatalf("LoadTemplates failed to resolve template/ files: %v", err)
+	}
+	if loaded.Parent == "" || loaded.Thread == "" {
+		t.Error("parent/thread templates should be loaded from template/ files")
 	}
 }
 
