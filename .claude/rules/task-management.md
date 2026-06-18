@@ -4,14 +4,14 @@
 
 ## 登録先
 
-- プロジェクト: `dev`（projectId: `6gpvgxp9jVwCFrVV`）
-- セクション: `vox-radio`（sectionId: `6gpvrxp3jVGwvp43`）
+- プロジェクト: `dev`
+- セクション: `vox-radio`
 
-projectId / sectionId は名前から特定することもできる（`mcp__todoist__find-projects` / `mcp__todoist__find-sections`）。ID が変わっていた場合は名前で引き直すこと。
+projectId / sectionId は名前から特定する（`mcp__todoist__find-projects` でプロジェクト `dev`、`mcp__todoist__find-sections` でセクション `vox-radio` を引いて ID を得る）。各自の Todoist 環境に合わせて利用すること。
 
 ## タスクの作成・更新・参照
 
-- **作成**: `mcp__todoist__add-tasks`（上記 projectId / sectionId を指定する）
+- **作成**: `mcp__todoist__add-tasks`（上記で引いた projectId / sectionId を指定する）
 - **参照・重複確認**: `mcp__todoist__find-tasks`（`projectId` / `sectionId` で絞り込む）
 - **更新**: `mcp__todoist__update-tasks` ／ **完了**: `mcp__todoist__complete-tasks`
 
