@@ -1,0 +1,106 @@
+# vox-radio 最新版への更新手順リファレンス
+
+> vox-radio 本体の新バージョンがリリースされたとき、プロジェクトを最新版へ追随させるための手順です。
+> 「vox-radio を最新版にして」「バージョンを上げて」「最新版に対応して」等の依頼や、SKILL.md の
+> 「バージョン整合チェック」でバイナリが古いと判明したときに、この手順に沿って更新してください。
+>
+> この手順は任意のユーザープロジェクトで使える汎用版です。配信用リポジトリ固有の手順
+> （CI のバージョンピン留め・`config/` の固定配置・`.github/workflows` の更新など）は含みません。
+> それらが必要なプロジェクトでは、各リポジトリの運用手順に従って追加対応してください。
+
+## ステップ1: 更新要否の判定（最新版の確認）
+
+最新リリースタグと現在のバイナリ版を比較し、**同一なら更新不要として終了**します（この手順は何度実行しても安全です）。
+
+```bash
+# 最新リリースタグ（semver 降順の先頭）。例: v0.0.17
+LATEST="$(git ls-remote --tags --refs --sort=-v:refname https://github.com/canpok1/vox-radio.git \
+  | head -n1 | sed 's#.*/##')"
+# 現在のバイナリ版。出力形式は "vox-radio version X.Y.Z"（タグは v 付き、--version は v なし）
+CURRENT="$(vox-radio --version | awk '{print $NF}')"
+echo "current=$CURRENT latest=$LATEST"
+```
+
+- `CURRENT` が `dev`（ローカルビルド）の場合は比較不能。警告を出すだけにとどめ、更新は行わない。
+- `"v$CURRENT" == "$LATEST"` の場合は「既に最新版です」と報告して終了する。
+- `"v$CURRENT" != "$LATEST"` の場合のみステップ2以降へ進む。
+
+## ステップ2: バイナリの更新
+
+最新リリースの `install.sh` を取得して実行し、バイナリを入れ替えます（`docs/installation.md` と同一手順）。
+
+```bash
+# 常に最新版を入れる
+curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
+vox-radio --version   # 更新後の版を確認
+```
+
+- 既定の設置先は `$HOME/.local/bin`。別ディレクトリに入れる場合は `INSTALL_DIR=$HOME/bin` 等を付けて実行し、PATH を通すこと。
+- 特定バージョンを入れる場合は `latest/download` をタグに置き換える（例: `releases/download/v0.0.17/install.sh`）。
+
+## ステップ3: エージェントスキルの再インストール
+
+バイナリと同じバージョンのスキル（`SKILL.md` ＋ `references/*.md`）へ更新します。設定ファイルのフィールド定義は
+この `references/*.md` を正とするため、**設定の追随（ステップ4）より先に**実行します。
+
+```bash
+vox-radio install --skills --force
+git status .claude/skills/vox-radio/   # 差分を確認（references の変更が破壊的変更の手がかりになる）
+```
+
+- `--force` を付けないと既存スキルは上書きされない。更新時は `--force` を必ず付けること。
+- `.skill-version` は常に新バイナリ版で上書きされ、版ずれが解消する。
+
+## ステップ4: 設定ファイル等の最新版への追随
+
+旧→新の変更点（破壊的変更・必須フィールド追加・既定値変更など）を把握し、各設定ファイルを追随させます。
+
+1. **変更点の把握**: リリースノートを確認する。取得できない場合は、ステップ3で更新された
+   `references/*.md` の差分（`git diff` / `git diff .claude/skills/vox-radio/`）と、ステップ5の `check`
+   エラーを根拠にする。リリースノートは次で取得できる（ネットワーク制限時は省略可）。
+
+   ```bash
+   curl -fsSL "https://api.github.com/repos/canpok1/vox-radio/releases/tags/${LATEST}" \
+     | sed -n 's/.*"body": "\(.*\)".*/\1/p'
+   ```
+
+2. **設定ファイルの更新**: 各設定ファイル（`vox-radio.yaml` / `episode-spec.yaml` / `feed-spec.yaml` /
+   `slack-spec.yaml` / アセット設定 YAML）を、更新後の `references/*.md` の定義に沿って修正する。
+   具体的な修正は SKILL.md 本体の「リファレンスと検証コマンド」「それ以外（部分編集…）」のフローに従う。
+
+3. **重要判断の記録**: 配信方式・データ形式・依存などアーキテクチャ上の重要変更を伴う追随の場合は、
+   その判断を記録に残すこと（プロジェクトに ADR 運用があればそれに従う）。些末な追随は対象外。
+
+## ステップ5: 検証ループ
+
+更新したすべての設定ファイルについて、該当の check コマンドが**終了コード 0 になるまで**修正と検証を繰り返します
+（コマンド一覧は SKILL.md の「リファレンスと検証コマンド」を参照）。エラーが出たらステップ4へ戻る。
+
+```bash
+vox-radio config check --config vox-radio.yaml
+vox-radio episodegen check episode-spec.yaml --config vox-radio.yaml
+vox-radio feedgen check
+vox-radio slackpost check
+vox-radio assets check assets/assets.yaml
+```
+
+- プロジェクトに存在しない設定ファイルの check は省略してよい。
+
+## ステップ6: コミット（任意）
+
+すべての check が通ったら、変更をコミットするかユーザーに確認します（PR 作成・マージは行わず、ユーザーの判断に委ねる）。
+
+```bash
+git rev-parse --abbrev-ref HEAD   # 作業ブランチであることを確認（main なら作業ブランチを切る）
+git add -A
+git status                        # 変更内容を確認
+```
+
+- コミットメッセージ例: `chore: vox-radio を <LATEST> へ更新`（主要な変更点があれば括弧で補足）。
+- コミットを行わない場合は、変更点と次に必要な操作（コミット／検証など）をユーザーに伝えて終了する。
+
+## 注意事項
+
+- バイナリだけを更新するとスキルが古いまま残り、references と実際の挙動が食い違う。ステップ3の再インストールを必ず行うこと。
+- 設定ファイルのフィールド値は、常に更新後の `references/*.md` を正とする（この手順書に個別値を書かない）。
+- 更新不要（最新版と同一）の場合は何も変更せず終了する。
