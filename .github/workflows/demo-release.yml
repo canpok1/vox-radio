@@ -1,0 +1,74 @@
+name: demo-release
+
+# デモ番組（demo/ 配下の設定）を生成し、固定タグ `demo` の prerelease として公開する。
+# 手動実行（workflow_dispatch）専用。再実行すると同じリリースを上書きする。
+# vox-radio バイナリ本体のリリース（v* タグ + goreleaser）とは独立。
+# prerelease にすることで GitHub の "latest" から除外し、install.sh の latest URL を保護する。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    services:
+      # 音声合成に VOICEVOX エンジンが必要。ランナーの localhost にマップされる。
+      voicevox:
+        image: voicevox/voicevox_engine:cpu-latest
+        ports:
+          - 50021:50021
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # デモは「リリース済みの vox-radio」で生成する（最新バイナリを取得）。
+      - name: Install vox-radio
+        run: curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
+
+      - name: Wait for VOICEVOX
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:50021/version; then
+              echo "voicevox ready"; exit 0
+            fi
+            echo "waiting voicevox... ($i)"; sleep 5
+          done
+          echo "voicevox did not become ready"; exit 1
+
+      # デモは連続性のない単発番組のため、キャッシュは使わず毎回クリーンに生成する。
+      - name: Generate demo episode
+        working-directory: demo
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VOX_RADIO_VOICEVOX_URL: http://127.0.0.1:50021
+        run: vox-radio episodegen --spec episode-spec.yaml --out-dir output
+
+      # 安定したダウンロード名にリネームし、manifest からリリースノート（要約＋クレジット）を生成。
+      - name: Prepare release assets
+        working-directory: demo
+        run: |
+          MP3=$(ls output/*_ep*.mp3 | head -n1)
+          MANIFEST=$(ls output/*_manifest.json | head -n1)
+          cp "$MP3" output/vox-radio-demo.mp3
+          vox-radio render --manifest "$MANIFEST" --template release-notes.tmpl --output output/RELEASE_NOTES.md
+
+      # 固定タグ `demo` の prerelease を作り直して上書きする（初回は delete が無いので無視）。
+      - name: Publish demo release (overwrite)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete demo --yes --cleanup-tag || true
+          gh release create demo demo/output/vox-radio-demo.mp3 \
+            --title "vox-radio デモ番組" \
+            --notes-file demo/output/RELEASE_NOTES.md \
+            --prerelease
