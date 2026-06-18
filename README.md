@@ -4,6 +4,12 @@
 
 原稿の生成に生成AI（Gemini を推奨）、音声の合成に VOICEVOX を利用します。
 
+## デモ番組
+
+ずんだもんとめたんが vox-radio の機能を紹介する、約 3 分のサンプル番組を公開しています。どんな番組が作れるか、ぜひ聴いてみてください。
+
+[デモ番組を聴く](https://github.com/canpok1/vox-radio/releases/tag/demo)
+
 ## インストール
 
 ```bash
