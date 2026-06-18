@@ -32,6 +32,7 @@ func TestInstallCmd_SkillsGenerated(t *testing.T) {
 		".claude/skills/vox-radio/references/assets.md",
 		".claude/skills/vox-radio/references/feed-spec.md",
 		".claude/skills/vox-radio/references/slack-spec.md",
+		".claude/skills/vox-radio/references/update.md",
 		".claude/skills/vox-radio/.skill-version",
 	}
 	for _, name := range expectedFiles {
