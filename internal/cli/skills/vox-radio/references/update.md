@@ -43,12 +43,20 @@ vox-radio --version   # 更新後の版を確認
 バイナリと同じバージョンのスキル（`SKILL.md` ＋ `references/*.md`）へ更新します。設定ファイルのフィールド定義は
 この `references/*.md` を正とするため、**設定の追随（ステップ4）より先に**実行します。
 
+**現在スキルがインストールされている場所を維持して上書き**すること。この手順書（`update.md`）自身が
+置かれているディレクトリが現在のスキル設置先（`<skills-dir>/vox-radio/`）なので、その親ディレクトリを
+`--skills-dir` に指定する。既定の `.claude/skills` 以外（`--skills-dir` 指定でインストールした場合）に
+置かれていることもあるため、思い込みで `.claude/skills` を使わないこと。
+
 ```bash
-vox-radio install --skills --force
-git status .claude/skills/vox-radio/   # 差分を確認（references の変更が破壊的変更の手がかりになる）
+# 現在のスキル設置先の親ディレクトリ。例: 既定なら .claude/skills、別の場所ならそのパス
+SKILLS_DIR="<この update.md がある vox-radio/ ディレクトリの親>"
+vox-radio install --skills --skills-dir "$SKILLS_DIR" --force
+git status "$SKILLS_DIR/vox-radio/"   # 差分を確認（references の変更が破壊的変更の手がかりになる）
 ```
 
 - `--force` を付けないと既存スキルは上書きされない。更新時は `--force` を必ず付けること。
+- 既定の `.claude/skills` に入っている場合は `--skills-dir` を省略してよい。
 - `.skill-version` は常に新バイナリ版で上書きされ、版ずれが解消する。
 
 ## ステップ4: 設定ファイル等の最新版への追随
