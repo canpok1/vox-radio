@@ -26,12 +26,11 @@ characters:
     name: ずんだもん
     pronoun: ボク
     speech_suffix: ["〜のだ", "〜なのだ"]
-    personality: ["元気", "明るい", "素直", "前向き", "好奇心旺盛"]
+    personality: ["元気", "明るい", "素直", "前向き", "好奇心旺盛", "おっちょこちょい"]
     default_style: ノーマル
     styles:
       ノーマル: 3
       あまあま: 1
-      ツンツン: 7
       なみだめ: 76
     credit: "VOICEVOX:ずんだもん"
   metan:
@@ -44,5 +43,4 @@ characters:
       ノーマル: 2
       あまあま: 0
       ツンツン: 6
-      ささやき: 36
     credit: "VOICEVOX:四国めたん"

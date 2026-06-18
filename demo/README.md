@@ -1,6 +1,6 @@
 # vox-radio 紹介デモ番組
 
-設定ファイルから生成AIと VOICEVOX でラジオ番組を自動生成する CLI ツール **vox-radio** の機能を、ずんだもんとめたんが約3分で紹介するデモ番組です。
+設定ファイルから生成AIと VOICEVOX でラジオ番組を自動生成する CLI ツール **vox-radio** の機能を、ずんだもんとめたんが紹介するデモ番組です。
 
 | ファイル | 内容 |
 |---|---|
@@ -27,13 +27,18 @@ BGM・ジングル・効果音はリポジトリ同梱の [`../sample-assets/`](
    cd demo
    ```
 
-3. `.env` を作成し、生成AIの API キーを設定する（`.env` は Git 管理対象外）
+3. `.env` を作成し、必要な環境変数を設定する（`.env` は Git 管理対象外）
 
    ```bash
    echo "GEMINI_API_KEY=<your-key>" > .env
    ```
 
-   環境変数 `GEMINI_API_KEY` を設定済みなら、この手順は省略できます。
+   - 環境変数 `GEMINI_API_KEY` を設定済みなら、この行は不要です。
+   - VOICEVOX Engine が既定の `http://localhost:50021` 以外で動いていて、環境変数 `VOX_RADIO_VOICEVOX_URL` も未設定の場合は、接続先も設定します（または `vox-radio.yaml` の `voicevox.url` を変更）。
+
+     ```bash
+     echo "VOX_RADIO_VOICEVOX_URL=http://<host>:<port>" >> .env
+     ```
 
 4. 番組を生成
 
