@@ -64,14 +64,13 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/block-commit-on-main.sh",
-            "timeout": 10
+            "command": "./.claude/hooks/session-setup.sh",
+            "timeout": 600
           }
         ]
       }
