@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # Go モジュール（ルートの go.mod / go.sum）
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # minor / patch をまとめて 1 PR に集約（自動マージ対象）
+      go-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions（.github/workflows/）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      github-actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # devcontainer features（.devcontainer/devcontainer.json）
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      devcontainers-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
