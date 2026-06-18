@@ -11,6 +11,8 @@ setup:
 	# 本モジュールが要求する Go バージョンでビルドさせるため GOTOOLCHAIN を明示する。
 	GOTOOLCHAIN=go$$(go list -m -f '{{.GoVersion}}') go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	go install github.com/goreleaser/goreleaser/v2@v2.14.3
+	GOTOOLCHAIN=go$$(go list -m -f '{{.GoVersion}}') go install github.com/evilmartians/lefthook/v2@v2.1.8
+	lefthook install
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/vox-radio
