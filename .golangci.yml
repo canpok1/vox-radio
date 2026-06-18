@@ -20,16 +20,261 @@ linters:
     - gocyclo
     - misspell
     - unconvert
+    - depguard
 
   settings:
     gocyclo:
       min-complexity: 30
+    depguard:
+      rules:
+        # 基盤層: internal パッケージへの依存禁止
+        foundation-layer:
+          list-mode: lax
+          files:
+            - "**/internal/fileio/**"
+            - "**/internal/httpretry/**"
+            - "**/internal/logging/**"
+            - "**/internal/mediainfo/**"
+            - "**/internal/testutil/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "基盤層パッケージはinternalパッケージに依存できません"
+        # データ層: model は internal パッケージへの依存禁止
+        model-layer:
+          list-mode: lax
+          files:
+            - "**/internal/model/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "model層（データ層）はinternalパッケージに依存できません"
+        # 設定層: config は fileio のみ許可
+        config-layer:
+          list-mode: lax
+          files:
+            - "**/internal/config/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "config層はinternal/fileioのみimportできます"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/fileio"
+        # オーケストレーション層: pipeline は model/config/fileio/manifest のみ
+        pipeline-layer:
+          list-mode: lax
+          files:
+            - "**/internal/pipeline/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "pipeline層はmodel/config/fileio/manifestのみimportできます（ステップ実装パッケージのimport禁止）"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/fileio"
+            - "github.com/canpok1/vox-radio/internal/manifest"
+        # ドメイン層: render は model のみ
+        domain-render:
+          list-mode: lax
+          files:
+            - "**/internal/render/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "renderはmodel以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+        # ドメイン層: cache は model のみ
+        domain-cache:
+          list-mode: lax
+          files:
+            - "**/internal/cache/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "cacheはmodel以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+        # ドメイン層: cast は model/config のみ
+        domain-cast:
+          list-mode: lax
+          files:
+            - "**/internal/cast/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "castはmodel/config以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+        # ドメイン層: collect/synth/assemble は model/config/基盤層のみ（同一ルール）
+        domain-collect-synth-assemble:
+          list-mode: lax
+          files:
+            - "**/internal/collect/**"
+            - "**/internal/synth/**"
+            - "**/internal/assemble/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "collect/synth/assembleはmodel/config/基盤層以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/fileio"
+            - "github.com/canpok1/vox-radio/internal/httpretry"
+            - "github.com/canpok1/vox-radio/internal/logging"
+            - "github.com/canpok1/vox-radio/internal/mediainfo"
+            - "github.com/canpok1/vox-radio/internal/testutil"
+        # ドメイン層: manifest は model/config のみ
+        domain-manifest:
+          list-mode: lax
+          files:
+            - "**/internal/manifest/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "manifestはmodel/config以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+        # ドメイン層: eval は config/script/llm のみ
+        domain-eval:
+          list-mode: lax
+          files:
+            - "**/internal/eval/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "evalはconfig/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: feed は model/fileio/cache のみ
+        domain-feed:
+          list-mode: lax
+          files:
+            - "**/internal/feed/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "feedはmodel/fileio/cache以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/fileio"
+            - "github.com/canpok1/vox-radio/internal/cache"
+        # ドメイン層: slack は model/fileio/render のみ
+        domain-slack:
+          list-mode: lax
+          files:
+            - "**/internal/slack/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "slackはmodel/fileio/render以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/fileio"
+            - "github.com/canpok1/vox-radio/internal/render"
+        # ドメイン層: script/llm は httpretry のみ
+        domain-script-llm:
+          list-mode: lax
+          files:
+            - "**/internal/script/llm/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script/llmはhttpretry以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/httpretry"
+        # ドメイン層: script/direct・script/summarize は model/script/llm のみ（同一ルール）
+        domain-script-direct-summarize:
+          list-mode: lax
+          files:
+            - "**/internal/script/direct/**"
+            - "**/internal/script/summarize/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script/direct・script/summarizeはmodel/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: script/summary は model/logging/script/llm のみ
+        domain-script-summary:
+          list-mode: lax
+          files:
+            - "**/internal/script/summary/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script/summaryはmodel/logging/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/logging"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: script/write は model/config/cache/script/llm のみ
+        domain-script-write:
+          list-mode: lax
+          files:
+            - "**/internal/script/write/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script/writeはmodel/config/cache/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/cache"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: script（親パッケージ）は model/config/logging/script/direct/script/write のみ
+        domain-script-parent:
+          list-mode: lax
+          files:
+            - "**/internal/script/*.go"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script（親パッケージ）はmodel/config/logging/script/direct/script/write以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/logging"
+            - "github.com/canpok1/vox-radio/internal/script/direct"
+            - "github.com/canpok1/vox-radio/internal/script/write"
+        # ドメイン層: rundown/prompt は config のみ
+        domain-rundown-prompt:
+          list-mode: lax
+          files:
+            - "**/internal/rundown/prompt/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "rundown/promptはconfig以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/config"
+        # ドメイン層: rundown/flow・rundown/select は config/model/rundown/prompt/script/llm のみ（同一ルール）
+        domain-rundown-flow-select:
+          list-mode: lax
+          files:
+            - "**/internal/rundown/flow/**"
+            - "**/internal/rundown/select/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "rundown/flow・rundown/selectはconfig/model/rundown/prompt/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/rundown/prompt"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: rundown（親パッケージ）は model/config/logging/cache/rundown/flow/rundown/select/script/summarize のみ
+        domain-rundown-parent:
+          list-mode: lax
+          files:
+            - "**/internal/rundown/*.go"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "rundown（親パッケージ）はmodel/config/logging/cache/rundown/flow/rundown/select/script/summarize以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/logging"
+            - "github.com/canpok1/vox-radio/internal/cache"
+            - "github.com/canpok1/vox-radio/internal/rundown/flow"
+            - "github.com/canpok1/vox-radio/internal/rundown/select"
+            - "github.com/canpok1/vox-radio/internal/script/summarize"
 
   exclusions:
     generated: lax
     rules:
       - linters:
           - errcheck
+        path: _test\.go
+      - linters:
+          - depguard
         path: _test\.go
       - linters:
           - all
