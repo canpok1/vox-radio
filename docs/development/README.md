@@ -135,7 +135,7 @@ make eval
 make release-check
 ```
 
-`goreleaser check` を実行し、設定の構文エラーや不整合を検出します。`goreleaser` は devcontainer 起動時または `make setup` 実行時に自動インストールされます。
+`goreleaser check` を実行し、設定の構文エラーや不整合を検出します。`goreleaser` は `make setup` ではインストールせず、`make release-check` 実行時に公式スクリプトでビルド済みバイナリを都度取得します。
 
 ## アーキテクチャ
 

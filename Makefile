@@ -4,15 +4,19 @@ LDFLAGS=-X github.com/canpok1/vox-radio/internal/cli.version=$(VERSION)
 PROFILE ?= sample/episode-spec.yaml
 OUT_DIR ?= output/$(shell date +%Y%m%d%H%M%S)
 
+# 開発ツールのバージョン
+GOLANGCI_LINT_VERSION ?= v2.12.2
+GORELEASER_VERSION ?= v2.14.3
+LEFTHOOK_VERSION ?= v2.1.8
+GOBIN ?= $(shell go env GOPATH)/bin
+
 setup:
-	# golangci-lint の go.mod は go ディレクティブを「最新-1」に固定するため、
-	# 素の go install（GOTOOLCHAIN=auto）だと古い Go でビルドされ、本モジュール
-	# （go.mod の go ディレクティブ）を lint しようとするとバージョン不整合で失敗する。
-	# 本モジュールが要求する Go バージョンでビルドさせるため GOTOOLCHAIN を明示する。
-	GOTOOLCHAIN=go$$(go list -m -f '{{.GoVersion}}') go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-	go install github.com/goreleaser/goreleaser/v2@v2.14.3
-	GOTOOLCHAIN=go$$(go list -m -f '{{.GoVersion}}') go install github.com/evilmartians/lefthook/v2@v2.1.8
-	lefthook install
+	# go install（ソースからビルド）は遅いため、ビルド済みバイナリを取得する。
+	# golangci-lint: 公式 install.sh がチェックサム検証込みでバイナリを配置する。
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
+	# lefthook: GitHub Releases のバイナリを取得する（goreleaser は release-check で都度取得）。
+	./scripts/install-lefthook.sh $(LEFTHOOK_VERSION) $(GOBIN)
+	$(GOBIN)/lefthook install
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/vox-radio
@@ -53,7 +57,8 @@ check-samples: build
 	./$(BINARY_NAME) assets check sample-assets/assets.yaml
 
 release-check:
-	goreleaser check
+	# goreleaser を setup でインストールせず、公式 run スクリプトで都度取得して実行する。
+	curl -sfL https://goreleaser.com/static/run | VERSION=$(GORELEASER_VERSION) bash -s -- check
 
 eval:
 	go test -tags=eval -count=1 -v -timeout 30m ./internal/eval/...
