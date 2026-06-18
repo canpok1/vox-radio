@@ -225,14 +225,7 @@ characters:
 
 4. 各コーナーで「いつ何を鳴らすか」を割り当てる（`episode-spec.yaml`）。コーナーの開始・終了に鳴らすジングルや効果音、コーナー中に流す BGM を指定する
 
-> **サンプル音源パックを使う場合**: 自分で音源を用意しなくても、ジングル・効果音・BGM 入りのサンプルパックを使えば上記の手順 1・2 を省けます。インストール済みの vox-radio と同じバージョンのパックを取得し（[Releases ページ](https://github.com/canpok1/vox-radio/releases)からお使いのバージョンを選んでダウンロードしてもOK）、設定ファイル（`vox-radio.yaml` など）のあるディレクトリで展開してください。
->
-> ```bash
-> curl -LO "https://github.com/canpok1/vox-radio/releases/download/v$(vox-radio --version | awk '{print $NF}')/vox-radio-sample-assets.zip"
-> unzip vox-radio-sample-assets.zip -d assets
-> ```
->
-> `assets/assets.yaml`（音源登録済み）が用意されるので、手順 3（検証）以降に進めます。ライセンスは展開後の `assets/CREDITS.md` を参照してください。
+> **サンプル音源パックを使う場合**: 自分で音源を用意しなくても、ジングル・効果音・BGM 入りのサンプルパックを使えば上記の手順 1・2 を省けます。使い方は[クイックスタート](#クイックスタート)の「BGM・効果音あり」を参照してください。
 >
 > パック展開後に `vox-radio init --sample-with-assets` を実行すると、各コーナーへの割り当て（手順 4）まで済んだサンプル設定（`episode-spec.yaml` 等）が生成され、そのまま番組生成できます（クイックスタートの「BGM・効果音あり」と同じ）。
 
