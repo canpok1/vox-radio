@@ -31,7 +31,7 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ### 2. 設定ファイルを用意する
 
-**BGM・効果音なし**と**BGM・効果音あり**のどちらか一方を選んでください（同じディレクトリで両方を実行すると、`init` は既存ファイルを上書きしないため設定が混ざります）。
+**BGM・効果音なし**と**BGM・効果音あり**のどちらか一方を選んでください。
 
 **BGM・効果音なし**
 
