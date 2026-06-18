@@ -1,6 +1,6 @@
 ---
 name: vox-radio
-description: vox-radio でラジオ番組を作る・更新する／設定ファイル（vox-radio.yaml・episode-spec.yaml・アセット設定・feed-spec.yaml・slack-spec.yaml）を編集する／設定や使い方を相談する／vox-radio 本体を最新版へ更新するスキル。質問に答えるだけで番組（mp3）まで仕上げられる。フィールド定義は同梱の references/*.md を参照し、check コマンドで検証する。
+description: vox-radio でラジオ番組を作る・更新する／設定ファイル（vox-radio.yaml・episode-spec.yaml・アセット設定・feed-spec.yaml・slack-spec.yaml）を編集する／設定や使い方を相談する／vox-radio 本体を最新版へ更新するスキル。質問に答えるだけで番組（mp3）まで仕上げられる。
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write
 ---
 

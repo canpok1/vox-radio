@@ -23,15 +23,19 @@ echo "current=$CURRENT latest=$LATEST"
 
 ## ステップ2: バイナリの更新
 
-最新リリースの `install.sh` を取得して実行し、バイナリを入れ替えます（`docs/installation.md` と同一手順）。
+最新リリースの `install.sh` を取得して実行し、バイナリを入れ替えます。**インストール位置は変更せず、現在と同じ場所へ入れ替える**こと。先に現在の設置先を確認し、その場所を `INSTALL_DIR` に指定して実行します。
 
 ```bash
-# 常に最新版を入れる
-curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
+# 現在の設置先を確認（同じ場所へ入れ替えるため）
+INSTALL_DIR="$(dirname "$(command -v vox-radio)")"
+echo "install dir: $INSTALL_DIR"
+
+# 同じ場所へ最新版を入れる
+curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh \
+  | INSTALL_DIR="$INSTALL_DIR" bash
 vox-radio --version   # 更新後の版を確認
 ```
 
-- 既定の設置先は `$HOME/.local/bin`。別ディレクトリに入れる場合は `INSTALL_DIR=$HOME/bin` 等を付けて実行し、PATH を通すこと。
 - 特定バージョンを入れる場合は `latest/download` をタグに置き換える（例: `releases/download/v0.0.17/install.sh`）。
 
 ## ステップ3: エージェントスキルの再インストール
@@ -86,5 +90,4 @@ vox-radio assets check assets/assets.yaml
 ## 注意事項
 
 - バイナリだけを更新するとスキルが古いまま残り、references と実際の挙動が食い違う。ステップ3の再インストールを必ず行うこと。
-- 設定ファイルのフィールド値は、常に更新後の `references/*.md` を正とする（この手順書に個別値を書かない）。
 - 更新不要（最新版と同一）の場合は何も変更せず終了する。
