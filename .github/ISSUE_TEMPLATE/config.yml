@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 質問・相談
+    url: https://github.com/canpok1/vox-radio/discussions
+    about: 使い方の質問や相談は Discussions をご利用ください（有効な場合）。
+  - name: セキュリティ脆弱性の報告
+    url: https://github.com/canpok1/vox-radio/security/advisories/new
+    about: 脆弱性は公開 Issue ではなく非公開の脆弱性報告から連絡してください。
