@@ -136,6 +136,23 @@ SLACK_CHANNEL=C0123456789
 vox-radio slackpost --manifest output/{program.id}_ep{NNN}_manifest.json --spec slack-spec.yaml
 ```
 
+### テンプレートレンダリング
+
+`render` は manifest.json を Go 標準の [text/template](https://pkg.go.dev/text/template) 記法でレンダリングします。テンプレートはファイル（`--template`）またはインライン文字列（`--template-string`）のどちらか一方で指定します。CI での値抽出や配信メモの生成に使います。
+
+```bash
+# 回番号を取り出す
+vox-radio render --manifest output/manifest.json --template-string '{{.EpisodeNumber}}'
+
+# リリースタイトルを組み立てる
+vox-radio render --manifest output/manifest.json --template-string '第{{.EpisodeNumber}}回 {{.EpisodeTitle}}'
+
+# テンプレートファイルから配信メモを生成
+vox-radio render --manifest output/manifest.json --template release-note.tmpl --output RELEASE_NOTES.md
+```
+
+テンプレートで参照できるフィールドと関数の一覧: [manifest.md](internal/cli/skills/vox-radio/references/manifest.md)
+
 ## 設定方法
 
 設定ファイルは `vox-radio init` で生成します。

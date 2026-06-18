@@ -142,6 +142,53 @@ func TestRenderCmd_TemplateParseError_Error(t *testing.T) {
 	}
 }
 
+func TestRenderCmd_TemplateString_BasicOutput(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForRenderTest(t, dir)
+
+	cmd := cli.NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"render", "--manifest", manifestPath, "--template-string", "{{.Title}} 第{{.EpisodeNumber}}回"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "テスト番組") {
+		t.Errorf("output should contain title, got: %q", buf.String())
+	}
+}
+
+func TestRenderCmd_TemplateBothFlags_Error(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForRenderTest(t, dir)
+	tmplPath := testutil.WriteTempFile(t, "test.tmpl", []byte(`{{.Title}}`))
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"render", "--manifest", manifestPath, "--template", tmplPath, "--template-string", "{{.Title}}"})
+	if err := cmd.Execute(); err == nil {
+		t.Error("expected error when both --template and --template-string are specified")
+	}
+}
+
+func TestRenderCmd_TemplateString_OutputFile(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := writeManifestForRenderTest(t, dir)
+	outputPath := filepath.Join(dir, "out.txt")
+
+	cmd := cli.NewRootCmd()
+	cmd.SetArgs([]string{"render", "--manifest", manifestPath, "--template-string", "{{.Title}}", "--output", outputPath})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if !strings.Contains(string(data), "テスト番組") {
+		t.Errorf("output file should contain title, got: %q", string(data))
+	}
+}
+
 func TestRootHelp_ContainsRender(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	buf := &bytes.Buffer{}
