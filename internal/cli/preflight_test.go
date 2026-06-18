@@ -36,8 +36,9 @@ func TestRequireMediaTools_OneMissing(t *testing.T) {
 	if !strings.Contains(err.Error(), "ffprobe") {
 		t.Errorf("want 'ffprobe' in error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), readmeURL) {
-		t.Errorf("want README URL in error, got: %v", err)
+	wantURL := referenceURL("README.md")
+	if !strings.Contains(err.Error(), wantURL) {
+		t.Errorf("want README URL %q in error, got: %v", wantURL, err)
 	}
 }
 
@@ -54,7 +55,8 @@ func TestRequireMediaTools_BothMissing(t *testing.T) {
 	if !strings.Contains(err.Error(), "ffprobe") {
 		t.Errorf("want 'ffprobe' in error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), readmeURL) {
-		t.Errorf("want README URL in error, got: %v", err)
+	wantURL := referenceURL("README.md")
+	if !strings.Contains(err.Error(), wantURL) {
+		t.Errorf("want README URL %q in error, got: %v", wantURL, err)
 	}
 }

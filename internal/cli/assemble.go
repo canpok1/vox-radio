@@ -22,15 +22,15 @@ func newAssembleCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "assemble",
 		Short: "WAV クリップを MP3 エピソードに組み立てる",
-		Long: `script.json と synth が生成したクリップディレクトリを読み込み、
+		Long: fmt.Sprintf(`script.json と synth が生成したクリップディレクトリを読み込み、
 ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終的な MP3 エピソードを生成します。
 
 実行には ffmpeg および ffprobe が必要です。インストール手順は vox-radio の README を参照してください:
-https://github.com/canpok1/vox-radio#readme
+%s
 
 例:
   vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3
-  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3 --spec episode-spec.yaml`,
+  vox-radio episodegen assemble --in work/script.json --clips work/clips --out work/episode.mp3 --spec episode-spec.yaml`, referenceURL("README.md")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, logFile, err := setupLogger("assemble", logDirFlag(cmd))
 			if err != nil {

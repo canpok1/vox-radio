@@ -7,7 +7,7 @@
 collect → rundown → script → synth → assemble → manifest を一括実行します。
 
 実行には ffmpeg および ffprobe が必要です。インストール手順は vox-radio の README を参照してください:
-https://github.com/canpok1/vox-radio#readme
+https://github.com/canpok1/vox-radio/blob/main/README.md
 
 最終的な {program.id}_ep{NNN}.mp3 とマニフェスト {program.id}_ep{NNN}_manifest.json は
 <out-dir>/ 直下に、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置されます。
