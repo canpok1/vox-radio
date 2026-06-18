@@ -129,7 +129,7 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 ```
 SLACK_BOT_TOKEN=xoxb-...
-SLACK_CHANNEL=C0123456789
+SLACK_CHANNEL_ID=C0123456789
 ```
 
 ```bash
@@ -258,6 +258,10 @@ vox-radio install --skills --skills-dir <スキルディレクトリ>
 ### お便りフォームの作成
 
 Google フォームでリスナーからお便りを募り、その回答を RSS フィードとして公開すれば、vox-radio のコーナーのデータソースとして取り込めます（Google フォーム側の設定は vox-radio の責務の範囲外です）。設定方法は[お便りフォームの作成](docs/guides/listener-form.md)を参照してください。
+
+### GitHub Actions で定期投稿
+
+GitHub Actions のスケジュール実行で、番組生成から Slack 投稿までを定期的に自動化できます。最小構成のサンプルは[GitHub Actions で定期的に Slack へ投稿する](docs/guides/github-actions-slack.md)を参照してください。
 
 ## コマンド一覧
 
