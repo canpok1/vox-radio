@@ -88,3 +88,4 @@
 | [0080](0080-slackpost-channel-via-env-var-name.md) | slackpost の投稿先チャンネルを環境変数名の間接指定にする | 採用 | 2026-06-16 |
 | [0081](0081-load-env-file-on-startup.md) | 起動時に .env ファイルから環境変数を読み込む | 採用 | 2026-06-16 |
 | [0082](0082-dependabot-auto-update-with-auto-merge.md) | Dependabot による依存自動更新と patch/minor の自動マージ | 採用 | 2026-06-18 |
+| [0083](0083-lefthook-for-git-hooks.md) | lefthook による git フック管理（保護ブランチへの直接コミット禁止・品質ゲート） | 採用 | 2026-06-18 |

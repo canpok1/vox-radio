@@ -20,6 +20,7 @@ make e2e     # e2e テスト（ffmpeg が必要、外部 API はモック）
 ```
 
 - 開発環境は devcontainer での構築を推奨します（`make` 系コマンドは開発者向け。利用者はリリース版バイナリのみで完結します）。
+- `make setup` を実行すると git フックが有効になります（pre-commit で gofmt・golangci-lint、pre-push で `go test ./...` が自動実行されます）。`--no-verify` でバイパス可能ですが、CI でも同等のチェックが走ります。
 - `.go` ファイルを変更するときは [アーキテクチャの依存ルール](docs/development/architecture.md) に従ってください。
 - CLI のコマンド・フラグ説明は cobra の `Short`/`Long` を編集し、`make docs` で `docs/cli/` を再生成します（手書きしない）。
 - 設定ファイルのフィールド定義は `internal/cli/skills/vox-radio/references/` が正です。
@@ -27,8 +28,8 @@ make e2e     # e2e テスト（ffmpeg が必要、外部 API はモック）
 
 ## Pull Request
 
-1. ブランチを切って変更を加える（`main` への直 push は避ける）。
-2. `make test` / `make lint` がローカルで通ることを確認する。
+1. ブランチを切って変更を加える（`main` への直接コミットは禁止です。pre-commit フックでも拒否されます）。
+2. `make test` / `make lint` がローカルで通ることを確認する（`make setup` 後は pre-push で自動実行されます）。
 3. PR を作成する。CI（`build.yml`）が通ることを確認する。
 4. レビューを受けてマージする。
 
