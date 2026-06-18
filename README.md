@@ -20,13 +20,13 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 
 ラジオ番組の生成には生成AI・VOICEVOX・ffmpeg が必要です。次の 3 つを準備します。
 
-- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得し、カレントディレクトリに `.env` ファイルを作成してキーを書くと起動時に自動で読み込まれます。
+- **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得しておきます。記入先の `.env` は手順 2 の `vox-radio init` が生成するので、その `GEMINI_API_KEY` 欄に記入します。
 
     ```
     GEMINI_API_KEY=<your-key>
     ```
 
-    OS やシェルに既に設定された環境変数は `.env` より優先されます。CI など環境ごとにファイルを切り替えたい場合は `--env-file <パス>` フラグを任意のコマンドに渡します。
+    `.env` は設定ファイルと同じディレクトリで実行すると自動で読み込まれます（OS やシェルに既に設定された環境変数が優先）。CI など環境ごとにファイルを切り替えたい場合は `--env-file <パス>` フラグを任意のコマンドに渡します。
 - **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
     - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
     - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
@@ -122,7 +122,7 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
-実行前に、以下の環境変数を設定しておきます（`.env` に書くと毎回 export 不要です）。
+実行前に、以下の環境変数を設定しておきます（`init` 生成の `.env` に記入欄があります）。
 
 - **Bot トークン**: `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数
 - **投稿先チャンネル ID**: `slack-spec.yaml` の `slack.channel_env` で指定した環境変数
@@ -174,6 +174,9 @@ vox-radio init --sample
 | `assets/assets.yaml` | アセット設定（ジングル・効果音・BGM） | [assets.md](internal/cli/skills/vox-radio/references/assets.md) |
 | `feed-spec.yaml` | RSS フィード生成設定（`feedgen` で使用） | [feed-spec.md](internal/cli/skills/vox-radio/references/feed-spec.md) |
 | `slack-spec.yaml` | Slack 投稿設定（`slackpost` で使用） | [slack-spec.md](internal/cli/skills/vox-radio/references/slack-spec.md) |
+| `.env` | 生成AI・VOICEVOX・Slack の環境変数テンプレート（記入欄を埋めて使用） | — |
+
+`slackpost` の投稿文テンプレート（`slack-parent.tmpl`・`slack-thread.tmpl`）は `template/` ディレクトリ配下に生成されます。
 
 番組生成に必要なのは `vox-radio.yaml` と `episode-spec.yaml` で、残りはアセット演出・配信を使う場合に編集します。サンプル（`init --sample`）には音声アセットを同梱しないため、効果音・BGM はコメントアウト済みの記入例になっています。コーディングエージェントに任せる方法は「[応用的な設定方法](#応用的な設定方法)」を参照してください。
 
