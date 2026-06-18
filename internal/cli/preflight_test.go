@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var testReadmeURL = referenceURL("README.md")
+
 func setLookPath(t *testing.T, fn func(string) (string, error)) {
 	t.Helper()
 	orig := lookPath
@@ -36,8 +38,8 @@ func TestRequireMediaTools_OneMissing(t *testing.T) {
 	if !strings.Contains(err.Error(), "ffprobe") {
 		t.Errorf("want 'ffprobe' in error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), readmeURL) {
-		t.Errorf("want README URL in error, got: %v", err)
+	if !strings.Contains(err.Error(), testReadmeURL) {
+		t.Errorf("want README URL %q in error, got: %v", testReadmeURL, err)
 	}
 }
 
@@ -54,7 +56,7 @@ func TestRequireMediaTools_BothMissing(t *testing.T) {
 	if !strings.Contains(err.Error(), "ffprobe") {
 		t.Errorf("want 'ffprobe' in error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), readmeURL) {
-		t.Errorf("want README URL in error, got: %v", err)
+	if !strings.Contains(err.Error(), testReadmeURL) {
+		t.Errorf("want README URL %q in error, got: %v", testReadmeURL, err)
 	}
 }

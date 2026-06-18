@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-const readmeURL = "https://github.com/canpok1/vox-radio#readme"
-
 // lookPath is exec.LookPath by default; replaced in tests.
 var lookPath = exec.LookPath
 
@@ -25,5 +23,5 @@ func requireMediaTools() error {
 		return nil
 	}
 	names := strings.Join(missing, ", ")
-	return fmt.Errorf("%s が見つかりません。音声の生成には ffmpeg および ffprobe が必要です。\nインストール手順は vox-radio の README を参照してください:\n%s", names, readmeURL)
+	return fmt.Errorf("%s が見つかりません。音声の生成には ffmpeg および ffprobe が必要です。\nインストール手順は vox-radio の README を参照してください:\n%s", names, referenceURL("README.md"))
 }
