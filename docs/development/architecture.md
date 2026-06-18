@@ -13,7 +13,7 @@ internal/cli（CLI層: 唯一の合成点。ロード・検証・依存注入）
     ↓
 internal/pipeline（オーケストレーション層: interface 経由でステップを実行）
     ↓
-ドメイン層（collect / rundown / script / synth / assemble / manifest / slack / feed / cache / cast / eval）
+ドメイン層（collect / rundown / script / synth / assemble / manifest / slack / feed / cache / cast / eval / render）
     ↓
 internal/config（設定層: 共有設定のロード・検証・Effective値）
     ↓
@@ -31,7 +31,7 @@ internal/model（データ層: 型定義と純粋関数のみ）
 | 基盤 | `fileio` `httpretry` `logging` `mediainfo` `testutil` | なし（標準ライブラリのみ） |
 | データ | `model` | **なし**（型定義と純粋関数のみ。ファイルI/O・YAML/JSONロード・環境変数参照を置かない） |
 | 設定 | `config` | `fileio` のみ |
-| ドメイン | `collect` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `assemble` `manifest` `slack` `feed` `cache` `cast` `eval` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
+| ドメイン | `collect` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `assemble` `manifest` `slack` `feed` `cache` `cast` `eval` `render` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
 | オーケストレーション | `pipeline` | `model` `config` `fileio` `manifest` のみ。**ステップ実装パッケージ（collect/rundown/script/synth/assemble 等）の import 禁止**（interface 経由で扱う） |
 | CLI | `cli` | すべて可（唯一の合成点） |
 
@@ -40,25 +40,29 @@ internal/model（データ層: 型定義と純粋関数のみ）
 以下は現状の正当な横断依存として許容する。これ以外のドメイン間依存を追加する場合は、本表の更新と理由の記録（必要なら ADR）を行うこと。
 
 - `rundown` → `rundown/flow` `rundown/select` `script/summarize`（要約器の再利用）
+- `rundown` → `cache`（過去エピソード文脈の参照）
 - `rundown/flow` `rundown/select` → `rundown/prompt` `script/llm`（共有LLMクライアント）
 - `script` → `script/direct` `script/write`
 - `script/write` → `cache`（過去エピソード文脈の参照）
+- `script/write` → `script/llm`（LLMクライアントの利用）
 - `script/direct` `script/summarize` `script/summary` → `script/llm`
 - `feed` → `cache`（エピソード履歴がフィードの正データ）
 - `eval` → `script/llm`（LLM-as-judge）
+- `slack` → `render`（メッセージレンダリング）
 
-### 検証コマンド
+### 検証
 
-依存ルールは以下で機械的に検証できる（変更後に実行して確認すること）。
+依存ルールは **depguard**（golangci-lint 内蔵）によって CI で自動検証される。`make lint` を実行することで違反を検出できる。
 
 ```bash
-# model が internal に依存していないこと（出力が空であること）
-go list -f '{{join .Imports "\n"}}' ./internal/model | grep canpok1 || true
+make lint
+```
 
-# pipeline がステップ実装パッケージに依存していないこと（出力が空であること）
-go list -f '{{join .Imports "\n"}}' ./internal/pipeline | grep -E 'internal/(collect|rundown|script|synth|assemble|slack|feed)' || true
+本表（§2）が depguard 設定（`.golangci.yml` の `linters.settings.depguard.rules`）の正（SSOT）である。表を更新したら depguard 設定も同期すること。
 
-# 全パッケージの依存エッジ一覧（本表との突き合わせ用）
+補助的な手動確認コマンド（全パッケージの依存エッジ一覧）:
+
+```bash
 go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canpok1
 ```
 
