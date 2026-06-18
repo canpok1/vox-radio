@@ -369,3 +369,43 @@ func TestRequireEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestReferenceURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		version     string
+		relPath     string
+		wantContain string
+	}{
+		{
+			name:        "semver uses version tag",
+			version:     "1.2.3",
+			relPath:     "internal/cli/skills/vox-radio/references/manifest.md",
+			wantContain: "/blob/v1.2.3/internal/cli/skills/vox-radio/references/manifest.md",
+		},
+		{
+			name:        "dev falls back to main",
+			version:     "dev",
+			relPath:     "internal/cli/skills/vox-radio/references/manifest.md",
+			wantContain: "/blob/main/internal/cli/skills/vox-radio/references/manifest.md",
+		},
+		{
+			name:        "invalid version falls back to main",
+			version:     "snapshot-abc",
+			relPath:     "internal/cli/skills/vox-radio/references/manifest.md",
+			wantContain: "/blob/main/internal/cli/skills/vox-radio/references/manifest.md",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			orig := version
+			version = tt.version
+			t.Cleanup(func() { version = orig })
+
+			got := referenceURL(tt.relPath)
+			if !strings.Contains(got, tt.wantContain) {
+				t.Errorf("referenceURL(%q) = %q, want containing %q", tt.relPath, got, tt.wantContain)
+			}
+		})
+	}
+}

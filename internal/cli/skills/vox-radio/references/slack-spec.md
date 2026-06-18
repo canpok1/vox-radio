@@ -71,45 +71,9 @@ slack:
 
 テンプレートは Go 標準の [`text/template`](https://pkg.go.dev/text/template) 記法を使います。
 
-### データ文脈
+### データ文脈・テンプレート関数
 
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `.Title` | string | 番組タイトル |
-| `.EpisodeNumber` | int | 回番号（0 で偽扱い） |
-| `.EpisodeTitle` | string | サブタイトル |
-| `.Description` | string | 番組説明 |
-| `.Summary` | string | 全体要約 |
-| `.Datetime` | string | 配信日時 |
-| `.AudioFile` | string | 音声ファイル名 |
-| `.Credits` | []string | クレジット一覧 |
-| `.Corners` | []ManifestCorner | コーナー一覧（下記参照） |
-
-`ManifestCorner` のフィールド:
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `.ID` | string | コーナー ID |
-| `.Title` | string | コーナータイトル |
-| `.Summary` | string | コーナー要約 |
-| `.Points` | []string | 要点リスト |
-| `.Articles` | []ArticleRef | 記事一覧（下記参照） |
-
-`ArticleRef` のフィールド:
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `.Title` | string | 記事タイトル |
-| `.URL` | string | 記事 URL（空の場合がある） |
-
-### 利用可能なテンプレート関数
-
-| 関数 | 説明 |
-|---|---|
-| `corner "<id>"` | 指定 ID のコーナーを `*ManifestCorner` で返す（見つからない場合は `nil`） |
-| `hasLinks <corner>` | コーナーに URL 付き記事が 1 件以上あれば `true` |
-
-Go 標準の `eq` / `ne` / `if` / `range` / `with` 等もすべて使えます。
+利用できるフィールドと関数の一覧は [manifest.md](manifest.md) を参照してください。
 
 ### レシピ集
 

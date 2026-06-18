@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/canpok1/vox-radio/internal/cache"
@@ -111,6 +112,19 @@ func readJSON[T any](path string) (T, error) {
 }
 
 const defaultLogDir = ".vox-radio/logs"
+
+var semverRe = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// referenceURL returns a versioned GitHub URL for relPath under the vox-radio repository.
+// When version is a semver (e.g. "1.2.3"), the URL points to that tagged commit.
+// Otherwise (e.g. "dev", snapshot builds), it falls back to the main branch.
+func referenceURL(relPath string) string {
+	ref := "main"
+	if semverRe.MatchString(version) {
+		ref = "v" + version
+	}
+	return fmt.Sprintf("https://github.com/canpok1/vox-radio/blob/%s/%s", ref, relPath)
+}
 
 // setupLogger creates a fan-out logger (stderr INFO+, logFile DEBUG+) and returns it with the
 // log file handle. The caller must close the file when done.
