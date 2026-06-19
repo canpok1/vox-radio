@@ -177,11 +177,7 @@ func waitForReady(ctx context.Context, client VoicevoxClient, timeout, interval 
 		return nil
 	}
 	deadline := time.Now().Add(timeout)
-	// Try immediately first (fast path when engine is already running)
-	if _, err := client.Version(ctx); err == nil {
-		return nil
-	}
-	timer := time.NewTimer(interval)
+	timer := time.NewTimer(0)
 	defer timer.Stop()
 	for {
 		select {

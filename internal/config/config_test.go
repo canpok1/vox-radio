@@ -566,34 +566,24 @@ func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
 	}
 }
 
-func TestVoicevoxConfig_EffectiveStartupTimeout_DefaultIs60Sec(t *testing.T) {
-	t.Parallel()
-	cfg := config.VoicevoxConfig{}
-	got := cfg.EffectiveStartupTimeout()
-	want := 60 * time.Second
-	if got != want {
-		t.Errorf("EffectiveStartupTimeout() = %v, want %v", got, want)
+func TestVoicevoxConfig_EffectiveStartupTimeout(t *testing.T) {
+	zero, thirty := 0, 30
+	tests := []struct {
+		name string
+		cfg  config.VoicevoxConfig
+		want time.Duration
+	}{
+		{name: "nil uses default 60s", cfg: config.VoicevoxConfig{}, want: 60 * time.Second},
+		{name: "zero disables", cfg: config.VoicevoxConfig{StartupTimeoutSeconds: &zero}, want: 0},
+		{name: "explicit value returned", cfg: config.VoicevoxConfig{StartupTimeoutSeconds: &thirty}, want: 30 * time.Second},
 	}
-}
-
-func TestVoicevoxConfig_EffectiveStartupTimeout_ZeroDisables(t *testing.T) {
-	t.Parallel()
-	zero := 0
-	cfg := config.VoicevoxConfig{StartupTimeoutSeconds: &zero}
-	got := cfg.EffectiveStartupTimeout()
-	if got != 0 {
-		t.Errorf("EffectiveStartupTimeout() = %v, want 0 (disabled)", got)
-	}
-}
-
-func TestVoicevoxConfig_EffectiveStartupTimeout_UsesSetValue(t *testing.T) {
-	t.Parallel()
-	n := 30
-	cfg := config.VoicevoxConfig{StartupTimeoutSeconds: &n}
-	got := cfg.EffectiveStartupTimeout()
-	want := 30 * time.Second
-	if got != want {
-		t.Errorf("EffectiveStartupTimeout() = %v, want %v", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.cfg.EffectiveStartupTimeout()
+			if got != tt.want {
+				t.Errorf("EffectiveStartupTimeout() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
