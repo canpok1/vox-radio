@@ -92,3 +92,4 @@
 | [0084](0084-activate-git-hooks-via-sessionstart-make-setup.md) | SessionStart フックで make setup を実行し git フックを有効化する | 採用 | 2026-06-18 |
 | [0085](0085-install-dev-tools-via-prebuilt-binary.md) | 開発ツールをビルド済みバイナリで取得し make setup を高速化する | 採用 | 2026-06-18 |
 | [0086](0086-single-shot-program-mode.md) | 単発番組モード（single_shot）で回番号を無効化し命名・キャッシュの例外を導入する | 採用 | 2026-06-19 |
+| [0087](0087-corner-source-as-typed-array.md) | コーナーの source を type 付き配列（discriminated array）へ再設計する | 採用 | 2026-06-19 |
