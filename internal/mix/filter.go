@@ -1,4 +1,4 @@
-package assemble
+package mix
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ const (
 
 // BuildContext holds all data needed to build the ffmpeg command.
 // Jingles are placed as SegmentTypeJingle in Script; OP/ED jingles are injected
-// into Script by the Assembler before calling BuildFFmpegArgs.
+// into Script by the Mixer before calling BuildFFmpegArgs.
 type BuildContext struct {
 	Script      model.Script
 	Clips       model.ClipsMeta

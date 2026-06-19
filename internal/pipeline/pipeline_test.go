@@ -15,13 +15,13 @@ import (
 
 // --- stubs ---
 
-type stubCollector struct {
+type stubGatherer struct {
 	articles model.Articles
 	err      error
 	called   bool
 }
 
-func (s *stubCollector) RunAll(_ context.Context, _ []config.CornerConfig, _ []string) (model.Articles, error) {
+func (s *stubGatherer) RunAll(_ context.Context, _ []config.CornerConfig, _ []string) (model.Articles, error) {
 	s.called = true
 	return s.articles, s.err
 }
@@ -70,7 +70,7 @@ func (s *stubSynther) Run(_ context.Context, _ model.Script, outDir string) (*mo
 	return s.clips, s.err
 }
 
-type stubAssembler struct {
+type stubMixer struct {
 	err              error
 	cornerDurations  map[string]float64
 	called           bool
@@ -79,7 +79,7 @@ type stubAssembler struct {
 	capturedMeta     model.EpisodeMeta
 }
 
-func (s *stubAssembler) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
+func (s *stubMixer) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
 	s.called = true
 	s.capturedClipsDir = clipsDir
 	s.capturedOutPath = outPath
@@ -132,33 +132,33 @@ func mustReadManifest(t *testing.T, outDir string) string {
 }
 
 type stubs struct {
-	col  *stubCollector
+	col  *stubGatherer
 	rnd  *stubRundowner
 	scr  *stubScripter
 	syn  *stubSynther
-	asm  *stubAssembler
+	asm  *stubMixer
 	sum  *stubProgramSummarizer
 	csum *stubCornerSummarizer
 }
 
 func defaultStubs() stubs {
 	return stubs{
-		col: &stubCollector{articles: model.Articles{Corners: make([]model.CornerArticles, 0)}},
+		col: &stubGatherer{articles: model.Articles{Corners: make([]model.CornerArticles, 0)}},
 		rnd: &stubRundowner{rundown: model.Rundown{Corners: make([]model.RundownCorner, 0)}},
 		scr: &stubScripter{script: model.Script{Segments: make([]model.ScriptSegment, 0)}},
 		syn: &stubSynther{clips: &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}},
-		asm: &stubAssembler{},
+		asm: &stubMixer{},
 	}
 }
 
 func newRunner(s stubs) *pipeline.Runner {
 	r := &pipeline.Runner{
 		Spec:      &config.EpisodeSpec{},
-		Collector: s.col,
+		Gatherer:  s.col,
 		Rundowner: s.rnd,
 		Scripter:  s.scr,
 		Synther:   s.syn,
-		Assembler: s.asm,
+		Mixer:     s.asm,
 	}
 	if s.sum != nil {
 		r.ProgramSummarizer = s.sum
@@ -180,7 +180,7 @@ func TestRunner_Run_CallsAllSteps(t *testing.T) {
 	}
 
 	if !s.col.called {
-		t.Error("Collector.RunAll not called")
+		t.Error("Gatherer.RunAll not called")
 	}
 	if !s.rnd.called {
 		t.Error("Rundowner.Run not called")
@@ -192,7 +192,7 @@ func TestRunner_Run_CallsAllSteps(t *testing.T) {
 		t.Error("Synther.Run not called")
 	}
 	if !s.asm.called {
-		t.Error("Assembler.Run not called")
+		t.Error("Mixer.Run not called")
 	}
 }
 
@@ -227,10 +227,10 @@ func TestRunner_Run_UsesCorrectPaths(t *testing.T) {
 		t.Errorf("Synther.Run outDir = %q, want %q", s.syn.capturedDir, l.ClipsDir())
 	}
 	if s.asm.capturedClipsDir != l.ClipsDir() {
-		t.Errorf("Assembler.Run clipsDir = %q, want %q", s.asm.capturedClipsDir, l.ClipsDir())
+		t.Errorf("Mixer.Run clipsDir = %q, want %q", s.asm.capturedClipsDir, l.ClipsDir())
 	}
 	if s.asm.capturedOutPath != l.Episode() {
-		t.Errorf("Assembler.Run outPath = %q, want %q", s.asm.capturedOutPath, l.Episode())
+		t.Errorf("Mixer.Run outPath = %q, want %q", s.asm.capturedOutPath, l.Episode())
 	}
 }
 
@@ -263,16 +263,16 @@ func TestRunner_Run_PassesRundownToScripter(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_CollectError(t *testing.T) {
+func TestRunner_Run_GatherError(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.col.err = errors.New("network error")
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
-		t.Fatal("expected error from Collector, got nil")
+		t.Fatal("expected error from Gatherer, got nil")
 	}
 	if s.rnd.called {
-		t.Error("Rundowner should not be called after Collector error")
+		t.Error("Rundowner should not be called after Gatherer error")
 	}
 }
 
@@ -312,17 +312,17 @@ func TestRunner_Run_SynthError(t *testing.T) {
 		t.Fatal("expected error from Synther, got nil")
 	}
 	if s.asm.called {
-		t.Error("Assembler should not be called after Synther error")
+		t.Error("Mixer should not be called after Synther error")
 	}
 }
 
-func TestRunner_Run_AssembleError(t *testing.T) {
+func TestRunner_Run_MixError(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.asm.err = errors.New("ffmpeg error")
 
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
-		t.Fatal("expected error from Assembler, got nil")
+		t.Fatal("expected error from Mixer, got nil")
 	}
 }
 
@@ -555,18 +555,18 @@ func TestRunner_Run_SkipsProofreadFile_WhenProofreadResultIsNil(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_SummaryBeforeAssemble(t *testing.T) {
+func TestRunner_Run_SummaryBeforeMix(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}
 	s.sum = &stubProgramSummarizer{err: errors.New("summary failed")}
 
-	// When ProgramSummarizer fails, Assembler must NOT be called (summary runs before assemble).
+	// When ProgramSummarizer fails, Mixer must NOT be called (summary runs before mix).
 	if err := newRunner(s).Run(context.Background(), pipeline.Options{OutDir: outDir}); err == nil {
 		t.Fatal("expected error when ProgramSummarizer fails")
 	}
 	if s.asm.called {
-		t.Error("Assembler should NOT be called when ProgramSummarizer fails (summary runs before assemble)")
+		t.Error("Mixer should NOT be called when ProgramSummarizer fails (summary runs before mix)")
 	}
 }
 
@@ -655,7 +655,7 @@ func TestRunner_Run_WritesTimeline(t *testing.T) {
 	}
 }
 
-func TestRunner_Run_EpisodeMetaPassedToAssembler(t *testing.T) {
+func TestRunner_Run_EpisodeMetaPassedToMixer(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
 	s.scr.lines = model.ScriptLines{Corners: make([]model.CornerLines, 0)}

@@ -48,7 +48,7 @@ func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache
 func TestSetupLogger_DefaultLogDir(t *testing.T) {
 	tmpDir := chdirTemp(t)
 
-	logger, f, err := setupLogger("collect", "")
+	logger, f, err := setupLogger("gather", "")
 	if err != nil {
 		t.Fatalf("setupLogger: %v", err)
 	}

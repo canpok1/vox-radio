@@ -1,4 +1,4 @@
-package collect
+package gather
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-func (c *Collector) fetchFeed(ctx context.Context, url string, maxItems int, excluded map[string]struct{}) ([]model.Article, error) {
+func (c *Gatherer) fetchFeed(ctx context.Context, url string, maxItems int, excluded map[string]struct{}) ([]model.Article, error) {
 	fp := gofeed.NewParser()
 	fp.Client = c.client
 

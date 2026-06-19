@@ -1,4 +1,4 @@
-package collect
+package gather
 
 import (
 	"context"
@@ -14,42 +14,42 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-// Collector fetches articles from RSS/Atom feeds and individual URLs.
-type Collector struct {
+// Gatherer fetches articles from RSS/Atom feeds and individual URLs.
+type Gatherer struct {
 	client *http.Client
 	logger *slog.Logger
 	loc    *time.Location
 	policy config.PromptInjectionConfig
 }
 
-// Option configures a Collector.
-type Option func(*Collector)
+// Option configures a Gatherer.
+type Option func(*Gatherer)
 
 // WithLogger sets the logger used for WARN messages.
 func WithLogger(l *slog.Logger) Option {
-	return func(c *Collector) { c.logger = l }
+	return func(c *Gatherer) { c.logger = l }
 }
 
 // WithLocation sets the timezone used for converting article published times.
 func WithLocation(loc *time.Location) Option {
-	return func(c *Collector) { c.loc = loc }
+	return func(c *Gatherer) { c.loc = loc }
 }
 
 // WithSanitizePolicy sets the prompt-injection sanitize policy applied to each fetched article.
 func WithSanitizePolicy(p config.PromptInjectionConfig) Option {
-	return func(c *Collector) { c.policy = p }
+	return func(c *Gatherer) { c.policy = p }
 }
 
-// New creates a Collector. If client is nil, a client with retry-enabled
+// New creates a Gatherer. If client is nil, a client with retry-enabled
 // transport (exponential backoff on 5xx/429) is used. The default client
 // also supports file:// URLs for loading locally saved feed/article files.
-func New(client *http.Client, opts ...Option) *Collector {
+func New(client *http.Client, opts ...Option) *Gatherer {
 	if client == nil {
 		base := http.DefaultTransport.(*http.Transport).Clone()
 		base.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
 		client = &http.Client{Transport: httpretry.NewTransport(base)}
 	}
-	c := &Collector{
+	c := &Gatherer{
 		client: client,
 		logger: slog.Default(),
 		loc:    time.UTC,
@@ -62,7 +62,7 @@ func New(client *http.Client, opts ...Option) *Collector {
 
 // Run collects articles from all feeds and individual URLs in cfg.
 // excluded is a set of URLs to skip when fetching from feeds (nil means no exclusion).
-func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded map[string]struct{}) ([]model.Article, error) {
+func (c *Gatherer) Run(ctx context.Context, cfg config.FeedsConfig, excluded map[string]struct{}) ([]model.Article, error) {
 	articles := make([]model.Article, 0)
 
 	for _, feed := range cfg.Feeds {
@@ -100,8 +100,8 @@ func (c *Collector) Run(ctx context.Context, cfg config.FeedsConfig, excluded ma
 
 // RunAll collects articles per corner, skipping corners with no source.
 // excludedDedupKeys is a list of DedupKeys to skip when fetching from feeds (nil means no exclusion).
-func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error) {
-	logger := c.logger.With("step", "collect")
+func (c *Gatherer) RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error) {
+	logger := c.logger.With("step", "gather")
 
 	var excluded map[string]struct{}
 	if len(excludedDedupKeys) > 0 {
@@ -148,7 +148,7 @@ func (c *Collector) RunAll(ctx context.Context, corners []config.CornerConfig, e
 // applySanitize applies prompt-injection sanitization to a.
 // Returns (true, nil) when an injection pattern is detected under on_detect=exclude (caller must exclude the article).
 // Returns (true, err) when on_detect=error and injection is detected.
-func (c *Collector) applySanitize(a *model.Article) (bool, error) {
+func (c *Gatherer) applySanitize(a *model.Article) (bool, error) {
 	flagged, err := sanitizeArticle(a, c.policy)
 	if err != nil {
 		return true, err

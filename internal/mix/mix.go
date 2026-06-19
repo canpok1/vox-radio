@@ -1,4 +1,4 @@
-package assemble
+package mix
 
 import (
 	"context"
@@ -25,8 +25,8 @@ type Result struct {
 	CornerDurations map[string]float64
 }
 
-// Assembler assembles speech clips and assets into a final mp3.
-type Assembler struct {
+// Mixer assembles speech clips and assets into a final mp3.
+type Mixer struct {
 	AssetsConfig config.AssetsConfig
 	Program      config.ProgramConfig
 	runFFmpeg    func(ctx context.Context, args []string, w io.Writer) error
@@ -36,23 +36,23 @@ type Assembler struct {
 	ffmpegWriter io.Writer
 }
 
-// Option configures an Assembler.
-type Option func(*Assembler)
+// Option configures an Mixer.
+type Option func(*Mixer)
 
 // WithLogger sets the logger used for progress messages.
 func WithLogger(l *slog.Logger) Option {
-	return func(a *Assembler) { a.logger = l }
+	return func(a *Mixer) { a.logger = l }
 }
 
 // WithFFmpegWriter sets the writer where ffmpeg stdout/stderr is captured.
 // If nil (the default), ffmpeg output is discarded.
 func WithFFmpegWriter(w io.Writer) Option {
-	return func(a *Assembler) { a.ffmpegWriter = w }
+	return func(a *Mixer) { a.ffmpegWriter = w }
 }
 
-// New creates a new Assembler that calls ffmpeg and ffprobe.
-func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ...Option) *Assembler {
-	a := &Assembler{
+// New creates a new Mixer that calls ffmpeg and ffprobe.
+func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ...Option) *Mixer {
+	a := &Mixer{
 		AssetsConfig: assetsConfig,
 		Program:      program,
 		runFFmpeg:    runFFmpegCmd,
@@ -68,8 +68,8 @@ func New(assetsConfig config.AssetsConfig, program config.ProgramConfig, opts ..
 
 // Run assembles the given clips and script into an mp3 at outPath.
 // It returns the duration and file size of the resulting mp3.
-func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string, meta model.EpisodeMeta) (*Result, error) {
-	logger := a.logger.With("step", "assemble")
+func (a *Mixer) Run(ctx context.Context, script model.Script, clips model.ClipsMeta, clipsDir string, outPath string, meta model.EpisodeMeta) (*Result, error) {
+	logger := a.logger.With("step", "mix")
 	done := logging.StartStep(ctx, logger, "開始")
 
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
@@ -143,7 +143,7 @@ func (a *Assembler) Run(ctx context.Context, script model.Script, clips model.Cl
 // collectAssetDurations fetches the playback duration for each unique asset of segType
 // that appears in the script. getFile returns the file path for a given asset name (ok=false
 // means the asset is not in the config and should be skipped). errLabel is used in errors.
-func (a *Assembler) collectAssetDurations(script model.Script, segType model.SegmentType, getFile func(name string) (string, bool), errLabel string) (map[string]float64, error) {
+func (a *Mixer) collectAssetDurations(script model.Script, segType model.SegmentType, getFile func(name string) (string, bool), errLabel string) (map[string]float64, error) {
 	seen := make(map[string]struct{})
 	for _, seg := range script.Segments {
 		if seg.Type == segType && seg.AssetName != "" {
@@ -165,14 +165,14 @@ func (a *Assembler) collectAssetDurations(script model.Script, segType model.Seg
 	return durations, nil
 }
 
-func (a *Assembler) collectJingleDurations(script model.Script) (map[string]float64, error) {
+func (a *Mixer) collectJingleDurations(script model.Script) (map[string]float64, error) {
 	return a.collectAssetDurations(script, model.SegmentTypeJingle, func(name string) (string, bool) {
 		e, ok := a.AssetsConfig.Jingle[name]
 		return e.File, ok
 	}, "jingle")
 }
 
-func (a *Assembler) collectSEDurations(script model.Script) (map[string]float64, error) {
+func (a *Mixer) collectSEDurations(script model.Script) (map[string]float64, error) {
 	return a.collectAssetDurations(script, model.SegmentTypeSE, func(name string) (string, bool) {
 		e, ok := a.AssetsConfig.SE[name]
 		return e.File, ok

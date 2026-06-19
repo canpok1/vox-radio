@@ -17,7 +17,7 @@ func TestNewSetup_CreatesLogFile(t *testing.T) {
 	logDir := filepath.Join(dir, "logs")
 
 	now := time.Date(2026, 5, 31, 12, 1, 3, 0, time.UTC)
-	logger, f, err := logging.NewSetup(now, "collect", logDir)
+	logger, f, err := logging.NewSetup(now, "gather", logDir)
 	if err != nil {
 		t.Fatalf("NewSetup error: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestNewSetup_CreatesLogFile(t *testing.T) {
 		t.Fatal("log file should not be nil")
 	}
 
-	logPath := filepath.Join(logDir, "20260531-120103-collect.log")
+	logPath := filepath.Join(logDir, "20260531-120103-gather.log")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Errorf("log file not created: %s", logPath)
 	}
@@ -47,7 +47,7 @@ func TestNewSetup_WritesToLogFile(t *testing.T) {
 	}
 	defer f.Close()
 
-	logger.With("step", "collect").Info("テストメッセージ")
+	logger.With("step", "gather").Info("テストメッセージ")
 
 	// Flush by closing and re-reading
 	if err := f.Sync(); err != nil {

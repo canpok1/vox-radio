@@ -1,4 +1,4 @@
-package assemble
+package mix
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler {
-	return &Assembler{
+func newTestMixer(ffmpegErr error, duration float64, size int64) *Mixer {
+	return &Mixer{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{},
 		runFFmpeg:    func(_ context.Context, _ []string, _ io.Writer) error { return ffmpegErr },
@@ -25,9 +25,9 @@ func newTestAssembler(ffmpegErr error, duration float64, size int64) *Assembler 
 	}
 }
 
-func TestAssembler_Run_ReturnsResult(t *testing.T) {
+func TestMixer_Run_ReturnsResult(t *testing.T) {
 	var capturedArgs []string
-	a := &Assembler{
+	a := &Mixer{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
@@ -78,8 +78,8 @@ func TestAssembler_Run_ReturnsResult(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_ReturnsCornerDurations(t *testing.T) {
-	a := newTestAssembler(nil, 60.0, 1024)
+func TestMixer_Run_ReturnsCornerDurations(t *testing.T) {
+	a := newTestMixer(nil, 60.0, 1024)
 
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -111,8 +111,8 @@ func TestAssembler_Run_ReturnsCornerDurations(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_FFmpegError(t *testing.T) {
-	a := newTestAssembler(errors.New("ffmpeg failed"), 0, 0)
+func TestMixer_Run_FFmpegError(t *testing.T) {
+	a := newTestMixer(errors.New("ffmpeg failed"), 0, 0)
 
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -132,8 +132,8 @@ func TestAssembler_Run_FFmpegError(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_NoClips_Error(t *testing.T) {
-	a := newTestAssembler(nil, 0, 0)
+func TestMixer_Run_NoClips_Error(t *testing.T) {
+	a := newTestMixer(nil, 0, 0)
 
 	script := model.Script{}
 	clips := model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
@@ -145,8 +145,8 @@ func TestAssembler_Run_NoClips_Error(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_CreatesOutputDir(t *testing.T) {
-	a := newTestAssembler(nil, 30.0, 512)
+func TestMixer_Run_CreatesOutputDir(t *testing.T) {
+	a := newTestMixer(nil, 30.0, 512)
 
 	script := model.Script{
 		Segments: []model.ScriptSegment{
@@ -171,9 +171,9 @@ func TestAssembler_Run_CreatesOutputDir(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_DefaultPause(t *testing.T) {
+func TestMixer_Run_DefaultPause(t *testing.T) {
 	var capturedArgs []string
-	a := &Assembler{
+	a := &Mixer{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
@@ -208,8 +208,8 @@ func TestAssembler_Run_DefaultPause(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_LogsStartAndComplete(t *testing.T) {
-	a := newTestAssembler(nil, 30.0, 1024*1024)
+func TestMixer_Run_LogsStartAndComplete(t *testing.T) {
+	a := newTestMixer(nil, 30.0, 1024*1024)
 
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -240,9 +240,9 @@ func TestAssembler_Run_LogsStartAndComplete(t *testing.T) {
 	}
 }
 
-func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
+func TestMixer_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 	var ffmpegOutput strings.Builder
-	a := &Assembler{
+	a := &Mixer{
 		AssetsConfig: config.AssetsConfig{},
 		Program:      config.ProgramConfig{},
 		runFFmpeg: func(_ context.Context, _ []string, w io.Writer) error {
@@ -278,11 +278,11 @@ func TestAssembler_Run_FFmpegOutputGoesToWriter(t *testing.T) {
 	}
 }
 
-// TestAssembler_Run_RealYAMLKeys verifies that asset keys from the actual YAML spec
+// TestMixer_Run_RealYAMLKeys verifies that asset keys from the actual YAML spec
 // are correctly wired through to the ffmpeg command, preventing silent disable recurrence.
 // This is the integration test that catches the bug described in Issue #98
 // where YAML keys ("opening"/"ending") didn't match the code's expected keys ("op"/"ed").
-func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
+func TestMixer_Run_RealYAMLKeys(t *testing.T) {
 	// Load the testdata spec to get real YAML asset keys.
 	spec, err := config.LoadEpisodeSpec("../../internal/config/testdata/episode_spec.yaml")
 	if err != nil {
@@ -290,7 +290,7 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	}
 
 	var capturedArgs []string
-	a := &Assembler{
+	a := &Mixer{
 		AssetsConfig: spec.Assets,
 		Program:      spec.Program,
 		runFFmpeg: func(_ context.Context, args []string, _ io.Writer) error {
@@ -365,11 +365,11 @@ func TestAssembler_Run_RealYAMLKeys(t *testing.T) {
 	}
 }
 
-// TestAssembler_Run_SE_DurationFetched verifies that Assembler.Run calls getDuration
+// TestMixer_Run_SE_DurationFetched verifies that Mixer.Run calls getDuration
 // for each unique sequential SE asset that appears in the script.
-func TestAssembler_Run_SE_DurationFetched(t *testing.T) {
+func TestMixer_Run_SE_DurationFetched(t *testing.T) {
 	durationCalls := make(map[string]int)
-	a := &Assembler{
+	a := &Mixer{
 		AssetsConfig: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
 				"chime": {File: "/assets/chime.wav", Volume: 0.8},
@@ -412,9 +412,9 @@ func TestAssembler_Run_SE_DurationFetched(t *testing.T) {
 	}
 }
 
-// TestAssembler_Run_SE_DurationError returns error when getDuration fails for a sequential SE.
-func TestAssembler_Run_SE_DurationError(t *testing.T) {
-	a := &Assembler{
+// TestMixer_Run_SE_DurationError returns error when getDuration fails for a sequential SE.
+func TestMixer_Run_SE_DurationError(t *testing.T) {
+	a := &Mixer{
 		AssetsConfig: config.AssetsConfig{
 			SE: map[string]config.SEEntry{
 				"chime": {File: "/assets/chime.wav", Volume: 0.8},
