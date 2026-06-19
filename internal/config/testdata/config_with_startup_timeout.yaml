@@ -1,0 +1,20 @@
+llm:
+  provider: openai
+  openai:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    model: gemini-3.1-flash-lite
+
+voicevox:
+  url: http://localhost:50021
+  startup_timeout_seconds: 0
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ"]
+    personality: ["元気"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3

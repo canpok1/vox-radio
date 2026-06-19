@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 const (
@@ -10,6 +11,8 @@ const (
 	DefaultVoicevoxURL = "http://localhost:50021"
 	// VoicevoxURLEnv は VOICEVOX URL を上書きする環境変数名。
 	VoicevoxURLEnv = "VOX_RADIO_VOICEVOX_URL"
+	// DefaultStartupTimeoutSeconds は startup_timeout_seconds 未指定時のデフォルト秒数。
+	DefaultStartupTimeoutSeconds = 60
 )
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.
@@ -73,8 +76,17 @@ var defaultSpeedPresets = map[string]float64{
 }
 
 type VoicevoxConfig struct {
-	URL     string           `yaml:"url"`
-	Presets *VoicevoxPresets `yaml:"presets,omitempty"`
+	URL                   string           `yaml:"url"`
+	Presets               *VoicevoxPresets `yaml:"presets,omitempty"`
+	StartupTimeoutSeconds *int             `yaml:"startup_timeout_seconds,omitempty"`
+}
+
+// EffectiveStartupTimeout は起動待機タイムアウトを返す。nil（未指定）はデフォルト 60 秒、*0 は待機無効（0）。
+func (c VoicevoxConfig) EffectiveStartupTimeout() time.Duration {
+	if c.StartupTimeoutSeconds == nil {
+		return DefaultStartupTimeoutSeconds * time.Second
+	}
+	return time.Duration(*c.StartupTimeoutSeconds) * time.Second
 }
 
 // EffectiveURL は環境変数 > 設定値 > デフォルトの優先順で URL を返す。

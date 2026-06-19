@@ -566,6 +566,53 @@ func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
 	}
 }
 
+func TestVoicevoxConfig_EffectiveStartupTimeout_DefaultIs60Sec(t *testing.T) {
+	t.Parallel()
+	cfg := config.VoicevoxConfig{}
+	got := cfg.EffectiveStartupTimeout()
+	want := 60 * time.Second
+	if got != want {
+		t.Errorf("EffectiveStartupTimeout() = %v, want %v", got, want)
+	}
+}
+
+func TestVoicevoxConfig_EffectiveStartupTimeout_ZeroDisables(t *testing.T) {
+	t.Parallel()
+	zero := 0
+	cfg := config.VoicevoxConfig{StartupTimeoutSeconds: &zero}
+	got := cfg.EffectiveStartupTimeout()
+	if got != 0 {
+		t.Errorf("EffectiveStartupTimeout() = %v, want 0 (disabled)", got)
+	}
+}
+
+func TestVoicevoxConfig_EffectiveStartupTimeout_UsesSetValue(t *testing.T) {
+	t.Parallel()
+	n := 30
+	cfg := config.VoicevoxConfig{StartupTimeoutSeconds: &n}
+	got := cfg.EffectiveStartupTimeout()
+	want := 30 * time.Second
+	if got != want {
+		t.Errorf("EffectiveStartupTimeout() = %v, want %v", got, want)
+	}
+}
+
+func TestLoadConfig_Voicevox_StartupTimeoutSeconds(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_with_startup_timeout.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	if cfg.Voicevox.StartupTimeoutSeconds == nil {
+		t.Fatal("Voicevox.StartupTimeoutSeconds should be non-nil when specified in YAML")
+	}
+	if *cfg.Voicevox.StartupTimeoutSeconds != 0 {
+		t.Errorf("Voicevox.StartupTimeoutSeconds: got %d, want 0", *cfg.Voicevox.StartupTimeoutSeconds)
+	}
+	if cfg.Voicevox.EffectiveStartupTimeout() != 0 {
+		t.Errorf("EffectiveStartupTimeout() = %v, want 0 (disabled from YAML)", cfg.Voicevox.EffectiveStartupTimeout())
+	}
+}
+
 func TestSlackConfig_EffectiveAPIURL(t *testing.T) {
 	// t.Setenv を使うため t.Parallel() は併用しない。
 	tests := []struct {
