@@ -6,32 +6,24 @@
 
 [デモ番組を聴く](https://github.com/canpok1/vox-radio/releases/tag/demo)
 
-## インストール
-
-```bash
-curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
-```
-
-設置先の変更・特定バージョンの指定などは[インストールガイド](docs/installation.md)を参照してください。
-
 ## クイックスタート
 
 すぐ動くサンプル設定で番組を 1 本作る最短手順です（サンプルの詳細は[設定方法](#設定方法)）。
 
-### 1. 実行環境を整える
+### 1. vox-radio を導入する
 
-ラジオ番組の生成には生成AI・VOICEVOX・ffmpeg が必要です。次の 3 つを準備します。
+```bash
+brew install --cask canpok1/homebrew-tap/vox-radio
+```
+
+ffmpeg も同時に導入されます。Homebrew を使わない場合は「[インストール](#インストール)」章を参照してください。
+
+### 2. 実行環境を整える
 
 - **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得しておきます。
-- **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。vox-radio は起動完了まで自動的に待機します（デフォルト最大 60 秒）。
-    - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
-    - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
-- **ffmpeg**: 音声の結合に使います（`ffprobe` を含む）。
-    - macOS: `brew install ffmpeg`
-    - Ubuntu / Debian: `sudo apt-get install ffmpeg`
-    - その他は [ffmpeg 公式サイト](https://ffmpeg.org/download.html)
+- **VOICEVOX Engine**: インストールして起動します。導入方法は「[インストール](#インストール)」章を参照してください。
 
-### 2. 設定ファイルを用意する
+### 3. 設定ファイルを用意する
 
 **BGM・効果音なし**と**BGM・効果音あり**のどちらか一方を選んでください。
 
@@ -53,7 +45,7 @@ unzip vox-radio-sample-assets.zip -d assets
 vox-radio init --sample-with-assets
 ```
 
-`init` で生成された `.env` の `GEMINI_API_KEY` 欄に、手順 1 で取得した API キーを記入します（実行時に自動で読み込まれます）。
+`init` で生成された `.env` の `GEMINI_API_KEY` 欄に、手順 2 で取得した API キーを記入します（実行時に自動で読み込まれます）。
 
 ```
 GEMINI_API_KEY=<your-key>
@@ -61,13 +53,49 @@ GEMINI_API_KEY=<your-key>
 
 サンプルはこのまま番組を生成できます。番組内容やキャラクターを変えたい場合は各設定ファイルを編集します（詳細は[設定方法](#設定方法)）。
 
-### 3. 番組を生成する
+### 4. 番組を生成する
 
 ```bash
 vox-radio episodegen --spec episode-spec.yaml
 ```
 
 番組は `output/{program.id}_ep{NNN}.mp3` に生成されます（マニフェスト・中間ファイルも `output/` 配下に出力）。
+
+## インストール
+
+### vox-radio の導入
+
+1. **Homebrew（推奨・macOS / Linux）**
+
+   ```bash
+   brew install --cask canpok1/homebrew-tap/vox-radio
+   ```
+
+   ffmpeg も同時に導入されます。
+
+2. **install.sh（macOS / Linux）**
+
+   ```bash
+   curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
+   ```
+
+3. **バイナリ手動ダウンロード（全OS・Windows 含む）**
+
+   [GitHub Releases](https://github.com/canpok1/vox-radio/releases/latest) から `tar.gz` / `zip` を取得して PATH に配置します。ffmpeg も別途導入が必要です。
+
+### 依存ソフトの導入
+
+- **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。vox-radio は起動完了まで自動的に待機します（デフォルト最大 60 秒）。
+    - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
+    - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
+- **ffmpeg**（`ffprobe` を含む）: Homebrew でインストールした場合は自動で導入されます。手動導入の場合:
+    - macOS: `brew install ffmpeg`
+    - Ubuntu / Debian: `sudo apt-get install ffmpeg`
+    - その他は [ffmpeg 公式サイト](https://ffmpeg.org/download.html)
+
+### 詳細
+
+設置先の変更・特定バージョンの指定・対応環境などは[インストールガイド](docs/installation.md)を参照してください。
 
 ## 使い方
 
