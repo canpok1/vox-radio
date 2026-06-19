@@ -113,6 +113,9 @@ func TestEpisodeFileName(t *testing.T) {
 		{"morning-news", 123, "morning-news_ep123.mp3"},
 		{"morning-news", 1000, "morning-news_ep1000.mp3"},
 		{"my-tech-radio", 5, "my-tech-radio_ep005.mp3"},
+		// single-shot mode (episodeNumber <= 0): no "_ep{NNN}" suffix
+		{"vox-radio-demo", 0, "vox-radio-demo.mp3"},
+		{"vox-radio-demo", -1, "vox-radio-demo.mp3"},
 	}
 	for _, tt := range tests {
 		got := fileio.EpisodeFileName(tt.programID, tt.episodeNumber)
@@ -144,6 +147,37 @@ func TestEpisodeBaseName(t *testing.T) {
 	got := fileio.EpisodeBaseName("morning-news", 7)
 	if want := "morning-news_ep007"; got != want {
 		t.Errorf("EpisodeBaseName = %q, want %q", got, want)
+	}
+}
+
+// single_shot（episodeNumber <= 0）ではサフィックス無しの programID のみになる。
+func TestEpisodeBaseName_SingleShot(t *testing.T) {
+	for _, n := range []int{0, -1} {
+		got := fileio.EpisodeBaseName("vox-radio-demo", n)
+		if want := "vox-radio-demo"; got != want {
+			t.Errorf("EpisodeBaseName(_, %d) = %q, want %q", n, got, want)
+		}
+	}
+}
+
+// single_shot 時の EpisodeLayout は全成果物がサフィックス無し命名になる。
+func TestEpisodeLayout_SingleShot(t *testing.T) {
+	layout := fileio.EpisodeLayout{OutDir: "/output", ProgramID: "vox-radio-demo", EpisodeNumber: 0}
+	base := filepath.Join("/output", "intermediate", "vox-radio-demo")
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"Episode", layout.Episode(), filepath.Join("/output", "vox-radio-demo.mp3")},
+		{"Manifest", layout.Manifest(), filepath.Join("/output", "vox-radio-demo_manifest.json")},
+		{"IntermediateDir", layout.IntermediateDir(), base},
+		{"ClipsDir", layout.ClipsDir(), filepath.Join(base, "05_clips")},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %q, want %q", tt.name, tt.got, tt.want)
+		}
 	}
 }
 

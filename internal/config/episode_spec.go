@@ -224,6 +224,26 @@ func validateDefaultAudioRef(parent, field string, ref *AudioRef, assets *Assets
 	return validateAudioRef(parent, field, ref, assets)
 }
 
+// ValidateSingleShot は単発番組モード（program.single_shot）の整合性を検証する。
+// single_shot 時は回番号が無効化されるため、回番号ベースの出現条件（condition）は
+// コーナー・キャストのいずれにも設定できない（設定されていればエラー）。
+func (p *EpisodeSpec) ValidateSingleShot() error {
+	if !p.Program.SingleShot {
+		return nil
+	}
+	for i, c := range p.Corners {
+		if c.Condition != nil {
+			return fmt.Errorf("corners[%d].condition: single_shot では回番号条件は使用できません", i)
+		}
+	}
+	for charID, c := range p.Casts {
+		if c.Condition != nil {
+			return fmt.Errorf("casts[%q].condition: single_shot では回番号条件は使用できません", charID)
+		}
+	}
+	return nil
+}
+
 // Validate はすべてのバリデーションを実行する単一エントリポイント。
 // Program・Corners・Cast・Assets・Casts の順に検証し、最初のエラーを返す。
 func (p *EpisodeSpec) Validate(chars map[string]CharacterConfig) error {
@@ -237,6 +257,9 @@ func (p *EpisodeSpec) Validate(chars map[string]CharacterConfig) error {
 		return err
 	}
 	if err := p.ValidateAssets(); err != nil {
+		return err
+	}
+	if err := p.ValidateSingleShot(); err != nil {
 		return err
 	}
 	return p.ValidateCasts(chars)

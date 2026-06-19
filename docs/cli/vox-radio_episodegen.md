@@ -13,6 +13,10 @@ https://github.com/canpok1/vox-radio/blob/main/README.md
 <out-dir>/ 直下に、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置されます。
 回ごとに別名・別ディレクトリになるため、過去回の成果物は上書きされません。
 
+program.single_shot を true にすると単発番組モードになり、回番号（第N回）を採番・露出せず、
+出力名はサフィックス無し（{program.id}.mp3）になります。キャッシュにも保存しないため、
+同名で上書き運用となります（再生成は --force）。
+
 mp3・マニフェスト・中間ディレクトリのいずれかが既に存在する場合はエラーで終了します。
 上書きするには --force を指定してください（--force 指定時は中間ディレクトリを削除して作り直します）。
 
@@ -34,7 +38,7 @@ vox-radio episodegen [flags]
 ```
       --force            既存の出力（mp3・マニフェスト・中間ディレクトリ）を上書きする
   -h, --help             help for episodegen
-      --out-dir string   出力ディレクトリ（{program.id}_ep{NNN}.mp3 と {program.id}_ep{NNN}_manifest.json をここに配置し、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置） (default "output")
+      --out-dir string   出力ディレクトリ（{program.id}_ep{NNN}.mp3 と {program.id}_ep{NNN}_manifest.json をここに配置し、中間ファイルは <out-dir>/intermediate/{program.id}_ep{NNN}/ に配置。single_shot 時は回番号サフィックス無し） (default "output")
       --spec string      エピソード仕様 YAML ファイルのパス（必須）
 ```
 

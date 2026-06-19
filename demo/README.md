@@ -46,7 +46,7 @@ BGM・ジングル・効果音はリポジトリ同梱の [`../sample-assets/`](
    vox-radio episodegen --spec episode-spec.yaml
    ```
 
-   `output/vox-radio-demo_ep001.mp3` が生成されます。
+   `output/vox-radio-demo.mp3` が生成されます（単発番組モードのため回番号は付きません）。
 
 ## クレジット
 
