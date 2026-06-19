@@ -35,16 +35,6 @@ jobs:
       - name: Install vox-radio
         run: curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
 
-      - name: Wait for VOICEVOX
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:50021/version; then
-              echo "voicevox ready"; exit 0
-            fi
-            echo "waiting voicevox... ($i)"; sleep 5
-          done
-          echo "voicevox did not become ready"; exit 1
-
       # デモは連続性のない単発番組のため、キャッシュは使わず毎回クリーンに生成する。
       - name: Generate demo episode
         working-directory: demo
