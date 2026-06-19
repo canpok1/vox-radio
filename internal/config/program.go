@@ -27,21 +27,22 @@ func DurationSecToTargetChars(sec, charsPerMinute int) int {
 	return sec * charsPerMinute / 60
 }
 
-// FeedEntry defines a single RSS/Atom feed source with an optional item limit.
-type FeedEntry struct {
+const (
+	// SourceTypeFeed はRSS/Atomフィードのソース種別。
+	SourceTypeFeed = "feed"
+	// SourceTypeWeb はWebページURLのソース種別。
+	SourceTypeWeb = "web"
+)
+
+// SourceEntry は1件のソース設定。type フィールドで feed / web を判別する。
+type SourceEntry struct {
+	Type     string `yaml:"type"`
 	URL      string `yaml:"url"`
-	MaxItems int    `yaml:"max_items"`
+	MaxItems int    `yaml:"max_items,omitempty"`
 }
 
-// FeedsConfig holds a list of feed sources and individual article URLs.
-type FeedsConfig struct {
-	Feeds    []FeedEntry `yaml:"feeds"`
-	Articles []string    `yaml:"articles"`
-}
-
-// SourceConfig defines the data sources for a corner (feeds and individual article URLs).
-// It is an alias for FeedsConfig, ensuring the two remain in sync.
-type SourceConfig = FeedsConfig
+// SourceConfig はコーナーのソース設定（SourceEntry の配列）。
+type SourceConfig = []SourceEntry
 
 // AudioRef references a jingle or SE asset by type and asset ID.
 type AudioRef struct {
@@ -70,7 +71,7 @@ type CornerConfig struct {
 	Cast          map[string]string `yaml:"cast"`
 	LengthSec     int               `yaml:"length_sec"`
 	SummaryLength int               `yaml:"summary_length,omitempty"`
-	Source        *SourceConfig     `yaml:"source,omitempty"`
+	Source        SourceConfig      `yaml:"source,omitempty"`
 	StartAudio    *AudioRef         `yaml:"start_audio,omitempty"`
 	EndAudio      *AudioRef         `yaml:"end_audio,omitempty"`
 	BGM           *string           `yaml:"bgm,omitempty"`

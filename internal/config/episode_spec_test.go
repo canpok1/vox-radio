@@ -265,6 +265,114 @@ func TestEpisodeSpec_ValidateCasts(t *testing.T) {
 	}
 }
 
+func TestEpisodeSpec_ValidateSource(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    *config.EpisodeSpec
+		wantErr bool
+	}{
+		{
+			name: "source なしのコーナーはエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{ID: "c1", Title: "C1"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=feed, url あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: "https://example.com/feed.xml"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=web, url あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeWeb, URL: "https://example.com/article"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=feed, max_items あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: "https://example.com/feed.xml", MaxItems: 5},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type が空の場合はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: "", URL: "https://example.com/feed.xml"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type が不正値の場合はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: "rss", URL: "https://example.com/feed.xml"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "url が空の場合はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: ""},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=web で max_items が非ゼロの場合はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeWeb, URL: "https://example.com/article", MaxItems: 3},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.spec.ValidateSource()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSource() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // TestEpisodeSpec_Validate_CallsAllValidations は Validate が全検証を通過することを確認する。
 func TestEpisodeSpec_Validate_CallsAllValidations(t *testing.T) {
 	chars := map[string]config.CharacterConfig{
@@ -344,6 +452,17 @@ func TestEpisodeSpec_Validate_ErrorCases(t *testing.T) {
 				Program: config.ProgramConfig{ID: "prog"},
 				Corners: []config.CornerConfig{
 					{ID: "c1", Title: "opening", StartAudio: &config.AudioRef{Type: "jingle", ID: "nonexistent"}},
+				},
+				Casts:  map[string]config.CastConfig{},
+				Assets: config.AssetsConfig{Jingle: map[string]config.JingleEntry{}, BGM: map[string]config.BGMEntry{}},
+			},
+		},
+		{
+			name: "source の type が不正なとき Validate はエラーを返す",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{ID: "prog"},
+				Corners: []config.CornerConfig{
+					{ID: "c1", Title: "opening", Source: config.SourceConfig{{Type: "invalid", URL: "https://example.com/feed"}}},
 				},
 				Casts:  map[string]config.CastConfig{},
 				Assets: config.AssetsConfig{Jingle: map[string]config.JingleEntry{}, BGM: map[string]config.BGMEntry{}},

@@ -224,6 +224,24 @@ func validateDefaultAudioRef(parent, field string, ref *AudioRef, assets *Assets
 	return validateAudioRef(parent, field, ref, assets)
 }
 
+// ValidateSource は corners[].source の type/url/max_items を検証する。
+func (p *EpisodeSpec) ValidateSource() error {
+	for i, c := range p.Corners {
+		for j, s := range c.Source {
+			if s.Type != SourceTypeFeed && s.Type != SourceTypeWeb {
+				return fmt.Errorf("corners[%d].source[%d].type: must be %q or %q, got %q", i, j, SourceTypeFeed, SourceTypeWeb, s.Type)
+			}
+			if s.URL == "" {
+				return fmt.Errorf("corners[%d].source[%d].url: required", i, j)
+			}
+			if s.Type == SourceTypeWeb && s.MaxItems != 0 {
+				return fmt.Errorf("corners[%d].source[%d].max_items: not allowed for type %q", i, j, SourceTypeWeb)
+			}
+		}
+	}
+	return nil
+}
+
 // ValidateSingleShot は単発番組モード（program.single_shot）の整合性を検証する。
 // single_shot 時は回番号が無効化されるため、回番号ベースの出現条件（condition）は
 // コーナー・キャストのいずれにも設定できない（設定されていればエラー）。
@@ -251,6 +269,9 @@ func (p *EpisodeSpec) Validate(chars map[string]CharacterConfig) error {
 		return err
 	}
 	if err := p.ValidateCorners(); err != nil {
+		return err
+	}
+	if err := p.ValidateSource(); err != nil {
 		return err
 	}
 	if err := p.ValidateCast(); err != nil {

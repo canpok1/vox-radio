@@ -22,10 +22,8 @@ func TestGatherer_Run_ErrorOnHTTPFailure(t *testing.T) {
 	defer server.Close()
 
 	t.Run("feed returns error on non-200", func(t *testing.T) {
-		cfg := config.FeedsConfig{
-			Feeds: []config.FeedEntry{
-				{URL: server.URL + "/feed.xml", MaxItems: 1},
-			},
+		cfg := config.SourceConfig{
+			{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 		}
 		c := gather.New(server.Client())
 		_, err := c.Run(context.Background(), cfg, nil)
@@ -35,8 +33,8 @@ func TestGatherer_Run_ErrorOnHTTPFailure(t *testing.T) {
 	})
 
 	t.Run("article returns error on non-200", func(t *testing.T) {
-		cfg := config.FeedsConfig{
-			Articles: []string{server.URL + "/article.html"},
+		cfg := config.SourceConfig{
+			{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 		}
 		c := gather.New(server.Client())
 		_, err := c.Run(context.Background(), cfg, nil)
@@ -63,10 +61,8 @@ func TestGatherer_Run_RSSAppliesMaxItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed.xml", MaxItems: 2},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 2},
 	}
 
 	c := gather.New(server.Client())
@@ -88,10 +84,8 @@ func TestGatherer_Run_RSSParsesFields(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed.xml", MaxItems: 1},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 	}
 
 	c := gather.New(server.Client())
@@ -126,8 +120,8 @@ func TestGatherer_Run_ArticleExtractsBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Articles: []string{server.URL + "/article.html"},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 	}
 
 	c := gather.New(server.Client())
@@ -159,10 +153,8 @@ func TestGatherer_Run_AtomAppliesMaxItems(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed_atom.xml", MaxItems: 2},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed_atom.xml", MaxItems: 2},
 	}
 
 	c := gather.New(server.Client())
@@ -183,10 +175,8 @@ func TestGatherer_Run_AtomParsesFields(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed_atom.xml", MaxItems: 1},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed_atom.xml", MaxItems: 1},
 	}
 
 	c := gather.New(server.Client())
@@ -223,10 +213,8 @@ func TestGatherer_Run_WarnOnEmptyFeed(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/empty.xml", MaxItems: 5},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/empty.xml", MaxItems: 5},
 	}
 
 	c := gather.New(server.Client(), gather.WithLogger(logger))
@@ -244,7 +232,7 @@ func TestGatherer_Run_WarnOnEmptyFeed(t *testing.T) {
 	if !strings.Contains(buf.String(), "Empty") {
 		t.Errorf("expected feed name in log, got: %q", buf.String())
 	}
-	if strings.Contains(buf.String(), cfg.Feeds[0].URL) {
+	if strings.Contains(buf.String(), cfg[0].URL) {
 		t.Errorf("expected feed name instead of URL in log, but URL was present: %q", buf.String())
 	}
 }
@@ -262,10 +250,8 @@ func TestGatherer_Run_WarnFallsBackToURLWhenFeedTitleEmpty(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
 	feedURL := server.URL + "/no-title.xml"
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: feedURL, MaxItems: 5},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 5},
 	}
 
 	c := gather.New(server.Client(), gather.WithLogger(logger))
@@ -292,10 +278,8 @@ func TestGatherer_Run_ExcludesURLsAndFillsFromLater(t *testing.T) {
 	defer server.Close()
 
 	feedURL := server.URL + "/feed.xml"
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: feedURL, MaxItems: 2},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 2},
 	}
 	// article/1 has no GUID, so material = normalizeContent(title, body)
 	excluded := map[string]struct{}{
@@ -332,10 +316,8 @@ func TestGatherer_Run_WarnWhenInsufficientNonExcludedArticles(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
 	feedURL := server.URL + "/feed.xml"
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: feedURL, MaxItems: 3},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 3},
 	}
 	excluded := map[string]struct{}{
 		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"):  {},
@@ -376,10 +358,8 @@ func TestGatherer_Run_UnlimitedWithExcludedDedupKeys(t *testing.T) {
 	defer server.Close()
 
 	feedURL := server.URL + "/feed.xml"
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: feedURL, MaxItems: 0},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 0},
 	}
 	excluded := map[string]struct{}{
 		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"): {},
@@ -397,12 +377,24 @@ func TestGatherer_Run_UnlimitedWithExcludedDedupKeys(t *testing.T) {
 }
 
 func TestGatherer_RunAll_SkipsSourcelessCorners(t *testing.T) {
+	emptyFeed := `<?xml version="1.0"?><rss version="2.0"><channel><title>Empty</title></channel></rss>`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		_, _ = w.Write([]byte(emptyFeed))
+	}))
+	defer server.Close()
+
 	corners := []config.CornerConfig{
 		{Title: "ソースなし", Content: "挨拶のみ"},
-		{Title: "ソースあり", Content: "ニュース", Source: &config.SourceConfig{}},
+		{
+			Title: "ソースあり", Content: "ニュース",
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml"},
+			},
+		},
 	}
 
-	c := gather.New(nil)
+	c := gather.New(server.Client())
 	result, err := c.RunAll(context.Background(), corners, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -434,14 +426,14 @@ func TestGatherer_RunAll_CollectsPerCorner(t *testing.T) {
 	corners := []config.CornerConfig{
 		{
 			Title: "コーナーA",
-			Source: &config.SourceConfig{
-				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 			},
 		},
 		{
 			Title: "コーナーB",
-			Source: &config.SourceConfig{
-				Articles: []string{server.URL + "/article.html"},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 			},
 		},
 	}
@@ -482,8 +474,8 @@ func TestGatherer_RunAll_ExcludesDedupKeysViaFeed(t *testing.T) {
 	corners := []config.CornerConfig{
 		{
 			Title: "ニュース",
-			Source: &config.SourceConfig{
-				Feeds: []config.FeedEntry{{URL: feedURL, MaxItems: 2}},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 2},
 			},
 		},
 	}
@@ -524,11 +516,9 @@ func TestGatherer_Run_CombinesFeedsAndArticles(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed.xml", MaxItems: 1},
-		},
-		Articles: []string{server.URL + "/article.html"},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 	}
 
 	c := gather.New(server.Client())
@@ -556,8 +546,8 @@ func TestGatherer_RunAll_LogsStartAndComplete(t *testing.T) {
 	corners := []config.CornerConfig{
 		{
 			Title: "テックニュース",
-			Source: &config.SourceConfig{
-				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 			},
 		},
 	}
@@ -591,14 +581,14 @@ func TestGatherer_RunAll_LogsPerCornerProgress(t *testing.T) {
 	corners := []config.CornerConfig{
 		{
 			Title: "コーナーA",
-			Source: &config.SourceConfig{
-				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 			},
 		},
 		{
 			Title: "コーナーB",
-			Source: &config.SourceConfig{
-				Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+			Source: config.SourceConfig{
+				{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 			},
 		},
 	}
@@ -630,10 +620,8 @@ func TestGatherer_Run_RSS_ExtractsSourceAuthorPublished(t *testing.T) {
 	if err != nil {
 		t.Fatalf("time.LoadLocation: %v", err)
 	}
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed_with_meta.xml"},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed_with_meta.xml"},
 	}
 
 	c := gather.New(server.Client(), gather.WithLocation(loc))
@@ -667,10 +655,8 @@ func TestGatherer_Run_RSS_EmailAuthorExcluded(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed_with_meta.xml"},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed_with_meta.xml"},
 	}
 
 	c := gather.New(server.Client())
@@ -697,10 +683,8 @@ func TestGatherer_Run_RSS_PublishedEmptyWhenNil(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{
-			{URL: server.URL + "/feed_with_meta.xml"},
-		},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed_with_meta.xml"},
 	}
 
 	c := gather.New(server.Client())
@@ -728,8 +712,8 @@ func TestGatherer_Run_RSS_SetsDedupKey(t *testing.T) {
 	defer server.Close()
 
 	feedURL := server.URL + "/feed.xml"
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: feedURL, MaxItems: 1}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 1},
 	}
 
 	c := gather.New(server.Client())
@@ -758,8 +742,8 @@ func TestGatherer_Run_Article_SetsDedupKey(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Articles: []string{server.URL + "/article.html"},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 	}
 
 	c := gather.New(server.Client())
@@ -794,11 +778,11 @@ func TestGatherer_Run_RSS_NamespaceIsolation(t *testing.T) {
 	defer server2.Close()
 
 	c := gather.New(server1.Client())
-	result1, err := c.Run(context.Background(), config.FeedsConfig{Feeds: []config.FeedEntry{{URL: server1.URL + "/feed.xml", MaxItems: 1}}}, nil)
+	result1, err := c.Run(context.Background(), config.SourceConfig{{Type: config.SourceTypeFeed, URL: server1.URL + "/feed.xml", MaxItems: 1}}, nil)
 	if err != nil {
 		t.Fatalf("feed1: %v", err)
 	}
-	result2, err := c.Run(context.Background(), config.FeedsConfig{Feeds: []config.FeedEntry{{URL: server2.URL + "/feed.xml", MaxItems: 1}}}, nil)
+	result2, err := c.Run(context.Background(), config.SourceConfig{{Type: config.SourceTypeFeed, URL: server2.URL + "/feed.xml", MaxItems: 1}}, nil)
 	if err != nil {
 		t.Fatalf("feed2: %v", err)
 	}
@@ -838,8 +822,8 @@ func TestGatherer_Run_RSS_ExcludesInjectionArticle(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 10}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 10},
 	}
 	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectExclude, MaxBodyChars: 10000}
 	c := gather.New(server.Client(), gather.WithSanitizePolicy(policy))
@@ -864,8 +848,8 @@ func TestGatherer_Run_Article_ExcludesInjectionArticle(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Articles: []string{server.URL + "/article.html"},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
 	}
 	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectExclude, MaxBodyChars: 10000}
 	c := gather.New(server.Client(), gather.WithSanitizePolicy(policy))
@@ -889,8 +873,8 @@ func TestGatherer_Run_RSS_OnDetectError_ReturnsError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 10}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 10},
 	}
 	policy := config.PromptInjectionConfig{OnDetect: config.OnDetectError, MaxBodyChars: 10000}
 	c := gather.New(server.Client(), gather.WithSanitizePolicy(policy))
@@ -912,8 +896,8 @@ func TestNew_DefaultClient_FileProtocol_Feed(t *testing.T) {
 	}
 	tmp.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: "file://" + tmp.Name(), MaxItems: 1}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: "file://" + tmp.Name(), MaxItems: 1},
 	}
 
 	c := gather.New(nil)
@@ -938,8 +922,8 @@ func TestNew_DefaultClient_FileProtocol_Article(t *testing.T) {
 	}
 	tmp.Close()
 
-	cfg := config.FeedsConfig{
-		Articles: []string{"file://" + tmp.Name()},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: "file://" + tmp.Name()},
 	}
 
 	c := gather.New(nil)
@@ -953,8 +937,8 @@ func TestNew_DefaultClient_FileProtocol_Article(t *testing.T) {
 }
 
 func TestNew_DefaultClient_FileProtocol_MissingFile(t *testing.T) {
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: "file:///nonexistent/path/feed.xml", MaxItems: 1}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: "file:///nonexistent/path/feed.xml", MaxItems: 1},
 	}
 
 	c := gather.New(nil)
@@ -972,8 +956,8 @@ func TestNew_DefaultClient_HTTPS_StillWorks(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cfg := config.FeedsConfig{
-		Feeds: []config.FeedEntry{{URL: server.URL + "/feed.xml", MaxItems: 1}},
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeFeed, URL: server.URL + "/feed.xml", MaxItems: 1},
 	}
 
 	c := gather.New(server.Client())
