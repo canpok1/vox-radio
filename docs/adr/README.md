@@ -94,3 +94,4 @@
 | [0086](0086-single-shot-program-mode.md) | 単発番組モード（single_shot）で回番号を無効化し命名・キャッシュの例外を導入する | 採用 | 2026-06-19 |
 | [0087](0087-corner-source-as-typed-array.md) | コーナーの source を type 付き配列（discriminated array）へ再設計する | 採用 | 2026-06-19 |
 | [0088](0088-voicevox-startup-readiness-polling.md) | VOICEVOX 起動待機ポーリングを vox-radio 本体に組み込む | 採用 | 2026-06-19 |
+| [0089](0089-distribute-via-homebrew-cask-with-ffmpeg-dependency.md) | vox-radio を Homebrew Cask で配布し ffmpeg を依存に含める | 採用 | 2026-06-19 |
