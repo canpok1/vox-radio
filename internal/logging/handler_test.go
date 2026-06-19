@@ -23,14 +23,14 @@ func record(level slog.Level, msg string, attrs ...slog.Attr) slog.Record {
 func TestTextHandler_FormatsWithStep(t *testing.T) {
 	var buf strings.Builder
 	h := logging.NewTextHandler(&buf, slog.LevelInfo)
-	hl := h.WithAttrs([]slog.Attr{slog.String("step", "collect")})
+	hl := h.WithAttrs([]slog.Attr{slog.String("step", "gather")})
 
 	if err := hl.Handle(context.Background(), record(slog.LevelInfo, "開始")); err != nil {
 		t.Fatalf("Handle error: %v", err)
 	}
 
 	got := buf.String()
-	if !strings.HasPrefix(got, "[12:01:03] collect: 開始") {
+	if !strings.HasPrefix(got, "[12:01:03] gather: 開始") {
 		t.Errorf("unexpected format: %q", got)
 	}
 }
@@ -161,13 +161,13 @@ func TestFanOutHandler_WithAttrs_PropagatesStep(t *testing.T) {
 	var buf strings.Builder
 	h := logging.NewTextHandler(&buf, slog.LevelInfo)
 	fan := logging.NewFanOutHandler(h)
-	fanWithStep := fan.WithAttrs([]slog.Attr{slog.String("step", "collect")})
+	fanWithStep := fan.WithAttrs([]slog.Attr{slog.String("step", "gather")})
 
 	if err := fanWithStep.Handle(context.Background(), record(slog.LevelInfo, "進捗")); err != nil {
 		t.Fatalf("Handle error: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "collect: 進捗") {
+	if !strings.Contains(buf.String(), "gather: 進捗") {
 		t.Errorf("step should be propagated: %q", buf.String())
 	}
 }

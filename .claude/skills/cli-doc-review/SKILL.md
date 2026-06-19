@@ -81,7 +81,7 @@ make docs
 
 ステップ1c で不足コマンドが見つかった場合、README のコマンドテーブルを更新する。
 
-- 追加コマンド: パイプライン順序（collect → script → synth → assemble → publish → prune / run）に合わせて行を挿入する
+- 追加コマンド: パイプライン順序（gather → script → synth → mix → publish → prune / run）に合わせて行を挿入する
 - 削除コマンド: 対応行を削除する
 
 ---

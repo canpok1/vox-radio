@@ -1,7 +1,7 @@
 # language: ja
 @ffmpeg
 機能: episodegen 一括実行
-  collect → rundown → script → synth → assemble → manifest の全パイプラインを
+  gather → rundown → script → synth → mix → manifest の全パイプラインを
   一括実行し、エピソード一式が生成されること。
 
   シナリオ: 全パイプラインを一括実行してエピソードを生成する

@@ -1,7 +1,7 @@
 package model
 
 type Article struct {
-	DedupKey    string `json:"dedup_key"`     // 重複判定キー（sha256:hex）。collect が設定する
+	DedupKey    string `json:"dedup_key"`     // 重複判定キー（sha256:hex）。gather が設定する
 	URL         string `json:"url,omitempty"` // 表示用リンク（空可）
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"` // フィード由来のテキスト（RSS/Atom content/description）

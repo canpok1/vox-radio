@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/canpok1/vox-radio/internal/assemble"
 	"github.com/canpok1/vox-radio/internal/config"
+	"github.com/canpok1/vox-radio/internal/mix"
 	"github.com/spf13/cobra"
 )
 
@@ -90,7 +90,7 @@ loop=true の BGM は、--max-length-sec 未指定時はループせず素材を
 				return err
 			}
 
-			// ffmpeg のログはターミナルに垂れ流さず、assemble/episodegen と同様に
+			// ffmpeg のログはターミナルに垂れ流さず、mix/episodegen と同様に
 			// ログファイルへ退避する。ターミナルには成功メッセージのみを出す。
 			_, logFile, err := setupLogger("assets-preview", logDirFlag(cmd))
 			if err != nil {
@@ -98,7 +98,7 @@ loop=true の BGM は、--max-length-sec 未指定時はループせず素材を
 			}
 			defer func() { _ = logFile.Close() }()
 
-			pctx := assemble.PreviewContext{
+			pctx := mix.PreviewContext{
 				AssetType:    assetType,
 				AssetKey:     assetKey,
 				Assets:       assets,
@@ -106,7 +106,7 @@ loop=true の BGM は、--max-length-sec 未指定時はループせず素材を
 				MaxLengthSec: maxLengthSec,
 			}
 
-			p := assemble.NewPreviewer()
+			p := mix.NewPreviewer()
 			if err := p.Run(context.Background(), pctx, logFile); err != nil {
 				return err
 			}

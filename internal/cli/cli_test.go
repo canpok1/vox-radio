@@ -24,18 +24,18 @@ func TestRootHelp(t *testing.T) {
 		}
 	}
 	// コマンドの行頭パターン（"  <name>  "）で検索することで、説明文中の単語と区別する
-	for _, sub := range []string{"collect", "rundown", "script", "synth", "assemble", "manifest", "run", "publish", "prune"} {
+	for _, sub := range []string{"gather", "rundown", "script", "synth", "mix", "manifest", "run", "publish", "prune"} {
 		if strings.Contains(out, "\n  "+sub+" ") {
 			t.Errorf("root help should not list %q as a top-level subcommand", sub)
 		}
 	}
 }
 
-func TestCollectMissingOut(t *testing.T) {
+func TestGatherMissingOut(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	errBuf := &bytes.Buffer{}
 	cmd.SetErr(errBuf)
-	cmd.SetArgs([]string{"episodegen", "collect"})
+	cmd.SetArgs([]string{"episodegen", "gather"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error when --out is missing")
@@ -60,27 +60,27 @@ func TestSynthMissingOutDir(t *testing.T) {
 	}
 }
 
-func TestAssembleMissingIn(t *testing.T) {
+func TestMixMissingIn(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "assemble", "--clips", "/tmp", "--out", "/tmp/ep.mp3"})
+	cmd.SetArgs([]string{"episodegen", "mix", "--clips", "/tmp", "--out", "/tmp/ep.mp3"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error when --in is missing")
 	}
 }
 
-func TestAssembleMissingClips(t *testing.T) {
+func TestMixMissingClips(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "assemble", "--in", "/tmp/script.json", "--out", "/tmp/ep.mp3"})
+	cmd.SetArgs([]string{"episodegen", "mix", "--in", "/tmp/script.json", "--out", "/tmp/ep.mp3"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error when --clips is missing")
 	}
 }
 
-func TestAssembleMissingOut(t *testing.T) {
+func TestMixMissingOut(t *testing.T) {
 	cmd := cli.NewRootCmd()
-	cmd.SetArgs([]string{"episodegen", "assemble", "--in", "/tmp/script.json", "--clips", "/tmp"})
+	cmd.SetArgs([]string{"episodegen", "mix", "--in", "/tmp/script.json", "--clips", "/tmp"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error when --out is missing")
@@ -98,13 +98,13 @@ func TestScriptMissingOut(t *testing.T) {
 
 func TestSpecRequired(t *testing.T) {
 	// --spec はデフォルト値を持たず、各サブコマンドで必須であること。
-	// assemble は assets を任意で読み込むため --spec は optional（意図的に対象外）。
+	// mix は assets を任意で読み込むため --spec は optional（意図的に対象外）。
 	tests := []struct {
 		name string
 		args []string
 	}{
 		{name: "episodegen", args: []string{"episodegen"}},
-		{name: "collect", args: []string{"episodegen", "collect"}},
+		{name: "gather", args: []string{"episodegen", "gather"}},
 		{name: "rundown", args: []string{"episodegen", "rundown"}},
 		{name: "script", args: []string{"episodegen", "script"}},
 		{name: "manifest", args: []string{"episodegen", "manifest"}},
@@ -204,7 +204,7 @@ func TestSubcommandHelp(t *testing.T) {
 	})
 
 	// episodegen 配下のサブコマンド
-	for _, sub := range []string{"collect", "rundown", "synth", "assemble", "manifest", "script"} {
+	for _, sub := range []string{"gather", "rundown", "synth", "mix", "manifest", "script"} {
 		t.Run("episodegen/"+sub, func(t *testing.T) {
 			cmd := cli.NewRootCmd()
 			buf := &bytes.Buffer{}

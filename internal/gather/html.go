@@ -1,4 +1,4 @@
-package collect
+package gather
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
-func (c *Collector) fetchArticle(ctx context.Context, rawURL string) (*model.Article, error) {
+func (c *Gatherer) fetchArticle(ctx context.Context, rawURL string) (*model.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)

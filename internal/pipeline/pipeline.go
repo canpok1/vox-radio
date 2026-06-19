@@ -21,8 +21,8 @@ type CornerSummarizer interface {
 	SummarizeCorner(ctx context.Context, corner model.CornerLines, summaryLength int) (model.CornerSummary, error)
 }
 
-// Collector gathers articles per corner from configured sources.
-type Collector interface {
+// Gatherer gathers articles per corner from configured sources.
+type Gatherer interface {
 	RunAll(ctx context.Context, corners []config.CornerConfig, excludedDedupKeys []string) (model.Articles, error)
 }
 
@@ -41,9 +41,9 @@ type Synther interface {
 	Run(ctx context.Context, scr model.Script, outDir string) (*model.ClipsMeta, error)
 }
 
-// Assembler produces an MP3 episode from clips and a script.
+// Mixer produces an MP3 episode from clips and a script.
 // Returns per-corner estimated durations (seconds) keyed by CornerID.
-type Assembler interface {
+type Mixer interface {
 	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error)
 }
 
@@ -55,15 +55,15 @@ type Options struct {
 	Casts         []model.RundownCast // confirmed cast for this episode; nil treated as empty
 }
 
-// Runner orchestrates the full collect→rundown→script→synth→summary→assemble→manifest pipeline.
+// Runner orchestrates the full gather→rundown→script→synth→summary→mix→manifest pipeline.
 type Runner struct {
 	Spec              *config.EpisodeSpec
 	Config            *config.Config
-	Collector         Collector
+	Gatherer          Gatherer
 	Rundowner         Rundowner
 	Scripter          Scripter
 	Synther           Synther
-	Assembler         Assembler
+	Mixer             Mixer
 	ProgramSummarizer ProgramSummarizer // optional; if nil, program summary is omitted from manifest
 	CornerSummarizer  CornerSummarizer  // optional; if nil, corner summaries are omitted from manifest
 	ExcludedDedupKeys []string          // DedupKeys to exclude from feed collection (past-used articles)
@@ -82,8 +82,8 @@ func writeTimeline(layout fileio.EpisodeLayout, corners []config.CornerConfig, c
 }
 
 // Run executes the full pipeline, writing intermediate files to <outDir>/intermediate/.
-// Order: collect → rundown → script → synth → summary → assemble → manifest.
-// Summary runs before assemble so that EpisodeTitle can be embedded in ID3 tags.
+// Order: gather → rundown → script → synth → summary → mix → manifest.
+// Summary runs before mix so that EpisodeTitle can be embedded in ID3 tags.
 func (r *Runner) Run(ctx context.Context, opts Options) error {
 	layout := fileio.EpisodeLayout{
 		OutDir:        opts.OutDir,
@@ -95,9 +95,9 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("create output dirs: %w", err)
 	}
 
-	articles, err := r.Collector.RunAll(ctx, r.Spec.Corners, r.ExcludedDedupKeys)
+	articles, err := r.Gatherer.RunAll(ctx, r.Spec.Corners, r.ExcludedDedupKeys)
 	if err != nil {
-		return fmt.Errorf("collect: %w", err)
+		return fmt.Errorf("gather: %w", err)
 	}
 	if err := fileio.WriteJSON(layout.Articles(), articles); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		clips = &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
 	}
 
-	// Summary runs before assemble: EpisodeTitle (from programSummary) is embedded in ID3 tags.
+	// Summary runs before mix: EpisodeTitle (from programSummary) is embedded in ID3 tags.
 	generatedAt := opts.GeneratedAt
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
@@ -173,9 +173,9 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Title:       programSummary.EpisodeTitle,
 		GeneratedAt: generatedAt,
 	}
-	cornerDurations, err := r.Assembler.Run(ctx, scr, *clips, layout.ClipsDir(), layout.Episode(), episodeMeta)
+	cornerDurations, err := r.Mixer.Run(ctx, scr, *clips, layout.ClipsDir(), layout.Episode(), episodeMeta)
 	if err != nil {
-		return fmt.Errorf("assemble: %w", err)
+		return fmt.Errorf("mix: %w", err)
 	}
 
 	if err := writeTimeline(layout, r.Spec.Corners, cornerDurations); err != nil {

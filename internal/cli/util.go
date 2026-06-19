@@ -41,7 +41,7 @@ func logDirFlag(cmd *cobra.Command) string {
 }
 
 // registerSpecFlag registers the required --spec flag on cmd, binding it
-// to specPath. Used by episodegen subcommands that load an episode spec (assemble is the
+// to specPath. Used by episodegen subcommands that load an episode spec (mix is the
 // exception: its --spec is optional because assets can be skipped).
 // Note: feedgen uses --spec too but registers it inline with a different description.
 func registerSpecFlag(cmd *cobra.Command, specPath *string) {

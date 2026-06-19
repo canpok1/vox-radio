@@ -1,4 +1,4 @@
-package collect
+package gather
 
 import (
 	"fmt"

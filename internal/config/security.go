@@ -13,7 +13,7 @@ const (
 	DefaultMaxArticleBodyChars = 3000
 )
 
-// PromptInjectionConfig holds settings for prompt-injection mitigation at the collect boundary.
+// PromptInjectionConfig holds settings for prompt-injection mitigation at the gather boundary.
 type PromptInjectionConfig struct {
 	// OnDetect controls behavior when an injection pattern is detected in a field.
 	// Valid values: "" (defaults to "exclude"), "exclude", "error".
