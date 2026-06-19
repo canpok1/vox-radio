@@ -17,13 +17,13 @@ GoReleaser に `homebrew_casks` を追加し、vox-actor と共用の tap `canpo
 - 生成される Cask は vox-radio の既存ビルド対象（macOS/Linux × amd64/arm64）をカバーし、macOS・Linux 双方の Homebrew で導入できる。
 - post-install で macOS の quarantine 属性を解除する（`OS.mac?` ガード付き。Linux では no-op）。
 - tap への push 認証は `HOMEBREW_TAP_GITHUB_TOKEN`（vox-actor 用と同じ PAT を流用）を使う。
-- `install.sh` は Homebrew を使わない利用者向け・Windows 向けの経路として継続する。
+- `install.sh`（Linux/macOS 対応）は Homebrew を使わない利用者向けの経路として継続する。Windows は従来どおりリリースの zip を手動取得する（install.sh・Homebrew とも非対応）。
 
 ## 結果
 
 - macOS・Linux の Homebrew 利用者は `brew install --cask` 一発で vox-radio と ffmpeg を導入でき、ADR-0070 の Apple Silicon 課題（および Linux での導入の手間）が解消する。
 - vox-actor と tap・配布方式を共有し保守が一貫する。
-- トレードオフ: tap publish に PAT の事前設定が要る。Homebrew 非利用者・Windows 向けに `install.sh` を併存させる（チャネルは増えるが既存資産の継続）。Cask は概念上 GUI 向けだが GoReleaser が `binary` stanza を生成し CLI も symlink される。
+- トレードオフ: tap publish に PAT の事前設定が要る。Homebrew 非利用者（Linux/macOS）向けに `install.sh` を併存させ、Windows はリリース zip の手動取得を継続する（チャネルは増えるが既存資産の継続）。Cask は概念上 GUI 向けだが GoReleaser が `binary` stanza を生成し CLI も symlink される。
 
 ## 検討した代替案
 
