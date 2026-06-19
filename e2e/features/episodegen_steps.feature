@@ -1,6 +1,6 @@
 # language: ja
 機能: episodegen の各ステップ単体実行
-  collect → rundown → script → synth → assemble → manifest の各ステップを
+  gather → rundown → script → synth → mix → manifest の各ステップを
   個別コマンドとして実行でき、中間ファイルが正しく受け渡されること。
 
   背景:
@@ -9,15 +9,15 @@
     かつ モックフィードサーバーが起動している
     かつ テスト用設定一式を配置する
 
-  シナリオ: collect はフィードから記事を収集する
-    もし "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+  シナリオ: gather はフィードから記事を収集する
+    もし "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     ならば 終了コードは 0 である
     かつ ファイル "work/01_articles.json" が存在する
     かつ ファイル "work/01_articles.json" に "テスト記事1" を含む
     かつ ファイル "work/01_articles.json" に "テスト記事2" を含む
 
   シナリオ: rundown は記事を選別して番組設計図を生成する
-    前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+    前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     もし "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する
     ならば 終了コードは 0 である
     かつ JSONファイル "work/02_rundown.json" の配列 "corners" の要素数は 2 である
@@ -26,7 +26,7 @@
     かつ JSONファイル "work/02_rundown.json" のキー "corners.1.articles.0.description" は空でない文字列である
 
   シナリオ: script は rundown から台本を生成する
-    前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+    前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     かつ "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する
     もし "vox-radio episodegen script --spec episode-spec.yaml --in work/02_rundown.json --out work/04_script.json" を実行する
     ならば 終了コードは 0 である
@@ -37,7 +37,7 @@
 
   @ffmpeg
   シナリオ: synth は台本から音声クリップを合成する
-    前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+    前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     かつ "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する
     かつ "vox-radio episodegen script --spec episode-spec.yaml --in work/02_rundown.json --out work/04_script.json" を実行する
     もし "vox-radio episodegen synth --in work/04_script.json --out-dir clips" を実行する
@@ -47,17 +47,17 @@
     かつ JSONファイル "clips/clips.json" のキー "clips.0.speaker_role" は文字列 "zundamon" である
 
   @ffmpeg
-  シナリオ: assemble はクリップを結合して MP3 を生成する
-    前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+  シナリオ: mix はクリップを結合して MP3 を生成する
+    前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     かつ "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する
     かつ "vox-radio episodegen script --spec episode-spec.yaml --in work/02_rundown.json --out work/04_script.json" を実行する
     かつ "vox-radio episodegen synth --in work/04_script.json --out-dir clips" を実行する
-    もし "vox-radio episodegen assemble --spec episode-spec.yaml --in work/04_script.json --clips clips --out episode.mp3" を実行する
+    もし "vox-radio episodegen mix --spec episode-spec.yaml --in work/04_script.json --clips clips --out episode.mp3" を実行する
     ならば 終了コードは 0 である
     かつ ファイル "episode.mp3" のサイズは 0 より大きい
 
   シナリオ: manifest は --lines 指定で要約付きマニフェストを生成する
-    前提 "vox-radio episodegen collect --spec episode-spec.yaml --out work/01_articles.json" を実行する
+    前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     かつ "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する
     かつ "vox-radio episodegen script --spec episode-spec.yaml --in work/02_rundown.json --out work/04_script.json" を実行する
     かつ ファイル "episode.mp3" を以下の内容で作成する:
