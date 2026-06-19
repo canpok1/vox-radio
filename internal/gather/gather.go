@@ -128,7 +128,7 @@ func (c *Gatherer) RunAll(ctx context.Context, corners []config.CornerConfig, ex
 
 		articles, err := c.Run(ctx, *corner.Source, excluded)
 		if err != nil {
-			return model.Articles{}, fmt.Errorf("collect corner %q: %w", corner.Title, err)
+			return model.Articles{}, fmt.Errorf("gather corner %q: %w", corner.Title, err)
 		}
 		for _, a := range articles {
 			logger.Debug("記事取得", "title", a.Title, "url", a.URL, "chars", utf8.RuneCountInString(a.Text()))

@@ -87,7 +87,7 @@ type CornerTiming struct {
 	DurationSec float64 `json:"duration_sec"`
 }
 
-// Timeline holds per-corner timing information produced by the assemble step.
+// Timeline holds per-corner timing information produced by the mix step.
 // Persisted as 06_timeline.json.
 type Timeline struct {
 	Corners []CornerTiming `json:"corners"`

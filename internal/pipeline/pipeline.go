@@ -140,7 +140,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		clips = &model.ClipsMeta{Clips: make([]model.ClipMeta, 0)}
 	}
 
-	// Summary runs before assemble: EpisodeTitle (from programSummary) is embedded in ID3 tags.
+	// Summary runs before mix: EpisodeTitle (from programSummary) is embedded in ID3 tags.
 	generatedAt := opts.GeneratedAt
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()

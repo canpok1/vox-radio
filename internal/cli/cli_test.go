@@ -31,7 +31,7 @@ func TestRootHelp(t *testing.T) {
 	}
 }
 
-func TestCollectMissingOut(t *testing.T) {
+func TestGatherMissingOut(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	errBuf := &bytes.Buffer{}
 	cmd.SetErr(errBuf)
@@ -60,7 +60,7 @@ func TestSynthMissingOutDir(t *testing.T) {
 	}
 }
 
-func TestAssembleMissingIn(t *testing.T) {
+func TestMixMissingIn(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"episodegen", "mix", "--clips", "/tmp", "--out", "/tmp/ep.mp3"})
 	err := cmd.Execute()
@@ -69,7 +69,7 @@ func TestAssembleMissingIn(t *testing.T) {
 	}
 }
 
-func TestAssembleMissingClips(t *testing.T) {
+func TestMixMissingClips(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"episodegen", "mix", "--in", "/tmp/script.json", "--out", "/tmp/ep.mp3"})
 	err := cmd.Execute()
@@ -78,7 +78,7 @@ func TestAssembleMissingClips(t *testing.T) {
 	}
 }
 
-func TestAssembleMissingOut(t *testing.T) {
+func TestMixMissingOut(t *testing.T) {
 	cmd := cli.NewRootCmd()
 	cmd.SetArgs([]string{"episodegen", "mix", "--in", "/tmp/script.json", "--clips", "/tmp"})
 	err := cmd.Execute()

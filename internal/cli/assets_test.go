@@ -223,7 +223,7 @@ func TestAssetsPreview_InvalidType_Error(t *testing.T) {
 
 // TestAssetsPreview_SuppressesFFmpegLog_Success verifies that a successful preview
 // does not leak ffmpeg log output to the terminal (stderr) and instead prints a
-// concise user-facing success message to stdout, matching assemble/episodegen.
+// concise user-facing success message to stdout, matching mix/episodegen.
 func TestAssetsPreview_SuppressesFFmpegLog_Success(t *testing.T) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("ffmpeg not installed")
