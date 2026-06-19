@@ -1,7 +1,0 @@
-feeds:
-  - url: https://example.com/rss.xml
-    max_items: 5
-  - url: https://another.example.com/feed
-    max_items: 3
-articles:
-  - https://example.com/articles/123
