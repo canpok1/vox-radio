@@ -76,16 +76,16 @@ vox-radio episodegen --spec episode-spec.yaml
 記事の収集から音声合成までを自動で行い、1 本のエピソード（mp3）を生成します。処理は次の 6 ステップで進みます。各ステップは前のステップの出力を受け取って次へ渡します。
 
 ```
-collect → rundown → script → synth → assemble → manifest
+gather → rundown → script → synth → mix → manifest
 ```
 
 | ステップ | 概要 |
 |----|------|
-| collect | コーナーごとにフィード・URL から記事を収集 |
+| gather | コーナーごとにフィード・URL から記事を収集 |
 | rundown | LLM が記事を選別し番組設計図を生成 |
 | script | 番組設計図から台本を生成（多段の LLM パイプライン） |
 | synth | VOICEVOX で音声クリップを合成 |
-| assemble | クリップとイントロ・アウトロを ffmpeg で結合し MP3 化 |
+| mix | クリップとイントロ・アウトロを ffmpeg で結合し MP3 化 |
 | manifest | 配信用の番組情報（タイトル・要約・記事など）を JSON 出力 |
 
 `episodegen` で全ステップを一括実行します。
@@ -104,11 +104,11 @@ vox-radio episodegen --spec episode-spec.yaml --force
 各ステップは個別にも実行できます。
 
 ```bash
-vox-radio episodegen collect  --out work/01_articles.json --spec episode-spec.yaml
+vox-radio episodegen gather   --out work/01_articles.json --spec episode-spec.yaml
 vox-radio episodegen rundown  --in work/01_articles.json --out work/02_rundown.json --spec episode-spec.yaml
 vox-radio episodegen script   --in work/02_rundown.json --out work/04_script.json --spec episode-spec.yaml
 vox-radio episodegen synth    --in work/04_script.json --out-dir work/clips
-vox-radio episodegen assemble --in work/04_script.json --clips work/clips --out work/episode.mp3 --spec episode-spec.yaml
+vox-radio episodegen mix      --in work/04_script.json --clips work/clips --out work/episode.mp3 --spec episode-spec.yaml
 vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown.json --audio work/episode.mp3 --out work/manifest.json
 ```
 
@@ -214,7 +214,7 @@ characters:
 
 ### アセット設定
 
-`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`assemble` で合成）。次の手順で設定を固めるのがおすすめです。
+`assets/assets.yaml` でジングル（イントロ/アウトロ）・効果音（SE）・BGM を定義し、番組に組み込めます（`mix` で合成）。次の手順で設定を固めるのがおすすめです。
 
 1. 使う音声ファイルを `assets/` に置く
 2. 各素材を登録する（`assets.yaml`）。音量やフェードのほか、BGM はセリフ中に音量を下げる度合い（ダッキング）なども設定できる

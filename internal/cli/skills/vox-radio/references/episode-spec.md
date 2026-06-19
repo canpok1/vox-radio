@@ -157,7 +157,7 @@ source:
     - "file://articles/article.html"
 ```
 
-> **注意**: ファイルが存在しない場合は `episodegen collect` 実行時にエラーになります。
+> **注意**: ファイルが存在しない場合は `episodegen gather` 実行時にエラーになります。
 
 ## `casts` セクション（出演者名簿）
 

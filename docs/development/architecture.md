@@ -13,7 +13,7 @@ internal/cli（CLI層: 唯一の合成点。ロード・検証・依存注入）
     ↓
 internal/pipeline（オーケストレーション層: interface 経由でステップを実行）
     ↓
-ドメイン層（collect / rundown / script / synth / assemble / manifest / slack / feed / cache / cast / eval / render）
+ドメイン層（gather / rundown / script / synth / mix / manifest / slack / feed / cache / cast / eval / render）
     ↓
 internal/config（設定層: 共有設定のロード・検証・Effective値）
     ↓
@@ -31,8 +31,8 @@ internal/model（データ層: 型定義と純粋関数のみ）
 | 基盤 | `fileio` `httpretry` `logging` `mediainfo` `testutil` | なし（標準ライブラリのみ） |
 | データ | `model` | **なし**（型定義と純粋関数のみ。ファイルI/O・YAML/JSONロード・環境変数参照を置かない） |
 | 設定 | `config` | `fileio` のみ |
-| ドメイン | `collect` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `assemble` `manifest` `slack` `feed` `cache` `cast` `eval` `render` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
-| オーケストレーション | `pipeline` | `model` `config` `fileio` `manifest` のみ。**ステップ実装パッケージ（collect/rundown/script/synth/assemble 等）の import 禁止**（interface 経由で扱う） |
+| ドメイン | `gather` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `mix` `manifest` `slack` `feed` `cache` `cast` `eval` `render` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
+| オーケストレーション | `pipeline` | `model` `config` `fileio` `manifest` のみ。**ステップ実装パッケージ（gather/rundown/script/synth/mix 等）の import 禁止**（interface 経由で扱う） |
 | CLI | `cli` | すべて可（唯一の合成点） |
 
 ### ドメイン間の許容横断エッジ
@@ -77,7 +77,7 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 ## 4. interface 設計のルール
 
-- **interface は利用側で定義する**（現状踏襲。例: `pipeline.Collector` / `pipeline.Scripter`、`synth.VoicevoxClient`、`slack.Poster`、`script/llm.Client`）。
+- **interface は利用側で定義する**（現状踏襲。例: `pipeline.Gatherer` / `pipeline.Scripter`、`synth.VoicevoxClient`、`slack.Poster`、`script/llm.Client`）。
 - **interface の引数・戻り値に具象ドメインパッケージの型を使わない。** `model` の型・基本型・利用側パッケージ定義の型のみとする（具象型を返すと利用側が実装パッケージへ依存してしまう）。
 - **ステップ間のデータ受け渡しは戻り値で行う。**「実装が副作用でファイルを書き、呼び出し側が読み戻す」暗黙のファイル契約を作らない。中間ファイルの書き出しはオーケストレーター（`pipeline`）または `cli` の責務とする。
 - 実装ごとに追加操作が必要な場合は supplementary interface（例: `CornerAppearanceSetter`）を使い、型アサーションで任意適用する（`.claude/rules/go-file.md` 参照）。
@@ -88,19 +88,19 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 | ファイル | 書き手 | 内容 |
 |---|---|---|
-| `intermediate/{program.id}_ep{NNN}/01_articles.json` | collect | 収集記事（`model.Articles`） |
+| `intermediate/{program.id}_ep{NNN}/01_articles.json` | gather | 収集記事（`model.Articles`） |
 | `intermediate/{program.id}_ep{NNN}/02_rundown.json` | rundown | 選別・フロー設計（`model.Rundown`） |
 | `intermediate/{program.id}_ep{NNN}/03_lines.json` | script(write) | 元表記のセリフ（`model.ScriptLines`） |
 | `intermediate/{program.id}_ep{NNN}/04_script.json` | script(direct) | 演出済み台本（`model.Script`） |
 | `intermediate/{program.id}_ep{NNN}/05_clips/` + `clips.json` | synth | 音声クリップ（`model.ClipsMeta`） |
-| `output/{program.id}_ep{NNN}.mp3` | assemble | 完成音声 |
+| `output/{program.id}_ep{NNN}.mp3` | mix | 完成音声 |
 | `output/{program.id}_ep{NNN}_manifest.json` | manifest | エピソードマニフェスト（`model.Manifest`） |
 
 - **パス・ファイル名は `internal/fileio/paths.go` の定数・関数のみ使用する。**`"03_lines.json"` 等のリテラル直書きを禁止する（`fileio.FileLines` 等の定数を使う）。回数別の出力パス（mp3・マニフェスト・中間ファイル）は `fileio.EpisodeLayout` のメソッドで解決する。
 
 ## 6. エラー処理・ログ
 
-- エラーは `fmt.Errorf("文脈プレフィックス: %w", err)` で一貫してラップする（例: `fmt.Errorf("collect: %w", err)`）。
+- エラーは `fmt.Errorf("文脈プレフィックス: %w", err)` で一貫してラップする（例: `fmt.Errorf("gather: %w", err)`）。
 - 判定は `errors.Is` / `errors.As`、複数バリデーションエラーの集約は `errors.Join` を使う。
 - ログは `slog` を使い、logger はオプション注入（`WithLogger` パターン）で渡す。
 - グローバル可変状態を作らない。パッケージレベル `var` は読み取り専用の定数的データ・`embed.FS`・JSONスキーマに限る。
