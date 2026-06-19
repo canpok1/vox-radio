@@ -100,9 +100,9 @@ corners:
     end_pause_sec: 2.0
     # 気象情報の取得元（気象庁 防災情報XMLの随時フィード。警報・注意報など）。
     source:
-      feeds:
-        - url: https://www.data.jma.go.jp/developer/xml/feed/extra.xml
-          max_items: 10              # このフィードから使う記事の最大本数
+      - type: feed
+        url: https://www.data.jma.go.jp/developer/xml/feed/extra.xml
+        max_items: 10              # このフィードから使う記事の最大本数
 
   # ここから下の3つは日替わりコーナー。毎回どれか1つだけ放送されます。
   # 回番号で出し分けるので、上の program.id（必須）をキーにした過去回の記憶を使います。
@@ -122,9 +122,9 @@ corners:
       offset: 1                      # 初回は1回目
     # 地震・火山情報の取得元（気象庁 防災情報XMLの地震火山フィード）。
     source:
-      feeds:
-        - url: https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml
-          max_items: 5
+      - type: feed
+        url: https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml
+        max_items: 5
 
   # お天気豆知識コーナー（データソースなし。AIが知識から話題を作ります）
   - id: "weather-trivia"

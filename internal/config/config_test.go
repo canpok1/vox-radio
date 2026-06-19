@@ -150,25 +150,7 @@ func TestLoadEpisodeSpec(t *testing.T) {
 	})
 
 	t.Run("CornerSource", func(t *testing.T) {
-		var sourceCorner *config.CornerConfig
-		for i := range spec.Corners {
-			if spec.Corners[i].Source != nil {
-				sourceCorner = &spec.Corners[i]
-				break
-			}
-		}
-		if sourceCorner == nil {
-			t.Fatal("no corner with source found")
-		}
-		if len(sourceCorner.Source.Feeds) == 0 {
-			t.Error("Source.Feeds must not be empty")
-		}
-		if sourceCorner.Source.Feeds[0].URL == "" {
-			t.Error("Source.Feeds[0].URL must not be empty")
-		}
-		if len(sourceCorner.Source.Articles) == 0 {
-			t.Error("Source.Articles must not be empty")
-		}
+		testLoadEpisodeSpecCornerSource(t, spec)
 	})
 
 	t.Run("Assets", func(t *testing.T) {
@@ -2229,7 +2211,7 @@ func TestLoadEpisodeSpec_FileURLResolution(t *testing.T) {
 
 	var sourceCorner *config.CornerConfig
 	for i := range spec.Corners {
-		if spec.Corners[i].Source != nil {
+		if len(spec.Corners[i].Source) > 0 {
 			sourceCorner = &spec.Corners[i]
 			break
 		}
@@ -2243,7 +2225,17 @@ func TestLoadEpisodeSpec_FileURLResolution(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	feeds := sourceCorner.Source.Feeds
+	var feeds []config.SourceEntry
+	var articles []config.SourceEntry
+	for _, s := range sourceCorner.Source {
+		switch s.Type {
+		case config.SourceTypeFeed:
+			feeds = append(feeds, s)
+		case config.SourceTypeWeb:
+			articles = append(articles, s)
+		}
+	}
+
 	if len(feeds) < 3 {
 		t.Fatalf("expected 3 feeds, got %d", len(feeds))
 	}
@@ -2264,19 +2256,57 @@ func TestLoadEpisodeSpec_FileURLResolution(t *testing.T) {
 		t.Errorf("feeds[2].URL (https://): got %q, want %q", feeds[2].URL, "https://example.com/rss.xml")
 	}
 
-	articles := sourceCorner.Source.Articles
 	if len(articles) < 2 {
 		t.Fatalf("expected 2 articles, got %d", len(articles))
 	}
 
 	// relative file:// article URL resolved
 	wantRelArticle := "file://" + filepath.Join(absTestdata, "articles/article.html")
-	if articles[0] != wantRelArticle {
-		t.Errorf("articles[0] (relative file://): got %q, want %q", articles[0], wantRelArticle)
+	if articles[0].URL != wantRelArticle {
+		t.Errorf("articles[0].URL (relative file://): got %q, want %q", articles[0].URL, wantRelArticle)
 	}
 
 	// https:// article passthrough
-	if articles[1] != "https://example.com/articles/1" {
-		t.Errorf("articles[1] (https://): got %q, want %q", articles[1], "https://example.com/articles/1")
+	if articles[1].URL != "https://example.com/articles/1" {
+		t.Errorf("articles[1].URL (https://): got %q, want %q", articles[1].URL, "https://example.com/articles/1")
+	}
+}
+
+func testLoadEpisodeSpecCornerSource(t *testing.T, spec *config.EpisodeSpec) {
+	t.Helper()
+	var sourceCorner *config.CornerConfig
+	for i := range spec.Corners {
+		if len(spec.Corners[i].Source) > 0 {
+			sourceCorner = &spec.Corners[i]
+			break
+		}
+	}
+	if sourceCorner == nil {
+		t.Fatal("no corner with source found")
+	}
+	var feeds, webs []config.SourceEntry
+	for _, s := range sourceCorner.Source {
+		switch s.Type {
+		case config.SourceTypeFeed:
+			feeds = append(feeds, s)
+		case config.SourceTypeWeb:
+			webs = append(webs, s)
+		}
+	}
+	if len(feeds) == 0 {
+		t.Error("Source must have at least one feed entry")
+	}
+	if len(feeds) > 0 && feeds[0].URL == "" {
+		t.Error("Source feed[0].URL must not be empty")
+	}
+	if len(webs) == 0 {
+		t.Error("Source must have at least one web entry")
+	}
+}
+
+func TestLoadEpisodeSpec_OldSourceFormatError(t *testing.T) {
+	_, err := config.LoadEpisodeSpec("testdata/episode_spec_old_source.yaml")
+	if err == nil {
+		t.Error("expected error for old source format (feeds:/articles: fields), got nil")
 	}
 }

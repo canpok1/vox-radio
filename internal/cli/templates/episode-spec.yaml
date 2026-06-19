@@ -112,10 +112,11 @@ corners:
     # 記事の取得元（RSSフィードや記事URLから内容を集めたいときに設定）。
     # 取得元が不要なコーナーはこのブロックごと省略してください。
     source:
-      feeds:
-        - url: https://example.com/feed
-          max_items: 5
-      articles: []
+      - type: feed
+        url: https://example.com/feed
+        max_items: 5
+      # - type: web
+      #   url: https://example.com/articles/1
     # 放送する回の条件（省略すると毎回放送される固定コーナー）。
     # condition を書くと、回番号が合ったときだけ放送されます。
     # condition:

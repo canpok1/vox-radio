@@ -64,22 +64,12 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 	}
 	for i := range p.Corners {
 		corner := &p.Corners[i]
-		if corner.Source == nil {
-			continue
-		}
-		for j := range corner.Source.Feeds {
-			resolved, err := resolveFileURL(specDir, corner.Source.Feeds[j].URL)
+		for j := range corner.Source {
+			resolved, err := resolveFileURL(specDir, corner.Source[j].URL)
 			if err != nil {
 				return nil, err
 			}
-			corner.Source.Feeds[j].URL = resolved
-		}
-		for j, article := range corner.Source.Articles {
-			resolved, err := resolveFileURL(specDir, article)
-			if err != nil {
-				return nil, err
-			}
-			corner.Source.Articles[j] = resolved
+			corner.Source[j].URL = resolved
 		}
 	}
 	resolveCornerDefaults(p)

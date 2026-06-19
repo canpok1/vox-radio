@@ -170,12 +170,12 @@ corners:
     cast: { zundamon: "MC", metan: "MC" }
     length_sec: 120
     source:
-      feeds:
-        - url: "https://script.google.com/macros/s/xxxxxxxx/exec"  # 控えた web アプリの URL
-          max_items: 3   # 収集する最大件数（過去に使った記事は除外して確保）
+      - type: feed
+        url: "https://script.google.com/macros/s/xxxxxxxx/exec"  # 控えた web アプリの URL
+        max_items: 3   # 収集する最大件数（過去に使った記事は除外して確保）
 ```
 
-これで `episodegen`（番組生成）の収集（`gather`）ステップがフィードを読み込み、お便りが番組に取り込まれます。`source.feeds` の設定の詳細は[episode-spec のリファレンス](../../internal/cli/skills/vox-radio/references/episode-spec.md)を参照してください。
+これで `episodegen`（番組生成）の収集（`gather`）ステップがフィードを読み込み、お便りが番組に取り込まれます。`source` の設定の詳細は[episode-spec のリファレンス](../../internal/cli/skills/vox-radio/references/episode-spec.md)を参照してください。
 
 ## 注意事項
 

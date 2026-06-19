@@ -14,13 +14,16 @@ corners:
       zundamon: "司会"
     length_sec: 30
     source:
-      feeds:
-        - url: "file://feeds/feed.xml"
-          max_items: 3
-        - url: "file:///abs/feed.xml"
-          max_items: 3
-        - url: "https://example.com/rss.xml"
-          max_items: 3
-      articles:
-        - "file://articles/article.html"
-        - "https://example.com/articles/1"
+      - type: feed
+        url: "file://feeds/feed.xml"
+        max_items: 3
+      - type: feed
+        url: "file:///abs/feed.xml"
+        max_items: 3
+      - type: feed
+        url: "https://example.com/rss.xml"
+        max_items: 3
+      - type: web
+        url: "file://articles/article.html"
+      - type: web
+        url: "https://example.com/articles/1"

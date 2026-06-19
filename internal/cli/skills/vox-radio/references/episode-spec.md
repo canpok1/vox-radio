@@ -119,30 +119,35 @@ corners:
     condition: { every: 3, offset: 0 }   # 3,6,9,… 回に採用
 ```
 
-### `corners[].source` サブフィールド
+### `corners[].source[]` エントリのフィールド
+
+`source` は type で種別を区別する配列です。各エントリに `type` で `feed` または `web` を指定します。
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `feeds` | []FeedEntry | 任意 | RSS/Atom フィードのリスト |
-| `articles` | []string | 任意 | 個別記事 URL のリスト。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
+| `type` | string | 必須 | `"feed"`（RSS/Atom フィード）または `"web"`（個別記事） |
+| `url` | string | 必須 | フィードまたは記事の URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
+| `max_items` | int | 任意 | `type: feed` のみ。過去使用URLを除外したうえで確保する最大記事数。デフォルト: 0（実質無制限）。除外で減った分はフィード内の後続記事で補う。`type: web` には指定不可。 |
 
-### `corners[].source.feeds[]` サブフィールド
-
-| フィールド | 型 | 必須/任意 | 説明 |
-|---|---|---|---|
-| `url` | string | 必須 | フィードの URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
-| `max_items` | int | 任意 | 過去使用URLを除外したうえで確保する最大記事数。デフォルト: 0（実質無制限）。除外で減った分はフィード内の後続記事で補う。 |
+```yaml
+source:
+  - type: feed
+    url: https://example.com/rss.xml
+    max_items: 5
+  - type: web
+    url: https://example.com/articles/1
+```
 
 ### `file://` プロトコルによるローカルフィード・記事の読み込み
 
-アクセス制限などで RSS/Atom フィードに直接アクセスできない場合、手動ダウンロードした XML ファイルをローカルから読み込めます。`feeds[].url` および `articles[]` に `file://` プロトコルを使ったパスを指定します。
+アクセス制限などで RSS/Atom フィードに直接アクセスできない場合、手動ダウンロードした XML ファイルをローカルから読み込めます。`url` に `file://` プロトコルを使ったパスを指定します。
 
 **絶対パス指定**（そのまま使用）:
 
 ```yaml
 source:
-  feeds:
-    - url: "file:///home/user/downloads/feed.xml"
+  - type: feed
+    url: "file:///home/user/downloads/feed.xml"
 ```
 
 **相対パス指定**（spec ファイルのディレクトリを基準に解決）:
@@ -151,10 +156,10 @@ source:
 # /home/user/myshow/episode-spec.yaml に記述した場合、
 # /home/user/myshow/feeds/feed.xml を読み込む
 source:
-  feeds:
-    - url: "file://feeds/feed.xml"
-  articles:
-    - "file://articles/article.html"
+  - type: feed
+    url: "file://feeds/feed.xml"
+  - type: web
+    url: "file://articles/article.html"
 ```
 
 > **注意**: ファイルが存在しない場合は `episodegen gather` 実行時にエラーになります。

@@ -60,38 +60,41 @@ func New(client *http.Client, opts ...Option) *Gatherer {
 	return c
 }
 
-// Run collects articles from all feeds and individual URLs in cfg.
+// Run collects articles from all source entries in cfg.
 // excluded is a set of URLs to skip when fetching from feeds (nil means no exclusion).
-func (c *Gatherer) Run(ctx context.Context, cfg config.FeedsConfig, excluded map[string]struct{}) ([]model.Article, error) {
+func (c *Gatherer) Run(ctx context.Context, cfg config.SourceConfig, excluded map[string]struct{}) ([]model.Article, error) {
 	articles := make([]model.Article, 0)
 
-	for _, feed := range cfg.Feeds {
-		items, err := c.fetchFeed(ctx, feed.URL, feed.MaxItems, excluded)
-		if err != nil {
-			return nil, fmt.Errorf("fetch feed %s: %w", feed.URL, err)
-		}
-		for i := range items {
-			flagged, err := c.applySanitize(&items[i])
+	for _, src := range cfg {
+		switch src.Type {
+		case config.SourceTypeFeed:
+			items, err := c.fetchFeed(ctx, src.URL, src.MaxItems, excluded)
+			if err != nil {
+				return nil, fmt.Errorf("fetch feed %s: %w", src.URL, err)
+			}
+			for i := range items {
+				flagged, err := c.applySanitize(&items[i])
+				if err != nil {
+					return nil, err
+				}
+				if !flagged {
+					articles = append(articles, items[i])
+				}
+			}
+		case config.SourceTypeWeb:
+			article, err := c.fetchArticle(ctx, src.URL)
+			if err != nil {
+				return nil, fmt.Errorf("fetch article %s: %w", src.URL, err)
+			}
+			flagged, err := c.applySanitize(article)
 			if err != nil {
 				return nil, err
 			}
 			if !flagged {
-				articles = append(articles, items[i])
+				articles = append(articles, *article)
 			}
-		}
-	}
-
-	for _, u := range cfg.Articles {
-		article, err := c.fetchArticle(ctx, u)
-		if err != nil {
-			return nil, fmt.Errorf("fetch article %s: %w", u, err)
-		}
-		flagged, err := c.applySanitize(article)
-		if err != nil {
-			return nil, err
-		}
-		if !flagged {
-			articles = append(articles, *article)
+		default:
+			return nil, fmt.Errorf("unknown source type %q", src.Type)
 		}
 	}
 
@@ -113,7 +116,7 @@ func (c *Gatherer) RunAll(ctx context.Context, corners []config.CornerConfig, ex
 
 	filtered := make([]config.CornerConfig, 0, len(corners))
 	for _, corner := range corners {
-		if corner.Source != nil {
+		if len(corner.Source) > 0 {
 			filtered = append(filtered, corner)
 		}
 	}
@@ -126,7 +129,7 @@ func (c *Gatherer) RunAll(ctx context.Context, corners []config.CornerConfig, ex
 	for i, corner := range filtered {
 		logger.Info(fmt.Sprintf("コーナー「%s」を収集中 (%d/%d)", corner.Title, i+1, len(filtered)))
 
-		articles, err := c.Run(ctx, *corner.Source, excluded)
+		articles, err := c.Run(ctx, corner.Source, excluded)
 		if err != nil {
 			return model.Articles{}, fmt.Errorf("gather corner %q: %w", corner.Title, err)
 		}
