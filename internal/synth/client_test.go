@@ -152,3 +152,37 @@ func TestHTTPVoicevoxClient_Synthesis_ReturnsErrorOnNonOK(t *testing.T) {
 		t.Error("expected error, got nil")
 	}
 }
+
+func TestHTTPVoicevoxClient_Version_ReturnsVersionString(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/version" || r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`"0.14.7"`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	got, err := client.Version(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "0.14.7" {
+		t.Errorf("Version() = %q, want %q", got, "0.14.7")
+	}
+}
+
+func TestHTTPVoicevoxClient_Version_ReturnsErrorOnNonOK(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not ready", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	_, err := client.Version(context.Background())
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
