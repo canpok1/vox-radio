@@ -40,6 +40,8 @@ voicevox:
   # 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、この値より優先して上書きされます。
   # devcontainer では VOX_RADIO_VOICEVOX_URL が自動設定されるため、この値の変更は不要です。
   url: http://localhost:50021
+  # VOICEVOX が起動するまで待機する最大秒数。省略時はデフォルト 60 秒。0 で待機を無効化。
+  # startup_timeout_seconds: 0
   # 声の抑揚・高さ・速さの呼び名を数値に対応づけます（省略すると組み込みの標準セットを使用）。
   presets:
     intonation:   # 抑揚の強さ（小さいほど棒読み、大きいほど豊かに。0.0〜2.0）

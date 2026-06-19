@@ -18,6 +18,10 @@ type fakeVoicevox struct {
 func newFakeVoicevox() *fakeVoicevox {
 	f := &fakeVoicevox{}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`"0.14.7"`))
+	})
 	mux.HandleFunc("/audio_query", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{

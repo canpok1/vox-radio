@@ -23,7 +23,7 @@ curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install
 ラジオ番組の生成には生成AI・VOICEVOX・ffmpeg が必要です。次の 3 つを準備します。
 
 - **生成AIの API キー**: サンプルは Gemini を使う構成です。[Google AI Studio](https://aistudio.google.com/) でキーを取得しておきます。
-- **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。
+- **VOICEVOX Engine**: いずれかの方法でインストールして起動します（既定 `http://localhost:50021`）。vox-radio は起動完了まで自動的に待機します（デフォルト最大 60 秒）。
     - [VOICEVOX 公式アプリ](https://voicevox.hiroshiba.jp/)をインストールして起動する
     - Docker で起動する: `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-latest`
 - **ffmpeg**: 音声の結合に使います（`ffprobe` を含む）。
