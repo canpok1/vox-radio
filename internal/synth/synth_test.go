@@ -3,19 +3,29 @@ package synth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
 type mockVoicevoxClient struct {
+	versionFn    func(ctx context.Context) (string, error)
 	audioQueryFn func(ctx context.Context, text string, speaker int) (*AudioQuery, error)
 	synthesisFn  func(ctx context.Context, query *AudioQuery, speaker int) ([]byte, error)
+}
+
+func (m *mockVoicevoxClient) Version(ctx context.Context) (string, error) {
+	if m.versionFn != nil {
+		return m.versionFn(ctx)
+	}
+	return "0.14.7", nil
 }
 
 func (m *mockVoicevoxClient) AudioQuery(ctx context.Context, text string, speaker int) (*AudioQuery, error) {
@@ -639,5 +649,180 @@ func TestSynth_Run_PropagatesCornerID(t *testing.T) {
 	}
 	if meta.Clips[1].CornerID != "tech" {
 		t.Errorf("Clips[1].CornerID: got %q, want tech", meta.Clips[1].CornerID)
+	}
+}
+
+// --- waitForReady tests ---
+
+func TestWaitForReady_SkipsWhenTimeoutZero(t *testing.T) {
+	t.Parallel()
+	client := &mockVoicevoxClient{
+		versionFn: func(_ context.Context) (string, error) {
+			return "", errors.New("not ready")
+		},
+	}
+	err := waitForReady(context.Background(), client, 0, time.Millisecond)
+	if err != nil {
+		t.Errorf("expected nil error when timeout=0, got %v", err)
+	}
+}
+
+func TestWaitForReady_ReturnsImmediatelyWhenReady(t *testing.T) {
+	t.Parallel()
+	client := &mockVoicevoxClient{
+		versionFn: func(_ context.Context) (string, error) {
+			return "0.14.7", nil
+		},
+	}
+	err := waitForReady(context.Background(), client, 5*time.Second, time.Millisecond)
+	if err != nil {
+		t.Errorf("expected nil error when ready, got %v", err)
+	}
+}
+
+func TestWaitForReady_ReturnsErrorOnTimeout(t *testing.T) {
+	t.Parallel()
+	client := &mockVoicevoxClient{
+		versionFn: func(_ context.Context) (string, error) {
+			return "", errors.New("not ready")
+		},
+	}
+	err := waitForReady(context.Background(), client, 50*time.Millisecond, 10*time.Millisecond)
+	if err == nil {
+		t.Error("expected error on timeout, got nil")
+	}
+}
+
+func TestWaitForReady_RetriesUntilReady(t *testing.T) {
+	t.Parallel()
+	attempts := 0
+	client := &mockVoicevoxClient{
+		versionFn: func(_ context.Context) (string, error) {
+			attempts++
+			if attempts < 3 {
+				return "", errors.New("not ready yet")
+			}
+			return "0.14.7", nil
+		},
+	}
+	err := waitForReady(context.Background(), client, 5*time.Second, 10*time.Millisecond)
+	if err != nil {
+		t.Errorf("expected nil error after retries, got %v", err)
+	}
+	if attempts < 3 {
+		t.Errorf("Version should be called at least 3 times, got %d", attempts)
+	}
+}
+
+func TestWaitForReady_RespectsCtxCancel(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	client := &mockVoicevoxClient{
+		versionFn: func(_ context.Context) (string, error) {
+			cancel()
+			return "", errors.New("not ready")
+		},
+	}
+	err := waitForReady(ctx, client, 5*time.Second, 10*time.Millisecond)
+	if err == nil {
+		t.Error("expected error on ctx cancel, got nil")
+	}
+}
+
+// --- Synth.Run readiness tests ---
+
+func TestSynth_Run_CallsVersionForReadiness(t *testing.T) {
+	versionCalled := false
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			versionFn: func(_ context.Context) (string, error) {
+				versionCalled = true
+				return "0.14.7", nil
+			},
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
+				return fakeWAV, nil
+			},
+		},
+		Config:       &config.Config{},
+		getDuration:  func(_ string) (float64, error) { return 1.0, nil },
+		logger:       slog.Default(),
+		pollInterval: time.Millisecond,
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !versionCalled {
+		t.Error("Version should be called during Run for readiness check")
+	}
+}
+
+func TestSynth_Run_SkipsReadinessWhenStartupTimeoutZero(t *testing.T) {
+	zero := 0
+	versionCalled := false
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			versionFn: func(_ context.Context) (string, error) {
+				versionCalled = true
+				return "", errors.New("not ready")
+			},
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{StartupTimeoutSeconds: &zero},
+		},
+		getDuration:  func(_ string) (float64, error) { return 1.0, nil },
+		logger:       slog.Default(),
+		pollInterval: time.Millisecond,
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"},
+		},
+	}
+	if _, err := s.Run(context.Background(), script, t.TempDir()); err != nil {
+		t.Errorf("unexpected error when startup_timeout_seconds=0: %v", err)
+	}
+	if versionCalled {
+		t.Error("Version should NOT be called when startup_timeout_seconds=0")
+	}
+}
+
+func TestSynth_Run_ReturnsErrorWhenReadinessTimeout(t *testing.T) {
+	n := 1
+	s := &Synth{
+		Client: &mockVoicevoxClient{
+			versionFn: func(_ context.Context) (string, error) {
+				return "", errors.New("not ready")
+			},
+			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
+				return &AudioQuery{SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
+				return fakeWAV, nil
+			},
+		},
+		Config: &config.Config{
+			Voicevox: config.VoicevoxConfig{StartupTimeoutSeconds: &n},
+		},
+		getDuration:  func(_ string) (float64, error) { return 1.0, nil },
+		logger:       slog.Default(),
+		pollInterval: time.Millisecond,
+	}
+	_, err := s.Run(context.Background(), model.Script{}, t.TempDir())
+	if err == nil {
+		t.Error("expected error when VOICEVOX startup times out")
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 	"unicode/utf8"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -15,12 +16,15 @@ import (
 	"github.com/canpok1/vox-radio/internal/model"
 )
 
+const pollIntervalDefault = time.Second
+
 // Synth synthesizes speech segments from a script using the VOICEVOX HTTP API
 type Synth struct {
-	Client      VoicevoxClient
-	Config      *config.Config
-	getDuration func(path string) (float64, error)
-	logger      *slog.Logger
+	Client       VoicevoxClient
+	Config       *config.Config
+	getDuration  func(path string) (float64, error)
+	logger       *slog.Logger
+	pollInterval time.Duration
 }
 
 // Option configures a Synth.
@@ -34,10 +38,11 @@ func WithLogger(l *slog.Logger) Option {
 // New creates a new Synth with an HTTP VOICEVOX client.
 func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
 	s := &Synth{
-		Client:      NewClient(engineURL),
-		Config:      cfg,
-		getDuration: mediainfo.Duration,
-		logger:      slog.Default(),
+		Client:       NewClient(engineURL),
+		Config:       cfg,
+		getDuration:  mediainfo.Duration,
+		logger:       slog.Default(),
+		pollInterval: pollIntervalDefault,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -49,6 +54,14 @@ func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
 // It also writes clips.json with metadata including durations.
 func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*model.ClipsMeta, error) {
 	logger := s.logger.With("step", "synth")
+
+	var timeout time.Duration
+	if s.Config != nil {
+		timeout = s.Config.Voicevox.EffectiveStartupTimeout()
+	}
+	if err := waitForReady(ctx, s.Client, timeout, s.pollInterval); err != nil {
+		return nil, fmt.Errorf("wait for voicevox: %w", err)
+	}
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
@@ -154,4 +167,34 @@ func (s *Synth) resolveSpeakerID(charID, style string) int {
 	}
 	id, _ := ch.SpeakerID(style)
 	return id
+}
+
+// waitForReady polls the VOICEVOX /version endpoint until it responds successfully.
+// Returns nil immediately when timeout is zero (disabled) or when the engine is ready.
+// Returns an error if the context is cancelled or the timeout expires.
+func waitForReady(ctx context.Context, client VoicevoxClient, timeout, interval time.Duration) error {
+	if timeout == 0 {
+		return nil
+	}
+	deadline := time.Now().Add(timeout)
+	// Try immediately first (fast path when engine is already running)
+	if _, err := client.Version(ctx); err == nil {
+		return nil
+	}
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+		}
+		if _, err := client.Version(ctx); err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("voicevox did not become ready within %s", timeout)
+		}
+		timer.Reset(interval)
+	}
 }
