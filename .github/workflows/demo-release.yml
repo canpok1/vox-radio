@@ -43,15 +43,13 @@ jobs:
           VOX_RADIO_VOICEVOX_URL: http://127.0.0.1:50021
         run: vox-radio episodegen --spec episode-spec.yaml --out-dir output
 
-      # 安定したダウンロード名にリネームし、manifest からリリースノート（要約＋クレジット）を生成。
-      - name: Prepare release assets
+      # manifest からリリースノート（要約＋クレジット）を生成する。
+      # single_shot 番組のため mp3 は program.id 名（output/vox-radio-demo.mp3）として
+      # 直接生成され、回番号サフィックス（_ep{NNN}）も付かないためリネーム不要。
+      - name: Prepare release notes
         working-directory: demo
         run: |
-          # single_shot 番組のため出力ファイル名に回番号サフィックス（_ep{NNN}）は付かない。
-          # mp3 は manifest 名（<base>_manifest.json）から <base>.mp3 を導出する。
           MANIFEST=$(ls output/*_manifest.json | head -n1)
-          MP3="${MANIFEST%_manifest.json}.mp3"
-          cp "$MP3" output/vox-radio-demo.mp3
           vox-radio render --manifest "$MANIFEST" --template release-notes.tmpl --output output/RELEASE_NOTES.md
 
       # 固定タグ `demo` の prerelease を作り直して上書きする（初回は delete が無いので無視）。
