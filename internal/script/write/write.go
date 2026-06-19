@@ -108,7 +108,7 @@ func (w *LLMWriter) SetPastEpisodes(eps []cache.Entry) {
 }
 
 // SetEpisodeNumber configures the episode number to inject into the script generation prompt.
-// 0 means unknown (will be rendered as "（不明）").
+// A value <= 0 (single-shot mode) omits the "今回の放送回" section from the prompt entirely.
 func (w *LLMWriter) SetEpisodeNumber(n int) {
 	w.episodeNumber = n
 }
@@ -186,9 +186,11 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	castOverviewStr := formatCastInfo(w.casts)
 	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
 
-	episodeNumberStr := "（不明）"
+	// 回番号セクション: 採番された回（episodeNumber > 0）のみ描画する。
+	// single_shot（episodeNumber <= 0）ではセクションごと出力しない（「（不明）」も出さない）。
+	episodeSection := ""
 	if w.episodeNumber > 0 {
-		episodeNumberStr = fmt.Sprintf("%d", w.episodeNumber)
+		episodeSection = fmt.Sprintf("## 今回の放送回\n\n第%d回です。", w.episodeNumber)
 	}
 
 	previousCornersStr := "（なし）"
@@ -220,7 +222,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{preset_info}}", presetInfo,
 		"{{past_episodes}}", pastEpisodesStr,
 		"{{previous_corners}}", previousCornersStr,
-		"{{episode_number}}", episodeNumberStr,
+		"{{episode_section}}", episodeSection,
 		"{{guest_info}}", castOverviewStr,
 		"{{recorded_at}}", recordedAtStr,
 		"{{timezone}}", timezoneStr,

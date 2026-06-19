@@ -125,6 +125,10 @@ type ProgramConfig struct {
 	CharsPerMinute int      `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute
 	AudioQuality   string   `yaml:"audio_quality,omitempty"`    // 音質プリセット: "high" / "standard" / "low"。未設定時は DefaultAudioQuality
 	Credits        []string `yaml:"credits,omitempty"`          // 番組固定クレジット（データソース帰属など）。manifest.credits に統合される
+	// SingleShot は単発番組モード。true で回番号（第N回）の採番・露出を一切行わず、
+	// 出力ファイル名をサフィックス無し（{program.id}.mp3）にし、キャッシュへも保存しない。
+	// 連続性のない単発番組（デモ等）向け。デフォルト false（従来どおり採番・後方互換）。
+	SingleShot bool `yaml:"single_shot,omitempty"`
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultProgramSummaryLength.

@@ -34,7 +34,13 @@ func ClipFileName(n int) string {
 
 // EpisodeBaseName returns the base name shared by an episode's outputs,
 // e.g. "morning-news_ep001".
+// When episodeNumber <= 0 (single-shot mode, see program.single_shot), the
+// number is invalid and the base name is the bare programID (no "_ep{NNN}"
+// suffix), e.g. "vox-radio-demo".
 func EpisodeBaseName(programID string, episodeNumber int) string {
+	if episodeNumber <= 0 {
+		return programID
+	}
 	return fmt.Sprintf("%s_ep%03d", programID, episodeNumber)
 }
 

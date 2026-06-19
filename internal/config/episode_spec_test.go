@@ -94,6 +94,57 @@ func TestEpisodeSpec_ValidateCorners(t *testing.T) {
 	}
 }
 
+func TestEpisodeSpec_ValidateSingleShot(t *testing.T) {
+	every2 := &config.EpisodeCondition{Every: 2}
+	tests := []struct {
+		name    string
+		spec    *config.EpisodeSpec
+		wantErr bool
+	}{
+		{
+			name: "single_shot=false なら condition があってもエラーなし",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{SingleShot: false},
+				Corners: []config.CornerConfig{{ID: "c1", Title: "C1", Condition: every2}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "single_shot=true で condition 無しならエラーなし",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{SingleShot: true},
+				Corners: []config.CornerConfig{{ID: "c1", Title: "C1"}},
+				Casts:   map[string]config.CastConfig{"zundamon": {Type: config.CastTypeRegular, Role: "司会"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "single_shot=true でコーナーに condition があるとエラー",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{SingleShot: true},
+				Corners: []config.CornerConfig{{ID: "c1", Title: "C1", Condition: every2}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "single_shot=true でキャストに condition があるとエラー",
+			spec: &config.EpisodeSpec{
+				Program: config.ProgramConfig{SingleShot: true},
+				Casts:   map[string]config.CastConfig{"guest1": {Type: config.CastTypeGuest, Role: "ゲスト", Condition: every2}},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.spec.ValidateSingleShot()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSingleShot() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestEpisodeSpec_ValidateCast(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -510,9 +510,9 @@ func TestLLMWriter_Write_NoPreviousCorners_ShowsNone(t *testing.T) {
 	}
 }
 
-func TestLLMWriter_SetEpisodeNumber_InjectsNumberIntoPrompt(t *testing.T) {
+func TestLLMWriter_SetEpisodeNumber_InjectsSectionIntoPrompt(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "episode={{episode_number}}", 0, nil)
+	w := write.NewLLMWriter(mc, "section={{episode_section}}", 0, nil)
 	w.SetEpisodeNumber(5)
 
 	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
@@ -524,15 +524,20 @@ func TestLLMWriter_SetEpisodeNumber_InjectsNumberIntoPrompt(t *testing.T) {
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if !strings.Contains(prompt, "5") {
-		t.Errorf("prompt should contain episode number 5, got: %s", prompt)
+	if !strings.Contains(prompt, "第5回") {
+		t.Errorf("prompt should contain 第5回, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "今回の放送回") {
+		t.Errorf("prompt should contain the 今回の放送回 section, got: %s", prompt)
 	}
 }
 
-func TestLLMWriter_SetEpisodeNumber_Zero_InjectsUnknown(t *testing.T) {
+// single_shot（episodeNumber <= 0）では「今回の放送回」セクションごと出力しない。
+// 「（不明）」も出さない。
+func TestLLMWriter_SetEpisodeNumber_Zero_OmitsSection(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "episode={{episode_number}}", 0, nil)
-	// default is 0 (no SetEpisodeNumber call)
+	w := write.NewLLMWriter(mc, "section=[{{episode_section}}]", 0, nil)
+	// default is 0 (no SetEpisodeNumber call) = single-shot
 
 	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
 	if err != nil {
@@ -543,8 +548,14 @@ func TestLLMWriter_SetEpisodeNumber_Zero_InjectsUnknown(t *testing.T) {
 		t.Fatal("LLM was not called")
 	}
 	prompt := mc.captured[0].Messages[0].Content
-	if !strings.Contains(prompt, "（不明）") {
-		t.Errorf("prompt should contain （不明） when episode number is 0, got: %s", prompt)
+	if strings.Contains(prompt, "今回の放送回") {
+		t.Errorf("prompt should omit the 今回の放送回 section when episode number is 0, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "（不明）") {
+		t.Errorf("prompt should not contain （不明） when episode number is 0, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, "section=[]") {
+		t.Errorf("episode_section should be empty when episode number is 0, got: %s", prompt)
 	}
 }
 
