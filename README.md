@@ -79,6 +79,8 @@ vox-radio episodegen --spec episode-spec.yaml
    curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
    ```
 
+   ffmpeg は別途導入が必要です（下記「[依存ソフトの導入](#依存ソフトの導入)」参照）。
+
 3. **バイナリ手動ダウンロード（全OS・Windows 含む）**
 
    [GitHub Releases](https://github.com/canpok1/vox-radio/releases/latest) から `tar.gz` / `zip` を取得して PATH に配置します。ffmpeg も別途導入が必要です。
