@@ -96,3 +96,4 @@
 | [0088](0088-voicevox-startup-readiness-polling.md) | VOICEVOX 起動待機ポーリングを vox-radio 本体に組み込む | 採用 | 2026-06-19 |
 | [0089](0089-distribute-via-homebrew-cask-with-ffmpeg-dependency.md) | vox-radio を Homebrew Cask で配布し ffmpeg を依存に含める | 採用 | 2026-06-19 |
 | [0090](0090-keep-mp3-only-output-format.md) | 出力音声形式を mp3 固定とし他形式（AAC/Opus 等）対応を見送る | 採用 | 2026-06-21 |
+| [0091](0091-add-links-and-text-source-types.md) | コーナーの source に links / text タイプを追加する | 採用 | 2026-06-21 |
