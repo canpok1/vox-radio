@@ -1,0 +1,27 @@
+program:
+  id: "test-program-links-text"
+
+casts:
+  zundamon:
+    type: regular
+    role: "MC"
+
+corners:
+  - id: "ref"
+    title: "参考コーナー"
+    content: "参考情報の紹介"
+    cast:
+      zundamon: "司会"
+    length_sec: 30
+    source:
+      - type: links
+        path: "links/urls.txt"
+      - type: links
+        path: "/abs/links.txt"
+      - type: text
+        path: "texts/ref.txt"
+      - type: text
+        path: "/abs/ref.txt"
+        title: "参考資料"
+
+assets_files: []

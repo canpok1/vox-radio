@@ -224,18 +224,60 @@ func validateDefaultAudioRef(parent, field string, ref *AudioRef, assets *Assets
 	return validateAudioRef(parent, field, ref, assets)
 }
 
-// ValidateSource は corners[].source の type/url/max_items を検証する。
+// ValidateSource は corners[].source の type/url/path/max_items/title を検証する。
 func (p *EpisodeSpec) ValidateSource() error {
 	for i, c := range p.Corners {
 		for j, s := range c.Source {
-			if s.Type != SourceTypeFeed && s.Type != SourceTypeWeb {
-				return fmt.Errorf("corners[%d].source[%d].type: must be %q or %q, got %q", i, j, SourceTypeFeed, SourceTypeWeb, s.Type)
-			}
-			if s.URL == "" {
-				return fmt.Errorf("corners[%d].source[%d].url: required", i, j)
-			}
-			if s.Type == SourceTypeWeb && s.MaxItems != 0 {
-				return fmt.Errorf("corners[%d].source[%d].max_items: not allowed for type %q", i, j, SourceTypeWeb)
+			pfx := fmt.Sprintf("corners[%d].source[%d]", i, j)
+			switch s.Type {
+			case SourceTypeFeed:
+				if s.URL == "" {
+					return fmt.Errorf("%s.url: required", pfx)
+				}
+				if s.Path != "" {
+					return fmt.Errorf("%s.path: not allowed for type %q", pfx, s.Type)
+				}
+				if s.Title != "" {
+					return fmt.Errorf("%s.title: not allowed for type %q", pfx, s.Type)
+				}
+			case SourceTypeWeb:
+				if s.URL == "" {
+					return fmt.Errorf("%s.url: required", pfx)
+				}
+				if s.MaxItems != 0 {
+					return fmt.Errorf("%s.max_items: not allowed for type %q", pfx, s.Type)
+				}
+				if s.Path != "" {
+					return fmt.Errorf("%s.path: not allowed for type %q", pfx, s.Type)
+				}
+				if s.Title != "" {
+					return fmt.Errorf("%s.title: not allowed for type %q", pfx, s.Type)
+				}
+			case SourceTypeLinks:
+				if s.Path == "" {
+					return fmt.Errorf("%s.path: required", pfx)
+				}
+				if s.URL != "" {
+					return fmt.Errorf("%s.url: not allowed for type %q", pfx, s.Type)
+				}
+				if s.MaxItems != 0 {
+					return fmt.Errorf("%s.max_items: not allowed for type %q", pfx, s.Type)
+				}
+				if s.Title != "" {
+					return fmt.Errorf("%s.title: not allowed for type %q", pfx, s.Type)
+				}
+			case SourceTypeText:
+				if s.Path == "" {
+					return fmt.Errorf("%s.path: required", pfx)
+				}
+				if s.URL != "" {
+					return fmt.Errorf("%s.url: not allowed for type %q", pfx, s.Type)
+				}
+				if s.MaxItems != 0 {
+					return fmt.Errorf("%s.max_items: not allowed for type %q", pfx, s.Type)
+				}
+			default:
+				return fmt.Errorf("%s.type: must be %q, %q, %q, or %q, got %q", pfx, SourceTypeFeed, SourceTypeWeb, SourceTypeLinks, SourceTypeText, s.Type)
 			}
 		}
 	}

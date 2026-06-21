@@ -362,6 +362,177 @@ func TestEpisodeSpec_ValidateSource(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		// links タイプ
+		{
+			name: "type=links, path あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks, Path: "/data/links.txt"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=links, path なし はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=links, url あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks, Path: "/data/links.txt", URL: "https://example.com"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=links, max_items あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks, Path: "/data/links.txt", MaxItems: 3},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=links, title あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks, Path: "/data/links.txt", Title: "見出し"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		// text タイプ
+		{
+			name: "type=text, path あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText, Path: "/data/ref.txt"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=text, path あり title あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText, Path: "/data/ref.txt", Title: "参考情報"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=text, path なし はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=text, url あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText, Path: "/data/ref.txt", URL: "https://example.com"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=text, max_items あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText, Path: "/data/ref.txt", MaxItems: 3},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		// feed・web に path / title は不可
+		{
+			name: "type=feed, path あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: "https://example.com/feed.xml", Path: "/tmp/feed.txt"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=feed, title あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: "https://example.com/feed.xml", Title: "見出し"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=web, path あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeWeb, URL: "https://example.com/article", Path: "/tmp/ref.txt"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=web, title あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeWeb, URL: "https://example.com/article", Title: "見出し"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/fileio"
@@ -70,6 +71,13 @@ func loadEpisodeSpecWith(path string, strict bool) (*EpisodeSpec, error) {
 				return nil, err
 			}
 			corner.Source[j].URL = resolved
+			if corner.Source[j].Path != "" {
+				absPath, err := filepath.Abs(resolveFile(specDir, corner.Source[j].Path))
+				if err != nil {
+					return nil, fmt.Errorf("resolve path %q: %w", corner.Source[j].Path, err)
+				}
+				corner.Source[j].Path = absPath
+			}
 		}
 	}
 	resolveCornerDefaults(p)

@@ -36,19 +36,19 @@ func (c *Gatherer) fetchFeed(ctx context.Context, url string, maxItems int, excl
 			body = item.Description
 		}
 
-		// GUID が非空なら DedupKey に bodyText 不要 → 除外チェック後まで HTML パースを遅延
+		// GUID または link が非空なら DedupKey に bodyText 不要 → 除外チェック後まで HTML パースを遅延
 		var bodyText string
-		if item.GUID == "" {
+		if item.GUID == "" && item.Link == "" {
 			bodyText = extractTextFromHTML(body)
 		}
-		key := FeedDedupKey(url, item.GUID, item.Title, bodyText)
+		key := FeedDedupKey(url, item.GUID, item.Link, item.Title, bodyText)
 
 		if _, skip := excluded[key]; skip {
 			continue
 		}
 
-		// GUID 非空で遅延した場合はここで HTML パース
-		if item.GUID != "" {
+		// GUID/link 非空で遅延した場合はここで HTML パース
+		if item.GUID != "" || item.Link != "" {
 			bodyText = extractTextFromHTML(body)
 		}
 		articles = append(articles, model.Article{

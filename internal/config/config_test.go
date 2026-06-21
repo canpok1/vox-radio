@@ -2347,3 +2347,66 @@ func TestLoadEpisodeSpec_OldSourceFormatError(t *testing.T) {
 		t.Error("expected error for old source format (feeds:/articles: fields), got nil")
 	}
 }
+
+func TestLoadEpisodeSpec_LinksTextPathResolution(t *testing.T) {
+	spec, err := config.LoadEpisodeSpec("testdata/episode_spec_links_text.yaml")
+	if err != nil {
+		t.Fatalf("LoadEpisodeSpec failed: %v", err)
+	}
+
+	var sourceCorner *config.CornerConfig
+	for i := range spec.Corners {
+		if len(spec.Corners[i].Source) > 0 {
+			sourceCorner = &spec.Corners[i]
+			break
+		}
+	}
+	if sourceCorner == nil {
+		t.Fatal("no corner with source found")
+	}
+
+	absTestdata, err := filepath.Abs("testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var linksSources, textSources []config.SourceEntry
+	for _, s := range sourceCorner.Source {
+		switch s.Type {
+		case config.SourceTypeLinks:
+			linksSources = append(linksSources, s)
+		case config.SourceTypeText:
+			textSources = append(textSources, s)
+		}
+	}
+
+	if len(linksSources) < 2 {
+		t.Fatalf("expected 2 links sources, got %d", len(linksSources))
+	}
+	// 相対パスは specDir 基準で絶対パスに解決される
+	wantRelLinks := filepath.Join(absTestdata, "links/urls.txt")
+	if linksSources[0].Path != wantRelLinks {
+		t.Errorf("links[0].Path (relative): got %q, want %q", linksSources[0].Path, wantRelLinks)
+	}
+	// 絶対パスはそのまま
+	if linksSources[1].Path != "/abs/links.txt" {
+		t.Errorf("links[1].Path (absolute): got %q, want %q", linksSources[1].Path, "/abs/links.txt")
+	}
+
+	if len(textSources) < 2 {
+		t.Fatalf("expected 2 text sources, got %d", len(textSources))
+	}
+	// 相対パスは specDir 基準で絶対パスに解決される
+	wantRelText := filepath.Join(absTestdata, "texts/ref.txt")
+	if textSources[0].Path != wantRelText {
+		t.Errorf("text[0].Path (relative): got %q, want %q", textSources[0].Path, wantRelText)
+	}
+	// 絶対パスはそのまま
+	if textSources[1].Path != "/abs/ref.txt" {
+		t.Errorf("text[1].Path (absolute): got %q, want %q", textSources[1].Path, "/abs/ref.txt")
+	}
+	// title フィールドが保持される
+	if textSources[1].Title != "参考資料" {
+		t.Errorf("text[1].Title: got %q, want %q", textSources[1].Title, "参考資料")
+	}
+}

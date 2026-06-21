@@ -32,13 +32,19 @@ const (
 	SourceTypeFeed = "feed"
 	// SourceTypeWeb はWebページURLのソース種別。
 	SourceTypeWeb = "web"
+	// SourceTypeLinks はURL一覧テキストファイルのソース種別。各行URLを個別記事として取得する。
+	SourceTypeLinks = "links"
+	// SourceTypeText は参考テキスト本文ファイルのソース種別。内容をそのままBodyに格納する。
+	SourceTypeText = "text"
 )
 
-// SourceEntry は1件のソース設定。type フィールドで feed / web を判別する。
+// SourceEntry は1件のソース設定。type フィールドで feed / web / links / text を判別する。
 type SourceEntry struct {
 	Type     string `yaml:"type"`
-	URL      string `yaml:"url"`
+	URL      string `yaml:"url,omitempty"`
 	MaxItems int    `yaml:"max_items,omitempty"`
+	Path     string `yaml:"path,omitempty"`
+	Title    string `yaml:"title,omitempty"`
 }
 
 // SourceConfig はコーナーのソース設定（SourceEntry の配列）。

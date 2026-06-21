@@ -72,26 +72,32 @@ func (c *Gatherer) Run(ctx context.Context, cfg config.SourceConfig, excluded ma
 			if err != nil {
 				return nil, fmt.Errorf("fetch feed %s: %w", src.URL, err)
 			}
-			for i := range items {
-				flagged, err := c.applySanitize(&items[i])
-				if err != nil {
-					return nil, err
-				}
-				if !flagged {
-					articles = append(articles, items[i])
-				}
+			if articles, err = c.appendSanitized(articles, items); err != nil {
+				return nil, err
 			}
 		case config.SourceTypeWeb:
 			article, err := c.fetchArticle(ctx, src.URL)
 			if err != nil {
 				return nil, fmt.Errorf("fetch article %s: %w", src.URL, err)
 			}
-			flagged, err := c.applySanitize(article)
-			if err != nil {
+			if articles, err = c.appendSanitized(articles, []model.Article{*article}); err != nil {
 				return nil, err
 			}
-			if !flagged {
-				articles = append(articles, *article)
+		case config.SourceTypeLinks:
+			items, err := c.fetchLinks(ctx, src.Path)
+			if err != nil {
+				return nil, fmt.Errorf("fetch links %s: %w", src.Path, err)
+			}
+			if articles, err = c.appendSanitized(articles, items); err != nil {
+				return nil, err
+			}
+		case config.SourceTypeText:
+			article, err := fetchText(src.Path, src.Title)
+			if err != nil {
+				return nil, fmt.Errorf("fetch text %s: %w", src.Path, err)
+			}
+			if articles, err = c.appendSanitized(articles, []model.Article{*article}); err != nil {
+				return nil, err
 			}
 		default:
 			return nil, fmt.Errorf("unknown source type %q", src.Type)
@@ -160,4 +166,18 @@ func (c *Gatherer) applySanitize(a *model.Article) (bool, error) {
 		c.logger.Warn("prompt injection pattern detected; article excluded", "url", a.URL)
 	}
 	return flagged, nil
+}
+
+// appendSanitized sanitizes each item and appends non-flagged ones to articles.
+func (c *Gatherer) appendSanitized(articles []model.Article, items []model.Article) ([]model.Article, error) {
+	for i := range items {
+		flagged, err := c.applySanitize(&items[i])
+		if err != nil {
+			return nil, err
+		}
+		if !flagged {
+			articles = append(articles, items[i])
+		}
+	}
+	return articles, nil
 }
