@@ -2,7 +2,8 @@
 
 - ステータス: 採用
 - 日付: 2026-06-21
-- 関連: [0087-corner-source-as-typed-array.md](0087-corner-source-as-typed-array.md)（type 付き配列の基盤）, [0057-feed-prompt-injection-defense.md](0057-feed-prompt-injection-defense.md)（収集テキストの sanitize）, [0058-decouple-article-dedup-key-from-url.md](0058-decouple-article-dedup-key-from-url.md)（内容ベース DedupKey）
+- 関連: [0087-corner-source-as-typed-array.md](0087-corner-source-as-typed-array.md)（type 付き配列の基盤）, [0057-feed-prompt-injection-defense.md](0057-feed-prompt-injection-defense.md)（収集テキストの sanitize）
+- 一部改訂: [0058-decouple-article-dedup-key-from-url.md](0058-decouple-article-dedup-key-from-url.md)（DedupKey の基盤。本 ADR で feed の material 順を見直す）
 
 ## コンテキスト
 
@@ -57,11 +58,22 @@ source:
 | `links` | `path` | `url` `max_items` `title` |
 | `text` | `path` | `url` `max_items` |
 
+### `feed` の DedupKey material 順の見直し（ADR-0058 の一部改訂）
+
+`links` を「namespace=コンテナ / material=アイテム URL」で同定するのに合わせ、同じ構造を持つ `feed`（namespace=フィード URL / material=アイテム識別子）の material 順を **`GUID → item.Link（URL）→ 正規化(タイトル＋本文)`** に変更する（従来は `GUID → 正規化(タイトル＋本文)`）。
+
+- 識別子を「安定度の高い順：GUID ＞ URL ＞ 内容」に統一し、feed と links の同定思想を揃える。
+- ADR-0058 が feed のフォールバックを内容ベースにしたのは**リンク無しフィード対策**であり、「内容更新で再採用したい」という content-hash の動機は `web`（旧 `articles[]`・天気予報等）に対するものだった。feed に URL フォールバックを挟んでも `web` の内容ハッシュ判定は変わらないため、ADR-0058 の核心は維持される。
+- `item.Link` が空のフィードでは従来どおり `正規化(タイトル＋本文)` にフォールバックする（リンク無しフィードは引き続き動作）。
+- `web` は変更しない（namespace=ページ URL / material=内容）。同一 URL で内容が更新されるページの再採用は引き続き `web` が担う。
+
 ## 結果
 
 - 参考ページの URL 一覧や任意の参考テキストを、最小の記述でコーナー素材に取り込めるようになり、番組素材の幅が広がる。
 - `feed` / `web`（外部 URL を `url` で指定）と `links` / `text`（ローカルファイルを `path` で指定）でフィールドが分かれ、種別ごとの意味が明確になる。
 - 既存の sanitize・DedupKey の仕組みを再利用するため、防御・重複判定の一貫性は保たれる。
+- feed の material 順見直しにより、GUID 無しフィードでもタイトル/本文の微変動（ドリフト）で記事が再採用される問題が減り、URL 単位で安定して過去回除外できる。
+- ただし「GUID 無し・URL 有り」の既存記事はキャッシュキーが変わるため、**移行直後の1回だけ再採用され得る**（ADR-0058 自身も同種の移行 blip を許容済み）。また同一 URL の feed アイテムは内容が更新されても再採用されなくなる（その用途が必要なら `web` を使う）。
 
 ## 検討した代替案
 
