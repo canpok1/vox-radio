@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -281,9 +282,9 @@ func TestGatherer_Run_ExcludesURLsAndFillsFromLater(t *testing.T) {
 	cfg := config.SourceConfig{
 		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 2},
 	}
-	// article/1 has no GUID, so material = normalizeContent(title, body)
+	// article/1 has no GUID; link="https://example.com/article/1" is used as material
 	excluded := map[string]struct{}{
-		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"): {},
+		gather.FeedDedupKey(feedURL, "", "https://example.com/article/1", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"): {},
 	}
 
 	c := gather.New(server.Client())
@@ -320,8 +321,8 @@ func TestGatherer_Run_WarnWhenInsufficientNonExcludedArticles(t *testing.T) {
 		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 3},
 	}
 	excluded := map[string]struct{}{
-		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"):  {},
-		gather.FeedDedupKey(feedURL, "", "オープンソース活動の活発化", "オープンソースプロジェクトへの参加者が増加している。"): {},
+		gather.FeedDedupKey(feedURL, "", "https://example.com/article/1", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"):  {},
+		gather.FeedDedupKey(feedURL, "", "https://example.com/article/2", "オープンソース活動の活発化", "オープンソースプロジェクトへの参加者が増加している。"): {},
 	}
 
 	c := gather.New(server.Client(), gather.WithLogger(logger))
@@ -362,7 +363,7 @@ func TestGatherer_Run_UnlimitedWithExcludedDedupKeys(t *testing.T) {
 		{Type: config.SourceTypeFeed, URL: feedURL, MaxItems: 0},
 	}
 	excluded := map[string]struct{}{
-		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"): {},
+		gather.FeedDedupKey(feedURL, "", "https://example.com/article/1", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"): {},
 	}
 
 	c := gather.New(server.Client())
@@ -480,7 +481,7 @@ func TestGatherer_RunAll_ExcludesDedupKeysViaFeed(t *testing.T) {
 		},
 	}
 	excludedDedupKeys := []string{
-		gather.FeedDedupKey(feedURL, "", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"),
+		gather.FeedDedupKey(feedURL, "", "https://example.com/article/1", "AIチップの最新動向", "新型AIチップが発表された。従来比2倍の性能を実現する。"),
 	}
 
 	c := gather.New(server.Client())
@@ -967,5 +968,199 @@ func TestNew_DefaultClient_HTTPS_StillWorks(t *testing.T) {
 	}
 	if len(result) == 0 {
 		t.Error("expected at least 1 article from http feed")
+	}
+}
+
+// --- links タイプ ---
+
+func writeTempFile(t *testing.T, content string) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fmt.Fprint(f, content); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	return f.Name()
+}
+
+func TestGatherer_Run_Links_FetchesEachURL(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	linksContent := server.URL + "/article1\n" + server.URL + "/article2\n"
+	linksFile := writeTempFile(t, linksContent)
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("articles count: got %d, want 2", len(result))
+	}
+}
+
+func TestGatherer_Run_Links_SkipsEmptyAndCommentLines(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	linksContent := "# コメント行\n\n" + server.URL + "/article\n  \n# 別コメント\n"
+	linksFile := writeTempFile(t, linksContent)
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("articles count: got %d, want 1 (empty/comment lines skipped)", len(result))
+	}
+}
+
+func TestGatherer_Run_Links_DedupKeyStableByFilePathAndURL(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	articleURL := server.URL + "/article"
+	linksFile := writeTempFile(t, articleURL+"\n")
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+
+	expectedKey := gather.LinksDedupKey(linksFile, articleURL)
+	if result[0].DedupKey != expectedKey {
+		t.Errorf("DedupKey: got %q, want %q", result[0].DedupKey, expectedKey)
+	}
+}
+
+func TestGatherer_Run_Links_ErrorOnMissingFile(t *testing.T) {
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: "/nonexistent/links.txt"},
+	}
+
+	c := gather.New(nil)
+	_, err := c.Run(context.Background(), cfg, nil)
+	if err == nil {
+		t.Error("expected error for missing links file, got nil")
+	}
+}
+
+// --- text タイプ ---
+
+func TestGatherer_Run_Text_StoresBodyFromFile(t *testing.T) {
+	content := "参考情報のテキスト本文です。\n複数行にわたります。"
+	textFile := writeTempFile(t, content)
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeText, Path: textFile, Title: "参考資料"},
+	}
+
+	c := gather.New(nil)
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("articles count: got %d, want 1", len(result))
+	}
+	art := result[0]
+	if art.Body != content {
+		t.Errorf("Body: got %q, want %q", art.Body, content)
+	}
+	if art.Title != "参考資料" {
+		t.Errorf("Title: got %q, want %q", art.Title, "参考資料")
+	}
+	if art.URL != "" {
+		t.Errorf("URL must be empty for text type, got %q", art.URL)
+	}
+}
+
+func TestGatherer_Run_Text_TitleFallsBackToFilename(t *testing.T) {
+	textFile := writeTempFile(t, "本文")
+	// ファイル名から拡張子を除いたものがタイトルになる
+	base := strings.TrimSuffix(filepath.Base(textFile), filepath.Ext(textFile))
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeText, Path: textFile},
+	}
+
+	c := gather.New(nil)
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Title != base {
+		t.Errorf("Title (fallback): got %q, want %q", result[0].Title, base)
+	}
+}
+
+func TestGatherer_Run_Text_DedupKeyContentBased(t *testing.T) {
+	content := "参考情報テキスト"
+	textFile := writeTempFile(t, content)
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeText, Path: textFile, Title: "タイトル"},
+	}
+
+	c := gather.New(nil)
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+
+	expectedKey := gather.TextDedupKey(textFile, "タイトル", content)
+	if result[0].DedupKey != expectedKey {
+		t.Errorf("DedupKey: got %q, want %q", result[0].DedupKey, expectedKey)
+	}
+}
+
+func TestGatherer_Run_Text_ErrorOnMissingFile(t *testing.T) {
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeText, Path: "/nonexistent/ref.txt"},
+	}
+
+	c := gather.New(nil)
+	_, err := c.Run(context.Background(), cfg, nil)
+	if err == nil {
+		t.Error("expected error for missing text file, got nil")
 	}
 }

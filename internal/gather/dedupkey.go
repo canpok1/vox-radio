@@ -19,14 +19,29 @@ func dedupKey(namespace, material string) string {
 }
 
 // FeedDedupKey computes the DedupKey for a feed item.
-// Use guid as material when non-empty; fall back to NormalizeContent(title, body).
+// material priority: guid → link → normalizeContent(title, body).
 // feedURL is the namespace (feed's source URL).
-func FeedDedupKey(feedURL, guid, title, body string) string {
+func FeedDedupKey(feedURL, guid, link, title, body string) string {
 	material := guid
+	if material == "" {
+		material = link
+	}
 	if material == "" {
 		material = normalizeContent(title, body)
 	}
 	return dedupKey(feedURL, material)
+}
+
+// LinksDedupKey computes the DedupKey for an entry in a links-type source file.
+// namespace=filePath, material=lineURL (stable regardless of page content).
+func LinksDedupKey(filePath, lineURL string) string {
+	return dedupKey(filePath, lineURL)
+}
+
+// TextDedupKey computes the DedupKey for a text-type source file.
+// namespace=filePath, material=normalizeContent(title, body) (content-based; changes when content changes).
+func TextDedupKey(filePath, title, body string) string {
+	return dedupKey(filePath, normalizeContent(title, body))
 }
 
 // HTMLDedupKey computes the DedupKey for an HTML article page.
