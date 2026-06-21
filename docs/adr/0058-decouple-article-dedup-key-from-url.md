@@ -2,6 +2,7 @@
 
 - ステータス: 採用
 - 日付: 2026-06-12
+- 一部改訂: [0091-add-links-and-text-source-types.md](0091-add-links-and-text-source-types.md)（feed の material 順を GUID→URL→内容に変更）
 
 ## コンテキスト
 
