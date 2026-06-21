@@ -117,6 +117,11 @@ corners:
         max_items: 5
       # - type: web
       #   url: https://example.com/articles/1
+      # - type: links
+      #   path: refs/urls.txt        # URL一覧ファイル（1行1URL）
+      # - type: text
+      #   path: refs/background.txt  # 参考テキストファイル
+      #   title: "背景知識"           # 省略するとファイル名を使用
     # 放送する回の条件（省略すると毎回放送される固定コーナー）。
     # condition を書くと、回番号が合ったときだけ放送されます。
     # condition:

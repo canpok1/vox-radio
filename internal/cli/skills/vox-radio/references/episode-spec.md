@@ -121,13 +121,15 @@ corners:
 
 ### `corners[].source[]` エントリのフィールド
 
-`source` は type で種別を区別する配列です。各エントリに `type` で `feed` または `web` を指定します。
+`source` は type で種別を区別する配列です。`type` は `feed` / `web` / `links` / `text` の4種類です。
 
-| フィールド | 型 | 必須/任意 | 説明 |
-|---|---|---|---|
-| `type` | string | 必須 | `"feed"`（RSS/Atom フィード）または `"web"`（個別記事） |
-| `url` | string | 必須 | フィードまたは記事の URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
-| `max_items` | int | 任意 | `type: feed` のみ。過去使用URLを除外したうえで確保する最大記事数。デフォルト: 0（実質無制限）。除外で減った分はフィード内の後続記事で補う。`type: web` には指定不可。 |
+| フィールド | 型 | 対象タイプ | 必須/任意 | 説明 |
+|---|---|---|---|---|
+| `type` | string | 全 | 必須 | `"feed"` / `"web"` / `"links"` / `"text"` |
+| `url` | string | feed, web | 必須 | フィードまたは記事の URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
+| `path` | string | links, text | 必須 | ローカルファイルのパス。spec ファイルのディレクトリ基準で相対解決（後述） |
+| `title` | string | text | 任意 | text タイプの記事タイトル。省略するとファイル名（拡張子除く）を使用 |
+| `max_items` | int | feed | 任意 | 過去使用 URL を除外したうえで確保する最大記事数。デフォルト: 0（無制限）。除外で減った分は後続記事で補う |
 
 ```yaml
 source:
@@ -136,7 +138,27 @@ source:
     max_items: 5
   - type: web
     url: https://example.com/articles/1
+  - type: links
+    path: refs/urls.txt          # URL 一覧ファイル（1行1URL）
+  - type: text
+    path: refs/background.txt   # 任意テキストファイル
+    title: "背景知識"
 ```
+
+#### `links` タイプ（URL 一覧ファイル）
+
+1行1URLのテキストファイルを読み込み、各行のURLを個別記事として取得します。
+
+- 空行と `#` で始まる行はスキップ
+- 各行 URL を `web` と同様に HTML 取得（`http(s)://` / `file://` 可）
+- 重複判定キー（DedupKey）は「ファイルパス + URL」の組み合わせで固定（ページ内容が変わっても同一URLは同一キー）
+
+#### `text` タイプ（参考テキスト）
+
+テキストファイルの内容をそのまま番組素材として使います。HTML パースは行わず、ファイル内容がそのまま LLM に渡ります。
+
+- `title` 省略時はファイル名（拡張子除く）をタイトルとして使用
+- 重複判定キーは「ファイルパス + タイトル + 本文」の組み合わせ（内容を変更すると新規素材として再採用される）
 
 ### `file://` プロトコルによるローカルフィード・記事の読み込み
 
@@ -163,6 +185,21 @@ source:
 ```
 
 > **注意**: ファイルが存在しない場合は `episodegen gather` 実行時にエラーになります。
+
+### `links` / `text` の `path` フィールド
+
+`path` は spec ファイルのディレクトリを基準に相対解決されます（絶対パスはそのまま使用）。
+
+```yaml
+# /home/user/myshow/episode-spec.yaml に記述した場合、
+# /home/user/myshow/refs/urls.txt を読み込む
+source:
+  - type: links
+    path: "refs/urls.txt"
+  - type: text
+    path: "refs/background.txt"
+    title: "背景知識"
+```
 
 ## `casts` セクション（出演者名簿）
 
