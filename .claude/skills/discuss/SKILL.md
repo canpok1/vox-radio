@@ -13,7 +13,8 @@ allowed-tools: Bash, Read, Grep, Glob, Agent, AskUserQuestion, Skill, mcp__todoi
 
 ## タスクの作成・更新について
 
-- タスクの登録先・使用ツールは `.claude/rules/task-management.md` に従う（このスキルは「タスクを作成／更新する」という抽象で記述し、具体は当該ルールに集約する）。
+- タスクの登録先・使用ツールはプロジェクトのタスク管理ルール（`.claude/rules/task-management.md` 等）に従う。
+- タスク管理ルールが存在しない場合は、ステップ4〜5のタスク作成・更新をスキップし、相談のみ成立させる（結論と根拠をユーザーに要約して終了する）。
 
 ## 手順
 
@@ -49,7 +50,7 @@ allowed-tools: Bash, Read, Grep, Glob, Agent, AskUserQuestion, Skill, mcp__todoi
 ### ステップ5: タスク本文の作成 / 修正（新規・既存いずれの場合も）
 
 - **前提（ゲート）**: ステップ3で不明点がすべて解消され、方針が確定していること。未決事項が残っている場合はステップ3に戻り、作成しない。
-- 作成・修正は `.claude/rules/task-management.md` のツール・登録先に従う（新規は `mcp__todoist__add-tasks`、既存修正は `mcp__todoist__update-tasks`）。
+- 作成・修正はプロジェクトのタスク管理ルールのツール・登録先に従う（タスク管理ルールが存在しない場合はこのステップをスキップ）。
 - `content`（タスク名）は何をするかを簡潔・具体的に書く。
 - `description`（タスク本文、Markdown）は次の構成で書く: `背景・目的` / `現状分析（コードで確認済み）` / `関連（既存タスク・ADR）` / `決定事項（判断不要）` / `仕様（データモデル・配線表など）` / `受け入れ条件（チェックリスト）` / `作業ステップ`。
 - 受け入れ条件は変更が必要なファイル・関数にマッピングし、シグネチャ変更の波及を `grep -rn` で確定する（`.claude/rules/go-file.md`）。

@@ -41,9 +41,6 @@ go.work.sum
 # 一時ファイル
 .tmp/
 
-# vox-actor
-.vox-actor/
-
 # vox-radio キャッシュ
 .vox-radio/
 
