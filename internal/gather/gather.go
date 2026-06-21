@@ -93,6 +93,32 @@ func (c *Gatherer) Run(ctx context.Context, cfg config.SourceConfig, excluded ma
 			if !flagged {
 				articles = append(articles, *article)
 			}
+		case config.SourceTypeLinks:
+			items, err := c.fetchLinks(ctx, src.Path)
+			if err != nil {
+				return nil, fmt.Errorf("fetch links %s: %w", src.Path, err)
+			}
+			for i := range items {
+				flagged, err := c.applySanitize(&items[i])
+				if err != nil {
+					return nil, err
+				}
+				if !flagged {
+					articles = append(articles, items[i])
+				}
+			}
+		case config.SourceTypeText:
+			article, err := fetchText(src.Path, src.Title)
+			if err != nil {
+				return nil, fmt.Errorf("fetch text %s: %w", src.Path, err)
+			}
+			flagged, err := c.applySanitize(article)
+			if err != nil {
+				return nil, err
+			}
+			if !flagged {
+				articles = append(articles, *article)
+			}
 		default:
 			return nil, fmt.Errorf("unknown source type %q", src.Type)
 		}
