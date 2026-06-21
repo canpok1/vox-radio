@@ -14,7 +14,7 @@ paths:
 
 - 利用者向け（インストール・設定・使い方）→ ルート `README.md`
 - 開発者向け（環境構築・ビルド・テスト・評価・アーキテクチャ）→ `docs/development/`
-- コマンド説明 → cobra `Short`/`Long` を正として `docs/cli/` に自動生成（README へ手書きしない。詳細は `.claude/rules/cli-usage.md`）
+- コマンド説明 → cobra `Short`/`Long` を正として `docs/cli/` に自動生成（README へ手書きしない。詳細は CLIドキュメント反映ルールを参照）
 - 設定フィールド定義 → `internal/cli/skills/vox-radio/references/`（`install --skills` で配布）
 
 ## 主なチェック観点

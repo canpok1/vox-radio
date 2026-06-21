@@ -8,7 +8,7 @@ tools: Bash, Glob, Grep, Read
 
 `README.md` や `docs/installation.md` など**利用者向け**ドキュメントを読み、下記 A〜G の観点で具体的に指摘する。**修正は行わない。** 開発者向けドキュメント（`docs/development/` 等）はこのレビューの対象外。
 
-`cli-doc-checker` / `doc-structure-checker` が機械的な構造チェックを担うのに対し、本エージェントは**読み手の体験を判断ベースで評価**する。
+機械的な構造チェックを担う他の手段に対し、本エージェントは**読み手の体験を判断ベースで評価**する。
 
 ## レビュー手順
 

@@ -1,7 +1,4 @@
 {
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
   "permissions": {
     "allow": [
       "Bash(cat:*)",
@@ -75,24 +72,5 @@
         ]
       }
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "./.claude/statusline.sh"
-  },
-  "enabledPlugins": {
-    "commit-commands@claude-plugins-official": true,
-    "base-tools@canpok1-plugins": true,
-    "skill-creator@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true
-  },
-  "extraKnownMarketplaces": {
-    "canpok1-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "canpok1/claude-code-plugins"
-      },
-      "autoUpdate": true
-    }
   }
 }
