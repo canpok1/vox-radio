@@ -4,7 +4,7 @@
 
 原稿の生成に生成AI（Gemini を推奨）、音声の合成に VOICEVOX を利用します。
 
-[デモ番組を聴く](https://github.com/canpok1/vox-radio/releases/tag/demo)
+[紹介ページ](https://canpok1.github.io/vox-radio/) ｜ [デモ番組を聴く](https://github.com/canpok1/vox-radio/releases/tag/demo)
 
 ## クイックスタート
 

@@ -1,0 +1,37 @@
+name: Deploy LP to GitHub Pages
+
+# site/ 配下の紹介LPを GitHub Pages へ公開する。
+# main への push（site/ 変更時）と手動実行で動く。
+# 事前にリポジトリ Settings → Pages → Source を「GitHub Actions」に設定すること。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
