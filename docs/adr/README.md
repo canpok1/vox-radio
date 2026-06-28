@@ -97,3 +97,4 @@
 | [0089](0089-distribute-via-homebrew-cask-with-ffmpeg-dependency.md) | vox-radio を Homebrew Cask で配布し ffmpeg を依存に含める | 採用 | 2026-06-19 |
 | [0090](0090-keep-mp3-only-output-format.md) | 出力音声形式を mp3 固定とし他形式（AAC/Opus 等）対応を見送る | 採用 | 2026-06-21 |
 | [0091](0091-add-links-and-text-source-types.md) | コーナーの source に links / text タイプを追加する | 採用 | 2026-06-21 |
+| [0092](0092-provide-docker-image-for-local-execution.md) | ローカル実行向けに公式 Docker イメージを提供する（ADR-0006 改訂） | 採用 | 2026-06-28 |
