@@ -39,6 +39,46 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
 
+dockers:
+  - id: vox-radio-amd64
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/canpok1/vox-radio"
+      - "--label=org.opencontainers.image.licenses=MIT"
+  - id: vox-radio-arm64
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/canpok1/vox-radio"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+docker_manifests:
+  - name_template: "ghcr.io/canpok1/vox-radio:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-amd64"
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/canpok1/vox-radio:latest"
+    image_templates:
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-amd64"
+      - "ghcr.io/canpok1/vox-radio:{{ .Version }}-arm64"
+
 changelog:
   sort: asc
   filters:

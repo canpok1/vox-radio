@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write # ghcr.io への Docker イメージ push に必要
 
 jobs:
   release:
