@@ -293,6 +293,10 @@ Google フォームでリスナーからお便りを募り、その回答を RSS
 
 GitHub Actions のスケジュール実行で、番組生成から Slack 投稿までを定期的に自動化できます。最小構成のサンプルは[GitHub Actions で定期的に Slack へ投稿する](docs/guides/github-actions-slack.md)を参照してください。
 
+### Docker で実行する
+
+公式 Docker イメージ（`ghcr.io/canpok1/vox-radio`）を使うと、Go・ffmpeg を個別に用意せず設定ファイルとコンテナだけで番組を生成できます。compose サンプルと手順は[Docker で番組を生成する](docs/guides/docker.md)を参照してください。
+
 ## コマンド一覧
 
 コマンド・サブコマンド・フラグの詳細は自動生成ドキュメントを参照してください。
