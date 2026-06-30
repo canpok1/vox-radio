@@ -40,7 +40,7 @@
 | `se_pause_placement` | SE/間の配置妥当性: 転換点・溜め等の効果的な位置に挿入し、過剰でないか（SE 0〜3回・pause 0〜2回の目安、`direction`/`description` の活用） |
 | `index_validity` | インデックス整合: `corner_index`/`after_line_index`/`line_index` が範囲内・コーナー内0始まり、`asset_name` が SE カタログ内か（機械検証と二重確認） |
 | `conversion_completeness` | 変換網羅性: 全セリフに対し `line_conversions` エントリを出力しているか（機械検証と二重確認） |
-| `reading_accuracy` | 読み変換の正確さ: 連濁/熟字訓/複合語特殊読み/音訓混在/英単語かな化が正しいか |
+| `reading_accuracy` | 読み変換の正確さ: 連濁/熟字訓/複合語特殊読み/音訓混在/英単語かな化が正しいか（かな化する自立語の読みはカタカナ、助詞の wa/e 化はひらがな、読みが明確な漢字は漢字のまま。カタカナ読み自体は減点しない） |
 | `content_preservation` | 内容保持: セリフの内容・意味・件数・話者・順序を変えていないか（読み表記のみ変更） |
 
 ## 採点ガイドライン

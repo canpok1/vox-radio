@@ -10,7 +10,7 @@
         "converted_text": "あたまつきをくらいました"
       }
     ],
-    "expectation": "「頭突き」は連濁により「ずつき」と読む。converted_text の「あたまつき」は連濁が取りこぼされた誤読であり、corrections に corner_index=0, line_index=0, text=\"ずつきをくらいました\" の修正を含めるべき。"
+    "expectation": "「頭突き」は連濁により「ずつき」と読む。converted_text の「あたまつき」は連濁が取りこぼされた誤読であり、corrections に corner_index=0, line_index=0, text=\"ズツキをくらいました\" の修正を含めるべき（かな化する自立語の読みはカタカナ）。"
   },
   {
     "name": "jukujikun_kyou",
@@ -23,7 +23,7 @@
         "converted_text": "こんにちはいいてんきですね"
       }
     ],
-    "expectation": "「今日」は熟字訓で「きょう」と読む。「こんにち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"きょうはいいてんきですね\" の修正を含めるべき。"
+    "expectation": "「今日」は熟字訓で「きょう」と読む。「こんにち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"キョウはいいてんきですね\" の修正を含めるべき（かな化する自立語の読みはカタカナ。助詞は ひらがな）。"
   },
   {
     "name": "compound_azuki",
@@ -36,7 +36,7 @@
         "converted_text": "しょうずをたいてずんだもちをつくります"
       }
     ],
-    "expectation": "「小豆」は複合語特殊読みで「あずき」と読む。「しょうず」は誤りであり、corrections に corner_index=0, line_index=0, text=\"あずきをたいてずんだもちをつくります\" の修正を含めるべき。"
+    "expectation": "「小豆」は複合語特殊読みで「あずき」と読む。「しょうず」は誤りであり、corrections に corner_index=0, line_index=0, text=\"アズキをたいてずんだもちをつくります\" の修正を含めるべき（かな化する自立語の読みはカタカナ）。"
   },
   {
     "name": "onyomi_kunyomi_mix",
@@ -49,7 +49,7 @@
         "converted_text": "はいりばぐちからおはいりください"
       }
     ],
-    "expectation": "「入場口」は音訓混在で「にゅうじょうぐち」と読む。「はいりばぐち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"にゅうじょうぐちからおはいりください\" の修正を含めるべき。"
+    "expectation": "「入場口」は音訓混在で「にゅうじょうぐち」と読む。「はいりばぐち」は誤りであり、corrections に corner_index=0, line_index=0, text=\"ニュウジョウグチからおはいりください\" の修正を含めるべき（かな化する自立語の読みはカタカナ）。"
   },
   {
     "name": "homophone_error",
@@ -81,7 +81,7 @@
         "converted_text": "にゅーすをほーこくにちます"
       }
     ],
-    "expectation": "「報告します」の converted_text が「ほーこくにちます」となっており日本語として意味不明。corrections に corner_index=0, line_index=0, text=\"にゅーすをほうこくします\" の修正を含めるべき。"
+    "expectation": "「報告します」の converted_text が「ほーこくにちます」となっており日本語として意味不明。corrections に corner_index=0, line_index=0, text=\"ニュースをホウコクします\" の修正を含めるべき（かな化する自立語の読みはカタカナ）。"
   },
   {
     "name": "normal_no_correction",
@@ -125,7 +125,7 @@
         "converted_text": "こんにちははれです"
       }
     ],
-    "expectation": "line_index=0 の「あたまつき」は連濁誤り（→ずつき）。line_index=1 の「でもげんきです」は正しい。corner_index=1, line_index=0 の「こんにちは」は熟字訓誤り（→きょう）。2件の修正を corrections に含めるべき。"
+    "expectation": "line_index=0 の「あたまつき」は連濁誤り（→ズツキ）。line_index=1 の「でもげんきです」は正しい。corner_index=1, line_index=0 の「こんにちは」は熟字訓誤り（→キョウ）。2件の修正を corrections に含めるべき（かな化する自立語の読みはカタカナ）。"
   },
   {
     "name": "particle_ha_unconverted",
