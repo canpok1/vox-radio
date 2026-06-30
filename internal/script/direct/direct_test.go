@@ -1459,3 +1459,140 @@ func TestLLMDirector_Direct_PropagatesCornerID_WithBoundaryAudio(t *testing.T) {
 		}
 	}
 }
+
+// TestLLMDirector_Direct_Pronunciation_ReplacesRegisteredWord verifies that a registered
+// proper-noun notation is replaced with its reading on lines the LLM did not convert.
+func TestLLMDirector_Direct_Pronunciation_ReplacesRegisteredWord(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "今日は宮本武蔵について話します"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "今日はみやもとむさしについて話します" {
+		t.Errorf("Segment[0].Text: got %q, want 今日はみやもとむさしについて話します", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_LeavesUnregisteredWord verifies that text containing
+// no registered notation is left unchanged.
+func TestLLMDirector_Direct_Pronunciation_LeavesUnregisteredWord(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "源氏物語の話をします"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	if got.Segments[0].Text != "源氏物語の話をします" {
+		t.Errorf("Segment[0].Text: got %q, want 源氏物語の話をします (unchanged)", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_WithLineConversion verifies the combined behavior:
+// the dictionary is applied to the original text first, but an LLM line conversion (when
+// present) takes precedence on that line; lines without a conversion still get dictionary readings.
+func TestLLMDirector_Direct_Pronunciation_WithLineConversion(t *testing.T) {
+	mc := &mockClient{
+		// Only line 0 is converted by the LLM; line 1 is left to the dictionary.
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えぬえいちけーのにゅーす"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{
+			"NHK":  "えぬえいちけー",
+			"宮本武蔵": "みやもとむさし",
+		}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "NHKのニュース"},
+		model.Line{SpeakerRole: "guest", Text: "宮本武蔵の特集"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	// line 0: LLM conversion takes precedence over the dictionary.
+	if got.Segments[0].Text != "えぬえいちけーのにゅーす" {
+		t.Errorf("Segment[0].Text: got %q, want えぬえいちけーのにゅーす (LLM conversion wins)", got.Segments[0].Text)
+	}
+	// line 1: no LLM conversion, so the dictionary reading is applied.
+	if got.Segments[1].Text != "みやもとむさしの特集" {
+		t.Errorf("Segment[1].Text: got %q, want みやもとむさしの特集 (dictionary applied)", got.Segments[1].Text)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_LongestKeyFirst verifies that overlapping entries are
+// applied longest-first so a longer term is not partially clobbered by a shorter one.
+func TestLLMDirector_Direct_Pronunciation_LongestKeyFirst(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{
+			"東":   "ひがし",
+			"東京":  "とうきょう",
+			"東京駅": "とうきょうえき",
+		}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "東京駅に行く"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Segments[0].Text != "とうきょうえきに行く" {
+		t.Errorf("Segment[0].Text: got %q, want とうきょうえきに行く (longest key first)", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_NotSet verifies that without WithPronunciation, text is
+// passed through unchanged (backward-compatible).
+func TestLLMDirector_Direct_Pronunciation_NotSet(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "宮本武蔵の話"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Segments[0].Text != "宮本武蔵の話" {
+		t.Errorf("Segment[0].Text: got %q, want 宮本武蔵の話 (unchanged)", got.Segments[0].Text)
+	}
+}
