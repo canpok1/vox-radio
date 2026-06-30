@@ -9,4 +9,7 @@ type Config struct {
 	Cache      CacheConfig                `yaml:"cache"`
 	Slack      SlackConfig                `yaml:"slack"`
 	Security   SecurityConfig             `yaml:"security,omitempty"`
+	// Pronunciation is a global proper-noun reading dictionary (written form -> reading).
+	// It is applied to each speech line before LLM kana conversions during scripting.
+	Pronunciation map[string]string `yaml:"pronunciation,omitempty"`
 }

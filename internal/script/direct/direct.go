@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	"github.com/canpok1/vox-radio/internal/model"
@@ -152,6 +153,7 @@ type LLMDirector struct {
 	promptTemplate string
 	temperature    float64
 	proofread      *proofreadConfig
+	pronunciation  map[string]string
 }
 
 // WithProofread enables a proofreading LLM pass that detects and corrects misreadings
@@ -159,6 +161,15 @@ type LLMDirector struct {
 func WithProofread(prompt string, temperature float64) func(*LLMDirector) {
 	return func(d *LLMDirector) {
 		d.proofread = &proofreadConfig{prompt: prompt, temperature: temperature}
+	}
+}
+
+// WithPronunciation sets a proper-noun reading dictionary (written form -> reading)
+// that is applied to each line's original text before the LLM kana conversion map.
+// When not set, no dictionary replacement is performed (backward-compatible).
+func WithPronunciation(dict map[string]string) func(*LLMDirector) {
+	return func(d *LLMDirector) {
+		d.pronunciation = dict
 	}
 }
 
@@ -238,7 +249,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		}
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), pr, nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions, d.pronunciation), pr, nil
 }
 
 func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, map[insertKey]string, error) {
@@ -310,7 +321,35 @@ func buildConversionMap(lineConversions []lineConversion) map[insertKey]string {
 	return m
 }
 
-func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
+// applyPronunciation replaces registered proper-noun notations in text with their
+// readings. Entries are applied longest-key-first so a longer term is not partially
+// clobbered by a shorter overlapping one. Go map iteration order is not stable, so the
+// YAML registration order cannot be preserved; longest-first is deterministic and
+// overlap-safe. An empty dictionary leaves text unchanged.
+func applyPronunciation(text string, dict map[string]string) string {
+	if len(dict) == 0 {
+		return text
+	}
+	keys := make([]string, 0, len(dict))
+	for k := range dict {
+		if k != "" {
+			keys = append(keys, k)
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		ri, rj := []rune(keys[i]), []rune(keys[j])
+		if len(ri) != len(rj) {
+			return len(ri) > len(rj)
+		}
+		return keys[i] < keys[j]
+	})
+	for _, k := range keys {
+		text = strings.ReplaceAll(text, k, dict[k])
+	}
+	return text
+}
+
+func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion, pronunciation map[string]string) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
 		key := insertKey{ins.CornerIndex, ins.AfterLineIndex}
@@ -353,7 +392,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 
 		for li, line := range corner.Lines {
-			text := line.Text
+			// Original text -> [dictionary replacement] -> [LLM conversion map].
+			// The LLM conversion (full-line kana) takes precedence when present;
+			// lines the LLM left untouched still get deterministic dictionary readings.
+			text := applyPronunciation(line.Text, pronunciation)
 			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
 				text = converted
 			}

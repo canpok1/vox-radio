@@ -1,0 +1,26 @@
+llm:
+  provider: openai
+  temperature: 0.7
+  max_retries: 3
+  openai:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    model: gemini-3.1-flash-lite
+
+voicevox:
+  url: http://localhost:50021
+
+# 同一の表記に複数の読み方を定義（衝突）。YAML デコーダが重複キーを検出してエラーにする。
+pronunciation:
+  宮本武蔵: みやもとむさし
+  宮本武蔵: べつのよみ
+
+characters:
+  zundamon:
+    name: ずんだもん
+    pronoun: ボク
+    speech_suffix: ["〜のだ"]
+    personality: ["元気"]
+    default_style: ノーマル
+    styles:
+      ノーマル: 3
