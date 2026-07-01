@@ -34,6 +34,55 @@ func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest)
 	return c.response, c.err
 }
 
+// echoConversionClient simulates the real direct LLM under direct.md's instruction
+// "全セリフを変換対象にする": it returns a line_conversion for EVERY line, echoing back the
+// text it received (an identity conversion). This makes tests reflect production, where no line
+// is left unconverted — the very state that hid the pronunciation-dictionary bug (empty/partial
+// line_conversions in tests never happens in real runs).
+//
+// Content-level tests (readings, kana conversion) should prefer this client over a hand-written
+// fixed response so they cannot accidentally assert on an impossible "unconverted line" state.
+// It expects the prompt to be exactly the corners JSON (use template "{{corners}}").
+type echoConversionClient struct {
+	capturedPrompt *string
+}
+
+func (c *echoConversionClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
+	content := ""
+	if len(req.Messages) > 0 {
+		content = req.Messages[0].Content
+	}
+	if c.capturedPrompt != nil {
+		*c.capturedPrompt = content
+	}
+
+	var payload []struct {
+		Lines []struct {
+			Text string `json:"text"`
+		} `json:"lines"`
+	}
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		return nil, fmt.Errorf("echoConversionClient: parse corners from prompt (use template %q): %w", "{{corners}}", err)
+	}
+
+	type lineConv struct {
+		CornerIndex int    `json:"corner_index"`
+		LineIndex   int    `json:"line_index"`
+		Text        string `json:"text"`
+	}
+	convs := make([]lineConv, 0)
+	for ci, corner := range payload {
+		for li, line := range corner.Lines {
+			convs = append(convs, lineConv{CornerIndex: ci, LineIndex: li, Text: line.Text})
+		}
+	}
+	resp := struct {
+		Insertions      []struct{} `json:"insertions"`
+		LineConversions []lineConv `json:"line_conversions"`
+	}{Insertions: []struct{}{}, LineConversions: convs}
+	return json.Marshal(resp)
+}
+
 // helper: wrap lines into a single-corner CornerLines slice
 func oneCorner(title string, lines ...model.Line) []model.CornerLines {
 	return []model.CornerLines{{Title: title, Lines: lines}}
@@ -1547,6 +1596,47 @@ func TestLLMDirector_Direct_Pronunciation_SurvivesFullLineConversion(t *testing.
 	}
 	if got.Segments[0].Text != "キョウはみやもとむさしについて話します" {
 		t.Errorf("Segment[0].Text: got %q, want キョウはみやもとむさしについて話します (reading preserved)", got.Segments[0].Text)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_SurvivesRealisticLLM is an observable-effect regression
+// test. Unlike the tests above (which hand-pick line_conversions), it drives the director with
+// echoConversionClient, which mimics the real direct prompt by converting EVERY line. It asserts
+// only the property the feature exists to guarantee — the registered reading appears in the final
+// text — without hard-coding the LLM's output. This test fails under the original buildScript-only
+// design (where the per-line conversion overrode the dictionary), so it guards against regressing
+// back to it. It also documents the intended way to test content behavior: use a mock that reflects
+// the prompt's real output, not an impossible unconverted-line state.
+func TestLLMDirector_Direct_Pronunciation_SurvivesRealisticLLM(t *testing.T) {
+	var capturedPrompt string
+	mc := &echoConversionClient{capturedPrompt: &capturedPrompt}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "今日は宮本武蔵について話します"},
+		model.Line{SpeakerRole: "guest", Text: "宮本武蔵といえば五輪書"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 2 {
+		t.Fatalf("Segments: got %d, want 2", len(got.Segments))
+	}
+	// The LLM (echo) received the substituted reading, so it can only ever echo the reading back.
+	if strings.Contains(capturedPrompt, "宮本武蔵") {
+		t.Errorf("LLM prompt should NOT contain the original notation (宮本武蔵), got: %s", capturedPrompt)
+	}
+	for i, seg := range got.Segments {
+		if !strings.Contains(seg.Text, "みやもとむさし") {
+			t.Errorf("Segment[%d].Text: got %q, want it to contain みやもとむさし (registered reading preserved)", i, seg.Text)
+		}
+		if strings.Contains(seg.Text, "宮本武蔵") {
+			t.Errorf("Segment[%d].Text: got %q, should not contain the original notation 宮本武蔵", i, seg.Text)
+		}
 	}
 }
 
