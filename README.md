@@ -236,7 +236,7 @@ characters:
 
 台本生成ではセリフの感情に応じてスタイルが選ばれ、音声合成はそのスタイルの声色で読み上げます。指定がない・不正なときは `default_style` が使われます。
 
-**読み方辞書** — 固有名詞などを意図した読みで読ませるための辞書です。`pronunciation` に「表記: 読み方」を登録すると、台本のセリフ中の表記が読み方へ置き換わります（その行を AI がかな化した場合は AI の結果が優先）。人名・作品名・略語など誤読しやすい語に使います（詳細は[vox-radio.md](internal/cli/skills/vox-radio/references/vox-radio.md)）。
+**読み方辞書** — 人名・作品名・略語など誤読しやすい語を、意図した読みで読ませる辞書です。`pronunciation` に「表記: 読み方」を登録すると、登録した語がセリフ中に現れたとき読み方へ置き換わり、その読みを AI が引き継いでかな化します（詳細は[vox-radio.md](internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 ```yaml
 pronunciation:

@@ -1486,6 +1486,70 @@ func TestLLMDirector_Direct_Pronunciation_ReplacesRegisteredWord(t *testing.T) {
 	}
 }
 
+// TestLLMDirector_Direct_Pronunciation_AppliedBeforeLLM verifies that the dictionary is applied
+// to the line text BEFORE it is sent to the LLM. The direct prompt instructs the LLM to convert
+// every line, so applying the dictionary only in buildScript would always be overridden by the
+// LLM's line_conversions. Substituting the reading into the input text up front guarantees the
+// reading survives the LLM's kana conversion.
+func TestLLMDirector_Direct_Pronunciation_AppliedBeforeLLM(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "今日は宮本武蔵について話します"},
+	)
+
+	_, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(capturedPrompt, "みやもとむさし") {
+		t.Errorf("LLM prompt should contain the dictionary reading (みやもとむさし), got: %s", capturedPrompt)
+	}
+	if strings.Contains(capturedPrompt, "宮本武蔵") {
+		t.Errorf("LLM prompt should NOT contain the original notation (宮本武蔵) after substitution, got: %s", capturedPrompt)
+	}
+}
+
+// TestLLMDirector_Direct_Pronunciation_SurvivesFullLineConversion reproduces the realistic case:
+// the direct prompt makes the LLM return a line_conversion for every line. Because the dictionary
+// is substituted before the LLM runs, the LLM converts the reading (not the original notation), so
+// the registered reading is preserved in the final text.
+func TestLLMDirector_Direct_Pronunciation_SurvivesFullLineConversion(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		// The LLM (operating on the already-substituted input) returns a full-line conversion
+		// that keeps the dictionary reading and kana-izes the rest.
+		response:       json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"キョウはみやもとむさしについて話します"}]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
+	)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "今日は宮本武蔵について話します"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// The LLM received the substituted reading, not the original notation.
+	if strings.Contains(capturedPrompt, "宮本武蔵") {
+		t.Errorf("LLM prompt should NOT contain the original notation (宮本武蔵), got: %s", capturedPrompt)
+	}
+	if got.Segments[0].Text != "キョウはみやもとむさしについて話します" {
+		t.Errorf("Segment[0].Text: got %q, want キョウはみやもとむさしについて話します (reading preserved)", got.Segments[0].Text)
+	}
+}
+
 // TestLLMDirector_Direct_Pronunciation_LeavesUnregisteredWord verifies that text containing
 // no registered notation is left unchanged.
 func TestLLMDirector_Direct_Pronunciation_LeavesUnregisteredWord(t *testing.T) {

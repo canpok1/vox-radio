@@ -182,6 +182,12 @@ func NewLLMDirector(client llm.Client, promptTemplate string, temperature float6
 }
 
 func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, catalog model.AssetCatalog, programDirection string) (model.Script, *model.ProofreadResult, error) {
+	// Apply the proper-noun reading dictionary to each line's text up front, before the LLM
+	// sees it. The direct prompt instructs the LLM to convert every line, so applying the
+	// dictionary only at the final buildScript step would always be overridden by the LLM's
+	// line_conversions. Substituting the reading into the input text guarantees it survives.
+	corners = applyPronunciationToCorners(corners, d.pronunciation)
+
 	payload := make([]cornerLLMPayload, len(corners))
 	for i, c := range corners {
 		payload[i] = cornerLLMPayload{
@@ -249,7 +255,7 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		}
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions, d.pronunciation), pr, nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), pr, nil
 }
 
 func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, map[insertKey]string, error) {
@@ -349,7 +355,28 @@ func applyPronunciation(text string, dict map[string]string) string {
 	return text
 }
 
-func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion, pronunciation map[string]string) model.Script {
+// applyPronunciationToCorners returns corners whose line texts have the reading dictionary
+// applied. The returned slice is a copy: the input corners (and their Lines) are not mutated,
+// and non-line fields (BGM, StartAudio, etc.) are carried over unchanged. An empty dictionary
+// returns the input as-is.
+func applyPronunciationToCorners(corners []model.CornerLines, dict map[string]string) []model.CornerLines {
+	if len(dict) == 0 {
+		return corners
+	}
+	out := make([]model.CornerLines, len(corners))
+	for i, c := range corners {
+		lines := make([]model.Line, len(c.Lines))
+		for j, line := range c.Lines {
+			line.Text = applyPronunciation(line.Text, dict)
+			lines[j] = line
+		}
+		c.Lines = lines
+		out[i] = c
+	}
+	return out
+}
+
+func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
 		key := insertKey{ins.CornerIndex, ins.AfterLineIndex}
@@ -392,10 +419,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 		}
 
 		for li, line := range corner.Lines {
-			// Original text -> [dictionary replacement] -> [LLM conversion map].
+			// line.Text already has the reading dictionary applied (see Direct).
 			// The LLM conversion (full-line kana) takes precedence when present;
-			// lines the LLM left untouched still get deterministic dictionary readings.
-			text := applyPronunciation(line.Text, pronunciation)
+			// lines the LLM left untouched fall back to the dictionary-applied text.
+			text := line.Text
 			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
 				text = converted
 			}
