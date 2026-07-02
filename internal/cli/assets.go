@@ -90,6 +90,11 @@ loop=true の BGM は、--max-length-sec 未指定時はループせず素材を
 				return err
 			}
 
+			// プレビュー音声は ffmpeg で加工するため、起動直後に存在確認する。
+			if err := checkResources(requireMediaTools); err != nil {
+				return err
+			}
+
 			// ffmpeg のログはターミナルに垂れ流さず、mix/episodegen と同様に
 			// ログファイルへ退避する。ターミナルには成功メッセージのみを出す。
 			_, logFile, err := setupLogger("assets-preview", logDirFlag(cmd))

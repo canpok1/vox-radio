@@ -41,6 +41,15 @@ voicevox.url フィールドで VOICEVOX エンジンの URL を指定します�
 				return fmt.Errorf("load config: %w", err)
 			}
 
+			ctx := context.Background()
+			engineURL := cfg.Voicevox.EffectiveURL()
+			if err := checkResources(
+				requireMediaTools,
+				func() error { return synth.CheckReadiness(ctx, engineURL, cfg) },
+			); err != nil {
+				return err
+			}
+
 			data, err := os.ReadFile(in)
 			if err != nil {
 				return fmt.Errorf("read script: %w", err)
@@ -50,10 +59,8 @@ voicevox.url フィールドで VOICEVOX エンジンの URL を指定します�
 				return fmt.Errorf("parse script: %w", err)
 			}
 
-			engineURL := cfg.Voicevox.EffectiveURL()
-
 			s := synth.New(engineURL, cfg, synth.WithLogger(logger))
-			meta, err := s.Run(context.Background(), scr, outDir)
+			meta, err := s.Run(ctx, scr, outDir)
 			if err != nil {
 				return err
 			}

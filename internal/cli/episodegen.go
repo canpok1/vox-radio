@@ -81,10 +81,6 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 			}
 			defer func() { _ = logFile.Close() }()
 
-			if err := requireMediaTools(); err != nil {
-				return err
-			}
-
 			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
 			if err != nil {
 				return err
@@ -122,6 +118,19 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 						return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", path)
 					}
 				}
+			}
+
+			// 必要な外部リソースをまとめて検証し、LLM でコストを消費する前に早期失敗させる
+			// （VOICEVOX 未到達を synth 段まで見逃さない）。安価な既存出力ガードの後段に置き、
+			// 出力が既存で即失敗するケースで VOICEVOX 待機を無駄に発生させない。
+			ctx := context.Background()
+			engineURL := cfg.Voicevox.EffectiveURL()
+			if err := checkResources(
+				requireMediaTools,
+				func() error { return synth.CheckReadiness(ctx, engineURL, cfg) },
+				func() error { return requireLLMKey(cfg) },
+			); err != nil {
+				return err
 			}
 
 			llmClient := newLLMClient(cfg)
@@ -168,8 +177,6 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				script.WithLogger(logger),
 			)
 
-			engineURL := cfg.Voicevox.EffectiveURL()
-
 			runner := &pipeline.Runner{
 				Spec:              p,
 				Config:            cfg,
@@ -183,7 +190,7 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				CornerSummarizer:  programsummary.NewLLMCornerSummarizer(llmClient, prompts["corner_summary"], stepTemp(cfg.LLM, "corner_summary"), programsummary.WithLogger(logger)),
 			}
 
-			if err := runner.Run(context.Background(), pipeline.Options{
+			if err := runner.Run(ctx, pipeline.Options{
 				OutDir:        outDir,
 				EpisodeNumber: episodeNumber,
 				Casts:         selectedCasts,

@@ -41,6 +41,10 @@ func newRundownCmd() *cobra.Command {
 				return err
 			}
 
+			if err := checkResources(func() error { return requireLLMKey(cfg) }); err != nil {
+				return err
+			}
+
 			llmClient := newLLMClient(cfg)
 
 			prompts, err := loadPrompts()
