@@ -73,7 +73,7 @@ func NewPoster(token, apiURL string) Poster {
 func (r *realPoster) VerifyScopes(ctx context.Context, required []string) error {
 	resp, err := r.client.AuthTestContext(ctx)
 	if err != nil {
-		return fmt.Errorf("Slack 認証に失敗しました（Bot トークンを確認してください）: %w", err)
+		return fmt.Errorf("認証に失敗しました（Slack Bot トークンを確認してください）: %w", err)
 	}
 
 	scopeHeader := resp.Header.Get("X-OAuth-Scopes")
@@ -91,7 +91,7 @@ func (r *realPoster) VerifyScopes(ctx context.Context, required []string) error 
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf(
-			"Slack Bot トークンに必要な権限（スコープ）が不足しています: %s。Slack App の OAuth & Permissions で追加し、ワークスペースへ再インストールしてください",
+			"必要な権限（スコープ）が Slack Bot トークンに不足しています: %s。Slack App の OAuth & Permissions で追加し、ワークスペースへ再インストールしてください",
 			strings.Join(missing, ", "),
 		)
 	}
