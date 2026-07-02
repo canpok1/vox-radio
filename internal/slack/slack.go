@@ -111,10 +111,17 @@ func Run(opts Options, poster Poster) error {
 		}
 	}
 
-	// 副作用（アップロード）の前にスコープを検証し、権限不足を早期・明確に通知する。
-	required := []string{scopeFilesWrite}
+	// 副作用（アップロード）の前に、これから実際に呼び出す API に必要なスコープだけを
+	// 検証し、権限不足を早期・明確に通知する。再開時は残りの工程に不要なスコープで弾かない。
+	var required []string
+	if needUpload {
+		required = append(required, scopeFilesWrite)
+	}
 	if len(blocks) > 0 {
-		required = append(required, scopeFilesRead, scopeChatWrite)
+		required = append(required, scopeChatWrite)
+		if state.ThreadTS == "" {
+			required = append(required, scopeFilesRead)
+		}
 	}
 	if err := poster.VerifyScopes(ctx, required); err != nil {
 		logger.Error("Slack スコープ検証に失敗しました", "required", required, "err", err)

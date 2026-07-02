@@ -255,6 +255,64 @@ func containsScope(scopes []string, target string) bool {
 	return false
 }
 
+// 再開時（アップロード済み・ts 解決済み・返信未完了）は、残る工程がスレッド返信のみのため
+// chat:write だけを検証し、既に使い終えた files:write / files:read は要求しない。
+func TestRun_Preflight_ResumeAfterTS_RequiresOnlyChatWrite(t *testing.T) {
+	dir := t.TempDir()
+	writeTestAudio(t, dir)
+	audioPath := filepath.Join(dir, "episode42.mp3")
+	statePath := filepath.Join(dir, "state.json")
+
+	manifest := buildTestManifestWithSummary()
+	stateJSON, err := json.Marshal(slack.PostState{
+		AudioFile:     manifest.AudioFile,
+		EpisodeNumber: manifest.EpisodeNumber,
+		Channel:       "C0123456789",
+		FileID:        "FILE123",
+		ThreadTS:      "TS123",
+		Replied:       false,
+	})
+	if err != nil {
+		t.Fatalf("marshal state: %v", err)
+	}
+	if err := os.WriteFile(statePath, stateJSON, 0o644); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+
+	var got []string
+	mock := &mockPoster{
+		verifyScopesFn: func(_ context.Context, required []string) error {
+			got = required
+			return nil
+		},
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			t.Error("UploadAudio must not be called on resume after upload")
+			return "", nil
+		},
+	}
+
+	err = slack.Run(slack.Options{
+		Manifest:  manifest,
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
+		StatePath: statePath,
+		DryRun:    false,
+		Out:       io.Discard,
+	}, mock)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if containsScope(got, "files:write") || containsScope(got, "files:read") {
+		t.Errorf("resume after ts should not require files:write/files:read, got: %v", got)
+	}
+	if !containsScope(got, "chat:write") {
+		t.Errorf("resume after ts should still require chat:write, got: %v", got)
+	}
+}
+
 func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	dir := t.TempDir()
 	writeTestAudio(t, dir)
