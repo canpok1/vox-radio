@@ -100,3 +100,4 @@
 | [0092](0092-provide-docker-image-for-local-execution.md) | ローカル実行向けに公式 Docker イメージを提供する（ADR-0006 改訂） | 採用 | 2026-06-28 |
 | [0093](0093-static-pronunciation-dictionary-before-llm.md) | 固有名詞の読み方辞書（静的辞書）を LLM 読み変換の前段に追加する（ADR-0045 改訂） | 採用 | 2026-06-30 |
 | [0094](0094-katakana-for-kanji-readings-in-kana-conversion.md) | 読み変換でかな化する漢字の読みをカタカナにし、助詞・かなはひらがなに保つ | 採用 | 2026-06-30 |
+| [0095](0095-startup-resource-preflight.md) | 起動時リソース preflight を全コマンド共通機構で導入する（ADR-0088 改訂） | 採用 | 2026-07-02 |
