@@ -169,6 +169,26 @@ func (s *Synth) resolveSpeakerID(charID, style string) int {
 	return id
 }
 
+// CheckReadiness verifies the VOICEVOX engine at engineURL is reachable by polling
+// its /version endpoint, waiting up to the configured startup timeout
+// (config.VoicevoxConfig.EffectiveStartupTimeout; zero disables the check).
+//
+// It is intended to be called at command startup — before any LLM work — so an
+// unreachable engine fails fast instead of only surfacing at the synth stage after
+// expensive LLM steps have already run. Synth.Run keeps its own waitForReady as a
+// defence for standalone use; when this ran first the engine is already ready so
+// that later poll returns immediately.
+func CheckReadiness(ctx context.Context, engineURL string, cfg *config.Config) error {
+	var timeout time.Duration
+	if cfg != nil {
+		timeout = cfg.Voicevox.EffectiveStartupTimeout()
+	}
+	if err := waitForReady(ctx, NewClient(engineURL), timeout, pollIntervalDefault); err != nil {
+		return fmt.Errorf("VOICEVOX エンジンに接続できません (%s): %w。VOICEVOX を起動してください（起動待機は voicevox.startup_timeout_seconds で調整、0 で無効）", engineURL, err)
+	}
+	return nil
+}
+
 // waitForReady polls the VOICEVOX /version endpoint until it responds successfully.
 // Returns nil immediately when timeout is zero (disabled) or when the engine is ready.
 // Returns an error if the context is cancelled or the timeout expires.
