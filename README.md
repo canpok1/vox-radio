@@ -156,7 +156,9 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
-Slack Bot には `chat:write`（スレッド返信）・`files:write`（mp3 アップロード）・`files:read`（アップロード完了確認）の 3 つの権限が必要です。詳細と設定手順は [slack-spec.md の必要な Slack スコープ](internal/cli/skills/vox-radio/references/slack-spec.md#必要な-slack-スコープ) を参照してください。
+Slack Bot には `files:write`（mp3 アップロード）・`files:read`（アップロード完了確認）・`chat:write`（スレッド返信）の 3 つの権限が必要です。詳細と設定手順は [slack-spec.md の必要な Slack スコープ](internal/cli/skills/vox-radio/references/slack-spec.md#必要な-slack-スコープ) を参照してください。`slackpost` はアップロード前に必要な権限が揃っているか検証し、不足していれば投稿せず不足スコープを表示して終了します（mp3 の二重投稿を防ぎます）。
+
+ログは既定で `.vox-radio/logs/` に出力されます（`--log-dir` で変更可）。権限不足などで失敗したときは、このログで詳細を確認できます。
 
 実行前に、以下の環境変数を設定しておきます（`init` 生成の `.env` に記入欄があります）。
 

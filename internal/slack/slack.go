@@ -5,9 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/canpok1/vox-radio/internal/model"
+)
+
+// 投稿処理で必要になる Slack Bot スコープ。
+const (
+	scopeFilesWrite = "files:write" // mp3 アップロード
+	scopeFilesRead  = "files:read"  // アップロード完了確認・親メッセージ ts 取得（files.info）
+	scopeChatWrite  = "chat:write"  // スレッド返信
 )
 
 // Options holds the inputs for Run.
@@ -21,6 +29,7 @@ type Options struct {
 	StatePath string
 	DryRun    bool
 	Out       io.Writer
+	Logger    *slog.Logger
 }
 
 // Run executes the slackpost workflow.
@@ -28,6 +37,11 @@ type Options struct {
 func Run(opts Options, poster Poster) error {
 	if opts.Out == nil {
 		opts.Out = os.Stdout
+	}
+
+	logger := opts.Logger
+	if logger == nil {
+		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 
 	templates, err := opts.Spec.Slack.LoadTemplates(opts.Spec.BaseDir)
@@ -86,17 +100,31 @@ func Run(opts Options, poster Poster) error {
 
 	if loaded, err := loadState(statePath); err == nil && loaded.Matches(opts.Manifest.AudioFile, opts.Manifest.EpisodeNumber) {
 		if loaded.Replied {
+			logger.Info("投稿は完了済みのためスキップします", "state", statePath)
 			writeResult(opts.Out, loaded.Channel, loaded.FileID, loaded.ThreadTS)
 			return nil
 		}
 		if loaded.FileID != "" {
+			logger.Info("アップロード済みの状態から再開します", "file_id", loaded.FileID)
 			state = *loaded
 			needUpload = false
 		}
 	}
 
+	// 副作用（アップロード）の前にスコープを検証し、権限不足を早期・明確に通知する。
+	required := []string{scopeFilesWrite}
+	if len(blocks) > 0 {
+		required = append(required, scopeFilesRead, scopeChatWrite)
+	}
+	if err := poster.VerifyScopes(ctx, required); err != nil {
+		logger.Error("Slack スコープ検証に失敗しました", "required", required, "err", err)
+		return fmt.Errorf("スコープ検証: %w", err)
+	}
+	logger.Info("Slack スコープ検証に成功しました", "required", required)
+
 	var runErr error
 	if needUpload {
+		logger.Info("mp3 をアップロードします", "channel", channel, "audio", opts.AudioPath)
 		state.FileID, runErr = poster.UploadAudio(ctx, UploadParams{
 			Channel:        channel,
 			FilePath:       opts.AudioPath,
@@ -105,26 +133,32 @@ func Run(opts Options, poster Poster) error {
 			InitialComment: header,
 		})
 		if runErr != nil {
+			logger.Error("mp3 のアップロードに失敗しました", "err", runErr)
 			return fmt.Errorf("upload audio: %w", runErr)
 		}
+		logger.Info("mp3 のアップロードに成功しました", "file_id", state.FileID)
 		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 && state.ThreadTS == "" {
+		logger.Info("スレッド ts を解決します", "file_id", state.FileID)
 		state.ThreadTS, runErr = poster.ResolveThreadTS(ctx, state.FileID, channel)
 		if runErr != nil {
+			logger.Error("スレッド ts の解決に失敗しました", "file_id", state.FileID, "err", runErr)
 			return runErr
 		}
 		_ = saveState(statePath, state)
 	}
 
 	if len(blocks) > 0 {
+		logger.Info("スレッド返信を投稿します", "thread_ts", state.ThreadTS)
 		if err := poster.PostThreadReply(ctx, ReplyParams{
 			Channel:  channel,
 			ThreadTS: state.ThreadTS,
 			Blocks:   blocks,
 			Text:     fallback,
 		}); err != nil {
+			logger.Error("スレッド返信の投稿に失敗しました", "err", err)
 			return fmt.Errorf("post thread reply: %w", err)
 		}
 	}
@@ -132,6 +166,7 @@ func Run(opts Options, poster Poster) error {
 	state.Replied = true
 	_ = saveState(statePath, state)
 
+	logger.Info("Slack への投稿が完了しました", "channel", channel, "file_id", state.FileID, "thread_ts", state.ThreadTS)
 	writeResult(opts.Out, channel, state.FileID, state.ThreadTS)
 	return nil
 }

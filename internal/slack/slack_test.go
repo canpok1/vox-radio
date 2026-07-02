@@ -175,6 +175,86 @@ func TestRun_PostMode_CallsUploadAndThread(t *testing.T) {
 	}
 }
 
+func TestRun_ScopeVerificationFails_DoesNotUpload(t *testing.T) {
+	dir := t.TempDir()
+	writeTestAudio(t, dir)
+	audioPath := filepath.Join(dir, "episode42.mp3")
+
+	uploadCalled := false
+	mock := &mockPoster{
+		verifyScopesFn: func(_ context.Context, _ []string) error {
+			return errors.New("必要な権限（スコープ）が不足しています: files:read")
+		},
+		uploadAudioFn: func(_ context.Context, _ slack.UploadParams) (string, error) {
+			uploadCalled = true
+			return "FILE123", nil
+		},
+	}
+
+	err := slack.Run(slack.Options{
+		Manifest:  buildTestManifestWithSummary(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
+		StatePath: filepath.Join(dir, "state.json"),
+		DryRun:    false,
+		Out:       io.Discard,
+	}, mock)
+	if err == nil {
+		t.Fatal("expected error when scope verification fails")
+	}
+	if !strings.Contains(err.Error(), "files:read") {
+		t.Errorf("error should name the missing scope, got: %v", err)
+	}
+	if uploadCalled {
+		t.Error("UploadAudio must not be called when scope verification fails (avoids double-post trap)")
+	}
+}
+
+func TestRun_Preflight_RequiresThreadScopesWhenThreadPresent(t *testing.T) {
+	dir := t.TempDir()
+	writeTestAudio(t, dir)
+	audioPath := filepath.Join(dir, "episode42.mp3")
+
+	var got []string
+	mock := &mockPoster{
+		verifyScopesFn: func(_ context.Context, required []string) error {
+			got = required
+			return nil
+		},
+	}
+
+	err := slack.Run(slack.Options{
+		Manifest:  buildTestManifestWithSummary(),
+		AudioPath: audioPath,
+		Spec:      buildTestSlackSpec(),
+		Token:     "xoxb-test-token",
+		Channel:   "C0123456789",
+		StatePath: filepath.Join(dir, "state.json"),
+		DryRun:    false,
+		Out:       io.Discard,
+	}, mock)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	for _, want := range []string{"files:write", "files:read", "chat:write"} {
+		if !containsScope(got, want) {
+			t.Errorf("required scopes should include %q, got: %v", want, got)
+		}
+	}
+}
+
+func containsScope(scopes []string, target string) bool {
+	for _, s := range scopes {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}
+
 func TestRun_PostMode_WithSummaryCallsThreadReply(t *testing.T) {
 	dir := t.TempDir()
 	writeTestAudio(t, dir)

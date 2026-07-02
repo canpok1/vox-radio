@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	slackgo "github.com/slack-go/slack"
@@ -31,6 +32,10 @@ type ReplyParams struct {
 
 // Poster is an interface for sending Slack messages.
 type Poster interface {
+	// VerifyScopes checks, via auth.test, that the bot token holds all required
+	// OAuth scopes. It runs before any posting side effect so that a permission
+	// shortage is reported up front (avoiding the "audio already uploaded" trap).
+	VerifyScopes(ctx context.Context, required []string) error
 	// UploadAudio uploads an mp3 file as the parent message and returns the file ID.
 	UploadAudio(ctx context.Context, u UploadParams) (fileID string, err error)
 	// ResolveThreadTS polls files.info until the thread ts is available for the given file.
@@ -59,6 +64,49 @@ func NewPoster(token, apiURL string) Poster {
 		pollInterval: time.Second,
 		pollTimeout:  30 * time.Second,
 	}
+}
+
+// VerifyScopes calls auth.test and compares the token's granted scopes (from the
+// X-OAuth-Scopes response header) against required. auth.test itself requires no
+// scope, so this works for any valid token. When the header is absent (scopes
+// cannot be determined) the scope check is skipped, but auth failures still surface.
+func (r *realPoster) VerifyScopes(ctx context.Context, required []string) error {
+	resp, err := r.client.AuthTestContext(ctx)
+	if err != nil {
+		return fmt.Errorf("Slack 認証に失敗しました（Bot トークンを確認してください）: %w", err)
+	}
+
+	scopeHeader := resp.Header.Get("X-OAuth-Scopes")
+	if scopeHeader == "" {
+		// スコープを判定できないため検証はスキップする（認証自体は成功している）。
+		return nil
+	}
+
+	granted := parseGrantedScopes(scopeHeader)
+	var missing []string
+	for _, s := range required {
+		if _, ok := granted[s]; !ok {
+			missing = append(missing, s)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"Slack Bot トークンに必要な権限（スコープ）が不足しています: %s。Slack App の OAuth & Permissions で追加し、ワークスペースへ再インストールしてください",
+			strings.Join(missing, ", "),
+		)
+	}
+	return nil
+}
+
+// parseGrantedScopes splits the comma-separated X-OAuth-Scopes header into a set.
+func parseGrantedScopes(header string) map[string]struct{} {
+	granted := make(map[string]struct{})
+	for _, s := range strings.Split(header, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			granted[s] = struct{}{}
+		}
+	}
+	return granted
 }
 
 func (r *realPoster) UploadAudio(ctx context.Context, u UploadParams) (string, error) {
@@ -161,7 +209,12 @@ func pollingTerminalError(fileID, reason string, cause error) error {
 }
 
 func (r *realPoster) nonRetryableError(fileID string, err error) error {
-	return pollingTerminalError(fileID, "non-retryable Slack error", err)
+	reason := "non-retryable Slack error"
+	var slackErr slackgo.SlackErrorResponse
+	if errors.As(err, &slackErr) && slackErr.Err == "missing_scope" {
+		reason = "Slack 権限不足（files:read スコープが必要）"
+	}
+	return pollingTerminalError(fileID, reason, err)
 }
 
 func (r *realPoster) timeoutError(fileID string, lastErr error) error {
