@@ -132,6 +132,8 @@ corners:
 | `name` | string | links, web | 任意 | 媒体名。`Article.Source` に設定され、番組内で出典として紹介される（例: 「Publickeyによると…」）。省略すると出典に触れない |
 | `max_items` | int | feed | 任意 | 過去使用 URL を除外したうえで確保する最大記事数。デフォルト: 0（無制限）。除外で減った分は後続記事で補う |
 
+`web` / `links` タイプでは、取得した HTML から公開日を自動抽出します（ベストエフォート）。OGP `article:published_time` → JSON-LD `datePublished` の優先順で検索し、取得できた場合のみ番組タイムゾーンに変換して `Article.Published` に設定されます。
+
 ```yaml
 source:
   - type: feed
@@ -156,7 +158,6 @@ source:
 - 各行 URL を `web` と同様に HTML 取得（`http(s)://` / `file://` 可）
 - 重複判定キー（DedupKey）は「ファイルパス + URL」の組み合わせで固定（ページ内容が変わっても同一URLは同一キー）
 - `name` を指定すると全記事の媒体名（`Article.Source`）に設定される（番組内で出典として紹介される）
-- 公開日は HTML メタタグから自動取得（ベストエフォート）: OGP `article:published_time` → JSON-LD `datePublished` の優先順。取得できた場合のみ番組タイムゾーンに変換して `Article.Published` に設定される
 
 #### `text` タイプ（参考テキスト）
 
