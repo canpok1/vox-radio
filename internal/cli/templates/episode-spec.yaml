@@ -117,8 +117,10 @@ corners:
         max_items: 5
       # - type: web
       #   url: https://example.com/articles/1
+      #   name: "媒体名"             # 媒体名（番組内で出典として紹介される。省略すると出典に触れない）
       # - type: links
       #   path: refs/urls.txt        # URL一覧ファイル（1行1URL）
+      #   name: "媒体名"             # 媒体名（番組内で出典として紹介される。省略すると出典に触れない）
       # - type: text
       #   path: refs/background.txt  # 参考テキストファイル
       #   title: "背景知識"           # 省略するとファイル名を使用

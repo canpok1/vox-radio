@@ -129,6 +129,7 @@ corners:
 | `url` | string | feed, web | 必須 | フィードまたは記事の URL。`https://` のほか `file://` によるローカルファイル指定も可能（後述） |
 | `path` | string | links, text | 必須 | ローカルファイルのパス。spec ファイルのディレクトリ基準で相対解決（後述） |
 | `title` | string | text | 任意 | text タイプの記事タイトル。省略するとファイル名（拡張子除く）を使用 |
+| `name` | string | links, web | 任意 | 媒体名。`Article.Source` に設定され、番組内で出典として紹介される（例: 「Publickeyによると…」）。省略すると出典に触れない |
 | `max_items` | int | feed | 任意 | 過去使用 URL を除外したうえで確保する最大記事数。デフォルト: 0（無制限）。除外で減った分は後続記事で補う |
 
 ```yaml
@@ -138,10 +139,12 @@ source:
     max_items: 5
   - type: web
     url: https://example.com/articles/1
+    name: "Publickey"              # 媒体名（番組内で出典として紹介される）
   - type: links
-    path: refs/urls.txt          # URL 一覧ファイル（1行1URL）
+    path: refs/urls.txt            # URL 一覧ファイル（1行1URL）
+    name: "はてなブックマーク"       # 全記事に共通の媒体名
   - type: text
-    path: refs/background.txt   # 任意テキストファイル
+    path: refs/background.txt     # 任意テキストファイル
     title: "背景知識"
 ```
 
@@ -152,6 +155,8 @@ source:
 - 空行と `#` で始まる行はスキップ
 - 各行 URL を `web` と同様に HTML 取得（`http(s)://` / `file://` 可）
 - 重複判定キー（DedupKey）は「ファイルパス + URL」の組み合わせで固定（ページ内容が変わっても同一URLは同一キー）
+- `name` を指定すると全記事の媒体名（`Article.Source`）に設定される（番組内で出典として紹介される）
+- 公開日は HTML メタタグから自動取得（ベストエフォート）: OGP `article:published_time` → JSON-LD `datePublished` の優先順。取得できた場合のみ番組タイムゾーンに変換して `Article.Published` に設定される
 
 #### `text` タイプ（参考テキスト）
 
