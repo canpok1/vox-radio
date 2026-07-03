@@ -756,3 +756,133 @@ func TestLLMRundowner_Run_PropagatesSourceAuthorPublished(t *testing.T) {
 		t.Errorf("Published: got %q, want %q", a.Published, "2026-06-06T19:00:00+09:00")
 	}
 }
+
+func TestLLMRundowner_Run_SkipIfNoArticles_SkipsCorner(t *testing.T) {
+	ms := &mockSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
+
+	corners := []config.CornerConfig{
+		{ID: "opening", Title: "オープニング", Content: "導入", LengthSec: 30},
+		{ID: "mail", Title: "お便りコーナー", Content: "お便り紹介", LengthSec: 120, SkipIfNoArticles: true},
+		{ID: "tech", Title: "テック", Content: "ニュース", LengthSec: 180},
+	}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "オープニング", Articles: []model.Article{}},
+			{CornerTitle: "お便りコーナー", Articles: []model.Article{}},
+			{CornerTitle: "テック", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "t", Description: "b"}}},
+		},
+	}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 2 {
+		t.Fatalf("len(Corners): got %d, want 2 (mail corner should be skipped)", len(got.Corners))
+	}
+	if got.Corners[0].Title != "オープニング" {
+		t.Errorf("Corners[0].Title: got %q, want %q", got.Corners[0].Title, "オープニング")
+	}
+	if got.Corners[1].Title != "テック" {
+		t.Errorf("Corners[1].Title: got %q, want %q", got.Corners[1].Title, "テック")
+	}
+}
+
+func TestLLMRundowner_Run_SkipIfNoArticles_KeepsCornerWithArticles(t *testing.T) {
+	ms := &mockSelector{result: sel.SelectResult{SelectedIDs: []string{"u1"}, SelectionReason: "理由"}}
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := newRundowner(ms, &mockSummarizer{}, nil, mfd)
+
+	corners := []config.CornerConfig{
+		{ID: "mail", Title: "お便りコーナー", Content: "お便り紹介", LengthSec: 120, SkipIfNoArticles: true},
+	}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "お便りコーナー", Articles: []model.Article{{DedupKey: "u1", URL: "u1", Title: "お便り1", Description: "内容"}}},
+		},
+	}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 1 {
+		t.Fatalf("len(Corners): got %d, want 1 (corner with articles should be kept)", len(got.Corners))
+	}
+	if got.Corners[0].Title != "お便りコーナー" {
+		t.Errorf("Corners[0].Title: got %q, want %q", got.Corners[0].Title, "お便りコーナー")
+	}
+}
+
+func TestLLMRundowner_Run_SkipIfNoArticles_FlowPositionAdjusted(t *testing.T) {
+	ms := &mockSelector{}
+	var capturedPositions []flow.Position
+	customDesigner := &positionCapturingDesigner{positions: &capturedPositions, flow: "flow"}
+	rd := rundown.NewLLMRundowner(ms, &mockSummarizer{}, customDesigner, nil)
+
+	corners := []config.CornerConfig{
+		{ID: "opening", Title: "オープニング", Content: "導入", LengthSec: 30},
+		{ID: "mail", Title: "お便りコーナー", Content: "お便り紹介", LengthSec: 120, SkipIfNoArticles: true},
+		{ID: "ending", Title: "エンディング", Content: "締め", LengthSec: 30},
+	}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "オープニング", Articles: []model.Article{}},
+			{CornerTitle: "お便りコーナー", Articles: []model.Article{}},
+			{CornerTitle: "エンディング", Articles: []model.Article{}},
+		},
+	}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 2 {
+		t.Fatalf("len(Corners): got %d, want 2", len(got.Corners))
+	}
+	if len(capturedPositions) != 2 {
+		t.Fatalf("expected 2 position calls, got %d", len(capturedPositions))
+	}
+	if capturedPositions[0] != flow.PositionOpening {
+		t.Errorf("first corner position: got %q, want %q", capturedPositions[0], flow.PositionOpening)
+	}
+	if capturedPositions[1] != flow.PositionEnding {
+		t.Errorf("last corner position: got %q, want %q", capturedPositions[1], flow.PositionEnding)
+	}
+}
+
+func TestLLMRundowner_Run_SkipIfNoArticles_LogOutput(t *testing.T) {
+	var buf bytes.Buffer
+	handler := logging.NewTextHandler(&buf, slog.LevelInfo)
+	logger := slog.New(handler)
+
+	mfd := &mockFlowDesigner{flow: "flow"}
+	rd := newRundowner(&mockSelector{}, &mockSummarizer{}, nil, mfd, rundown.WithLogger(logger))
+
+	corners := []config.CornerConfig{
+		{ID: "mail", Title: "お便りコーナー", Content: "お便り紹介", LengthSec: 120, SkipIfNoArticles: true},
+	}
+	articles := model.Articles{
+		Corners: []model.CornerArticles{
+			{CornerTitle: "お便りコーナー", Articles: []model.Article{}},
+		},
+	}
+
+	got, err := rd.Run(context.Background(), corners, articles, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Corners) != 0 {
+		t.Fatalf("len(Corners): got %d, want 0", len(got.Corners))
+	}
+
+	logOutput := buf.String()
+	if !strings.Contains(logOutput, "記事なしのためコーナーをスキップ") {
+		t.Errorf("log should contain skip message, got: %q", logOutput)
+	}
+	if !strings.Contains(logOutput, "corner=お便りコーナー") {
+		t.Errorf("log should contain corner name, got: %q", logOutput)
+	}
+}
