@@ -111,12 +111,14 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
+	corners := filterCornersInRundown(r.Spec.Corners, rundown)
+
 	var chars map[string]config.CharacterConfig
 	if r.Config != nil {
 		chars = r.Config.Characters
 	}
 
-	scr, scriptLines, pr, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, r.Spec.Corners, chars)
+	scr, scriptLines, pr, err := r.Scripter.Generate(ctx, r.Spec.Program, rundown, corners, chars)
 	if err != nil {
 		return fmt.Errorf("script: %w", err)
 	}
@@ -178,13 +180,13 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("mix: %w", err)
 	}
 
-	if err := writeTimeline(layout, r.Spec.Corners, cornerDurations); err != nil {
+	if err := writeTimeline(layout, corners, cornerDurations); err != nil {
 		return fmt.Errorf("write timeline: %w", err)
 	}
 
 	m := manifest.Build(manifest.BuildParams{
 		Program:           r.Spec.Program,
-		Corners:           r.Spec.Corners,
+		Corners:           corners,
 		Rundown:           rundown,
 		AudioFile:         fileio.EpisodeFileName(r.Spec.Program.ID, opts.EpisodeNumber),
 		GeneratedAt:       generatedAt,
@@ -205,4 +207,20 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 	}
 
 	return nil
+}
+
+// filterCornersInRundown returns only the corners whose IDs appear in the rundown.
+// This handles corners skipped by the rundowner (e.g. skip_if_no_articles).
+func filterCornersInRundown(corners []config.CornerConfig, rd model.Rundown) []config.CornerConfig {
+	included := make(map[string]struct{}, len(rd.Corners))
+	for _, rc := range rd.Corners {
+		included[rc.ID] = struct{}{}
+	}
+	filtered := make([]config.CornerConfig, 0, len(rd.Corners))
+	for _, c := range corners {
+		if _, ok := included[c.ID]; ok {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
 }

@@ -124,6 +124,9 @@ corners:
       # - type: text
       #   path: refs/background.txt  # 参考テキストファイル
       #   title: "背景知識"           # 省略するとファイル名を使用
+    # 記事がないときにコーナーを丸ごとスキップする（省略すると false＝記事なしでも放送）。
+    # お便りコーナーなど素材がないと成り立たないコーナー向け。
+    # skip_if_no_articles: true
     # 放送する回の条件（省略すると毎回放送される固定コーナー）。
     # condition を書くと、回番号が合ったときだけ放送されます。
     # condition:

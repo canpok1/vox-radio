@@ -70,6 +70,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 
 	articleMap := articles.CornerMap()
 	rundownCorners := make([]model.RundownCorner, 0, len(corners))
+	includedCorners := make([]config.CornerConfig, 0, len(corners))
 
 	// フェーズ1: 各コーナーの記事選別・要約・選別理由を収集
 	for _, corner := range corners {
@@ -93,6 +94,10 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 		cornerArticles = filtered
 
 		if len(cornerArticles) == 0 {
+			if corner.SkipIfNoArticles {
+				r.logger.Info("記事なしのためコーナーをスキップ", "corner", corner.Title)
+				continue
+			}
 			rundownCorners = append(rundownCorners, model.RundownCorner{
 				ID:                corner.ID,
 				Title:             corner.Title,
@@ -100,6 +105,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 				AppearanceCount:   appearanceCount,
 				LastEpisodeNumber: lastEpisodeNumber,
 			})
+			includedCorners = append(includedCorners, corner)
 			continue
 		}
 
@@ -143,6 +149,7 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 			AppearanceCount:   appearanceCount,
 			LastEpisodeNumber: lastEpisodeNumber,
 		})
+		includedCorners = append(includedCorners, corner)
 	}
 
 	// キャストをセット
@@ -152,8 +159,8 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 	}
 
 	// フェーズ2: 番組構成全体を文脈に全コーナーの flow を設計
-	last := len(corners) - 1
-	for i, corner := range corners {
+	last := len(includedCorners) - 1
+	for i, corner := range includedCorners {
 		designed, err := r.flowDesigner.DesignFlow(ctx, corner, flow.PositionFor(i, last), rd.Corners[i], rd)
 		if err != nil {
 			return model.Rundown{}, fmt.Errorf("design flow for corner %q: %w", corner.Title, err)
@@ -161,6 +168,6 @@ func (r *LLMRundowner) Run(ctx context.Context, corners []config.CornerConfig, a
 		rd.Corners[i].Flow = designed
 	}
 
-	done(fmt.Sprintf("%dコーナー", len(corners)))
+	done(fmt.Sprintf("%dコーナー", len(includedCorners)))
 	return rd, nil
 }
