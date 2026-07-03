@@ -423,6 +423,18 @@ func TestEpisodeSpec_ValidateSource(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "type=links, name あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeLinks, Path: "/data/links.txt", Name: "Publickey"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
 		// text タイプ
 		{
 			name: "type=text, path あり はエラーなし",
@@ -528,6 +540,42 @@ func TestEpisodeSpec_ValidateSource(t *testing.T) {
 					ID: "c1", Title: "C1",
 					Source: config.SourceConfig{
 						{Type: config.SourceTypeWeb, URL: "https://example.com/article", Title: "見出し"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=web, name あり はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeWeb, URL: "https://example.com/article", Name: "Publickey"},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "type=feed, name あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeFeed, URL: "https://example.com/feed.xml", Name: "テスト"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "type=text, name あり はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{
+					ID: "c1", Title: "C1",
+					Source: config.SourceConfig{
+						{Type: config.SourceTypeText, Path: "/data/ref.txt", Name: "テスト"},
 					},
 				}},
 			},

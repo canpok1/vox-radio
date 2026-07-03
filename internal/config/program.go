@@ -45,6 +45,7 @@ type SourceEntry struct {
 	MaxItems int    `yaml:"max_items,omitempty"`
 	Path     string `yaml:"path,omitempty"`
 	Title    string `yaml:"title,omitempty"`
+	Name     string `yaml:"name,omitempty"` // 媒体名（links/web 用。Article.Source に設定される）
 }
 
 // SourceConfig はコーナーのソース設定（SourceEntry の配列）。

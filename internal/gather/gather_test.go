@@ -1164,3 +1164,220 @@ func TestGatherer_Run_Text_ErrorOnMissingFile(t *testing.T) {
 		t.Error("expected error for missing text file, got nil")
 	}
 }
+
+// --- name フィールド（媒体名 → Article.Source） ---
+
+func TestGatherer_Run_Links_NameSetsArticleSource(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	linksFile := writeTempFile(t, server.URL+"/article\n")
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile, Name: "Publickey"},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Source != "Publickey" {
+		t.Errorf("Source: got %q, want %q", result[0].Source, "Publickey")
+	}
+}
+
+func TestGatherer_Run_Links_NoNameKeepsSourceEmpty(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	linksFile := writeTempFile(t, server.URL+"/article\n")
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Source != "" {
+		t.Errorf("Source should be empty when name is not set, got %q", result[0].Source)
+	}
+}
+
+func TestGatherer_Run_Web_NameSetsArticleSource(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html", Name: "TechCrunch"},
+	}
+
+	c := gather.New(server.Client())
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Source != "TechCrunch" {
+		t.Errorf("Source: got %q, want %q", result[0].Source, "TechCrunch")
+	}
+}
+
+// --- 公開日の自動抽出（OGP / JSON-LD） ---
+
+func TestGatherer_Run_Article_ExtractsPublishedFromOGP(t *testing.T) {
+	htmlData := loadTestdata(t, "article_with_ogp.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
+	}
+
+	c := gather.New(server.Client(), gather.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	// 2026-06-15T10:30:00+00:00 → Asia/Tokyo = 2026-06-15T19:30:00+09:00
+	if result[0].Published != "2026-06-15T19:30:00+09:00" {
+		t.Errorf("Published: got %q, want %q", result[0].Published, "2026-06-15T19:30:00+09:00")
+	}
+}
+
+func TestGatherer_Run_Article_ExtractsPublishedFromJSONLD(t *testing.T) {
+	htmlData := loadTestdata(t, "article_with_jsonld.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
+	}
+
+	c := gather.New(server.Client(), gather.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	// 2026-07-01T09:00:00+09:00 → Asia/Tokyo = 2026-07-01T09:00:00+09:00 (同TZ)
+	if result[0].Published != "2026-07-01T09:00:00+09:00" {
+		t.Errorf("Published: got %q, want %q", result[0].Published, "2026-07-01T09:00:00+09:00")
+	}
+}
+
+func TestGatherer_Run_Article_ExtractsPublishedFromJSONLDGraph(t *testing.T) {
+	htmlData := loadTestdata(t, "article_with_jsonld_graph.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
+	}
+
+	c := gather.New(server.Client(), gather.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	// 2026-05-20T14:00:00Z → Asia/Tokyo = 2026-05-20T23:00:00+09:00
+	if result[0].Published != "2026-05-20T23:00:00+09:00" {
+		t.Errorf("Published: got %q, want %q", result[0].Published, "2026-05-20T23:00:00+09:00")
+	}
+}
+
+func TestGatherer_Run_Article_NoPublishedWhenNoMeta(t *testing.T) {
+	htmlData := loadTestdata(t, "article.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeWeb, URL: server.URL + "/article.html"},
+	}
+
+	c := gather.New(server.Client(), gather.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Published != "" {
+		t.Errorf("Published should be empty for article without meta, got %q", result[0].Published)
+	}
+}
+
+func TestGatherer_Run_Links_ExtractsPublished(t *testing.T) {
+	htmlData := loadTestdata(t, "article_with_ogp.html")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(htmlData)
+	}))
+	defer server.Close()
+
+	linksFile := writeTempFile(t, server.URL+"/article\n")
+	loc, _ := time.LoadLocation("Asia/Tokyo")
+	cfg := config.SourceConfig{
+		{Type: config.SourceTypeLinks, Path: linksFile},
+	}
+
+	c := gather.New(server.Client(), gather.WithLocation(loc))
+	result, err := c.Run(context.Background(), cfg, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("no articles returned")
+	}
+	if result[0].Published != "2026-06-15T19:30:00+09:00" {
+		t.Errorf("Published: got %q, want %q", result[0].Published, "2026-06-15T19:30:00+09:00")
+	}
+}
