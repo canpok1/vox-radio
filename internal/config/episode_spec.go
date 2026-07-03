@@ -240,6 +240,9 @@ func (p *EpisodeSpec) ValidateSource() error {
 				if s.Title != "" {
 					return fmt.Errorf("%s.title: not allowed for type %q", pfx, s.Type)
 				}
+				if s.Name != "" {
+					return fmt.Errorf("%s.name: not allowed for type %q", pfx, s.Type)
+				}
 			case SourceTypeWeb:
 				if s.URL == "" {
 					return fmt.Errorf("%s.url: required", pfx)
@@ -275,6 +278,9 @@ func (p *EpisodeSpec) ValidateSource() error {
 				}
 				if s.MaxItems != 0 {
 					return fmt.Errorf("%s.max_items: not allowed for type %q", pfx, s.Type)
+				}
+				if s.Name != "" {
+					return fmt.Errorf("%s.name: not allowed for type %q", pfx, s.Type)
 				}
 			default:
 				return fmt.Errorf("%s.type: must be %q, %q, %q, or %q, got %q", pfx, SourceTypeFeed, SourceTypeWeb, SourceTypeLinks, SourceTypeText, s.Type)
