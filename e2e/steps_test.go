@@ -36,10 +36,11 @@ type scenarioState struct {
 	stdout   string
 	stderr   string
 
-	llm      *fakeLLM
-	voicevox *fakeVoicevox
-	feed     *fakeFeed
-	slack    *fakeSlack
+	llm          *fakeLLM
+	voicevox     *fakeVoicevox
+	voicevoxNemo *fakeVoicevox
+	feed         *fakeFeed
+	slack        *fakeSlack
 }
 
 func (s *scenarioState) close() {
@@ -48,6 +49,9 @@ func (s *scenarioState) close() {
 	}
 	if s.voicevox != nil {
 		s.voicevox.Close()
+	}
+	if s.voicevoxNemo != nil {
+		s.voicevoxNemo.Close()
 	}
 	if s.feed != nil {
 		s.feed.Close()
@@ -72,6 +76,10 @@ func (s *scenarioState) expand(text string) string {
 	if s.voicevox != nil {
 		voicevoxURL = s.voicevox.URL()
 	}
+	voicevoxNemoURL := "http://e2e-voicevox-nemo.invalid"
+	if s.voicevoxNemo != nil {
+		voicevoxNemoURL = s.voicevoxNemo.URL()
+	}
 	slackURL := "http://e2e-slack.invalid"
 	if s.slack != nil {
 		slackURL = s.slack.URL()
@@ -80,6 +88,7 @@ func (s *scenarioState) expand(text string) string {
 		"{{LLM_URL}}", llmURL,
 		"{{FEED_URL}}", feedURL,
 		"{{VOICEVOX_URL}}", voicevoxURL,
+		"{{VOICEVOX_NEMO_URL}}", voicevoxNemoURL,
 		"{{SLACK_URL}}", slackURL,
 		"{{WORKDIR}}", s.workDir,
 	)
@@ -105,6 +114,15 @@ func (s *scenarioState) startLLM() error {
 func (s *scenarioState) startVoicevox() error {
 	s.voicevox = newFakeVoicevox()
 	s.env["VOX_RADIO_VOICEVOX_URL"] = s.voicevox.URL()
+	return nil
+}
+
+// startVoicevoxNemo starts a second fake VOICEVOX-compatible server (simulating
+// VOICEVOX NEMO) and exposes it via the per-server env var override so
+// vox-radio.yaml's voicevox.servers.nemo can resolve it without a literal URL.
+func (s *scenarioState) startVoicevoxNemo() error {
+	s.voicevoxNemo = newFakeVoicevox()
+	s.env["VOX_RADIO_VOICEVOX_URL_NEMO"] = s.voicevoxNemo.URL()
 	return nil
 }
 
@@ -474,6 +492,26 @@ func (s *scenarioState) assertSlackNotReceived(method string) error {
 	return nil
 }
 
+func (s *scenarioState) assertVoicevoxAudioQueryCount(want int) error {
+	if s.voicevox == nil {
+		return fmt.Errorf("fake voicevox server is not running")
+	}
+	if got := s.voicevox.AudioQueryCount(); got != int64(want) {
+		return fmt.Errorf("fake voicevox (default) received %d /audio_query requests, want %d", got, want)
+	}
+	return nil
+}
+
+func (s *scenarioState) assertVoicevoxNemoAudioQueryCount(want int) error {
+	if s.voicevoxNemo == nil {
+		return fmt.Errorf("fake voicevox (nemo) server is not running")
+	}
+	if got := s.voicevoxNemo.AudioQueryCount(); got != int64(want) {
+		return fmt.Errorf("fake voicevox (nemo) received %d /audio_query requests, want %d", got, want)
+	}
+	return nil
+}
+
 func (s *scenarioState) clearSlackReceived() error {
 	if s.slack == nil {
 		return fmt.Errorf("fake slack server is not running")
@@ -512,6 +550,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Given
 	sc.Step(`^モックLLMサーバーが起動している$`, s.startLLM)
 	sc.Step(`^モックVOICEVOXサーバーが起動している$`, s.startVoicevox)
+	sc.Step(`^モックVOICEVOXサーバー\(NEMO\)が起動している$`, s.startVoicevoxNemo)
 	sc.Step(`^モックフィードサーバーが起動している$`, s.startFeed)
 	sc.Step(`^モックSlackサーバーが起動している$`, s.startSlack)
 	sc.Step(`^テスト用設定一式を配置する$`, s.placeFixtures)
@@ -542,4 +581,6 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^JSONファイル "([^"]*)" の配列 "([^"]*)" の要素数は (\d+) 以上である$`, s.assertJSONArrayLenAtLeast)
 	sc.Step(`^モックSlackサーバーは "([^"]*)" を受信した$`, s.assertSlackReceived)
 	sc.Step(`^モックSlackサーバーは "([^"]*)" を受信していない$`, s.assertSlackNotReceived)
+	sc.Step(`^モックVOICEVOXサーバーは音声合成リクエストを (\d+) 件受信した$`, s.assertVoicevoxAudioQueryCount)
+	sc.Step(`^モックVOICEVOXサーバー\(NEMO\)は音声合成リクエストを (\d+) 件受信した$`, s.assertVoicevoxNemoAudioQueryCount)
 }

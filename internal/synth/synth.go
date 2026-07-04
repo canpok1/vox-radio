@@ -3,6 +3,7 @@ package synth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,9 +19,13 @@ import (
 
 const pollIntervalDefault = time.Second
 
-// Synth synthesizes speech segments from a script using the VOICEVOX HTTP API
+// Synth synthesizes speech segments from a script using the VOICEVOX HTTP API.
+// Clients is keyed by voicevox.servers name (or config.DefaultServerName in
+// url-only mode); segments are routed to a server by their character's
+// CharacterConfig.EffectiveEngine().
 type Synth struct {
-	Client       VoicevoxClient
+	Clients      map[string]VoicevoxClient
+	urls         map[string]string
 	Config       *config.Config
 	getDuration  func(path string) (float64, error)
 	logger       *slog.Logger
@@ -35,10 +40,17 @@ func WithLogger(l *slog.Logger) Option {
 	return func(s *Synth) { s.logger = l }
 }
 
-// New creates a new Synth with an HTTP VOICEVOX client.
-func New(engineURL string, cfg *config.Config, opts ...Option) *Synth {
+// New creates a new Synth with an HTTP VOICEVOX client per server. urls maps
+// server name (config.DefaultServerName in url-only mode) to its resolved
+// URL, as returned by config.VoicevoxConfig.EffectiveURLs().
+func New(urls map[string]string, cfg *config.Config, opts ...Option) *Synth {
+	clients := make(map[string]VoicevoxClient, len(urls))
+	for name, u := range urls {
+		clients[name] = NewClient(u)
+	}
 	s := &Synth{
-		Client:       NewClient(engineURL),
+		Clients:      clients,
+		urls:         urls,
 		Config:       cfg,
 		getDuration:  mediainfo.Duration,
 		logger:       slog.Default(),
@@ -59,7 +71,7 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 	if s.Config != nil {
 		timeout = s.Config.Voicevox.EffectiveStartupTimeout()
 	}
-	if err := waitForReady(ctx, s.Client, timeout, s.pollInterval); err != nil {
+	if err := waitForAllReady(ctx, s.readinessTargets(), timeout, s.pollInterval); err != nil {
 		return nil, fmt.Errorf("wait for voicevox: %w", err)
 	}
 
@@ -88,10 +100,11 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 		logger.Debug("クリップ詳細", "speaker", seg.SpeakerRole, "style", seg.Style, "text_chars", utf8.RuneCountInString(seg.Text))
 
 		speakerID := s.resolveSpeakerID(seg.SpeakerRole, seg.Style)
+		client := s.resolveClient(seg.SpeakerRole)
 		clipFile := fmt.Sprintf("clip_%03d.wav", i)
 		clipPath := filepath.Join(outDir, clipFile)
 
-		if err := s.synthesize(ctx, seg, speakerID, clipPath, presets); err != nil {
+		if err := s.synthesize(ctx, client, seg, speakerID, clipPath, presets); err != nil {
 			return nil, fmt.Errorf("synthesize clip %d: %w", i, err)
 		}
 
@@ -128,8 +141,8 @@ func (s *Synth) Run(ctx context.Context, script model.Script, outDir string) (*m
 	return meta, nil
 }
 
-func (s *Synth) synthesize(ctx context.Context, seg model.ScriptSegment, speakerID int, outPath string, presets config.VoicevoxPresets) error {
-	query, err := s.Client.AudioQuery(ctx, seg.Text, speakerID)
+func (s *Synth) synthesize(ctx context.Context, client VoicevoxClient, seg model.ScriptSegment, speakerID int, outPath string, presets config.VoicevoxPresets) error {
+	query, err := client.AudioQuery(ctx, seg.Text, speakerID)
 	if err != nil {
 		return fmt.Errorf("audio query: %w", err)
 	}
@@ -144,7 +157,7 @@ func (s *Synth) synthesize(ctx context.Context, seg model.ScriptSegment, speaker
 		query.SpeedScale = v
 	}
 
-	wavBytes, err := s.Client.Synthesis(ctx, query, speakerID)
+	wavBytes, err := client.Synthesis(ctx, query, speakerID)
 	if err != nil {
 		return fmt.Errorf("synthesis: %w", err)
 	}
@@ -169,24 +182,90 @@ func (s *Synth) resolveSpeakerID(charID, style string) int {
 	return id
 }
 
-// CheckReadiness verifies the VOICEVOX engine at engineURL is reachable by polling
-// its /version endpoint, waiting up to the configured startup timeout
-// (config.VoicevoxConfig.EffectiveStartupTimeout; zero disables the check).
+// resolveClient resolves a character ID to the VoicevoxClient for its
+// CharacterConfig.EffectiveEngine(). Falls back to config.DefaultServerName
+// when the character is unknown or its engine has no matching client.
+func (s *Synth) resolveClient(charID string) VoicevoxClient {
+	name := config.DefaultServerName
+	if s.Config != nil {
+		if ch, ok := s.Config.Characters[charID]; ok {
+			name = ch.EffectiveEngine()
+		}
+	}
+	if c, ok := s.Clients[name]; ok {
+		return c
+	}
+	return s.Clients[config.DefaultServerName]
+}
+
+// readinessTargets builds the readiness poll targets for every registered client.
+func (s *Synth) readinessTargets() []readinessTarget {
+	targets := make([]readinessTarget, 0, len(s.Clients))
+	for name, client := range s.Clients {
+		targets = append(targets, readinessTarget{name: name, url: s.urls[name], client: client})
+	}
+	return targets
+}
+
+// CheckReadiness verifies every VOICEVOX-compatible server in urls (keyed by
+// server name, as returned by config.VoicevoxConfig.EffectiveURLs()) is
+// reachable by polling its /version endpoint concurrently, waiting up to the
+// configured startup timeout (config.VoicevoxConfig.EffectiveStartupTimeout;
+// zero disables the check).
 //
 // It is intended to be called at command startup — before any LLM work — so an
 // unreachable engine fails fast instead of only surfacing at the synth stage after
-// expensive LLM steps have already run. Synth.Run keeps its own waitForReady as a
-// defence for standalone use; when this ran first the engine is already ready so
+// expensive LLM steps have already run. Synth.Run keeps its own readiness wait as a
+// defence for standalone use; when this ran first the engines are already ready so
 // that later poll returns immediately.
-func CheckReadiness(ctx context.Context, engineURL string, cfg *config.Config) error {
+func CheckReadiness(ctx context.Context, urls map[string]string, cfg *config.Config) error {
 	var timeout time.Duration
 	if cfg != nil {
 		timeout = cfg.Voicevox.EffectiveStartupTimeout()
 	}
-	if err := waitForReady(ctx, NewClient(engineURL), timeout, pollIntervalDefault); err != nil {
-		return fmt.Errorf("VOICEVOX エンジンに接続できません (%s): %w。VOICEVOX を起動してください（起動待機は voicevox.startup_timeout_seconds で調整、0 で無効）", engineURL, err)
+	targets := make([]readinessTarget, 0, len(urls))
+	for name, u := range urls {
+		targets = append(targets, readinessTarget{name: name, url: u, client: NewClient(u)})
+	}
+	if err := waitForAllReady(ctx, targets, timeout, pollIntervalDefault); err != nil {
+		return fmt.Errorf("VOICEVOX エンジンに接続できません: %w。VOICEVOX を起動してください（起動待機は voicevox.startup_timeout_seconds で調整、0 で無効）", err)
 	}
 	return nil
+}
+
+// readinessTarget identifies a single VOICEVOX-compatible server for a readiness poll.
+type readinessTarget struct {
+	name   string
+	url    string
+	client VoicevoxClient
+}
+
+// waitForAllReady polls every target's /version endpoint concurrently until each
+// responds successfully, waiting up to timeout. Returns nil immediately when
+// timeout is zero (disabled) or there are no targets. On failure, returns a
+// joined error naming the server and URL for each unreachable target.
+func waitForAllReady(ctx context.Context, targets []readinessTarget, timeout, interval time.Duration) error {
+	if timeout == 0 || len(targets) == 0 {
+		return nil
+	}
+	errCh := make(chan error, len(targets))
+	for _, t := range targets {
+		t := t
+		go func() {
+			err := waitForReady(ctx, t.client, timeout, interval)
+			if err != nil {
+				err = fmt.Errorf("%s (%s): %w", t.name, t.url, err)
+			}
+			errCh <- err
+		}()
+	}
+	var errs []error
+	for range targets {
+		if err := <-errCh; err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // waitForReady polls the VOICEVOX /version endpoint until it responds successfully.

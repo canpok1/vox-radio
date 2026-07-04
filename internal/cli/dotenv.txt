@@ -12,9 +12,13 @@ GEMINI_API_KEY=
 # DIFY_API_KEY=
 
 # --- VOICEVOX（任意） ---
-# VOICEVOX Engine の接続先を上書きします。
+# VOICEVOX Engine の接続先を上書きします（単一サーバーモードの default サーバーにのみ適用）。
 # 未設定時は vox-radio.yaml の voicevox.url、それも無ければ http://localhost:50021 を使います。
 # VOX_RADIO_VOICEVOX_URL=http://localhost:50021
+
+# vox-radio.yaml の voicevox.servers で複数サーバー（例: VOICEVOX NEMO 併用）を定義した場合、
+# サーバーごとに VOX_RADIO_VOICEVOX_URL_<サーバー名を大文字化し - を _ に置換した名前> で上書きできます。
+# VOX_RADIO_VOICEVOX_URL_NEMO=http://localhost:50121
 
 # --- Slack 投稿（slackpost を使う場合のみ） ---
 # Bot トークンと投稿先チャンネル ID。

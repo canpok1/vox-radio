@@ -27,6 +27,12 @@ func validateConfig(cfg *Config) error {
 	if err := validateCharacters(cfg.Characters); err != nil {
 		return err
 	}
+	if err := validateVoicevoxServers(cfg.Voicevox); err != nil {
+		return err
+	}
+	if err := validateCharacterEngines(cfg.Characters, cfg.Voicevox); err != nil {
+		return err
+	}
 	if err := validateVoicevoxPresets(cfg.Voicevox.Presets); err != nil {
 		return err
 	}

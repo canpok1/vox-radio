@@ -40,14 +40,14 @@ var fakeWAV = []byte("FAKEWAV")
 
 func newTestSynth() *Synth {
 	return &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{SpeedScale: 1.0}, nil
 			},
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Characters: map[string]config.CharacterConfig{
 				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
@@ -191,7 +191,7 @@ func TestSynth_Run_AutoCreatesOutputDir(t *testing.T) {
 func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 	var gotSpeakers []int
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, speaker int) (*AudioQuery, error) {
 				gotSpeakers = append(gotSpeakers, speaker)
 				return &AudioQuery{SpeedScale: 1.0}, nil
@@ -199,7 +199,7 @@ func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Characters: map[string]config.CharacterConfig{
 				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
@@ -233,6 +233,53 @@ func TestSynth_Run_UsesSpeakerFromCharacterCatalog(t *testing.T) {
 	}
 }
 
+func TestSynth_Run_RoutesSegmentsToCharacterEngine(t *testing.T) {
+	var defaultCalls, nemoCalls []string
+	newRecordingClient := func(calls *[]string) *mockVoicevoxClient {
+		return &mockVoicevoxClient{
+			audioQueryFn: func(_ context.Context, text string, _ int) (*AudioQuery, error) {
+				*calls = append(*calls, text)
+				return &AudioQuery{SpeedScale: 1.0}, nil
+			},
+			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
+				return fakeWAV, nil
+			},
+		}
+	}
+	s := &Synth{
+		Clients: map[string]VoicevoxClient{
+			"default": newRecordingClient(&defaultCalls),
+			"nemo":    newRecordingClient(&nemoCalls),
+		},
+		Config: &config.Config{
+			Characters: map[string]config.CharacterConfig{
+				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3}},
+				"anneli":   {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 0}, Engine: "nemo"},
+			},
+		},
+		getDuration: func(_ string) (float64, error) { return 1.0, nil },
+		logger:      slog.Default(),
+	}
+	script := model.Script{
+		Segments: []model.ScriptSegment{
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "デフォルトエンジン"},
+			{Type: model.SegmentTypeSpeech, SpeakerRole: "anneli", Text: "NEMOエンジン"},
+		},
+	}
+
+	dir := t.TempDir()
+	if _, err := s.Run(context.Background(), script, dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(defaultCalls) != 1 || defaultCalls[0] != "デフォルトエンジン" {
+		t.Errorf("default client calls: got %v, want [デフォルトエンジン]", defaultCalls)
+	}
+	if len(nemoCalls) != 1 || nemoCalls[0] != "NEMOエンジン" {
+		t.Errorf("nemo client calls: got %v, want [NEMOエンジン]", nemoCalls)
+	}
+}
+
 func TestNew_StoresConfig(t *testing.T) {
 	cfg := &config.Config{
 		Voicevox: config.VoicevoxConfig{URL: "http://localhost:50021"},
@@ -241,17 +288,31 @@ func TestNew_StoresConfig(t *testing.T) {
 		},
 	}
 
-	s := New("http://localhost:50021", cfg)
+	s := New(map[string]string{"default": "http://localhost:50021"}, cfg)
 
 	if s.Config != cfg {
 		t.Error("New should store the config in Synth.Config")
 	}
 }
 
+func TestNew_CreatesClientPerServer(t *testing.T) {
+	s := New(map[string]string{"default": "http://localhost:50021", "nemo": "http://localhost:50121"}, &config.Config{})
+
+	if len(s.Clients) != 2 {
+		t.Fatalf("Clients count: got %d, want 2", len(s.Clients))
+	}
+	if _, ok := s.Clients["default"]; !ok {
+		t.Error("Clients should contain a client for \"default\"")
+	}
+	if _, ok := s.Clients["nemo"]; !ok {
+		t.Error("Clients should contain a client for \"nemo\"")
+	}
+}
+
 func TestSynth_Run_UsesStyleFromSegment(t *testing.T) {
 	var gotSpeakers []int
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, speaker int) (*AudioQuery, error) {
 				gotSpeakers = append(gotSpeakers, speaker)
 				return &AudioQuery{SpeedScale: 1.0}, nil
@@ -259,7 +320,7 @@ func TestSynth_Run_UsesStyleFromSegment(t *testing.T) {
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Characters: map[string]config.CharacterConfig{
 				"zundamon": {DefaultStyle: "ノーマル", Styles: map[string]int{"ノーマル": 3, "なみだめ": 76}},
@@ -388,7 +449,7 @@ func TestSynth_Run_LogsStartAndComplete(t *testing.T) {
 func TestSynth_Run_AppliesIntonationPreset(t *testing.T) {
 	var gotQuery *AudioQuery
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
 			},
@@ -396,7 +457,7 @@ func TestSynth_Run_AppliesIntonationPreset(t *testing.T) {
 				gotQuery = q
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{
 				Presets: &config.VoicevoxPresets{
@@ -431,7 +492,7 @@ func TestSynth_Run_AppliesIntonationPreset(t *testing.T) {
 func TestSynth_Run_AppliesPitchPreset(t *testing.T) {
 	var gotQuery *AudioQuery
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
 			},
@@ -439,7 +500,7 @@ func TestSynth_Run_AppliesPitchPreset(t *testing.T) {
 				gotQuery = q
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{
 				Presets: &config.VoicevoxPresets{
@@ -471,7 +532,7 @@ func TestSynth_Run_AppliesPitchPreset(t *testing.T) {
 func TestSynth_Run_AppliesSpeedPreset(t *testing.T) {
 	var gotQuery *AudioQuery
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
 			},
@@ -479,7 +540,7 @@ func TestSynth_Run_AppliesSpeedPreset(t *testing.T) {
 				gotQuery = q
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{
 				Presets: &config.VoicevoxPresets{
@@ -511,7 +572,7 @@ func TestSynth_Run_AppliesSpeedPreset(t *testing.T) {
 func TestSynth_Run_NoOverwriteWhenPresetEmpty(t *testing.T) {
 	var gotQuery *AudioQuery
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.01, SpeedScale: 1.1}, nil
 			},
@@ -519,7 +580,7 @@ func TestSynth_Run_NoOverwriteWhenPresetEmpty(t *testing.T) {
 				gotQuery = q
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{
 				Presets: &config.VoicevoxPresets{
@@ -558,7 +619,7 @@ func TestSynth_Run_NoOverwriteWhenPresetEmpty(t *testing.T) {
 func TestSynth_Run_UnknownPresetNameNoOverwrite(t *testing.T) {
 	var gotQuery *AudioQuery
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			audioQueryFn: func(_ context.Context, _ string, _ int) (*AudioQuery, error) {
 				return &AudioQuery{IntonationScale: 1.0, PitchScale: 0.0, SpeedScale: 1.0}, nil
 			},
@@ -566,7 +627,7 @@ func TestSynth_Run_UnknownPresetNameNoOverwrite(t *testing.T) {
 				gotQuery = q
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{
 				Presets: &config.VoicevoxPresets{
@@ -734,7 +795,7 @@ func TestWaitForReady_RespectsCtxCancel(t *testing.T) {
 func TestSynth_Run_CallsVersionForReadiness(t *testing.T) {
 	versionCalled := false
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			versionFn: func(_ context.Context) (string, error) {
 				versionCalled = true
 				return "0.14.7", nil
@@ -745,7 +806,7 @@ func TestSynth_Run_CallsVersionForReadiness(t *testing.T) {
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config:       &config.Config{},
 		getDuration:  func(_ string) (float64, error) { return 1.0, nil },
 		logger:       slog.Default(),
@@ -768,7 +829,7 @@ func TestSynth_Run_SkipsReadinessWhenStartupTimeoutZero(t *testing.T) {
 	zero := 0
 	versionCalled := false
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			versionFn: func(_ context.Context) (string, error) {
 				versionCalled = true
 				return "", errors.New("not ready")
@@ -779,7 +840,7 @@ func TestSynth_Run_SkipsReadinessWhenStartupTimeoutZero(t *testing.T) {
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{StartupTimeoutSeconds: &zero},
 		},
@@ -803,7 +864,7 @@ func TestSynth_Run_SkipsReadinessWhenStartupTimeoutZero(t *testing.T) {
 func TestSynth_Run_ReturnsErrorWhenReadinessTimeout(t *testing.T) {
 	n := 1
 	s := &Synth{
-		Client: &mockVoicevoxClient{
+		Clients: map[string]VoicevoxClient{"default": &mockVoicevoxClient{
 			versionFn: func(_ context.Context) (string, error) {
 				return "", errors.New("not ready")
 			},
@@ -813,7 +874,7 @@ func TestSynth_Run_ReturnsErrorWhenReadinessTimeout(t *testing.T) {
 			synthesisFn: func(_ context.Context, _ *AudioQuery, _ int) ([]byte, error) {
 				return fakeWAV, nil
 			},
-		},
+		}},
 		Config: &config.Config{
 			Voicevox: config.VoicevoxConfig{StartupTimeoutSeconds: &n},
 		},
