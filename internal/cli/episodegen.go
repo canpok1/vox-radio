@@ -68,6 +68,9 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの voicevox.url より優先して VOICEVOX エンジンの URL を上書きできます。
+voicevox.engines で名前付きの複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO）を定義し、
+characters.<id>.engine でキャラクターごとに使用サーバーを指定できます（省略時は default）。
+サーバーごとの URL は環境変数 VOX_RADIO_VOICEVOX_URL_<サーバー名（大文字）> でも上書きできます。
 
 例:
   vox-radio episodegen
@@ -124,10 +127,10 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 			// （VOICEVOX 未到達を synth 段まで見逃さない）。安価な既存出力ガードの後段に置き、
 			// 出力が既存で即失敗するケースで VOICEVOX 待機を無駄に発生させない。
 			ctx := context.Background()
-			engineURL := cfg.Voicevox.EffectiveURL()
+			engineURLs := cfg.Voicevox.EffectiveURLs()
 			if err := checkResources(
 				requireMediaTools,
-				func() error { return synth.CheckReadiness(ctx, engineURL, cfg) },
+				func() error { return synth.CheckReadiness(ctx, engineURLs, cfg) },
 				func() error { return requireLLMKey(cfg) },
 			); err != nil {
 				return err
@@ -184,7 +187,7 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				ExcludedDedupKeys: excludedDedupKeys,
 				Rundowner:         rundowner,
 				Scripter:          scripter,
-				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
+				Synther:           synth.New(engineURLs, cfg, synth.WithLogger(logger)),
 				Mixer:             &mixerAdapter{inner: mix.New(p.Assets, p.Program, mix.WithLogger(logger), mix.WithFFmpegWriter(logFile))},
 				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary"), p.Program.EffectiveSummaryLength(), programsummary.WithLogger(logger)),
 				CornerSummarizer:  programsummary.NewLLMCornerSummarizer(llmClient, prompts["corner_summary"], stepTemp(cfg.LLM, "corner_summary"), programsummary.WithLogger(logger)),

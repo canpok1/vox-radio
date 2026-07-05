@@ -9,11 +9,11 @@ VOICEVOX NEMO は通常の VOICEVOX Engine とは別サーバー（別ポート�
 
 ## 決定
 
-`voicevox.servers` に名前付きサーバー（名前 → `url`）を定義し、`characters.<id>.engine` で使用サーバーを指定する（省略時 `default`）。環境変数はサーバー名ごとに `VOX_RADIO_VOICEVOX_URL_<NAME>`（大文字化・`-`→`_` 正規化）で上書きし、既存の `VOX_RADIO_VOICEVOX_URL` は default 専用として維持する。`voicevox.url` のみの既存設定は暗黙の default サーバーとして従来通り動作させ、`url` と `servers` の同時指定はエラー。presets・startup_timeout_seconds は共通のまま、readiness チェックは定義済み全サーバーへ並行実施する。
+`voicevox.engines` に名前付きサーバー（名前 → `url`）を定義し、`characters.<id>.engine` で使用エンジンを指定する（省略時 `default`）。環境変数はエンジン名ごとに `VOX_RADIO_VOICEVOX_URL_<NAME>`（大文字化・`-`→`_` 正規化）で上書きし、既存の `VOX_RADIO_VOICEVOX_URL` は default 専用として維持する。`voicevox.url` のみの既存設定は暗黙の default エンジンとして従来通り動作させ、`url` と `engines` の同時指定はエラー。presets・startup_timeout_seconds は共通のまま、readiness チェックは定義済み全エンジンへ並行実施する。フィールド名は `characters.<id>.engine` との対応が直感的になるよう `servers` ではなく `engines` とする（VOICEVOX 自体も「エンジン」と呼ばれる）。
 
 ```yaml
 voicevox:
-  servers:
+  engines:
     default: { url: http://localhost:50021 }
     nemo: { url: http://localhost:50121 }
 characters:
@@ -25,11 +25,11 @@ characters:
 
 - VOICEVOX と NEMO（および任意の互換サーバー）の声を1エピソード内で併用できる。
 - 既存の設定ファイル・環境変数は無変更で動作し続ける（後方互換）。
-- クライアント実装は共通の `VoicevoxClient` を再利用でき、追加はサーバー名→クライアントのルーティングのみ。
-- トレードオフ: 定義済み全サーバーが起動チェック対象になるため、使わないサーバーは定義から外す運用が必要。環境変数名の正規化衝突（`nemo-v2` と `nemo_v2` 等）はバリデーションで検出する。
+- クライアント実装は共通の `VoicevoxClient` を再利用でき、追加はエンジン名→クライアントのルーティングのみ。
+- トレードオフ: 定義済み全エンジンが起動チェック対象になるため、使わないエンジンは定義から外す運用が必要。環境変数名の正規化衝突（`nemo-v2` と `nemo_v2` 等）はバリデーションで検出する。
 
 ## 検討した代替案
 
-- **スタイル単位でサーバーを指定**: 1キャラクターの声は通常1エンジンに属するため過剰。設定が冗長になり却下。
-- **speaker ID にサーバープレフィックスを埋め込む**（例: `nemo:0`）: styles マップの値が int でなくなり既存設定の互換性を壊すため却下。
-- **エピソードで実際に使うサーバーのみ readiness チェック**: コマンドごとに使用サーバーの解決ロジックが必要で複雑化するため、シンプルな全サーバーチェックを採用（ユーザー確認済み）。
+- **スタイル単位でエンジンを指定**: 1キャラクターの声は通常1エンジンに属するため過剰。設定が冗長になり却下。
+- **speaker ID にエンジンプレフィックスを埋め込む**（例: `nemo:0`）: styles マップの値が int でなくなり既存設定の互換性を壊すため却下。
+- **エピソードで実際に使うエンジンのみ readiness チェック**: コマンドごとに使用エンジンの解決ロジックが必要で複雑化するため、シンプルな全エンジンチェックを採用（ユーザー確認済み）。

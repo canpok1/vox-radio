@@ -220,7 +220,7 @@ vox-radio init --sample
 
 ### 共通設定
 
-`vox-radio.yaml` には番組全体で共通する設定を記載します。原稿生成に使う LLM（OpenAI 互換 API。Gemini を推奨。ほかに Dify にも対応）と VOICEVOX の接続先、出演キャラクター（キャラカタログ）、固有名詞の読み方辞書、過去回キャッシュの設定を含みます。
+`vox-radio.yaml` には番組全体で共通する設定を記載します。原稿生成に使う LLM（OpenAI 互換 API。Gemini を推奨。ほかに Dify にも対応）と VOICEVOX の接続先、出演キャラクター（キャラカタログ）、固有名詞の読み方辞書、過去回キャッシュの設定を含みます。VOICEVOX NEMO など、VOICEVOX と同じAPIを持つ複数のエンジンを併用し、キャラクターごとに使用サーバーを指定することもできます（詳細は[vox-radio.md](internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 **キャラクター（キャラカタログ）** — 番組に出演させるキャラクターの一覧です。`characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
 
