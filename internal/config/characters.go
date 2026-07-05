@@ -3,6 +3,10 @@ package config
 import "fmt"
 
 type CharacterConfig struct {
+	// Name is the character's display name shown to the LLM during script
+	// generation. Empty (or whitespace-only) means an anonymous character:
+	// the name is withheld from the prompt and other cast members are
+	// instructed not to address this character at all.
 	Name         string         `yaml:"name"`
 	Pronoun      string         `yaml:"pronoun"`
 	SpeechSuffix []string       `yaml:"speech_suffix"`
