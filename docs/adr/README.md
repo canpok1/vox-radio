@@ -102,3 +102,4 @@
 | [0094](0094-katakana-for-kanji-readings-in-kana-conversion.md) | 読み変換でかな化する漢字の読みをカタカナにし、助詞・かなはひらがなに保つ | 採用 | 2026-06-30 |
 | [0095](0095-startup-resource-preflight.md) | 起動時リソース preflight を全コマンド共通機構で導入する（ADR-0088 改訂） | 採用 | 2026-07-02 |
 | [0096](0096-voicevox-multiple-named-servers.md) | VOICEVOX 接続先を名前付き複数サーバー化しキャラクター単位で切り替える | 採用 | 2026-07-04 |
+| [0097](0097-anonymous-character-via-optional-name.md) | `characters.<id>.name` を任意化し空欄で匿名キャラクターを表現する | 採用 | 2026-07-05 |
