@@ -319,7 +319,7 @@ func buildCastInfo(assignments []CastAssignment, chars map[string]config.Charact
 		}
 		nameField := ch.Name
 		if strings.TrimSpace(ch.Name) == "" {
-			nameField = "非公開（この人物の名前は決して明かさず、他の出演者もこの人物への呼びかけ自体を行わないこと）"
+			nameField = "非公開"
 		}
 		fmt.Fprintf(&sb, "- %s（%s）: 名前=%s、一人称=%s、語尾=[%s]、性格=[%s]、スタイル=[%s]（デフォルト: %s）\n",
 			a.CharacterID, roleStr,

@@ -708,8 +708,13 @@ func TestLLMWriter_CastInfo_ProgramRoleOnly_WhenNoCornerRole(t *testing.T) {
 }
 
 func TestLLMWriter_CastInfo_AnonymousCharacter_HidesNameAndAvoidsAddressing(t *testing.T) {
+	templateBytes, err := os.ReadFile("../../cli/prompts/write.md")
+	if err != nil {
+		t.Fatalf("failed to read write.md: %v", err)
+	}
+
 	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "cast={{cast_info}}", 0, nil)
+	w := write.NewLLMWriter(mc, string(templateBytes), 0, nil)
 
 	assignments := []write.CastAssignment{
 		{CharacterID: "guest_a", Type: "guest", ProgramRole: "ゲスト"},
@@ -718,7 +723,10 @@ func TestLLMWriter_CastInfo_AnonymousCharacter_HidesNameAndAvoidsAddressing(t *t
 		"guest_a": {Name: "", Pronoun: "わたし", SpeechSuffix: []string{"です"}, Personality: []string{"物静か"}},
 	}
 
-	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, assignments, nil, nil, nil, "", chars)
+	_, err = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, assignments, nil, nil, nil, "", chars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
@@ -727,7 +735,7 @@ func TestLLMWriter_CastInfo_AnonymousCharacter_HidesNameAndAvoidsAddressing(t *t
 	if !strings.Contains(prompt, "名前=非公開") {
 		t.Errorf("prompt should mark anonymous character's name as undisclosed, got: %s", prompt)
 	}
-	if !strings.Contains(prompt, "呼びかけ") {
+	if !strings.Contains(prompt, "他の出演者もその人物への呼びかけ自体を行わないでください") {
 		t.Errorf("prompt should instruct not to address the anonymous character, got: %s", prompt)
 	}
 	if !strings.Contains(prompt, "わたし") {
