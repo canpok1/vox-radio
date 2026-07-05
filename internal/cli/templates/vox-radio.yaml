@@ -42,10 +42,10 @@ voicevox:
   # devcontainer では VOX_RADIO_VOICEVOX_URL が自動設定されるため、この値の変更は不要です。
   url: http://localhost:50021
   # 複数の VOICEVOX 互換サーバー（例: VOICEVOX NEMO 併用）を使う場合は、
-  # 上の url の代わりに servers で名前付きサーバーを定義し、
-  # characters.<キャラID>.engine でキャラクターごとの使用サーバーを指定します（省略時は default）。
-  # url と servers は同時指定できません。
-  # servers:
+  # 上の url の代わりに engines で名前付きエンジンを定義し、
+  # characters.<キャラID>.engine でキャラクターごとの使用エンジンを指定します（省略時は default）。
+  # url と engines は同時指定できません。
+  # engines:
   #   default:
   #     url: http://localhost:50021
   #   nemo:

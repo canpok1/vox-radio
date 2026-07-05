@@ -10,10 +10,10 @@ llm:
     model: test-model
 
 voicevox:
-  url: http://localhost:50021
-  servers:
+  engines:
     default:
       url: http://localhost:50021
+    nemo: {}
 
 characters:
   zundamon:

@@ -16,7 +16,7 @@ GEMINI_API_KEY=
 # 未設定時は vox-radio.yaml の voicevox.url、それも無ければ http://localhost:50021 を使います。
 # VOX_RADIO_VOICEVOX_URL=http://localhost:50021
 
-# vox-radio.yaml の voicevox.servers で複数サーバー（例: VOICEVOX NEMO 併用）を定義した場合、
+# vox-radio.yaml の voicevox.engines で複数サーバー（例: VOICEVOX NEMO 併用）を定義した場合、
 # サーバーごとに VOX_RADIO_VOICEVOX_URL_<サーバー名を大文字化し - を _ に置換した名前> で上書きできます。
 # VOX_RADIO_VOICEVOX_URL_NEMO=http://localhost:50121
 

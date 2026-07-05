@@ -53,7 +53,7 @@ func TestCheckReadiness_ReturnsErrorWhenUnreachable(t *testing.T) {
 	}
 }
 
-func TestCheckReadiness_ChecksAllServersConcurrently_AndNamesFailingOnes(t *testing.T) {
+func TestCheckReadiness_ChecksAllEnginesConcurrently_AndNamesFailingOnes(t *testing.T) {
 	ready := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`"0.14.0"`))
 	}))
@@ -70,12 +70,12 @@ func TestCheckReadiness_ChecksAllServersConcurrently_AndNamesFailingOnes(t *test
 		"nemo":    unreachableURL,
 	}, cfg)
 	if err == nil {
-		t.Fatal("expected error when one of multiple servers is unreachable")
+		t.Fatal("expected error when one of multiple engines is unreachable")
 	}
 	if !strings.Contains(err.Error(), "nemo") {
-		t.Errorf("error should name the failing server (nemo), got: %v", err)
+		t.Errorf("error should name the failing engine (nemo), got: %v", err)
 	}
 	if !strings.Contains(err.Error(), unreachableURL) {
-		t.Errorf("error should include the failing server's URL, got: %v", err)
+		t.Errorf("error should include the failing engine's URL, got: %v", err)
 	}
 }

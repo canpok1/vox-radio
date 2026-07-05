@@ -54,37 +54,37 @@
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `url` | string | 任意 | VOICEVOX Engine のURL（単一サーバーモード）。`servers` と同時指定不可 |
-| `servers` | map[string]VoicevoxServerConfig | 任意 | 名前付き複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO 併用）。`url` と同時指定不可 |
-| `startup_timeout_seconds` | int | 任意 | 音声合成前に VOICEVOX の起動を待つ最大秒数。省略時はデフォルト 60 秒。`0` で待機を無効化。全サーバー共通で、定義済み全サーバーへ並行適用される |
-| `presets` | *VoicevoxPresets | 任意 | 抑揚・音高・話速プリセット定義。省略時はコード組込みのデフォルトプリセットが適用される。全サーバー共通 |
+| `url` | string | 任意 | VOICEVOX Engine のURL（単一サーバーモード）。`engines` と同時指定不可 |
+| `engines` | map[string]VoicevoxEngineConfig | 任意 | 名前付き複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO 併用）。`url` と同時指定不可 |
+| `startup_timeout_seconds` | int | 任意 | 音声合成前に VOICEVOX の起動を待つ最大秒数。省略時はデフォルト 60 秒。`0` で待機を無効化。全エンジン共通で、定義済み全エンジンへ並行適用される |
+| `presets` | *VoicevoxPresets | 任意 | 抑揚・音高・話速プリセット定義。省略時はコード組込みのデフォルトプリセットが適用される。全エンジン共通 |
 
-`url` は環境変数 `VOX_RADIO_VOICEVOX_URL` で上書きできます。解決順は `VOX_RADIO_VOICEVOX_URL`（環境変数）> `voicevox.url` > 既定値 `http://localhost:50021` です。`url` のみを指定した設定は、暗黙のサーバー名 `default` として動作します（後方互換）。
+`url` は環境変数 `VOX_RADIO_VOICEVOX_URL` で上書きできます。解決順は `VOX_RADIO_VOICEVOX_URL`（環境変数）> `voicevox.url` > 既定値 `http://localhost:50021` です。`url` のみを指定した設定は、暗黙のエンジン名 `default` として動作します（後方互換）。
 
-### `voicevox.servers.<name>` サブフィールド
+### `voicevox.engines.<name>` サブフィールド
 
-複数の VOICEVOX 互換サーバー（例: 通常の VOICEVOX Engine と VOICEVOX NEMO）を名前付きで定義し、`characters.<id>.engine` でキャラクターごとに使用サーバーを切り替えられます。
+複数の VOICEVOX 互換サーバー（例: 通常の VOICEVOX Engine と VOICEVOX NEMO）を名前付きで定義し、`characters.<id>.engine` でキャラクターごとに使用エンジンを切り替えられます。
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `url` | string | サーバーごとの環境変数上書きがなければ必須 | このサーバーの URL |
+| `url` | string | エンジンごとの環境変数上書きがなければ必須 | このエンジンの URL |
 
-- サーバー名は `[a-z0-9_-]+`（英小文字・数字・`-`・`_`）のみ使用できます。
-- サーバーごとの URL は環境変数 `VOX_RADIO_VOICEVOX_URL_<サーバー名を大文字化し `-` を `_` に置換した名前>` で上書きできます（例: `nemo` → `VOX_RADIO_VOICEVOX_URL_NEMO`）。
-- サーバー名 `default` のみ、既存の `VOX_RADIO_VOICEVOX_URL`（サーバー名別の環境変数がない場合）と既定値 `http://localhost:50021`（`url` 省略時）が追加のフォールバックとして働きます。それ以外のサーバー名は `url` かサーバー別環境変数のいずれかが必須です。
-- 正規化後の環境変数名が複数のサーバー名で衝突する場合（例: `nemo-v2` と `nemo_v2`）はエラーになります。
-- 起動時に定義済み全サーバーへ並行で疎通確認（readiness チェック）が行われます。
+- エンジン名は `[a-z0-9_-]+`（英小文字・数字・`-`・`_`）のみ使用できます。
+- エンジンごとの URL は環境変数 `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し `-` を `_` に置換した名前>` で上書きできます（例: `nemo` → `VOX_RADIO_VOICEVOX_URL_NEMO`）。
+- エンジン名 `default` のみ、既存の `VOX_RADIO_VOICEVOX_URL`（エンジン別の環境変数がない場合）と既定値 `http://localhost:50021`（`url` 省略時）が追加のフォールバックとして働きます。それ以外のエンジン名は `url` かエンジン別環境変数のいずれかが必須です。
+- 正規化後の環境変数名が複数のエンジン名で衝突する場合（例: `nemo-v2` と `nemo_v2`）はエラーになります。
+- 起動時に定義済み全エンジンへ並行で疎通確認（readiness チェック）が行われます。
 
 ```yaml
 voicevox:
-  servers:
+  engines:
     default:
       url: http://localhost:50021
     nemo:
       url: http://localhost:50121
 characters:
   anneli:
-    engine: nemo   # このキャラクターは nemo サーバーで合成する（省略時は default）
+    engine: nemo   # このキャラクターは nemo エンジンで合成する（省略時は default）
 ```
 
 ### `voicevox.presets` サブフィールド
@@ -149,8 +149,8 @@ pronunciation:
 | `default_style` | string | 任意 | デフォルトの音声スタイル名（`styles` のキーと一致させること） |
 | `styles` | map[string]int | 任意 | スタイル名 → VOICEVOX 話者ID のマップ |
 | `credit` | string | 任意 | キャラクターのクレジット表記（例: `VOICEVOX:ずんだもん`）。設定すると manifest の `credits` へ自動収集される |
-| `engine` | string | 任意 | 音声合成に使う `voicevox.servers` のサーバー名。省略時は `default` |
+| `engine` | string | 任意 | 音声合成に使う `voicevox.engines` のエンジン名。省略時は `default` |
 
 `default_style` を指定した場合、その値は `styles` のキーとして存在しなければなりません（起動時検証あり）。
 
-`engine` を指定した場合、`voicevox.servers` に同名のサーバーが定義されていなければなりません（起動時検証あり）。`voicevox.servers` を使わない単一サーバーモードでは `engine` は省略するか `default` のみ指定できます。
+`engine` を指定した場合、`voicevox.engines` に同名のエンジンが定義されていなければなりません（起動時検証あり）。`voicevox.engines` を使わない単一サーバーモードでは `engine` は省略するか `default` のみ指定できます。

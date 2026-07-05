@@ -71,7 +71,7 @@ docker compose run --rm --entrypoint sh vox-radio -c '
 ## 仕組み・ポイント
 
 - **状態の永続化** — 作業ディレクトリ（`./`）を `/work` にマウントするため、設定・`output/`（中間ファイル `output/intermediate/` を含む）・`.vox-radio/cache/`（過去回の履歴）がホスト側に残ります。回番号の連続性が保たれ、前回までを踏まえた番組になります。
-- **VOICEVOX は別コンテナ** — イメージには含めません。`VOX_RADIO_VOICEVOX_URL` で接続先を指定します（compose では `http://voicevox:50021`）。VOICEVOX NEMO などを追加コンテナとして併用する場合は、`vox-radio.yaml` の `voicevox.servers` でサーバーを定義し、サーバーごとに `VOX_RADIO_VOICEVOX_URL_<サーバー名を大文字化し - を _ に置換した名前>` で接続先を上書きできます（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
+- **VOICEVOX は別コンテナ** — イメージには含めません。`VOX_RADIO_VOICEVOX_URL` で接続先を指定します（compose では `http://voicevox:50021`）。VOICEVOX NEMO などを追加コンテナとして併用する場合は、`vox-radio.yaml` の `voicevox.engines` でエンジンを定義し、エンジンごとに `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し - を _ に置換した名前>` で接続先を上書きできます（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
 - **定期実行** — cron から `docker compose run --rm ...` を呼べば、ローカル端末でも定期生成・投稿ができます。GitHub Actions で回す場合は [GitHub Actions で定期投稿](github-actions-slack.md)を参照してください。
 
 ## 注意事項

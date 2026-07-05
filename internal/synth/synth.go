@@ -20,8 +20,8 @@ import (
 const pollIntervalDefault = time.Second
 
 // Synth synthesizes speech segments from a script using the VOICEVOX HTTP API.
-// Clients is keyed by voicevox.servers name (or config.DefaultServerName in
-// url-only mode); segments are routed to a server by their character's
+// Clients is keyed by voicevox.engines name (or config.DefaultEngineName in
+// url-only mode); segments are routed to an engine by their character's
 // CharacterConfig.EffectiveEngine().
 type Synth struct {
 	Clients      map[string]VoicevoxClient
@@ -40,8 +40,8 @@ func WithLogger(l *slog.Logger) Option {
 	return func(s *Synth) { s.logger = l }
 }
 
-// New creates a new Synth with an HTTP VOICEVOX client per server. urls maps
-// server name (config.DefaultServerName in url-only mode) to its resolved
+// New creates a new Synth with an HTTP VOICEVOX client per engine. urls maps
+// engine name (config.DefaultEngineName in url-only mode) to its resolved
 // URL, as returned by config.VoicevoxConfig.EffectiveURLs().
 func New(urls map[string]string, cfg *config.Config, opts ...Option) *Synth {
 	clients := make(map[string]VoicevoxClient, len(urls))
@@ -183,10 +183,10 @@ func (s *Synth) resolveSpeakerID(charID, style string) int {
 }
 
 // resolveClient resolves a character ID to the VoicevoxClient for its
-// CharacterConfig.EffectiveEngine(). Falls back to config.DefaultServerName
+// CharacterConfig.EffectiveEngine(). Falls back to config.DefaultEngineName
 // when the character is unknown or its engine has no matching client.
 func (s *Synth) resolveClient(charID string) VoicevoxClient {
-	name := config.DefaultServerName
+	name := config.DefaultEngineName
 	if s.Config != nil {
 		if ch, ok := s.Config.Characters[charID]; ok {
 			name = ch.EffectiveEngine()
@@ -195,7 +195,7 @@ func (s *Synth) resolveClient(charID string) VoicevoxClient {
 	if c, ok := s.Clients[name]; ok {
 		return c
 	}
-	return s.Clients[config.DefaultServerName]
+	return s.Clients[config.DefaultEngineName]
 }
 
 // readinessTargets builds the readiness poll targets for every registered client.
@@ -207,8 +207,8 @@ func (s *Synth) readinessTargets() []readinessTarget {
 	return targets
 }
 
-// CheckReadiness verifies every VOICEVOX-compatible server in urls (keyed by
-// server name, as returned by config.VoicevoxConfig.EffectiveURLs()) is
+// CheckReadiness verifies every VOICEVOX-compatible engine in urls (keyed by
+// engine name, as returned by config.VoicevoxConfig.EffectiveURLs()) is
 // reachable by polling its /version endpoint concurrently, waiting up to the
 // configured startup timeout (config.VoicevoxConfig.EffectiveStartupTimeout;
 // zero disables the check).
@@ -233,7 +233,7 @@ func CheckReadiness(ctx context.Context, urls map[string]string, cfg *config.Con
 	return nil
 }
 
-// readinessTarget identifies a single VOICEVOX-compatible server for a readiness poll.
+// readinessTarget identifies a single VOICEVOX-compatible engine for a readiness poll.
 type readinessTarget struct {
 	name   string
 	url    string
@@ -243,7 +243,7 @@ type readinessTarget struct {
 // waitForAllReady polls every target's /version endpoint concurrently until each
 // responds successfully, waiting up to timeout. Returns nil immediately when
 // timeout is zero (disabled) or there are no targets. On failure, returns a
-// joined error naming the server and URL for each unreachable target.
+// joined error naming the engine and URL for each unreachable target.
 func waitForAllReady(ctx context.Context, targets []readinessTarget, timeout, interval time.Duration) error {
 	if timeout == 0 || len(targets) == 0 {
 		return nil

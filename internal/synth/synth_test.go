@@ -295,7 +295,7 @@ func TestNew_StoresConfig(t *testing.T) {
 	}
 }
 
-func TestNew_CreatesClientPerServer(t *testing.T) {
+func TestNew_CreatesClientPerEngine(t *testing.T) {
 	s := New(map[string]string{"default": "http://localhost:50021", "nemo": "http://localhost:50121"}, &config.Config{})
 
 	if len(s.Clients) != 2 {

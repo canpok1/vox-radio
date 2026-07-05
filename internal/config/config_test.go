@@ -560,21 +560,21 @@ func TestVoicevoxConfig_EffectiveURLs_URLOnlyMode(t *testing.T) {
 			}
 			c := config.VoicevoxConfig{URL: tt.url}
 			got := c.EffectiveURLs()
-			if got[config.DefaultServerName] != tt.want {
-				t.Errorf("EffectiveURLs()[%q] = %q, want %q", config.DefaultServerName, got[config.DefaultServerName], tt.want)
+			if got[config.DefaultEngineName] != tt.want {
+				t.Errorf("EffectiveURLs()[%q] = %q, want %q", config.DefaultEngineName, got[config.DefaultEngineName], tt.want)
 			}
 			if len(got) != 1 {
-				t.Errorf("EffectiveURLs() len = %d, want 1 (url-only mode is implicit default server only)", len(got))
+				t.Errorf("EffectiveURLs() len = %d, want 1 (url-only mode is implicit default engine only)", len(got))
 			}
 		})
 	}
 }
 
-func TestVoicevoxConfig_EffectiveURLs_ServersMode(t *testing.T) {
+func TestVoicevoxConfig_EffectiveURLs_EnginesMode(t *testing.T) {
 	// t.Setenv を使うため t.Parallel() は併用しない。
 	t.Run("設定値のみ", func(t *testing.T) {
 		c := config.VoicevoxConfig{
-			Servers: map[string]config.VoicevoxServerConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
 				"default": {URL: "http://localhost:50021"},
 				"nemo":    {URL: "http://localhost:50121"},
 			},
@@ -588,10 +588,10 @@ func TestVoicevoxConfig_EffectiveURLs_ServersMode(t *testing.T) {
 		}
 	})
 
-	t.Run("サーバー名別環境変数が設定値より優先される", func(t *testing.T) {
+	t.Run("エンジン名別環境変数が設定値より優先される", func(t *testing.T) {
 		t.Setenv("VOX_RADIO_VOICEVOX_URL_NEMO", "http://nemo-override:50121")
 		c := config.VoicevoxConfig{
-			Servers: map[string]config.VoicevoxServerConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
 				"default": {URL: "http://localhost:50021"},
 				"nemo":    {URL: "http://localhost:50121"},
 			},
@@ -605,10 +605,10 @@ func TestVoicevoxConfig_EffectiveURLs_ServersMode(t *testing.T) {
 		}
 	})
 
-	t.Run("旧環境変数はdefaultサーバーのみに適用される", func(t *testing.T) {
+	t.Run("旧環境変数はdefaultエンジンのみに適用される", func(t *testing.T) {
 		t.Setenv(config.VoicevoxURLEnv, "http://legacy-override:50021")
 		c := config.VoicevoxConfig{
-			Servers: map[string]config.VoicevoxServerConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
 				"default": {URL: "http://localhost:50021"},
 				"nemo":    {URL: "http://localhost:50121"},
 			},
@@ -622,9 +622,9 @@ func TestVoicevoxConfig_EffectiveURLs_ServersMode(t *testing.T) {
 		}
 	})
 
-	t.Run("defaultサーバーはurl未指定でも定数にフォールバックする", func(t *testing.T) {
+	t.Run("defaultエンジンはurl未指定でも定数にフォールバックする", func(t *testing.T) {
 		c := config.VoicevoxConfig{
-			Servers: map[string]config.VoicevoxServerConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
 				"default": {},
 			},
 		}
@@ -634,15 +634,15 @@ func TestVoicevoxConfig_EffectiveURLs_ServersMode(t *testing.T) {
 		}
 	})
 
-	t.Run("非defaultサーバーはurl未指定かつ環境変数未設定なら空文字", func(t *testing.T) {
+	t.Run("非defaultエンジンはurl未指定かつ環境変数未設定なら空文字", func(t *testing.T) {
 		c := config.VoicevoxConfig{
-			Servers: map[string]config.VoicevoxServerConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
 				"nemo": {},
 			},
 		}
 		got := c.EffectiveURLs()
 		if got["nemo"] != "" {
-			t.Errorf("nemo = %q, want empty (no fallback for non-default server)", got["nemo"])
+			t.Errorf("nemo = %q, want empty (no fallback for non-default engine)", got["nemo"])
 		}
 	})
 }
@@ -2308,27 +2308,27 @@ func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
 			wantInError: "voicevox.presets",
 		},
 		{
-			name:        "voicevox url and servers are mutually exclusive",
-			file:        "testdata/config_invalid_voicevox_url_and_servers.yaml",
+			name:        "voicevox url and engines are mutually exclusive",
+			file:        "testdata/config_invalid_voicevox_url_and_engines.yaml",
 			wantInError: "voicevox",
 		},
 		{
-			name:        "server name must match [a-z0-9_-]+",
-			file:        "testdata/config_invalid_voicevox_server_name.yaml",
-			wantInError: "voicevox.servers",
+			name:        "engine name must match [a-z0-9_-]+",
+			file:        "testdata/config_invalid_voicevox_engine_name.yaml",
+			wantInError: "voicevox.engines",
 		},
 		{
-			name:        "non-default server url must not be empty",
-			file:        "testdata/config_invalid_voicevox_server_url_empty.yaml",
-			wantInError: "voicevox.servers",
+			name:        "non-default engine url must not be empty",
+			file:        "testdata/config_invalid_voicevox_engine_url_empty.yaml",
+			wantInError: "voicevox.engines",
 		},
 		{
-			name:        "normalized env var name collision between server names",
-			file:        "testdata/config_invalid_voicevox_server_env_collision.yaml",
-			wantInError: "voicevox.servers",
+			name:        "normalized env var name collision between engine names",
+			file:        "testdata/config_invalid_voicevox_engine_env_collision.yaml",
+			wantInError: "voicevox.engines",
 		},
 		{
-			name:        "character engine references an undefined server",
+			name:        "character engine references an undefined engine",
 			file:        "testdata/config_invalid_character_engine.yaml",
 			wantInError: "characters",
 		},
@@ -2351,7 +2351,7 @@ func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_MultiVoicevoxServers(t *testing.T) {
+func TestLoadConfig_MultiVoicevoxEngines(t *testing.T) {
 	cfg, err := config.LoadConfig("testdata/config_multi_voicevox.yaml")
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
@@ -2366,8 +2366,8 @@ func TestLoadConfig_MultiVoicevoxServers(t *testing.T) {
 	if cfg.Characters["anneli"].EffectiveEngine() != "nemo" {
 		t.Errorf("anneli engine = %q, want nemo", cfg.Characters["anneli"].EffectiveEngine())
 	}
-	if cfg.Characters["zundamon"].EffectiveEngine() != config.DefaultServerName {
-		t.Errorf("zundamon engine = %q, want %q", cfg.Characters["zundamon"].EffectiveEngine(), config.DefaultServerName)
+	if cfg.Characters["zundamon"].EffectiveEngine() != config.DefaultEngineName {
+		t.Errorf("zundamon engine = %q, want %q", cfg.Characters["zundamon"].EffectiveEngine(), config.DefaultEngineName)
 	}
 }
 

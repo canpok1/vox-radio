@@ -10,7 +10,7 @@ llm:
     model: test-model
 
 voicevox:
-  servers:
+  engines:
     default:
       url: http://localhost:50021
 

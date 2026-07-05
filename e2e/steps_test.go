@@ -119,7 +119,7 @@ func (s *scenarioState) startVoicevox() error {
 
 // startVoicevoxNemo starts a second fake VOICEVOX-compatible server (simulating
 // VOICEVOX NEMO) and exposes it via the per-server env var override so
-// vox-radio.yaml's voicevox.servers.nemo can resolve it without a literal URL.
+// vox-radio.yaml's voicevox.engines.nemo can resolve it without a literal URL.
 func (s *scenarioState) startVoicevoxNemo() error {
 	s.voicevoxNemo = newFakeVoicevox()
 	s.env["VOX_RADIO_VOICEVOX_URL_NEMO"] = s.voicevoxNemo.URL()

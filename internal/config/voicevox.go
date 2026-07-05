@@ -12,17 +12,17 @@ import (
 const (
 	// DefaultVoicevoxURL は voicevox.url 未指定時のデフォルト URL。
 	DefaultVoicevoxURL = "http://localhost:50021"
-	// VoicevoxURLEnv は VOICEVOX URL を上書きする環境変数名（default サーバー専用）。
+	// VoicevoxURLEnv は VOICEVOX URL を上書きする環境変数名（default エンジン専用）。
 	VoicevoxURLEnv = "VOX_RADIO_VOICEVOX_URL"
-	// DefaultServerName は voicevox.servers 省略時・characters[].engine 省略時に使うサーバー名。
-	DefaultServerName = "default"
+	// DefaultEngineName は voicevox.engines 省略時・characters[].engine 省略時に使うエンジン名。
+	DefaultEngineName = "default"
 	// DefaultStartupTimeoutSeconds は startup_timeout_seconds 未指定時のデフォルト秒数。
 	DefaultStartupTimeoutSeconds = 60
 )
 
-// serverNamePattern restricts voicevox.servers keys to a form that normalizes
-// unambiguously to an environment variable name (see serverURLEnvName).
-var serverNamePattern = regexp.MustCompile(`^[a-z0-9_-]+$`)
+// engineNamePattern restricts voicevox.engines keys to a form that normalizes
+// unambiguously to an environment variable name (see engineURLEnvName).
+var engineNamePattern = regexp.MustCompile(`^[a-z0-9_-]+$`)
 
 // VoicevoxPresets maps preset names to float64 scale values for each axis.
 type VoicevoxPresets struct {
@@ -84,15 +84,15 @@ var defaultSpeedPresets = map[string]float64{
 	"とても早口":   1.4,
 }
 
-// VoicevoxServerConfig is a single named VOICEVOX-compatible server entry
-// under voicevox.servers.
-type VoicevoxServerConfig struct {
+// VoicevoxEngineConfig is a single named VOICEVOX-compatible engine entry
+// under voicevox.engines.
+type VoicevoxEngineConfig struct {
 	URL string `yaml:"url"`
 }
 
 type VoicevoxConfig struct {
 	URL                   string                          `yaml:"url"`
-	Servers               map[string]VoicevoxServerConfig `yaml:"servers,omitempty"`
+	Engines               map[string]VoicevoxEngineConfig `yaml:"engines,omitempty"`
 	Presets               *VoicevoxPresets                `yaml:"presets,omitempty"`
 	StartupTimeoutSeconds *int                            `yaml:"startup_timeout_seconds,omitempty"`
 }
@@ -105,47 +105,47 @@ func (c VoicevoxConfig) EffectiveStartupTimeout() time.Duration {
 	return time.Duration(*c.StartupTimeoutSeconds) * time.Second
 }
 
-// serverURLEnvName returns the per-server URL override env var name for a
-// server name: VOX_RADIO_VOICEVOX_URL_<NAME> with the name upper-cased and
+// engineURLEnvName returns the per-engine URL override env var name for an
+// engine name: VOX_RADIO_VOICEVOX_URL_<NAME> with the name upper-cased and
 // "-" normalized to "_".
-func serverURLEnvName(name string) string {
+func engineURLEnvName(name string) string {
 	norm := strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 	return VoicevoxURLEnv + "_" + norm
 }
 
-// resolveServerURL resolves a single named server's URL following the
+// resolveEngineURL resolves a single named engine's URL following the
 // priority: ① VOX_RADIO_VOICEVOX_URL_<NAME> ② (default のみ) VOX_RADIO_VOICEVOX_URL
 // ③ 設定値 ④ (default のみ) デフォルト定数。Returns "" if none apply (only
-// possible for a non-default server with no configured url and no override).
-func (c VoicevoxConfig) resolveServerURL(name string, sc VoicevoxServerConfig) string {
-	if v := os.Getenv(serverURLEnvName(name)); v != "" {
+// possible for a non-default engine with no configured url and no override).
+func (c VoicevoxConfig) resolveEngineURL(name string, ec VoicevoxEngineConfig) string {
+	if v := os.Getenv(engineURLEnvName(name)); v != "" {
 		return v
 	}
-	if name == DefaultServerName {
+	if name == DefaultEngineName {
 		if v := os.Getenv(VoicevoxURLEnv); v != "" {
 			return v
 		}
 	}
-	if sc.URL != "" {
-		return sc.URL
+	if ec.URL != "" {
+		return ec.URL
 	}
-	if name == DefaultServerName {
+	if name == DefaultEngineName {
 		return DefaultVoicevoxURL
 	}
 	return ""
 }
 
-// EffectiveURLs resolves every configured VOICEVOX-compatible server to its
-// final URL, keyed by server name. When voicevox.servers is not set, the
+// EffectiveURLs resolves every configured VOICEVOX-compatible engine to its
+// final URL, keyed by engine name. When voicevox.engines is not set, the
 // single voicevox.url (or its env/default fallback) is returned as the
-// implicit "default" server, preserving pre-multi-server behavior.
+// implicit "default" engine, preserving pre-multi-engine behavior.
 func (c VoicevoxConfig) EffectiveURLs() map[string]string {
-	if len(c.Servers) == 0 {
-		return map[string]string{DefaultServerName: c.resolveServerURL(DefaultServerName, VoicevoxServerConfig{URL: c.URL})}
+	if len(c.Engines) == 0 {
+		return map[string]string{DefaultEngineName: c.resolveEngineURL(DefaultEngineName, VoicevoxEngineConfig{URL: c.URL})}
 	}
-	result := make(map[string]string, len(c.Servers))
-	for name, sc := range c.Servers {
-		result[name] = c.resolveServerURL(name, sc)
+	result := make(map[string]string, len(c.Engines))
+	for name, ec := range c.Engines {
+		result[name] = c.resolveEngineURL(name, ec)
 	}
 	return result
 }
@@ -196,40 +196,40 @@ func validateVoicevoxPresets(p *VoicevoxPresets) error {
 	return nil
 }
 
-// validateVoicevoxServers checks voicevox.url / voicevox.servers for mutual
-// exclusion, server name format, required urls (env override may substitute),
-// and normalized-env-name collisions between server names.
-func validateVoicevoxServers(c VoicevoxConfig) error {
-	if len(c.Servers) == 0 {
+// validateVoicevoxEngines checks voicevox.url / voicevox.engines for mutual
+// exclusion, engine name format, required urls (env override may substitute),
+// and normalized-env-name collisions between engine names.
+func validateVoicevoxEngines(c VoicevoxConfig) error {
+	if len(c.Engines) == 0 {
 		return nil
 	}
 	if c.URL != "" {
-		return fmt.Errorf("voicevox: url と servers は同時に指定できません（url を voicevox.servers.%s.url へ移行してください）", DefaultServerName)
+		return fmt.Errorf("voicevox: url と engines は同時に指定できません（url を voicevox.engines.%s.url へ移行してください）", DefaultEngineName)
 	}
 
-	envNameToServers := make(map[string][]string, len(c.Servers))
-	names := make([]string, 0, len(c.Servers))
-	for name := range c.Servers {
+	envNameToEngines := make(map[string][]string, len(c.Engines))
+	names := make([]string, 0, len(c.Engines))
+	for name := range c.Engines {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	for _, name := range names {
-		if !serverNamePattern.MatchString(name) {
-			return fmt.Errorf("voicevox.servers[%q]: サーバー名は英小文字・数字・-・_ のみ使用できます", name)
+		if !engineNamePattern.MatchString(name) {
+			return fmt.Errorf("voicevox.engines[%q]: エンジン名は英小文字・数字・-・_ のみ使用できます", name)
 		}
-		envName := serverURLEnvName(name)
-		envNameToServers[envName] = append(envNameToServers[envName], name)
+		envName := engineURLEnvName(name)
+		envNameToEngines[envName] = append(envNameToEngines[envName], name)
 
-		if c.resolveServerURL(name, c.Servers[name]) == "" {
-			return fmt.Errorf("voicevox.servers[%q].url が空です（環境変数 %s で指定するか url を設定してください）", name, envName)
+		if c.resolveEngineURL(name, c.Engines[name]) == "" {
+			return fmt.Errorf("voicevox.engines[%q].url が空です（環境変数 %s で指定するか url を設定してください）", name, envName)
 		}
 	}
 
-	for _, envName := range sortedKeys(envNameToServers) {
-		conflicting := envNameToServers[envName]
+	for _, envName := range sortedKeys(envNameToEngines) {
+		conflicting := envNameToEngines[envName]
 		if len(conflicting) > 1 {
-			return fmt.Errorf("voicevox.servers: サーバー名 %s は環境変数名 %s に正規化され衝突します", strings.Join(conflicting, ", "), envName)
+			return fmt.Errorf("voicevox.engines: エンジン名 %s は環境変数名 %s に正規化され衝突します", strings.Join(conflicting, ", "), envName)
 		}
 	}
 	return nil
