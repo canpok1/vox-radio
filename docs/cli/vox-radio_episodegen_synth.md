@@ -10,6 +10,9 @@ script.json を読み込み、VOICEVOX を呼び出して各台詞を WAV クリ
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 voicevox.url フィールドで VOICEVOX エンジンの URL を指定します（デフォルト: http://localhost:50021）。
 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの値より優先して URL を上書きできます。
+voicevox.engines で名前付きの複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO）を定義し、
+characters.<id>.engine でキャラクターごとに使用サーバーを指定できます（省略時は default）。
+サーバーごとの URL は環境変数 VOX_RADIO_VOICEVOX_URL_<サーバー名（大文字）> でも上書きできます。
 話者 ID は共通設定ファイルのキャラクターカタログから解決されます。
 
 例:

@@ -156,6 +156,10 @@ vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.y
 
 生成した番組を Slack へ投稿します。`slackpost` がマニフェスト（`{program.id}_ep{NNN}_manifest.json`）と `slack-spec.yaml` をもとに mp3 をアップロードします。投稿は親メッセージ（mp3 ＋ 初期コメント）とスレッド返信（要約＋コーナー）の 2 段構成です。投稿の進捗は状態ファイルに記録されるため、途中で失敗して再実行しても、mp3 を二重に投稿せず続きから再開します。
 
+Slack Bot には `files:write`（mp3 アップロード）・`files:read`（アップロード完了確認）・`chat:write`（スレッド返信）の 3 つの権限が必要です。詳細と設定手順は [slack-spec.md の必要な Slack スコープ](internal/cli/skills/vox-radio/references/slack-spec.md#必要な-slack-スコープ) を参照してください。`slackpost` はアップロード前に必要な権限が揃っているか検証し、不足していれば投稿せず不足スコープを表示して終了します（mp3 の二重投稿を防ぎます）。
+
+ログは既定で `.vox-radio/logs/` に出力されます（`--log-dir` で変更可）。権限不足などで失敗したときは、このログで詳細を確認できます。
+
 実行前に、以下の環境変数を設定しておきます（`init` 生成の `.env` に記入欄があります）。
 
 - **Bot トークン**: `vox-radio.yaml` の `slack.bot_token_env` で指定した環境変数
@@ -216,7 +220,7 @@ vox-radio init --sample
 
 ### 共通設定
 
-`vox-radio.yaml` には番組全体で共通する設定を記載します。原稿生成に使う LLM（OpenAI 互換 API。Gemini を推奨。ほかに Dify にも対応）と VOICEVOX の接続先、出演キャラクター（キャラカタログ）、固有名詞の読み方辞書、過去回キャッシュの設定を含みます。
+`vox-radio.yaml` には番組全体で共通する設定を記載します。原稿生成に使う LLM（OpenAI 互換 API。Gemini を推奨。ほかに Dify にも対応）と VOICEVOX の接続先、出演キャラクター（キャラカタログ）、固有名詞の読み方辞書、過去回キャッシュの設定を含みます。VOICEVOX NEMO など、VOICEVOX と同じAPIを持つ複数のエンジンを併用し、キャラクターごとに使用サーバーを指定することもできます（詳細は[vox-radio.md](internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 **キャラクター（キャラカタログ）** — 番組に出演させるキャラクターの一覧です。`characters` に、キャラごとの名前・一人称・口調・性格と、使える音声スタイル（VOICEVOX の声色）を登録します。台本生成と音声合成はこのカタログを参照します。
 

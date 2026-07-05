@@ -62,6 +62,15 @@ func (f *fakeSlack) handle(w http.ResponseWriter, r *http.Request) {
 	f.received = append(f.received, method)
 	f.mu.Unlock()
 
+	switch method {
+	case "auth.test":
+		// プリフライトのスコープ検証用。付与済みスコープをヘッダで返す。
+		w.Header().Set("X-OAuth-Scopes", "chat:write,files:write,files:read")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"ok":true,"url":"https://example.slack.com/","team":"T","user":"bot","team_id":"T1","user_id":"U1","bot_id":"B1"}`)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	switch method {
 	case "files.getUploadURLExternal":

@@ -255,6 +255,82 @@ func TestRealPoster_ResolveThreadTS_NonRetryableError_ImmediateFailure(t *testin
 	}
 }
 
+// newAuthTestServer creates a test server that handles auth.test, optionally
+// setting the X-OAuth-Scopes header. When ok is false it returns invalid_auth.
+func newAuthTestServer(t *testing.T, scopesHeader string, ok bool) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "auth.test") {
+			http.NotFound(w, r)
+			return
+		}
+		if scopesHeader != "" {
+			w.Header().Set("X-OAuth-Scopes", scopesHeader)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if ok {
+			_, _ = w.Write([]byte(`{"ok":true,"url":"https://x.slack.com/","team":"T","user":"u","team_id":"T1","user_id":"U1","bot_id":"B1"}`))
+		} else {
+			_, _ = w.Write([]byte(`{"ok":false,"error":"invalid_auth"}`))
+		}
+	}))
+}
+
+func TestRealPoster_VerifyScopes_AllPresent_Succeeds(t *testing.T) {
+	srv := newAuthTestServer(t, "chat:write,files:write,files:read", true)
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
+
+	err := poster.VerifyScopes(context.Background(), []string{"files:write", "files:read", "chat:write"})
+	if err != nil {
+		t.Fatalf("VerifyScopes should succeed when all scopes are granted: %v", err)
+	}
+}
+
+func TestRealPoster_VerifyScopes_MissingScope_ReturnsError(t *testing.T) {
+	srv := newAuthTestServer(t, "chat:write,files:write", true)
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
+
+	err := poster.VerifyScopes(context.Background(), []string{"files:write", "files:read", "chat:write"})
+	if err == nil {
+		t.Fatal("VerifyScopes should return error when a required scope is missing")
+	}
+	if !strings.Contains(err.Error(), "files:read") {
+		t.Errorf("error should name the missing scope files:read, got: %v", err)
+	}
+}
+
+func TestRealPoster_VerifyScopes_AuthError_ReturnsError(t *testing.T) {
+	srv := newAuthTestServer(t, "", false)
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
+
+	err := poster.VerifyScopes(context.Background(), []string{"files:write"})
+	if err == nil {
+		t.Fatal("VerifyScopes should return error when auth.test fails")
+	}
+	if !strings.Contains(err.Error(), "認証") {
+		t.Errorf("error should indicate auth failure, got: %v", err)
+	}
+}
+
+func TestRealPoster_VerifyScopes_EmptyHeader_SkipsCheck(t *testing.T) {
+	srv := newAuthTestServer(t, "", true)
+	defer srv.Close()
+
+	poster := newTestRealPoster(srv.URL+"/", 10*time.Millisecond, 5*time.Second)
+
+	// スコープヘッダが無い場合は判定不能としてスキップし、エラーにしない。
+	err := poster.VerifyScopes(context.Background(), []string{"files:write", "files:read"})
+	if err != nil {
+		t.Fatalf("VerifyScopes should skip check when scope header is absent: %v", err)
+	}
+}
+
 func TestIsNonRetryable(t *testing.T) {
 	tests := []struct {
 		name string

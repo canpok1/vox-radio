@@ -39,7 +39,7 @@ ffmpeg を使ってイントロ・アウトロ・SE をミックスし、最終�
 			}
 			defer func() { _ = logFile.Close() }()
 
-			if err := requireMediaTools(); err != nil {
+			if err := checkResources(requireMediaTools); err != nil {
 				return err
 			}
 

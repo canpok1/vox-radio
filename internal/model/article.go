@@ -6,7 +6,7 @@ type Article struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"` // フィード由来のテキスト（RSS/Atom content/description）
 	Body        string `json:"body,omitempty"`        // 記事ページ直接取得のテキスト（fetchArticle）
-	Source      string `json:"source,omitempty"`      // 媒体名（RSS feed.Title）
+	Source      string `json:"source,omitempty"`      // 媒体名（feed: feed.Title / links,web: SourceEntry.Name）
 	Author      string `json:"author,omitempty"`      // 著者名（ベストエフォート）
 	Published   string `json:"published,omitempty"`   // 配信日時（RFC3339・番組TZ変換済み）
 }

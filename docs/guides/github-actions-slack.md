@@ -8,7 +8,7 @@ GitHub Actions のスケジュール実行で、定期的に番組を生成し�
 ## 前提
 
 - 設定ファイル（`vox-radio.yaml` / `episode-spec.yaml` / `slack-spec.yaml`）がリポジトリのルートにコミット済みであること（`vox-radio init` で生成し、内容を記入したもの）。
-- Slack Bot を作成し、必要な権限（`chat:write` / `files:write`）を付与済みであること（[README の Slack投稿](../../README.md#slack投稿)を参照）。
+- Slack Bot を作成し、必要な権限（`chat:write` / `files:write` / `files:read`）を付与済みであること（[README の Slack投稿](../../README.md#slack投稿)を参照）。
 - リポジトリに次の値を登録済みであること。
 
   | 値 | 登録先 | 既定の環境変数名 | 対応する設定 |
@@ -84,6 +84,7 @@ jobs:
 2. **番組生成** — `episodegen` が記事収集から音声合成までを一括実行し（詳細は[README の番組生成](../../README.md#番組生成)）、`output/` に mp3 とマニフェストを出力します。
 3. **Slack 投稿** — `slackpost` がマニフェストをもとに mp3 を Slack へ直接アップロードします。GitHub Release など公開 URL の準備は不要です。
 4. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/cache/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。
+5. **VOICEVOX NEMO などを併用する場合** — `services` にサービスを追加してポートをマップし、`vox-radio.yaml` の `voicevox.engines` でエンジンを定義したうえで、エンジンごとに `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し - を _ に置換した名前>` 環境変数を設定します（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 ## 注意事項
 

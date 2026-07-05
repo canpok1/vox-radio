@@ -514,7 +514,7 @@ func TestLoadConfig_Voicevox(t *testing.T) {
 	}
 }
 
-func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
+func TestVoicevoxConfig_EffectiveURLs_URLOnlyMode(t *testing.T) {
 	// t.Setenv を使うため t.Parallel() は併用しない。
 	tests := []struct {
 		name   string
@@ -559,11 +559,92 @@ func TestVoicevoxConfig_EffectiveURL(t *testing.T) {
 				}
 			}
 			c := config.VoicevoxConfig{URL: tt.url}
-			if got := c.EffectiveURL(); got != tt.want {
-				t.Errorf("EffectiveURL() = %q, want %q", got, tt.want)
+			got := c.EffectiveURLs()
+			if got[config.DefaultEngineName] != tt.want {
+				t.Errorf("EffectiveURLs()[%q] = %q, want %q", config.DefaultEngineName, got[config.DefaultEngineName], tt.want)
+			}
+			if len(got) != 1 {
+				t.Errorf("EffectiveURLs() len = %d, want 1 (url-only mode is implicit default engine only)", len(got))
 			}
 		})
 	}
+}
+
+func TestVoicevoxConfig_EffectiveURLs_EnginesMode(t *testing.T) {
+	// t.Setenv を使うため t.Parallel() は併用しない。
+	t.Run("設定値のみ", func(t *testing.T) {
+		c := config.VoicevoxConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
+				"default": {URL: "http://localhost:50021"},
+				"nemo":    {URL: "http://localhost:50121"},
+			},
+		}
+		got := c.EffectiveURLs()
+		if got["default"] != "http://localhost:50021" {
+			t.Errorf("default = %q", got["default"])
+		}
+		if got["nemo"] != "http://localhost:50121" {
+			t.Errorf("nemo = %q", got["nemo"])
+		}
+	})
+
+	t.Run("エンジン名別環境変数が設定値より優先される", func(t *testing.T) {
+		t.Setenv("VOX_RADIO_VOICEVOX_URL_NEMO", "http://nemo-override:50121")
+		c := config.VoicevoxConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
+				"default": {URL: "http://localhost:50021"},
+				"nemo":    {URL: "http://localhost:50121"},
+			},
+		}
+		got := c.EffectiveURLs()
+		if got["nemo"] != "http://nemo-override:50121" {
+			t.Errorf("nemo = %q, want override", got["nemo"])
+		}
+		if got["default"] != "http://localhost:50021" {
+			t.Errorf("default = %q, want unaffected", got["default"])
+		}
+	})
+
+	t.Run("旧環境変数はdefaultエンジンのみに適用される", func(t *testing.T) {
+		t.Setenv(config.VoicevoxURLEnv, "http://legacy-override:50021")
+		c := config.VoicevoxConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
+				"default": {URL: "http://localhost:50021"},
+				"nemo":    {URL: "http://localhost:50121"},
+			},
+		}
+		got := c.EffectiveURLs()
+		if got["default"] != "http://legacy-override:50021" {
+			t.Errorf("default = %q, want legacy env override", got["default"])
+		}
+		if got["nemo"] != "http://localhost:50121" {
+			t.Errorf("nemo = %q, want unaffected by legacy env", got["nemo"])
+		}
+	})
+
+	t.Run("defaultエンジンはurl未指定でも定数にフォールバックする", func(t *testing.T) {
+		c := config.VoicevoxConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
+				"default": {},
+			},
+		}
+		got := c.EffectiveURLs()
+		if got["default"] != config.DefaultVoicevoxURL {
+			t.Errorf("default = %q, want %q", got["default"], config.DefaultVoicevoxURL)
+		}
+	})
+
+	t.Run("非defaultエンジンはurl未指定かつ環境変数未設定なら空文字", func(t *testing.T) {
+		c := config.VoicevoxConfig{
+			Engines: map[string]config.VoicevoxEngineConfig{
+				"nemo": {},
+			},
+		}
+		got := c.EffectiveURLs()
+		if got["nemo"] != "" {
+			t.Errorf("nemo = %q, want empty (no fallback for non-default engine)", got["nemo"])
+		}
+	})
 }
 
 func TestVoicevoxConfig_EffectiveStartupTimeout(t *testing.T) {
@@ -2226,6 +2307,36 @@ func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
 			file:        "testdata/config_invalid_preset_range.yaml",
 			wantInError: "voicevox.presets",
 		},
+		{
+			name:        "voicevox url and engines are mutually exclusive",
+			file:        "testdata/config_invalid_voicevox_url_and_engines.yaml",
+			wantInError: "voicevox",
+		},
+		{
+			name:        "engine name must match [a-z0-9_-]+",
+			file:        "testdata/config_invalid_voicevox_engine_name.yaml",
+			wantInError: "voicevox.engines",
+		},
+		{
+			name:        "non-default engine url must not be empty",
+			file:        "testdata/config_invalid_voicevox_engine_url_empty.yaml",
+			wantInError: "voicevox.engines",
+		},
+		{
+			name:        "normalized env var name collision between engine names",
+			file:        "testdata/config_invalid_voicevox_engine_env_collision.yaml",
+			wantInError: "voicevox.engines",
+		},
+		{
+			name:        "character engine references an undefined engine",
+			file:        "testdata/config_invalid_character_engine.yaml",
+			wantInError: "characters",
+		},
+		{
+			name:        "character engine other than default in url-only mode",
+			file:        "testdata/config_invalid_character_engine_url_only_mode.yaml",
+			wantInError: "characters",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -2237,6 +2348,26 @@ func TestLoadConfig_ValidationError_FieldPathPresent(t *testing.T) {
 				t.Errorf("error should contain %q, got: %v", c.wantInError, err)
 			}
 		})
+	}
+}
+
+func TestLoadConfig_MultiVoicevoxEngines(t *testing.T) {
+	cfg, err := config.LoadConfig("testdata/config_multi_voicevox.yaml")
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	urls := cfg.Voicevox.EffectiveURLs()
+	if urls["default"] != "http://localhost:50021" {
+		t.Errorf("default url = %q", urls["default"])
+	}
+	if urls["nemo"] != "http://localhost:50121" {
+		t.Errorf("nemo url = %q", urls["nemo"])
+	}
+	if cfg.Characters["anneli"].EffectiveEngine() != "nemo" {
+		t.Errorf("anneli engine = %q, want nemo", cfg.Characters["anneli"].EffectiveEngine())
+	}
+	if cfg.Characters["zundamon"].EffectiveEngine() != config.DefaultEngineName {
+		t.Errorf("zundamon engine = %q, want %q", cfg.Characters["zundamon"].EffectiveEngine(), config.DefaultEngineName)
 	}
 }
 

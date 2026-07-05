@@ -7,12 +7,16 @@ import (
 	"encoding/binary"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 )
 
 // fakeVoicevox は VOICEVOX Engine の /audio_query と /synthesis を模倣するモックサーバー。
 // /synthesis は ffprobe が解析できる正規の WAV（無音）を返す。
+// audioQueryCount は複数サーバー構成でキャラクターごとに正しい接続先へ
+// リクエストが届いたかを検証するための受信回数カウンタ。
 type fakeVoicevox struct {
-	server *httptest.Server
+	server          *httptest.Server
+	audioQueryCount atomic.Int64
 }
 
 func newFakeVoicevox() *fakeVoicevox {
@@ -23,6 +27,7 @@ func newFakeVoicevox() *fakeVoicevox {
 		_, _ = w.Write([]byte(`"0.14.7"`))
 	})
 	mux.HandleFunc("/audio_query", func(w http.ResponseWriter, r *http.Request) {
+		f.audioQueryCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"accent_phrases": [],
@@ -47,6 +52,9 @@ func newFakeVoicevox() *fakeVoicevox {
 func (f *fakeVoicevox) URL() string { return f.server.URL }
 
 func (f *fakeVoicevox) Close() { f.server.Close() }
+
+// AudioQueryCount returns how many /audio_query requests this server received.
+func (f *fakeVoicevox) AudioQueryCount() int64 { return f.audioQueryCount.Load() }
 
 // buildSilentWAV は PCM16/mono/24kHz の無音 WAV バイト列を生成する。
 func buildSilentWAV(durationSec float64) []byte {

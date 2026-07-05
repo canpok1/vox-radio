@@ -68,6 +68,9 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの voicevox.url より優先して VOICEVOX エンジンの URL を上書きできます。
+voicevox.engines で名前付きの複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO）を定義し、
+characters.<id>.engine でキャラクターごとに使用サーバーを指定できます（省略時は default）。
+サーバーごとの URL は環境変数 VOX_RADIO_VOICEVOX_URL_<サーバー名（大文字）> でも上書きできます。
 
 例:
   vox-radio episodegen
@@ -80,10 +83,6 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				return fmt.Errorf("setup logger: %w", err)
 			}
 			defer func() { _ = logFile.Close() }()
-
-			if err := requireMediaTools(); err != nil {
-				return err
-			}
 
 			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
 			if err != nil {
@@ -122,6 +121,19 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 						return fmt.Errorf("%s は既に存在します。上書きするには --force を指定してください", path)
 					}
 				}
+			}
+
+			// 必要な外部リソースをまとめて検証し、LLM でコストを消費する前に早期失敗させる
+			// （VOICEVOX 未到達を synth 段まで見逃さない）。安価な既存出力ガードの後段に置き、
+			// 出力が既存で即失敗するケースで VOICEVOX 待機を無駄に発生させない。
+			ctx := context.Background()
+			engineURLs := cfg.Voicevox.EffectiveURLs()
+			if err := checkResources(
+				requireMediaTools,
+				func() error { return synth.CheckReadiness(ctx, engineURLs, cfg) },
+				func() error { return requireLLMKey(cfg) },
+			); err != nil {
+				return err
 			}
 
 			llmClient := newLLMClient(cfg)
@@ -168,8 +180,6 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				script.WithLogger(logger),
 			)
 
-			engineURL := cfg.Voicevox.EffectiveURL()
-
 			runner := &pipeline.Runner{
 				Spec:              p,
 				Config:            cfg,
@@ -177,13 +187,13 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 				ExcludedDedupKeys: excludedDedupKeys,
 				Rundowner:         rundowner,
 				Scripter:          scripter,
-				Synther:           synth.New(engineURL, cfg, synth.WithLogger(logger)),
+				Synther:           synth.New(engineURLs, cfg, synth.WithLogger(logger)),
 				Mixer:             &mixerAdapter{inner: mix.New(p.Assets, p.Program, mix.WithLogger(logger), mix.WithFFmpegWriter(logFile))},
 				ProgramSummarizer: programsummary.NewLLMProgramSummarizer(llmClient, prompts["summary"], stepTemp(cfg.LLM, "summary"), p.Program.EffectiveSummaryLength(), programsummary.WithLogger(logger)),
 				CornerSummarizer:  programsummary.NewLLMCornerSummarizer(llmClient, prompts["corner_summary"], stepTemp(cfg.LLM, "corner_summary"), programsummary.WithLogger(logger)),
 			}
 
-			if err := runner.Run(context.Background(), pipeline.Options{
+			if err := runner.Run(ctx, pipeline.Options{
 				OutDir:        outDir,
 				EpisodeNumber: episodeNumber,
 				Casts:         selectedCasts,

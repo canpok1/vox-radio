@@ -47,6 +47,25 @@
     かつ JSONファイル "clips/clips.json" のキー "clips.0.speaker_role" は文字列 "zundamon" である
 
   @ffmpeg
+  シナリオ: synth は複数VOICEVOXサーバーでキャラクターごとに接続先を切り替える
+    前提 モックVOICEVOXサーバー(NEMO)が起動している
+    かつ fixture "vox-radio_multi_voicevox.yaml.tmpl" をファイル "vox-radio.yaml" として配置する
+    かつ ファイル "multi_engine_script.json" を以下の内容で作成する:
+      """
+      {
+        "segments": [
+          { "type": "speech", "speaker_role": "zundamon", "text": "デフォルトサーバーで話す" },
+          { "type": "speech", "speaker_role": "anneli", "text": "NEMOサーバーで話す" }
+        ]
+      }
+      """
+    もし "vox-radio episodegen synth --in multi_engine_script.json --out-dir multi_clips" を実行する
+    ならば 終了コードは 0 である
+    かつ ファイル "multi_clips/clips.json" が存在する
+    かつ モックVOICEVOXサーバーは音声合成リクエストを 1 件受信した
+    かつ モックVOICEVOXサーバー(NEMO)は音声合成リクエストを 1 件受信した
+
+  @ffmpeg
   シナリオ: mix はクリップを結合して MP3 を生成する
     前提 "vox-radio episodegen gather --spec episode-spec.yaml --out work/01_articles.json" を実行する
     かつ "vox-radio episodegen rundown --spec episode-spec.yaml --in work/01_articles.json --out work/02_rundown.json" を実行する

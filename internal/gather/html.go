@@ -2,9 +2,11 @@ package gather
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 
@@ -32,11 +34,13 @@ func (c *Gatherer) fetchArticle(ctx context.Context, rawURL string) (*model.Arti
 
 	title := findTitle(doc)
 	body := findBody(doc)
+	published := findPublished(doc, c.loc)
 	return &model.Article{
-		DedupKey: HTMLDedupKey(rawURL, title, body),
-		URL:      rawURL,
-		Title:    title,
-		Body:     body,
+		DedupKey:  HTMLDedupKey(rawURL, title, body),
+		URL:       rawURL,
+		Title:     title,
+		Body:      body,
+		Published: published,
 	}, nil
 }
 
@@ -100,6 +104,107 @@ func extractText(n *html.Node) string {
 	}
 	walk(n)
 	return sb.String()
+}
+
+// findPublished extracts the article published date from HTML meta tags.
+// Priority: OGP article:published_time → JSON-LD datePublished.
+// Returns RFC3339 in loc, or empty string if not found or unparseable.
+func findPublished(doc *html.Node, loc *time.Location) string {
+	if raw := findMetaContent(doc, "article:published_time"); raw != "" {
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
+			return t.In(loc).Format(time.RFC3339)
+		}
+	}
+	if raw := findJSONLDPublished(doc); raw != "" {
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
+			return t.In(loc).Format(time.RFC3339)
+		}
+	}
+	return ""
+}
+
+// findMetaContent returns the content attribute of the first <meta property="prop"> element.
+func findMetaContent(doc *html.Node, property string) string {
+	var walk func(*html.Node) string
+	walk = func(n *html.Node) string {
+		if n.Type == html.ElementNode && n.Data == "meta" {
+			var prop, content string
+			for _, a := range n.Attr {
+				switch a.Key {
+				case "property":
+					prop = a.Val
+				case "content":
+					content = a.Val
+				}
+			}
+			if prop == property && content != "" {
+				return content
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if v := walk(c); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+	return walk(doc)
+}
+
+// findJSONLDPublished extracts datePublished from <script type="application/ld+json">.
+// Supports both flat objects and @graph arrays.
+func findJSONLDPublished(doc *html.Node) string {
+	var walk func(*html.Node) string
+	walk = func(n *html.Node) string {
+		if n.Type == html.ElementNode && n.Data == "script" {
+			isJSONLD := false
+			for _, a := range n.Attr {
+				if a.Key == "type" && a.Val == "application/ld+json" {
+					isJSONLD = true
+					break
+				}
+			}
+			if isJSONLD && n.FirstChild != nil && n.FirstChild.Type == html.TextNode {
+				if v := extractDatePublished(n.FirstChild.Data); v != "" {
+					return v
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if v := walk(c); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+	return walk(doc)
+}
+
+func extractDatePublished(jsonText string) string {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(jsonText), &obj); err != nil {
+		return ""
+	}
+	if raw, ok := obj["datePublished"]; ok {
+		var s string
+		if json.Unmarshal(raw, &s) == nil && s != "" {
+			return s
+		}
+	}
+	if raw, ok := obj["@graph"]; ok {
+		var graph []map[string]json.RawMessage
+		if json.Unmarshal(raw, &graph) == nil {
+			for _, entry := range graph {
+				if dp, ok := entry["datePublished"]; ok {
+					var s string
+					if json.Unmarshal(dp, &s) == nil && s != "" {
+						return s
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func extractTextFromHTML(s string) string {
