@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/canpok1/vox-radio/internal/config"
@@ -28,14 +29,29 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
 投稿先チャンネル ID は slack-spec.yaml の slack.channel_env で指定した環境変数から取得します。
 環境変数 VOX_RADIO_SLACK_API_URL を設定すると、Slack API の接続先 URL を上書きできます（テスト・検証用）。
 
+アップロード前に必要なスコープ（files:write / files:read / chat:write）を検証し、
+不足していれば投稿せずに不足スコープを表示して終了します（音声の二重投稿を防ぎます）。
+
 実行進捗は状態ファイルに記録されます。タイムアウト後に再実行すると、音声の二重投稿なしに
 未完了の返信投稿から再開します。状態ファイルの既定パスは manifest と同じディレクトリです。
+実行ログは --log-dir で指定したディレクトリに出力されます。
 
 例:
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --dry-run
   vox-radio slackpost --manifest output/manifest.json --spec config/slack-spec.yaml --state /tmp/state.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// dry-run は副作用なしのプレビューのため、ログファイルは生成しない。
+			var logger *slog.Logger
+			if !dryRun {
+				l, logFile, err := setupLogger("slackpost", logDirFlag(cmd))
+				if err != nil {
+					return fmt.Errorf("setup logger: %w", err)
+				}
+				defer func() { _ = logFile.Close() }()
+				logger = l
+			}
+
 			cfg, err := config.LoadConfig(configPath(cmd))
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
@@ -80,6 +96,7 @@ Bot トークンは共通設定の slack.bot_token_env で指定した環境変�
 				StatePath: statePath,
 				DryRun:    dryRun,
 				Out:       cmd.OutOrStdout(),
+				Logger:    logger,
 			}, nil)
 		},
 	}

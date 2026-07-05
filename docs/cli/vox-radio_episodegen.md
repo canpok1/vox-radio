@@ -22,6 +22,9 @@ mp3・マニフェスト・中間ディレクトリのいずれかが既に存�
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 環境変数 VOX_RADIO_VOICEVOX_URL を設定すると、設定ファイルの voicevox.url より優先して VOICEVOX エンジンの URL を上書きできます。
+voicevox.engines で名前付きの複数 VOICEVOX 互換サーバー（例: VOICEVOX NEMO）を定義し、
+characters.<id>.engine でキャラクターごとに使用サーバーを指定できます（省略時は default）。
+サーバーごとの URL は環境変数 VOX_RADIO_VOICEVOX_URL_<サーバー名（大文字）> でも上書きできます。
 
 例:
   vox-radio episodegen

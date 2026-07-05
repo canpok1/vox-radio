@@ -45,6 +45,7 @@ type SourceEntry struct {
 	MaxItems int    `yaml:"max_items,omitempty"`
 	Path     string `yaml:"path,omitempty"`
 	Title    string `yaml:"title,omitempty"`
+	Name     string `yaml:"name,omitempty"` // 媒体名（links/web 用。Article.Source に設定される）
 }
 
 // SourceConfig はコーナーのソース設定（SourceEntry の配列）。
@@ -69,21 +70,22 @@ type CornerDefaults struct {
 
 // CornerConfig defines a fixed corner in the program structure.
 type CornerConfig struct {
-	ID            string            `yaml:"id"` // コーナーを回をまたいで同定する安定キー（必須・番組内で一意）
-	Title         string            `yaml:"title"`
-	Content       string            `yaml:"content"`
-	Direction     string            `yaml:"direction,omitempty"`
-	ScriptNote    string            `yaml:"script_note,omitempty"` // コーナー個別の台本指示（write専用・非公開）
-	Cast          map[string]string `yaml:"cast"`
-	LengthSec     int               `yaml:"length_sec"`
-	SummaryLength int               `yaml:"summary_length,omitempty"`
-	Source        SourceConfig      `yaml:"source,omitempty"`
-	StartAudio    *AudioRef         `yaml:"start_audio,omitempty"`
-	EndAudio      *AudioRef         `yaml:"end_audio,omitempty"`
-	BGM           *string           `yaml:"bgm,omitempty"`
-	StartPauseSec *float64          `yaml:"start_pause_sec,omitempty"`
-	EndPauseSec   *float64          `yaml:"end_pause_sec,omitempty"`
-	Condition     *EpisodeCondition `yaml:"condition,omitempty"` // 出現条件（nil なら毎回出る固定コーナー）
+	ID               string            `yaml:"id"` // コーナーを回をまたいで同定する安定キー（必須・番組内で一意）
+	Title            string            `yaml:"title"`
+	Content          string            `yaml:"content"`
+	Direction        string            `yaml:"direction,omitempty"`
+	ScriptNote       string            `yaml:"script_note,omitempty"` // コーナー個別の台本指示（write専用・非公開）
+	Cast             map[string]string `yaml:"cast"`
+	LengthSec        int               `yaml:"length_sec"`
+	SummaryLength    int               `yaml:"summary_length,omitempty"`
+	Source           SourceConfig      `yaml:"source,omitempty"`
+	StartAudio       *AudioRef         `yaml:"start_audio,omitempty"`
+	EndAudio         *AudioRef         `yaml:"end_audio,omitempty"`
+	BGM              *string           `yaml:"bgm,omitempty"`
+	StartPauseSec    *float64          `yaml:"start_pause_sec,omitempty"`
+	EndPauseSec      *float64          `yaml:"end_pause_sec,omitempty"`
+	Condition        *EpisodeCondition `yaml:"condition,omitempty"`           // 出現条件（nil なら毎回出る固定コーナー）
+	SkipIfNoArticles bool              `yaml:"skip_if_no_articles,omitempty"` // true なら記事0件時にコーナーごとスキップ
 }
 
 // EffectiveSummaryLength returns the configured SummaryLength, falling back to DefaultCornerSummaryLength.

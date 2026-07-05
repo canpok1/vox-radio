@@ -405,6 +405,11 @@ func TestRunner_Run_CallsCornerSummarizer(t *testing.T) {
 func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
+	s.rnd.rundown = model.Rundown{
+		Corners: []model.RundownCorner{
+			{ID: "test", Title: "テストコーナー", Articles: make([]model.RundownArticle, 0)},
+		},
+	}
 	s.scr.lines = model.ScriptLines{
 		Corners: []model.CornerLines{
 			{Title: "テストコーナー", Lines: []model.Line{{Text: "テスト"}}},
@@ -414,7 +419,7 @@ func TestRunner_Run_ManifestIncludesCornerSummary(t *testing.T) {
 
 	r := newRunner(s)
 	r.Spec = &config.EpisodeSpec{
-		Corners: []config.CornerConfig{{Title: "テストコーナー"}},
+		Corners: []config.CornerConfig{{ID: "test", Title: "テストコーナー"}},
 	}
 
 	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
@@ -621,6 +626,12 @@ func TestRunner_Run_ManifestIncludesCharacterCredits(t *testing.T) {
 func TestRunner_Run_WritesTimeline(t *testing.T) {
 	outDir := t.TempDir()
 	s := defaultStubs()
+	s.rnd.rundown = model.Rundown{
+		Corners: []model.RundownCorner{
+			{ID: "op", Title: "OP", Articles: make([]model.RundownArticle, 0)},
+			{ID: "tech", Title: "技術", Articles: make([]model.RundownArticle, 0)},
+		},
+	}
 	s.asm.cornerDurations = map[string]float64{"op": 12.5, "tech": 30.0}
 
 	r := newRunner(s)
@@ -673,5 +684,58 @@ func TestRunner_Run_EpisodeMetaPassedToMixer(t *testing.T) {
 
 	if s.asm.capturedMeta.Number != 3 {
 		t.Errorf("EpisodeMeta.Number = %d, want 3", s.asm.capturedMeta.Number)
+	}
+}
+
+func TestRunner_Run_SkippedCornersFilteredFromDownstream(t *testing.T) {
+	outDir := t.TempDir()
+	s := defaultStubs()
+	// Rundowner returns only 2 corners (mail was skipped)
+	s.rnd.rundown = model.Rundown{
+		Corners: []model.RundownCorner{
+			{ID: "opening", Title: "オープニング", Articles: make([]model.RundownArticle, 0)},
+			{ID: "ending", Title: "エンディング", Articles: make([]model.RundownArticle, 0)},
+		},
+	}
+	s.asm.cornerDurations = map[string]float64{"opening": 10.0, "ending": 15.0}
+
+	r := newRunner(s)
+	r.Spec = &config.EpisodeSpec{
+		Corners: []config.CornerConfig{
+			{ID: "opening", Title: "オープニング", Content: "導入", LengthSec: 30},
+			{ID: "mail", Title: "お便りコーナー", Content: "お便り紹介", LengthSec: 120, SkipIfNoArticles: true},
+			{ID: "ending", Title: "エンディング", Content: "締め", LengthSec: 30},
+		},
+	}
+
+	if err := r.Run(context.Background(), pipeline.Options{OutDir: outDir}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Timeline should only have the 2 included corners
+	var tl model.Timeline
+	if err := fileio.ReadJSON(outLayout(outDir).Timeline(), &tl); err != nil {
+		t.Fatalf("read timeline: %v", err)
+	}
+	if len(tl.Corners) != 2 {
+		t.Fatalf("Timeline.Corners: got %d, want 2", len(tl.Corners))
+	}
+	if tl.Corners[0].ID != "opening" {
+		t.Errorf("Timeline.Corners[0].ID: got %q, want %q", tl.Corners[0].ID, "opening")
+	}
+	if tl.Corners[1].ID != "ending" {
+		t.Errorf("Timeline.Corners[1].ID: got %q, want %q", tl.Corners[1].ID, "ending")
+	}
+
+	// Manifest should only have the 2 included corners
+	got := mustReadManifest(t, outDir)
+	if strings.Contains(got, "お便りコーナー") {
+		t.Error("manifest should not contain skipped corner title")
+	}
+	if !strings.Contains(got, "オープニング") {
+		t.Error("manifest should contain opening corner")
+	}
+	if !strings.Contains(got, "エンディング") {
+		t.Error("manifest should contain ending corner")
 	}
 }

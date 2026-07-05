@@ -80,6 +80,9 @@ func (c *Gatherer) Run(ctx context.Context, cfg config.SourceConfig, excluded ma
 			if err != nil {
 				return nil, fmt.Errorf("fetch article %s: %w", src.URL, err)
 			}
+			if src.Name != "" {
+				article.Source = src.Name
+			}
 			if articles, err = c.appendSanitized(articles, []model.Article{*article}); err != nil {
 				return nil, err
 			}
@@ -87,6 +90,11 @@ func (c *Gatherer) Run(ctx context.Context, cfg config.SourceConfig, excluded ma
 			items, err := c.fetchLinks(ctx, src.Path)
 			if err != nil {
 				return nil, fmt.Errorf("fetch links %s: %w", src.Path, err)
+			}
+			if src.Name != "" {
+				for i := range items {
+					items[i].Source = src.Name
+				}
 			}
 			if articles, err = c.appendSanitized(articles, items); err != nil {
 				return nil, err

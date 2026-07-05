@@ -12,9 +12,17 @@ import (
 
 // mockPoster is a test double for the Poster interface.
 type mockPoster struct {
+	verifyScopesFn    func(ctx context.Context, required []string) error
 	uploadAudioFn     func(ctx context.Context, u slack.UploadParams) (string, error)
 	resolveThreadTSFn func(ctx context.Context, fileID, channel string) (string, error)
 	postThreadReplyFn func(ctx context.Context, p slack.ReplyParams) error
+}
+
+func (m *mockPoster) VerifyScopes(ctx context.Context, required []string) error {
+	if m.verifyScopesFn != nil {
+		return m.verifyScopesFn(ctx, required)
+	}
+	return nil
 }
 
 func (m *mockPoster) UploadAudio(ctx context.Context, u slack.UploadParams) (string, error) {
