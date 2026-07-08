@@ -17,6 +17,7 @@
 | `direction` | string | 任意 | 番組全体の演出方針（direct ステップのみに渡る）。SE・pause の挿入タイミングに関する指示。台本生成・manifest・feed・Slack には渡されない |
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
+| `timezone` | string | 任意 | 番組内で日時を整形するときのIANAタイムゾーン名（例: `Asia/Tokyo`）。記事公開日時の変換、収録日時（台本生成プロンプトに渡す）、生成 MP3 の日付メタデータ（ID3）の整形に使用。未指定時はデフォルト `Asia/Tokyo`。不正なタイムゾーン名は警告のうえ UTC にフォールバックする |
 | `chars_per_minute` | int | 任意 | 台本の文字数換算に使用する1分あたりの目安文字数。台本生成時の `length_sec` → 目標文字数換算に使用。未指定時はデフォルト 420（= 7文字/秒×60） |
 | `audio_quality` | string | 任意 | 生成 MP3 の音質プリセット。`high`（約245kbps）/ `standard`（約190kbps、**既定**）/ `low`（約130kbps）。未指定または空は `standard` として扱われる |
 | `credits` | []string | 任意 | 番組固定クレジット。データソース帰属など番組全体に適用するクレジットをリストで記入する。各エピソードの `<description>` 末尾クレジット節へアセット・キャラクターのクレジットとともに自動追記される（重複排除あり） |
@@ -43,6 +44,7 @@
 | `start_pause_sec` | float64 | 任意 | コーナー先頭（`start_audio` より前）に挿入する無音時間（秒）。0 または省略時は挿入しない |
 | `end_pause_sec` | float64 | 任意 | コーナー末尾（`end_audio` より後）に挿入する無音時間（秒）。0 または省略時は挿入しない |
 | `condition` | EpisodeCondition | 任意 | コーナーの出現条件（省略すると毎回必ず出る固定コーナー） |
+| `skip_if_no_articles` | bool | 任意 | `true` にすると、このコーナーの記事が0件のときコーナーごとスキップする（お便りコーナーなど、素材がないと成り立たないコーナー向け）。未指定時は `false`（記事0件でもコーナーは放送される）。`source` を省略したコーナーも記事0件になるため、`skip_if_no_articles: true` を併せて指定すると収集素材のないコーナーを番組から外せる |
 
 ### `corners[].condition` サブフィールド
 

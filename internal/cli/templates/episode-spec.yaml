@@ -20,6 +20,9 @@ program:
   # script_note: "記事を紹介する場合は記事タイトルを正確に伝えること。"
   # 番組まとめ文のおおよその文字数（省略すると 200 文字）。
   # summary_length: 200
+  # 番組内で日時を整形するときのタイムゾーン（IANA名。省略すると Asia/Tokyo）。
+  # 記事公開日時の変換や収録日時の表示、生成 MP3 の日付情報に使われます。
+  # timezone: "Asia/Tokyo"
   # 生成 MP3 の音質プリセット（省略すると standard）。
   #   high     → 約245kbps (VBR V0)
   #   standard → 約190kbps (VBR V2) ※既定
