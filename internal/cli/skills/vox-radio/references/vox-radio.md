@@ -154,3 +154,13 @@ pronunciation:
 `default_style` を指定した場合、その値は `styles` のキーとして存在しなければなりません（起動時検証あり）。
 
 `engine` を指定した場合、`voicevox.engines` に同名のエンジンが定義されていなければなりません（起動時検証あり）。`voicevox.engines` を使わない単一サーバーモードでは `engine` は省略するか `default` のみ指定できます。
+
+## `slack` セクション
+
+Slack 通知（`slackpost` コマンド）で使う Bot トークンの環境変数名を指定します。省略可能で、Slack 連携を使わない場合は不要です。
+
+| フィールド | 型 | 必須/任意 | 説明 |
+|---|---|---|---|
+| `bot_token_env` | string | 任意 | Slack Bot トークン（`xoxb-...`）を格納する環境変数名。`slackpost` での Slack 投稿時に使用 |
+
+通知先チャンネルやメッセージテンプレートなど、配信ごとの詳細設定は `slack-spec.yaml` 側で行います。フォーマットは `references/slack-spec.md` を参照してください。
