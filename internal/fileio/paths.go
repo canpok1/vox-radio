@@ -19,6 +19,7 @@ const (
 	FileProofread = "04_proofread.json"
 	FileScript    = "04_script.json"
 	FileTimeline  = "06_timeline.json"
+	FileAnalysis  = "07_analysis.json"
 
 	DirIntermediate = "intermediate"
 	DirClips        = "05_clips"
@@ -94,6 +95,7 @@ func (l EpisodeLayout) Lines() string     { return l.intermediatePath(FileLines)
 func (l EpisodeLayout) Proofread() string { return l.intermediatePath(FileProofread) }
 func (l EpisodeLayout) Script() string    { return l.intermediatePath(FileScript) }
 func (l EpisodeLayout) Timeline() string  { return l.intermediatePath(FileTimeline) }
+func (l EpisodeLayout) Analysis() string  { return l.intermediatePath(FileAnalysis) }
 
 // EnsureDirs creates the episode's intermediate and clips directories.
 func (l EpisodeLayout) EnsureDirs() error {

@@ -200,6 +200,7 @@ func TestEpisodeLayout(t *testing.T) {
 		{"Proofread", layout.Proofread(), filepath.Join(base, "04_proofread.json")},
 		{"Script", layout.Script(), filepath.Join(base, "04_script.json")},
 		{"Timeline", layout.Timeline(), filepath.Join(base, "06_timeline.json")},
+		{"Analysis", layout.Analysis(), filepath.Join(base, "07_analysis.json")},
 	}
 	for _, tt := range tests {
 		if tt.got != tt.want {

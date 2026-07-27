@@ -201,6 +201,13 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 				return err
 			}
 
+			// analyze は completed mp3 を捨てないよう失敗してもパイプライン全体は継続する
+			// （ADR-0098）。single_shot でも 07_analysis.json は出力するが、キャッシュには
+			// 保存しない（後段の !p.Program.SingleShot 分岐で appendToCache 自体を呼ばない）。
+			if err := runAndSaveAnalysis(ctx, cfg, prompts, llmClient, p, layout, logger); err != nil {
+				logger.Warn("分析に失敗（処理は継続）", "err", err)
+			}
+
 			// single_shot は連続性のない単発番組のためキャッシュへ保存しない
 			// （次回の採番・past_episodes・feed 連載のいずれにも載せない）。
 			if !p.Program.SingleShot {
@@ -225,6 +232,7 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 		newSynthCmd(),
 		newMixCmd(),
 		newManifestCmd(),
+		newAnalyzeCmd(),
 		newEpisodegenCheckCmd(),
 	)
 
@@ -255,7 +263,12 @@ func appendToCache(mgr *cache.Manager, layout fileio.EpisodeLayout, cacheCfg con
 		durationSec = int(d)
 	}
 
-	entry := cache.BuildEntryFromManifest(layout.ProgramID, m, rd, bytes, durationSec)
+	analysis, err := readOptionalJSON[model.Analysis](layout.Analysis())
+	if err != nil {
+		logger.Warn("分析ファイルの読み込みに失敗（処理は継続）", "err", err)
+	}
+
+	entry := cache.BuildEntryFromManifest(layout.ProgramID, m, rd, bytes, durationSec, analysis)
 	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
 		return err
 	}
