@@ -18,7 +18,7 @@
 | 段 | 実行契機 | 処理 | 出力 |
 |---|---|---|---|
 | analyze | 番組生成の直後 | 実セリフから課題（findings）と会話の型（patterns）を抽出し、機械メトリクス（目標尺 `length_sec` と実測尺の乖離・校正修正件数・話者別セリフ量）と合成 | `07_analysis.json` とキャッシュの `analysis` フィールド |
-| retro | `vox-radio retro`（定期実行） | 直近 N 件の分析から問題と施策を組にして記録し、効果が確認された施策を実証済みへ昇格 | `<program_id>_try.yaml`（試行中）/ `<program_id>_keep.yaml`（実証済み） |
+| retro | `vox-radio retro`（定期実行） | 直近 N 件の分析から問題と施策を組にして記録し、効果が確認された施策を実証済みへ昇格 | `programs/{program_id}/try.yaml`（試行中）/ `programs/{program_id}/keep.yaml`（実証済み、ADR-0099） |
 | 注入 | `episodegen` 起動時 | `write` プロンプトの `{{retro_keep}}`（守る）と `{{retro_try}}`（今回試す）へ注入 | — |
 
 工程名は1回分の `analyze` と複数回の `retro`（レトロスペクティブの語義）に対応させた。
