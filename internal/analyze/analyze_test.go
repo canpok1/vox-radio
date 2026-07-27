@@ -3,6 +3,7 @@ package analyze_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/canpok1/vox-radio/internal/analyze"
@@ -177,7 +178,7 @@ func TestLLMAnalyzer_Analyze_TruncatesFindingsAndPatternsToFive(t *testing.T) {
 		patterns = append(patterns, `{"aspect":"a","detail":"d"}`)
 	}
 	mc := &mockClient{
-		response: json.RawMessage(`{"findings":[` + join(findings) + `],"patterns":[` + join(patterns) + `]}`),
+		response: json.RawMessage(`{"findings":[` + strings.Join(findings, ",") + `],"patterns":[` + strings.Join(patterns, ",") + `]}`),
 	}
 	a := analyze.NewLLMAnalyzer(mc, "{{lines}}", 0)
 
@@ -191,15 +192,4 @@ func TestLLMAnalyzer_Analyze_TruncatesFindingsAndPatternsToFive(t *testing.T) {
 	if len(got.Patterns) != 5 {
 		t.Errorf("Patterns len = %d, want 5 (truncated)", len(got.Patterns))
 	}
-}
-
-func join(items []string) string {
-	out := ""
-	for i, it := range items {
-		if i > 0 {
-			out += ","
-		}
-		out += it
-	}
-	return out
 }

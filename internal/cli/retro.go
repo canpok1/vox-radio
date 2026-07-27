@@ -139,15 +139,9 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 				LatestEpisode:    lastEvaluated,
 			})
 
-			newTF := retro.TryFile{
-				GeneratedAt:          time.Now().UTC().Format(time.RFC3339),
-				LastEvaluatedEpisode: lastEvaluated,
-				Problems:             result.NextTry,
-			}
-			newKF := retro.KeepFile{
-				GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-				Keeps:       result.NextKeep,
-			}
+			generatedAt := time.Now().UTC().Format(time.RFC3339)
+			newTF := retro.NewTryFile(result.NextTry, lastEvaluated, generatedAt)
+			newKF := retro.NewKeepFile(result.NextKeep, generatedAt)
 
 			if len(result.PromotedIDs) > 0 {
 				logger.Info("keepへ昇格", "ids", result.PromotedIDs)

@@ -45,6 +45,12 @@ type Problem struct {
 	ClearStreak      int    `yaml:"clear_streak"` // consecutive newly-evaluated episodes without recurrence; promoted to keep at retro.keep_threshold
 }
 
+// NewTryFile builds a TryFile from a retro run's result. generatedAt is an RFC3339 timestamp
+// (the caller's "now"; retro has no need to observe wall-clock time itself).
+func NewTryFile(problems []Problem, lastEvaluatedEpisode int, generatedAt string) TryFile {
+	return TryFile{GeneratedAt: generatedAt, LastEvaluatedEpisode: lastEvaluatedEpisode, Problems: model.NonNil(problems)}
+}
+
 // LoadTryFile reads the try file at path. A missing file is not an error: it returns an empty
 // TryFile (first run).
 func LoadTryFile(path string) (TryFile, error) {
@@ -63,14 +69,32 @@ func LoadTryFile(path string) (TryFile, error) {
 	return tf, nil
 }
 
+// marshalWithHeader renders v as YAML prefixed with header, the shared shape behind
+// MarshalTryFile/MarshalKeepFile.
+func marshalWithHeader(v any, header string) ([]byte, error) {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return append([]byte(header), data...), nil
+}
+
+// writeFile creates path's parent directory as needed and writes content, the shared shape
+// behind SaveTryFile/SaveKeepFile.
+func writeFile(path string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create dir: %w", err)
+	}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
+}
+
 // MarshalTryFile renders tf as YAML with the standard header comment, the same bytes SaveTryFile
 // writes to disk. Used by the retro command's --dry-run to preview without writing.
 func MarshalTryFile(tf TryFile) ([]byte, error) {
-	data, err := yaml.Marshal(tf)
-	if err != nil {
-		return nil, fmt.Errorf("marshal try file: %w", err)
-	}
-	return append([]byte(tryFileHeader), data...), nil
+	return marshalWithHeader(tf, tryFileHeader)
 }
 
 // SaveTryFile writes tf to path, fully replacing any existing content (retro does not do
@@ -80,13 +104,7 @@ func SaveTryFile(path string, tf TryFile) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create dir: %w", err)
-	}
-	if err := os.WriteFile(path, content, 0o644); err != nil {
-		return fmt.Errorf("write try file: %w", err)
-	}
-	return nil
+	return writeFile(path, content)
 }
 
 const keepFileHeader = `# vox-radio retro が昇格・降格で更新する。既存項目の文面は書き換えない。
@@ -110,6 +128,12 @@ type Keep struct {
 	ProvenAtEpisode int    `yaml:"proven_at_episode"`
 }
 
+// NewKeepFile builds a KeepFile from a retro run's result. generatedAt is an RFC3339 timestamp
+// (the caller's "now"; retro has no need to observe wall-clock time itself).
+func NewKeepFile(keeps []Keep, generatedAt string) KeepFile {
+	return KeepFile{GeneratedAt: generatedAt, Keeps: model.NonNil(keeps)}
+}
+
 // LoadKeepFile reads the keep file at path. A missing file is not an error: it returns an empty
 // KeepFile.
 func LoadKeepFile(path string) (KeepFile, error) {
@@ -131,11 +155,7 @@ func LoadKeepFile(path string) (KeepFile, error) {
 // MarshalKeepFile renders kf as YAML with the standard header comment, the same bytes
 // SaveKeepFile writes to disk. Used by the retro command's --dry-run to preview without writing.
 func MarshalKeepFile(kf KeepFile) ([]byte, error) {
-	data, err := yaml.Marshal(kf)
-	if err != nil {
-		return nil, fmt.Errorf("marshal keep file: %w", err)
-	}
-	return append([]byte(keepFileHeader), data...), nil
+	return marshalWithHeader(kf, keepFileHeader)
 }
 
 // SaveKeepFile writes kf to path, fully replacing any existing content. Callers must not rewrite
@@ -146,13 +166,7 @@ func SaveKeepFile(path string, kf KeepFile) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create dir: %w", err)
-	}
-	if err := os.WriteFile(path, content, 0o644); err != nil {
-		return fmt.Errorf("write keep file: %w", err)
-	}
-	return nil
+	return writeFile(path, content)
 }
 
 // KeepContentLength returns the total character count of keep's problem/action text, used to
@@ -255,13 +269,9 @@ type analysisForPrompt struct {
 	Patterns      []model.AnalysisPattern `json:"patterns"`
 }
 
-type currentProblemForPrompt struct {
-	ID      string `json:"id"`
-	Problem string `json:"problem"`
-	Action  string `json:"action"`
-}
-
-type currentKeepForPrompt struct {
+// idProblemActionForPrompt is the {id, problem, action} shape shared by current try problems and
+// current keep entries in the prompt (current_problems / current_keeps).
+type idProblemActionForPrompt struct {
 	ID      string `json:"id"`
 	Problem string `json:"problem"`
 	Action  string `json:"action"`
@@ -329,18 +339,18 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 		return nil, nil, 0, fmt.Errorf("marshal analyses: %w", err)
 	}
 
-	currentForPrompt := make([]currentProblemForPrompt, len(current))
+	currentForPrompt := make([]idProblemActionForPrompt, len(current))
 	for i, p := range current {
-		currentForPrompt[i] = currentProblemForPrompt{ID: p.ID, Problem: p.Problem, Action: p.Action}
+		currentForPrompt[i] = idProblemActionForPrompt{ID: p.ID, Problem: p.Problem, Action: p.Action}
 	}
 	currentJSON, err := json.Marshal(currentForPrompt)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("marshal current problems: %w", err)
 	}
 
-	currentKeepsForPrompt := make([]currentKeepForPrompt, len(currentKeeps))
+	currentKeepsForPrompt := make([]idProblemActionForPrompt, len(currentKeeps))
 	for i, k := range currentKeeps {
-		currentKeepsForPrompt[i] = currentKeepForPrompt{ID: k.ID, Problem: k.Problem, Action: k.Action}
+		currentKeepsForPrompt[i] = idProblemActionForPrompt{ID: k.ID, Problem: k.Problem, Action: k.Action}
 	}
 	currentKeepsJSON, err := json.Marshal(currentKeepsForPrompt)
 	if err != nil {
@@ -384,17 +394,10 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 // not in currentIDs and gets overridden here, avoiding duplicate or invented ids. The result is
 // truncated to maxTries.
 func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTries int) []Problem {
-	currentIDs := make(map[string]bool, len(current)+len(currentKeeps))
-	used := make(map[int]bool)
-	for _, p := range current {
-		currentIDs[p.ID] = true
-		if n, ok := parseProblemID(p.ID); ok {
-			used[n] = true
-		}
-	}
-	for _, k := range currentKeeps {
-		currentIDs[k.ID] = true
-		if n, ok := parseProblemID(k.ID); ok {
+	currentIDs := trackedIDs(current, currentKeeps)
+	used := make(map[int]bool, len(currentIDs))
+	for id := range currentIDs {
+		if n, ok := parseProblemID(id); ok {
 			used[n] = true
 		}
 	}
@@ -429,6 +432,19 @@ func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTrie
 		result = result[:maxTries]
 	}
 	return result
+}
+
+// trackedIDs returns the set of ids already tracked by either a try problem or a keep entry.
+// Shared by assignIDs (validating an LLM-echoed id) and ApplyCounts (finding brand-new problems).
+func trackedIDs(problems []Problem, keeps []Keep) map[string]bool {
+	ids := make(map[string]bool, len(problems)+len(keeps))
+	for _, p := range problems {
+		ids[p.ID] = true
+	}
+	for _, k := range keeps {
+		ids[k.ID] = true
+	}
+	return ids
 }
 
 func parseProblemID(id string) (int, bool) {

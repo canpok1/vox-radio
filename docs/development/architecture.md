@@ -71,7 +71,7 @@ go list -f '{{.ImportPath}} => {{join .Imports " "}}' ./internal/... | grep canp
 
 ## 3. ロードと依存注入のルール
 
-- **ドメインパッケージの公開関数は、ロード済みの構造体を受け取る。** ファイルパスを受け取って内部で `Load*` しない（ユニットテストにファイル配置が必要になり、層の責務も崩れるため）。
+- **ドメインパッケージの公開関数は、ロード済みの構造体を受け取る。** ファイルパスを受け取って内部で `Load*` しない（ユニットテストにファイル配置が必要になり、層の責務も崩れるため）。例外は、そのドメイン自身が所有する永続状態ストア（`cache.Manager` の `Load`/`Append`、`retro` の `LoadTryFile`/`SaveTryFile`/`LoadKeepFile`/`SaveKeepFile` など）。これらは `vox-radio.yaml` / spec のような利用者設定ではなく、ドメインが読み書きする自分自身のデータなので対象外とする。
 - **`config.LoadConfig` / 各 spec の Load・Validate の呼び出しは `cli` 層のみ。** ロード → 検証 → 構造体注入の流れを `cli`（`util.go` の `loadConfigAndSpec` 等）に集約する。
 - **`os.Getenv` の呼び出しは `cli` 層のみ。** 例外は ADR で明示された env override（`VOX_RADIO_VOICEVOX_URL`: ADR-0042、`VOX_RADIO_SLACK_API_URL`: ADR-0055）の `Effective*` メソッドに限る。
 - **spec の置き場所は「複数ドメインが共有する設定は `config`、単一ドメイン専用の spec はそのドメインパッケージ」**とする。

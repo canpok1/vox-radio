@@ -92,13 +92,7 @@ func ApplyCounts(in ApplyCountsInput) ApplyCountsResult {
 		nextTry = append(nextTry, p)
 	}
 
-	existingIDs := make(map[string]bool, len(in.PrevTryProblems)+len(in.PrevKeeps))
-	for _, p := range in.PrevTryProblems {
-		existingIDs[p.ID] = true
-	}
-	for _, k := range in.PrevKeeps {
-		existingIDs[k.ID] = true
-	}
+	existingIDs := trackedIDs(in.PrevTryProblems, in.PrevKeeps)
 
 	for _, k := range in.PrevKeeps {
 		episodes := recurredEpisodesByID[k.ID]

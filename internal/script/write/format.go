@@ -66,32 +66,30 @@ type RetroTryItem struct {
 	Action  string
 }
 
-// FormatRetroTry formats retro's in-progress problems as a concise text block for LLM injection.
-// Returns "" if items is empty; LLMWriter.SetRetroTry then renders "（なし）" via stringOrNone.
-func FormatRetroTry(items []RetroTryItem) string {
+// formatRetroItems formats retro problem/action pairs as a concise text block for LLM injection,
+// using problemLabel/actionLabel to distinguish try's "in-progress" framing from keep's "proven"
+// framing. Returns "" if items is empty.
+func formatRetroItems(items []RetroTryItem, problemLabel, actionLabel string) string {
 	if len(items) == 0 {
 		return ""
 	}
 
 	var sb strings.Builder
 	for _, it := range items {
-		fmt.Fprintf(&sb, "- 問題: %s\n  施策: %s\n", it.Problem, it.Action)
+		fmt.Fprintf(&sb, "- %s: %s\n  %s: %s\n", problemLabel, it.Problem, actionLabel, it.Action)
 	}
 	return sb.String()
 }
 
+// FormatRetroTry formats retro's in-progress problems as a concise text block for LLM injection.
+// Returns "" if items is empty; LLMWriter.SetRetroTry then renders "（なし）" via stringOrNone.
+func FormatRetroTry(items []RetroTryItem) string {
+	return formatRetroItems(items, "問題", "施策")
+}
+
 // FormatRetroKeep formats retro's proven (keep) actions as a concise text block for LLM
 // injection. Returns "" if items is empty; LLMWriter.SetRetroKeep then renders "（なし）" via
-// stringOrNone. Uses the same RetroTryItem shape as FormatRetroTry (Problem/Action), but the
-// wording is "always apply" rather than "try this round" to match keep's meaning.
+// stringOrNone.
 func FormatRetroKeep(items []RetroTryItem) string {
-	if len(items) == 0 {
-		return ""
-	}
-
-	var sb strings.Builder
-	for _, it := range items {
-		fmt.Fprintf(&sb, "- 課題: %s\n  対応: %s\n", it.Problem, it.Action)
-	}
-	return sb.String()
+	return formatRetroItems(items, "課題", "対応")
 }

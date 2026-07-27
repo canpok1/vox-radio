@@ -41,6 +41,26 @@ func TestLoadTryFile_MissingFileReturnsEmpty(t *testing.T) {
 	}
 }
 
+func TestNewTryFile_NonNilProblemsAndFields(t *testing.T) {
+	tf := retro.NewTryFile(nil, 5, "2026-07-27T10:00:00Z")
+	if tf.GeneratedAt != "2026-07-27T10:00:00Z" || tf.LastEvaluatedEpisode != 5 {
+		t.Errorf("NewTryFile fields = %+v, unexpected", tf)
+	}
+	if tf.Problems == nil {
+		t.Error("Problems is nil, want empty non-nil slice")
+	}
+}
+
+func TestNewKeepFile_NonNilKeepsAndFields(t *testing.T) {
+	kf := retro.NewKeepFile(nil, "2026-07-27T10:00:00Z")
+	if kf.GeneratedAt != "2026-07-27T10:00:00Z" {
+		t.Errorf("GeneratedAt = %q, want 2026-07-27T10:00:00Z", kf.GeneratedAt)
+	}
+	if kf.Keeps == nil {
+		t.Error("Keeps is nil, want empty non-nil slice")
+	}
+}
+
 func TestSaveTryFile_RoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "try.yaml")
 	want := retro.TryFile{
