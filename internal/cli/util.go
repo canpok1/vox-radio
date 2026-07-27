@@ -229,6 +229,11 @@ func programCachePath(programID string) string {
 	return filepath.Join(programDir(programID), "cache.jsonl")
 }
 
+// programTryPath returns the retro try file path for the given program (ADR-0098/ADR-0099).
+func programTryPath(programID string) string {
+	return filepath.Join(programDir(programID), "try.yaml")
+}
+
 // loadCacheEntries loads all cache entries for the given program.
 // Returns (entries, nextEpisodeNumber, error). File-not-found is not an error (returns episode 1).
 // program.id is required (validated at load time), so the cache is always consulted.

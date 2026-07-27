@@ -96,6 +96,11 @@ cache:
   retention_days: 90       # 記憶を残す日数（超えた古いものは消す）
   llm_context_entries: 10  # AIに参考として渡す直近エピソード数
 
+# retro コマンド（過去回の分析から課題と施策を抽出し番組生成へ注入する自動改善ループ）の設定。
+retro:
+  max_tries: 3          # 同時に試す施策の上限（多すぎると何が効いたか分からなくなる）
+  analysis_entries: 5   # retro が参照する直近の分析件数
+
 # Slack へ配信するときの設定（slackpost コマンドで使用）。
 slack:
   # Slack の Bot トークン（xoxb-... ）を入れておく環境変数の名前。

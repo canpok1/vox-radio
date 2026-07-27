@@ -57,3 +57,25 @@ func formatPastEpisodes(eps []cache.Entry) string {
 
 	return sb.String()
 }
+
+// RetroTryItem is one retro problem/action pair to inject into the write prompt as
+// "{{retro_try}}". A write-package-local type (rather than internal/retro.Problem) so this
+// domain does not need to depend on the retro domain; the cli layer converts.
+type RetroTryItem struct {
+	Problem string
+	Action  string
+}
+
+// FormatRetroTry formats retro's in-progress problems as a concise text block for LLM injection.
+// Returns "" if items is empty; LLMWriter.SetRetroTry then renders "（なし）" via stringOrNone.
+func FormatRetroTry(items []RetroTryItem) string {
+	if len(items) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	for _, it := range items {
+		fmt.Fprintf(&sb, "- 問題: %s\n  施策: %s\n", it.Problem, it.Action)
+	}
+	return sb.String()
+}

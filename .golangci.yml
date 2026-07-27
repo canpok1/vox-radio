@@ -132,6 +132,20 @@ linters:
             - "github.com/canpok1/vox-radio/internal/config"
             - "github.com/canpok1/vox-radio/internal/logging"
             - "github.com/canpok1/vox-radio/internal/script/llm"
+        # ドメイン層: retro は model/config/logging/cache/script/llm のみ
+        domain-retro:
+          list-mode: lax
+          files:
+            - "**/internal/retro/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "retroはmodel/config/logging/cache/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/logging"
+            - "github.com/canpok1/vox-radio/internal/cache"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
         # ドメイン層: manifest は model/config のみ
         domain-manifest:
           list-mode: lax

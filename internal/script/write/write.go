@@ -92,6 +92,7 @@ type LLMWriter struct {
 	casts          []model.RundownCast
 	recordedAt     string // RFC3339 in program timezone; empty means unknown
 	timezone       string // IANA timezone name; empty means unknown
+	retroTry       string // pre-formatted retro try-file text; empty means no in-progress problems
 
 	cornerAppearanceCount   int // current corner: appearance count including this episode (1 = new corner)
 	cornerLastEpisodeNumber int // current corner: most recent past episode it appeared in (0 = none)
@@ -125,6 +126,14 @@ func (w *LLMWriter) SetCasts(casts []model.RundownCast) {
 func (w *LLMWriter) SetCornerAppearance(appearanceCount, lastEpisodeNumber int) {
 	w.cornerAppearanceCount = appearanceCount
 	w.cornerLastEpisodeNumber = lastEpisodeNumber
+}
+
+// SetRetroTry configures the retro try file's formatted text (see FormatRetroTry) to inject into
+// the script generation prompt as "{{retro_try}}". An empty text renders as "（なし）"
+// (stringOrNone); deleting the try file or leaving it without problems is how injection stops
+// (ADR-0098 deliberately has no separate on/off flag).
+func (w *LLMWriter) SetRetroTry(text string) {
+	w.retroTry = text
 }
 
 // SetRecordedAt configures the recording time to inject into the script generation prompt.
@@ -212,6 +221,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	timezoneStr := stringOrUnknown(w.timezone)
 
 	programScriptNoteStr := stringOrNone(program.ScriptNote)
+	retroTryStr := stringOrNone(w.retroTry)
 
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
@@ -227,6 +237,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{recorded_at}}", recordedAtStr,
 		"{{timezone}}", timezoneStr,
 		"{{program_script_note}}", programScriptNoteStr,
+		"{{retro_try}}", retroTryStr,
 	).Replace(w.promptTemplate)
 
 	schema := BuildLinesSchema(sortedKeys(presets.Intonation), sortedKeys(presets.Pitch), sortedKeys(presets.Speed))

@@ -15,6 +15,7 @@ import (
 	"github.com/canpok1/vox-radio/internal/mix"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/pipeline"
+	"github.com/canpok1/vox-radio/internal/retro"
 	"github.com/canpok1/vox-radio/internal/rundown"
 	"github.com/canpok1/vox-radio/internal/rundown/flow"
 	sel "github.com/canpok1/vox-radio/internal/rundown/select"
@@ -150,6 +151,15 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 			loc := resolveLocation(p.Program, logger)
 			writer := write.NewLLMWriter(llmClient, prompts["write"], stepTemp(cfg.LLM, "write"), cfg)
 			writer.SetRecordedAt(time.Now(), loc)
+
+			tryFile, err := retro.LoadTryFile(programTryPath(p.Program.ID))
+			if err != nil {
+				return fmt.Errorf("load try file: %w", err)
+			}
+			if items := retroTryItems(tryFile); items != nil {
+				writer.SetRetroTry(write.FormatRetroTry(items))
+				logger.Info("retro施策を注入", "count", len(items))
+			}
 
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())

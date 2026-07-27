@@ -146,6 +146,20 @@ vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown
 
 ログは既定で `.vox-radio/logs/` に出力されます。
 
+### 自動改善ループ（retro）
+
+蓄積された分析（`07_analysis.json`）から、反復して現れる課題を見つけて次に試す施策を提案し、以降の台本生成へ自動的に反映させます。
+
+```bash
+vox-radio retro --spec episode-spec.yaml
+```
+
+- 課題と施策の組は `.vox-radio/programs/{program.id}/try.yaml` に記録され、`episodegen` 実行時に台本生成プロンプトへ自動的に注入されます。
+- **`retro` を実行しなくても、既存の `try.yaml` は注入され続けます。** 適用を止めたいときは `try.yaml` を削除してください（専用の設定フラグはありません）。
+- `retro` は実行のたびに `try.yaml` を全置換します。手で編集しても次回の `retro` で上書きされるため、恒久的に固定したい方針は `episode-spec.yaml` の `program.script_note` に書いてください。
+- 同時に試す施策の件数は `vox-radio.yaml` の `retro.max_tries`（既定 3）で制限されます。同時に多数の施策を試すと、問題が解消したときにどれが効いたのか切り分けられなくなるためです。
+- 変更内容を確認してから反映したい場合は `--dry-run` で標準出力にプレビューできます。
+
 ### フィード生成
 
 配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。既定では `public/feed.xml` に書き出されます（出力先は `feed-spec.yaml` で変更可）。
