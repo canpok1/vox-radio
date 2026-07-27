@@ -33,3 +33,31 @@ func TestRetroConfig_EffectiveAnalysisEntries_Configured(t *testing.T) {
 		t.Errorf("EffectiveAnalysisEntries() = %d, want 8", got)
 	}
 }
+
+func TestRetroConfig_EffectiveKeepThreshold_Default(t *testing.T) {
+	c := config.RetroConfig{}
+	if got := c.EffectiveKeepThreshold(); got != config.DefaultRetroKeepThreshold {
+		t.Errorf("EffectiveKeepThreshold() = %d, want %d", got, config.DefaultRetroKeepThreshold)
+	}
+}
+
+func TestRetroConfig_EffectiveKeepThreshold_Configured(t *testing.T) {
+	c := config.RetroConfig{KeepThreshold: 5}
+	if got := c.EffectiveKeepThreshold(); got != 5 {
+		t.Errorf("EffectiveKeepThreshold() = %d, want 5", got)
+	}
+}
+
+func TestRetroConfig_EffectiveKeepLength_Default(t *testing.T) {
+	c := config.RetroConfig{}
+	if got := c.EffectiveKeepLength(); got != config.DefaultRetroKeepLength {
+		t.Errorf("EffectiveKeepLength() = %d, want %d", got, config.DefaultRetroKeepLength)
+	}
+}
+
+func TestRetroConfig_EffectiveKeepLength_Configured(t *testing.T) {
+	c := config.RetroConfig{KeepLength: 1000}
+	if got := c.EffectiveKeepLength(); got != 1000 {
+		t.Errorf("EffectiveKeepLength() = %d, want 1000", got)
+	}
+}

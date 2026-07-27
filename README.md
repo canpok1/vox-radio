@@ -154,10 +154,11 @@ vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown
 vox-radio retro --spec episode-spec.yaml
 ```
 
-- 課題と施策の組は `.vox-radio/programs/{program.id}/try.yaml` に記録され、`episodegen` 実行時に台本生成プロンプトへ自動的に注入されます。
-- **`retro` を実行しなくても、既存の `try.yaml` は注入され続けます。** 適用を止めたいときは `try.yaml` を削除してください（専用の設定フラグはありません）。
-- `retro` は実行のたびに `try.yaml` を全置換します。手で編集しても次回の `retro` で上書きされるため、恒久的に固定したい方針は `episode-spec.yaml` の `program.script_note` に書いてください。
-- 同時に試す施策の件数は `vox-radio.yaml` の `retro.max_tries`（既定 3）で制限されます。同時に多数の施策を試すと、問題が解消したときにどれが効いたのか切り分けられなくなるためです。
+- 課題と施策の組は `.vox-radio/programs/{program.id}/try.yaml` に**試行中（未実証）**として記録され、`episodegen` 実行時に台本生成プロンプトへ自動的に注入されます。
+- 問題が `vox-radio.yaml` の `retro.keep_threshold`（既定 3）回連続で再発しなければ、その施策は**実証済み**として `.vox-radio/programs/{program.id}/keep.yaml` へ昇格し、`try.yaml` から外れて常に適用されます。再発した場合は `try.yaml` へ戻ります。
+- **`retro` を実行しなくても、既存の `try.yaml` / `keep.yaml` は注入され続けます。** 適用を止めたいときは該当ファイルを削除してください（専用の設定フラグはありません）。
+- `retro` は実行のたびに `try.yaml` を全置換します。手で編集しても次回の `retro` で上書きされるため、恒久的に固定したい方針は `episode-spec.yaml` の `program.script_note` に書いてください。**`keep.yaml` は retro が書き換えません**（昇格による追加・降格による削除のみ）が、放置すると増え続けます。分量が `vox-radio.yaml` の `retro.keep_length`（既定 600 文字）を超えると警告が出るので、`script_note` へ移して `keep.yaml` から削除してください。
+- 同時に試す施策の件数は `retro.max_tries`（既定 3）で制限されます。同時に多数の施策を試すと、問題が解消したときにどれが効いたのか切り分けられなくなるためです。
 - 変更内容を確認してから反映したい場合は `--dry-run` で標準出力にプレビューできます。
 
 ### フィード生成

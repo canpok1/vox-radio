@@ -79,3 +79,19 @@ func FormatRetroTry(items []RetroTryItem) string {
 	}
 	return sb.String()
 }
+
+// FormatRetroKeep formats retro's proven (keep) actions as a concise text block for LLM
+// injection. Returns "" if items is empty; LLMWriter.SetRetroKeep then renders "（なし）" via
+// stringOrNone. Uses the same RetroTryItem shape as FormatRetroTry (Problem/Action), but the
+// wording is "always apply" rather than "try this round" to match keep's meaning.
+func FormatRetroKeep(items []RetroTryItem) string {
+	if len(items) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	for _, it := range items {
+		fmt.Fprintf(&sb, "- 課題: %s\n  対応: %s\n", it.Problem, it.Action)
+	}
+	return sb.String()
+}

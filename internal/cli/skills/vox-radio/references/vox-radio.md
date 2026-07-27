@@ -129,6 +129,8 @@ pronunciation:
 |---|---|---|---|
 | `max_tries` | int | 任意 | 同時に試行中の問題数の上限。デフォルト: 3 |
 | `analysis_entries` | int | 任意 | retro が参照する直近の分析件数。デフォルト: 5 |
+| `keep_threshold` | int | 任意 | 実証済み（keep）へ昇格させるのに必要な、問題が連続で発生しなかった回数。デフォルト: 3 |
+| `keep_length` | int | 任意 | keep の分量の警告しきい値（文字数）。超えても切り捨てない（警告のみ）。デフォルト: 600 |
 
 ## `security` セクション
 

@@ -161,6 +161,15 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 				logger.Info("retro施策を注入", "count", len(items))
 			}
 
+			keepFile, err := retro.LoadKeepFile(programKeepPath(p.Program.ID))
+			if err != nil {
+				return fmt.Errorf("load keep file: %w", err)
+			}
+			if items := retroKeepItems(keepFile); items != nil {
+				writer.SetRetroKeep(write.FormatRetroKeep(items))
+				logger.Info("keep方針を注入", "count", len(items))
+			}
+
 			cacheMgr := cache.New(programCachePath(p.Program.ID))
 			recent := cache.Recent(entries, cfg.Cache.EffectiveLLMContextEntries())
 			excludedDedupKeys := cache.PastDedupKeys(entries)

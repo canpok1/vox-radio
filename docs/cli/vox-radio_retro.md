@@ -7,12 +7,17 @@
 蓄積された過去回の分析（analyze の出力）から、反復して現れる課題を見つけ、
 次に試す施策と組にして .vox-radio/programs/{program.id}/try.yaml へ記録します。
 
-try ファイルの内容は episodegen 実行時に write（台本生成）プロンプトへ自動的に注入されます。
-retro を実行しなくても、既存の try ファイルは注入され続けます。適用を止めたいときは
-try ファイルを削除してください。
+問題が retro.keep_threshold 回連続で再発しなければ、その施策は実証済みとして
+.vox-radio/programs/{program.id}/keep.yaml へ昇格し、try からは外れて常に適用されます。
+keep の問題が再発した場合は try へ降格します。
+
+try/keep ファイルの内容は episodegen 実行時に write（台本生成）プロンプトへ自動的に注入されます。
+retro を実行しなくても、既存の try/keep ファイルは注入され続けます。適用を止めたいときは
+該当するファイルを削除してください。
 
 retro は毎回 try ファイルを全置換します（個別項目の承認は行いません）。恒久的に固定したい
-方針は episode-spec.yaml の script_note に書いてください。
+方針は episode-spec.yaml の script_note に書いてください。keep が増えすぎた場合も script_note へ
+移し keep から削除することを検討してください。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 

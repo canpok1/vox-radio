@@ -26,6 +26,20 @@ func retroTryItems(tf retro.TryFile) []write.RetroTryItem {
 	return items
 }
 
+// retroKeepItems converts a loaded keep file's entries into write.RetroTryItem for injection.
+// Returns nil when there is nothing to inject: a missing keep file (LoadKeepFile already yields an
+// empty Keeps slice for that case) or an empty keep file.
+func retroKeepItems(kf retro.KeepFile) []write.RetroTryItem {
+	if len(kf.Keeps) == 0 {
+		return nil
+	}
+	items := make([]write.RetroTryItem, len(kf.Keeps))
+	for i, k := range kf.Keeps {
+		items[i] = write.RetroTryItem{Problem: k.Problem, Action: k.Action}
+	}
+	return items
+}
+
 func newRetroCmd() *cobra.Command {
 	var specPath string
 	var dryRun bool
@@ -36,12 +50,17 @@ func newRetroCmd() *cobra.Command {
 		Long: `蓄積された過去回の分析（analyze の出力）から、反復して現れる課題を見つけ、
 次に試す施策と組にして .vox-radio/programs/{program.id}/try.yaml へ記録します。
 
-try ファイルの内容は episodegen 実行時に write（台本生成）プロンプトへ自動的に注入されます。
-retro を実行しなくても、既存の try ファイルは注入され続けます。適用を止めたいときは
-try ファイルを削除してください。
+問題が retro.keep_threshold 回連続で再発しなければ、その施策は実証済みとして
+.vox-radio/programs/{program.id}/keep.yaml へ昇格し、try からは外れて常に適用されます。
+keep の問題が再発した場合は try へ降格します。
+
+try/keep ファイルの内容は episodegen 実行時に write（台本生成）プロンプトへ自動的に注入されます。
+retro を実行しなくても、既存の try/keep ファイルは注入され続けます。適用を止めたいときは
+該当するファイルを削除してください。
 
 retro は毎回 try ファイルを全置換します（個別項目の承認は行いません）。恒久的に固定したい
-方針は episode-spec.yaml の script_note に書いてください。
+方針は episode-spec.yaml の script_note に書いてください。keep が増えすぎた場合も script_note へ
+移し keep から削除することを検討してください。
 
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
 
@@ -90,6 +109,11 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			if err != nil {
 				return err
 			}
+			keepPath := programKeepPath(p.Program.ID)
+			kf, err := retro.LoadKeepFile(keepPath)
+			if err != nil {
+				return err
+			}
 
 			llmClient := newLLMClient(cfg)
 			prompts, err := loadPrompts()
@@ -98,31 +122,68 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			}
 
 			r := retro.NewLLMRetro(llmClient, prompts["retro"], stepTemp(cfg.LLM, "retro"), retro.WithLogger(logger))
-			problems, lastEvaluated, err := r.Run(context.Background(), p.Program, analyzed, tf.Problems, cfg.Retro.EffectiveMaxTries())
+			proposed, recurrences, lastEvaluated, err := r.Run(context.Background(), p.Program, analyzed, tf.Problems, kf.Keeps, cfg.Retro.EffectiveMaxTries())
 			if err != nil {
 				return fmt.Errorf("retro: %w", err)
 			}
 
+			newEpisodes := retro.NewEpisodeNumbers(analyzed, tf.LastEvaluatedEpisode)
+			result := retro.ApplyCounts(retro.ApplyCountsInput{
+				PrevTryProblems:  tf.Problems,
+				PrevKeeps:        kf.Keeps,
+				ProposedProblems: proposed,
+				Recurrences:      recurrences,
+				NewEpisodes:      newEpisodes,
+				KeepThreshold:    cfg.Retro.EffectiveKeepThreshold(),
+				MaxTries:         cfg.Retro.EffectiveMaxTries(),
+				LatestEpisode:    lastEvaluated,
+			})
+
 			newTF := retro.TryFile{
 				GeneratedAt:          time.Now().UTC().Format(time.RFC3339),
 				LastEvaluatedEpisode: lastEvaluated,
-				Problems:             problems,
+				Problems:             result.NextTry,
+			}
+			newKF := retro.KeepFile{
+				GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+				Keeps:       result.NextKeep,
+			}
+
+			if len(result.PromotedIDs) > 0 {
+				logger.Info("keepへ昇格", "ids", result.PromotedIDs)
+			}
+			if len(result.DemotedIDs) > 0 {
+				logger.Info("tryへ降格", "ids", result.DemotedIDs)
+			}
+
+			keepLength := cfg.Retro.EffectiveKeepLength()
+			if n := retro.KeepContentLength(newKF); n > keepLength {
+				logger.Warn("keepの分量が上限を超えています。episode-spec.yaml の script_note へ移すことを検討してください", "length", n, "limit", keepLength)
 			}
 
 			if dryRun {
-				content, err := retro.MarshalTryFile(newTF)
+				tryContent, err := retro.MarshalTryFile(newTF)
 				if err != nil {
 					return err
 				}
-				_, _ = fmt.Fprint(cmd.OutOrStdout(), string(content))
+				keepContent, err := retro.MarshalKeepFile(newKF)
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), string(tryContent))
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), string(keepContent))
 				return nil
 			}
 
 			if err := retro.SaveTryFile(tryPath, newTF); err != nil {
 				return err
 			}
-			logger.Info("tryファイルを更新", "problems", len(problems))
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "try file written to %s (%d problems)\n", tryPath, len(problems))
+			if err := retro.SaveKeepFile(keepPath, newKF); err != nil {
+				return err
+			}
+			logger.Info("try/keepファイルを更新", "try_problems", len(newTF.Problems), "keeps", len(newKF.Keeps))
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "try file written to %s (%d problems)\n", tryPath, len(newTF.Problems))
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "keep file written to %s (%d keeps)\n", keepPath, len(newKF.Keeps))
 			return nil
 		},
 	}

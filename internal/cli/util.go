@@ -234,6 +234,11 @@ func programTryPath(programID string) string {
 	return filepath.Join(programDir(programID), "try.yaml")
 }
 
+// programKeepPath returns the retro keep file path for the given program (ADR-0098/ADR-0099).
+func programKeepPath(programID string) string {
+	return filepath.Join(programDir(programID), "keep.yaml")
+}
+
 // loadCacheEntries loads all cache entries for the given program.
 // Returns (entries, nextEpisodeNumber, error). File-not-found is not an error (returns episode 1).
 // program.id is required (validated at load time), so the cache is always consulted.

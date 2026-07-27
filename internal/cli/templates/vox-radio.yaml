@@ -100,6 +100,8 @@ cache:
 retro:
   max_tries: 3          # 同時に試す施策の上限（多すぎると何が効いたか分からなくなる）
   analysis_entries: 5   # retro が参照する直近の分析件数
+  keep_threshold: 3     # 実証済み（keep）へ昇格させるのに必要な、問題が連続で発生しなかった回数
+  keep_length: 600      # keep の分量の警告しきい値（文字数）。超えても切り捨てず警告のみ
 
 # Slack へ配信するときの設定（slackpost コマンドで使用）。
 slack:

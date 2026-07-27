@@ -88,6 +88,64 @@ func TestSaveTryFile_IncludesHeaderComment(t *testing.T) {
 	}
 }
 
+func TestLoadKeepFile_MissingFileReturnsEmpty(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keep.yaml")
+
+	kf, err := retro.LoadKeepFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if kf.Keeps == nil || len(kf.Keeps) != 0 {
+		t.Errorf("Keeps = %+v, want empty non-nil slice", kf.Keeps)
+	}
+}
+
+func TestSaveKeepFile_RoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sub", "keep.yaml")
+	want := retro.KeepFile{
+		GeneratedAt: "2026-07-27T10:00:00Z",
+		Keeps: []retro.Keep{
+			{ID: "p1", Problem: "掛け合いが説明調", Action: "疑問形で崩す", ProvenAtEpisode: 19},
+		},
+	}
+
+	if err := retro.SaveKeepFile(path, want); err != nil {
+		t.Fatalf("SaveKeepFile: %v", err)
+	}
+
+	got, err := retro.LoadKeepFile(path)
+	if err != nil {
+		t.Fatalf("LoadKeepFile: %v", err)
+	}
+	if len(got.Keeps) != 1 || got.Keeps[0].ID != "p1" || got.Keeps[0].ProvenAtEpisode != 19 {
+		t.Fatalf("Keeps = %+v, unexpected", got.Keeps)
+	}
+}
+
+func TestSaveKeepFile_IncludesHeaderComment(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keep.yaml")
+	if err := retro.SaveKeepFile(path, retro.KeepFile{Keeps: make([]retro.Keep, 0)}); err != nil {
+		t.Fatalf("SaveKeepFile: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if len(data) == 0 || data[0] != '#' {
+		t.Errorf("file should start with a comment header, got: %s", string(data[:min(30, len(data))]))
+	}
+}
+
+func TestKeepContentLength_SumsProblemAndActionRunes(t *testing.T) {
+	kf := retro.KeepFile{Keeps: []retro.Keep{
+		{Problem: "あい", Action: "うえお"}, // 2 + 3 runes
+		{Problem: "x", Action: "y"},    // 1 + 1
+	}}
+	if got := retro.KeepContentLength(kf); got != 7 {
+		t.Errorf("KeepContentLength = %d, want 7", got)
+	}
+}
+
 func TestMarshalTryFile_EmptyProblemsRendersEmptyArray(t *testing.T) {
 	content, err := retro.MarshalTryFile(retro.TryFile{GeneratedAt: "x", Problems: make([]retro.Problem, 0)})
 	if err != nil {
@@ -122,7 +180,7 @@ func TestLLMRetro_Run_SingleCallAssignsNewIDs(t *testing.T) {
 		{EpisodeNumber: 12, Analysis: &model.Analysis{}},
 	}
 
-	got, lastEvaluated, err := r.Run(context.Background(), config.ProgramConfig{Title: "テスト"}, entries, nil, 3)
+	got, _, lastEvaluated, err := r.Run(context.Background(), config.ProgramConfig{Title: "テスト"}, entries, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -154,7 +212,7 @@ func TestLLMRetro_Run_PreservesExistingIDAndAssignsNextForNew(t *testing.T) {
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -184,7 +242,7 @@ func TestLLMRetro_Run_IgnoresHallucinatedIDForNewProblem(t *testing.T) {
 	current := []retro.Problem{{ID: "p1", Problem: "既存", Action: "a", FirstSeenEpisode: 1, LastSeenEpisode: 1}}
 	entries := []cache.Entry{{EpisodeNumber: 5, Analysis: &model.Analysis{}}}
 
-	got, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -211,7 +269,7 @@ func TestLLMRetro_Run_TruncatesToMaxTries(t *testing.T) {
 	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
 	entries := []cache.Entry{{EpisodeNumber: 1, Analysis: &model.Analysis{}}}
 
-	got, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
