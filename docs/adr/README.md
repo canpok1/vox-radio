@@ -103,4 +103,4 @@
 | [0095](0095-startup-resource-preflight.md) | 起動時リソース preflight を全コマンド共通機構で導入する（ADR-0088 改訂） | 採用 | 2026-07-02 |
 | [0096](0096-voicevox-multiple-named-servers.md) | VOICEVOX 接続先を名前付き複数サーバー化しキャラクター単位で切り替える | 採用 | 2026-07-04 |
 | [0097](0097-anonymous-character-via-optional-name.md) | `characters.<id>.name` を任意化し空欄で匿名キャラクターを表現する | 採用 | 2026-07-05 |
-| [0098](0098-episode-reflection-and-improvement-hint-loop.md) | 番組の振り返りと改善案注入による自動改善ループを導入する | 採用 | 2026-07-27 |
+| [0098](0098-episode-analysis-and-retro-hint-loop.md) | 回ごとの分析と振り返りによる自動改善ループを導入する | 採用 | 2026-07-27 |
