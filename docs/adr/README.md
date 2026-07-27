@@ -103,3 +103,5 @@
 | [0095](0095-startup-resource-preflight.md) | 起動時リソース preflight を全コマンド共通機構で導入する（ADR-0088 改訂） | 採用 | 2026-07-02 |
 | [0096](0096-voicevox-multiple-named-servers.md) | VOICEVOX 接続先を名前付き複数サーバー化しキャラクター単位で切り替える | 採用 | 2026-07-04 |
 | [0097](0097-anonymous-character-via-optional-name.md) | `characters.<id>.name` を任意化し空欄で匿名キャラクターを表現する | 採用 | 2026-07-05 |
+| [0098](0098-episode-analysis-and-retro-hint-loop.md) | 回ごとの分析と振り返りによる自動改善ループを導入する | 採用 | 2026-07-27 |
+| [0099](0099-per-program-state-directory.md) | 番組ごとの状態を `.vox-radio/programs/{program_id}/` へ集約する | 採用 | 2026-07-27 |
