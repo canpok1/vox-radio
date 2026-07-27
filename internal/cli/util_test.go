@@ -16,22 +16,22 @@ import (
 
 func writeCacheRaw(t *testing.T, dir string, programID string, content []byte) {
 	t.Helper()
-	cacheDir := filepath.Join(dir, ".vox-radio", "cache")
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	progDir := filepath.Join(dir, ".vox-radio", "programs", programID)
+	if err := os.MkdirAll(progDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(cacheDir, programID+".jsonl"), content, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(progDir, "cache.jsonl"), content, 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 }
 
 func writeCacheJSONL(t *testing.T, dir string, programID string, entries []cache.Entry) {
 	t.Helper()
-	cacheDir := filepath.Join(dir, ".vox-radio", "cache")
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	progDir := filepath.Join(dir, ".vox-radio", "programs", programID)
+	if err := os.MkdirAll(progDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	path := filepath.Join(cacheDir, programID+".jsonl")
+	path := filepath.Join(progDir, "cache.jsonl")
 	f, err := os.Create(path)
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -137,6 +137,22 @@ func TestResolveCornersByRundown_UnknownID(t *testing.T) {
 	_, err := resolveCornersByRundown(corners, rd)
 	if err == nil {
 		t.Error("expected error for unknown id, got nil")
+	}
+}
+
+func TestProgramDir(t *testing.T) {
+	got := programDir("morning-news")
+	want := filepath.Join(".vox-radio", "programs", "morning-news")
+	if got != want {
+		t.Errorf("programDir(%q) = %q, want %q", "morning-news", got, want)
+	}
+}
+
+func TestProgramCachePath(t *testing.T) {
+	got := programCachePath("morning-news")
+	want := filepath.Join(".vox-radio", "programs", "morning-news", "cache.jsonl")
+	if got != want {
+		t.Errorf("programCachePath(%q) = %q, want %q", "morning-news", got, want)
 	}
 }
 

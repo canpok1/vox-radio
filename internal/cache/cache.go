@@ -50,7 +50,8 @@ type Entry struct {
 	Corners           []CornerEntry            `json:"corners"`
 	ConversationNotes []model.ConversationNote `json:"conversation_notes"`
 	Casts             []CastEntry              `json:"casts"`
-	Credits           []string                 `json:"credits,omitempty"` // omitempty: backward compat with pre-credits cache entries (missing key → nil on read)
+	Credits           []string                 `json:"credits,omitempty"`  // omitempty: backward compat with pre-credits cache entries (missing key → nil on read)
+	Analysis          *model.Analysis          `json:"analysis,omitempty"` // omitempty: backward compat with pre-analysis cache entries (missing key → nil on read)
 }
 
 // Manager handles JSONL cache file operations for a single program.
@@ -136,9 +137,10 @@ func stripCornerHeavyFields(corners []CornerEntry) []CornerEntry {
 	return stripped
 }
 
-// Compact keeps all entries but drops heavy corner fields (Summary, Points, Articles) and
-// ConversationNotes for entries outside the detailed window (most recent maxEntries entries that
-// are within retentionDays). Corner identity (ID, Title) is preserved so appearance counting works.
+// Compact keeps all entries but drops heavy corner fields (Summary, Points, Articles),
+// ConversationNotes, and Analysis for entries outside the detailed window (most recent maxEntries
+// entries that are within retentionDays). Corner identity (ID, Title) is preserved so appearance
+// counting works.
 func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
@@ -166,6 +168,7 @@ func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 		if !detailed[i] {
 			e.Corners = stripCornerHeavyFields(e.Corners)
 			e.ConversationNotes = make([]model.ConversationNote, 0)
+			e.Analysis = nil
 		}
 		result[i] = e
 	}
@@ -185,8 +188,9 @@ func Recent(entries []Entry, n int) []Entry {
 
 // BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, rundown, and media info.
 // Rundown data (summary, points) is merged into the manifest's article references by DedupKey.
-// bytes and durationSec are from mediainfo (0 if not available).
-func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int) Entry {
+// bytes and durationSec are from mediainfo (0 if not available). analysis is nil when the analyze
+// step's output file was not available (analyze failure does not block the cache append).
+func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int, analysis *model.Analysis) Entry {
 	rdArticleByDedupKey := make(map[string]model.RundownArticle)
 	for _, c := range rd.Corners {
 		for _, a := range c.Articles {
@@ -235,6 +239,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 		ConversationNotes: m.ConversationNotes,
 		Casts:             casts,
 		Credits:           model.NonNil(m.Credits),
+		Analysis:          analysis,
 	}
 }
 

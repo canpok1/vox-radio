@@ -118,6 +118,8 @@ gather → rundown → script → synth → mix → manifest
 | mix | クリップにイントロ・アウトロ・SE を ffmpeg で合成し MP3 化 |
 | manifest | 配信用の番組情報（タイトル・要約・記事など）を JSON 出力 |
 
+上記6ステップの完了後、`episodegen` はこの回の分析（`analyze`）も自動実行します。コーナーの目標尺と実測尺のズレ・話者別セリフ数などの機械集計指標に加え、LLM がこの回の課題（findings）と会話の型（patterns）を抽出し、`07_analysis.json` としてキャッシュに蓄積します。分析に失敗しても番組生成自体は継続します。既存回の中間ファイルから分析を作り直したい場合は `vox-radio episodegen analyze` を単独実行できます。
+
 `episodegen` で全ステップを一括実行します。
 
 ```bash
@@ -144,12 +146,27 @@ vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown
 
 ログは既定で `.vox-radio/logs/` に出力されます。
 
+### 自動改善ループ（retro）
+
+蓄積された分析（`07_analysis.json`）から、反復して現れる課題を見つけて次に試す施策を提案し、以降の台本生成へ自動的に反映させます。
+
+```bash
+vox-radio retro --spec episode-spec.yaml
+```
+
+- 課題と施策の組は `.vox-radio/programs/{program.id}/try.yaml` に**試行中（未実証）**として記録され、`episodegen` 実行時に台本生成プロンプトへ自動的に注入されます。
+- 問題が `vox-radio.yaml` の `retro.keep_threshold`（既定 3）回連続で再発しなければ、その施策は**実証済み**として `.vox-radio/programs/{program.id}/keep.yaml` へ昇格し、`try.yaml` から外れて常に適用されます。再発した場合は `try.yaml` へ戻ります。
+- **`retro` を実行しなくても、既存の `try.yaml` / `keep.yaml` は注入され続けます。** 適用を止めたいときは該当ファイルを削除してください（専用の設定フラグはありません）。
+- `retro` は実行のたびに `try.yaml` を全置換します。手で編集しても次回の `retro` で上書きされるため、恒久的に固定したい方針は `episode-spec.yaml` の `program.script_note` に書いてください。**`keep.yaml` は retro が書き換えません**（昇格による追加・降格による削除のみ）が、放置すると増え続けます。分量が `vox-radio.yaml` の `retro.keep_length`（既定 600 文字）を超えると警告が出るので、`script_note` へ移して `keep.yaml` から削除してください。
+- 同時に試す施策の件数は `retro.max_tries`（既定 3）で制限されます。同時に多数の施策を試すと、問題が解消したときにどれが効いたのか切り分けられなくなるためです。
+- 変更内容を確認してから反映したい場合は `--dry-run` で標準出力にプレビューできます。
+
 ### フィード生成
 
 配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。既定では `public/feed.xml` に書き出されます（出力先は `feed-spec.yaml` で変更可）。
 
 ```bash
-vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.yaml
+vox-radio feedgen --cache .vox-radio/programs/<program.id>/cache.jsonl --spec feed-spec.yaml
 ```
 
 ### Slack投稿
@@ -248,7 +265,14 @@ pronunciation:
   NHK: えぬえいちけー
 ```
 
-**キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
+**キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして、番組ごとのディレクトリに保存されます（`.vox-radio/programs/<program.id>/cache.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
+
+> **旧バージョンからの移行** — v0.99 以前は `.vox-radio/cache/<program.id>.jsonl` に保存していました。過去回の連続性を保つには、アップグレード後に以下で新しい配置へ移してください（移さない場合は履歴が引き継がれず回番号が 1 から再開します）。
+>
+> ```bash
+> mkdir -p .vox-radio/programs/<program.id>
+> mv .vox-radio/cache/<program.id>.jsonl .vox-radio/programs/<program.id>/cache.jsonl
+> ```
 
 ### エピソード設定
 

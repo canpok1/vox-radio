@@ -20,4 +20,4 @@
     かつ JSONファイル "out/e2e-radio_ep001_manifest.json" のキー "title" は文字列 "E2Eテストラジオ" である
     かつ JSONファイル "out/e2e-radio_ep001_manifest.json" のキー "episode_number" は数値 1 である
     かつ JSONファイル "out/e2e-radio_ep001_manifest.json" のキー "audio_file" は文字列 "e2e-radio_ep001.mp3" である
-    かつ ファイル ".vox-radio/cache/e2e-radio.jsonl" の行数は 1 である
+    かつ ファイル ".vox-radio/programs/e2e-radio/cache.jsonl" の行数は 1 である
