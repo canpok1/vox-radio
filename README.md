@@ -149,7 +149,7 @@ vox-radio episodegen manifest --spec episode-spec.yaml --rundown work/02_rundown
 配信用の RSS フィード（`feed.xml`）を生成します。`feedgen` が番組の履歴キャッシュと `feed-spec.yaml` から出力します（manifest・mp3 は不要）。既定では `public/feed.xml` に書き出されます（出力先は `feed-spec.yaml` で変更可）。
 
 ```bash
-vox-radio feedgen --cache .vox-radio/cache/<program.id>.jsonl --spec feed-spec.yaml
+vox-radio feedgen --cache .vox-radio/programs/<program.id>/cache.jsonl --spec feed-spec.yaml
 ```
 
 ### Slack投稿
@@ -248,7 +248,14 @@ pronunciation:
   NHK: えぬえいちけー
 ```
 
-**キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして保存されます（`.vox-radio/cache/<program.id>.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
+**キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして、番組ごとのディレクトリに保存されます（`.vox-radio/programs/<program.id>/cache.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
+
+> **旧バージョンからの移行** — v0.99 以前は `.vox-radio/cache/<program.id>.jsonl` に保存していました。過去回の連続性を保つには、アップグレード後に以下で新しい配置へ移してください（移さない場合は履歴が引き継がれず回番号が 1 から再開します）。
+>
+> ```bash
+> mkdir -p .vox-radio/programs/<program.id>
+> mv .vox-radio/cache/<program.id>.jsonl .vox-radio/programs/<program.id>/cache.jsonl
+> ```
 
 ### エピソード設定
 

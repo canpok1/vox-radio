@@ -49,9 +49,13 @@ jobs:
       - uses: actions/checkout@v4
 
       # 1. キャッシュ復元。実行ごとに新しいキーで保存し、直近のキャッシュを引き継ぐ書き方。
+      # 旧パス（.vox-radio/cache）は移行期の併記。指定を外すと移行前の履歴が復元されず、
+      # 回番号が 1 に戻って静かに失敗するので、移行が済むまでは両方を指定すること。
       - uses: actions/cache@v4
         with:
-          path: .vox-radio/cache
+          path: |
+            .vox-radio/cache
+            .vox-radio/programs
           key: vox-radio-cache-${{ github.run_id }}
           restore-keys: vox-radio-cache-
 
@@ -80,10 +84,10 @@ jobs:
 
 ## 仕組み
 
-1. **キャッシュ復元** — 過去回の履歴（`.vox-radio/cache/`）を `actions/cache` で復元し、前回までの内容を踏まえた番組を生成します。初回（キャッシュ無し）でも動作し、回番号は 1 から始まります。
+1. **キャッシュ復元** — 過去回の履歴（`.vox-radio/programs/`）を `actions/cache` で復元し、前回までの内容を踏まえた番組を生成します。初回（キャッシュ無し）でも動作し、回番号は 1 から始まります。
 2. **番組生成** — `episodegen` が記事収集から音声合成までを一括実行し（詳細は[README の番組生成](../../README.md#番組生成)）、`output/` に mp3 とマニフェストを出力します。
 3. **Slack 投稿** — `slackpost` がマニフェストをもとに mp3 を Slack へ直接アップロードします。GitHub Release など公開 URL の準備は不要です。
-4. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/cache/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。
+4. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/programs/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。移行が済んだらワークフローから `.vox-radio/cache` の指定を外してください。
 5. **VOICEVOX NEMO などを併用する場合** — `services` にサービスを追加してポートをマップし、`vox-radio.yaml` の `voicevox.engines` でエンジンを定義したうえで、エンジンごとに `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し - を _ に置換した名前>` 環境変数を設定します（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 ## 注意事項

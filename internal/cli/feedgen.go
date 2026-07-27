@@ -20,7 +20,7 @@ cache はエピソード状態の正データです。manifest や mp3 は必要
 生成された feed.xml は feed-spec.yaml の output.public ディレクトリに書き出されます。
 
 例:
-  vox-radio feedgen --cache .vox-radio/cache/zundamon-tech-radio.jsonl --spec config/feed-spec.yaml`,
+  vox-radio feedgen --cache .vox-radio/programs/zundamon-tech-radio/cache.jsonl --spec config/feed-spec.yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			spec, err := feed.LoadFeedSpec(specPath)
 			if err != nil {

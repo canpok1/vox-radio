@@ -219,8 +219,14 @@ func requireEnv(name string, dryRun bool) (string, error) {
 	return v, nil
 }
 
+// programDir returns the per-program state directory (ADR-0099), shared by cache
+// and the retro try/keep files.
+func programDir(programID string) string {
+	return filepath.Join(".vox-radio", "programs", programID)
+}
+
 func programCachePath(programID string) string {
-	return filepath.Join(".vox-radio", "cache", programID+".jsonl")
+	return filepath.Join(programDir(programID), "cache.jsonl")
 }
 
 // loadCacheEntries loads all cache entries for the given program.
