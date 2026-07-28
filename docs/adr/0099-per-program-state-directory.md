@@ -49,7 +49,7 @@
 |---|---|
 | ローカルの履歴 | `.vox-radio/cache/{id}.jsonl` を `.vox-radio/programs/{id}/cache.jsonl` へ移す。移さないと回番号が 1 に戻る |
 | `feedgen --cache` | 新しいパスを渡す。ファイルが無ければ失敗するので気づける |
-| GitHub Actions | `actions/cache` の `path` を `.vox-radio/programs` に変える。移行期は旧パスも併記する。指定を直さないと復元が静かに失敗する |
+| GitHub Actions | `actions/cache` の `path` を `.vox-radio/programs` に変える。移行期は旧パスも併記し、復元後にワークフロー内で `mv` する移行ステップを追加する。移行ステップが無いと、旧パスを併記しても新バイナリが履歴を見つけられず回番号が 1 に戻る |
 
 ## 検討した代替案
 
