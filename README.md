@@ -267,7 +267,7 @@ pronunciation:
 
 **キャッシュ（過去回の記憶）** — vox-radio は過去に放送した番組の情報（扱った話題や放送回など）をキャッシュに記録し、過去回で触れた内容を新しい回の会話に織り込んだり、放送回数を管理したりします。キャッシュは番組ごとに `episode-spec.yaml` の `program.id` をキーとして、番組ごとのディレクトリに保存されます（`.vox-radio/programs/<program.id>/cache.jsonl`）。**このため `program.id` は必須**で、未設定だと `episodegen`（番組生成）や `episodegen check` でエラーになります。
 
-> **旧バージョンからの移行** — v0.99 以前は `.vox-radio/cache/<program.id>.jsonl` に保存していました。過去回の連続性を保つには、アップグレード後に以下で新しい配置へ移してください（移さない場合は履歴が引き継がれず回番号が 1 から再開します）。
+> **旧バージョンからの移行** — v1.0.5 以前は `.vox-radio/cache/<program.id>.jsonl` に保存していました。過去回の連続性を保つには、アップグレード後に以下で新しい配置へ移してください（移さない場合は履歴が引き継がれず回番号が 1 から再開します）。
 >
 > ```bash
 > mkdir -p .vox-radio/programs/<program.id>

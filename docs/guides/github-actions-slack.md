@@ -49,8 +49,9 @@ jobs:
       - uses: actions/checkout@v4
 
       # 1. キャッシュ復元。実行ごとに新しいキーで保存し、直近のキャッシュを引き継ぐ書き方。
-      # 旧パス（.vox-radio/cache）は移行期の併記。指定を外すと移行前の履歴が復元されず、
-      # 回番号が 1 に戻って静かに失敗するので、移行が済むまでは両方を指定すること。
+      # 旧パス（.vox-radio/cache）は移行期の併記。自動移行は行われないため、次の
+      # 「Migrate cache layout」ステップが旧ファイルを見つけられるよう、移行が済むまでは
+      # 両方を指定すること（併記だけでは履歴は引き継がれない）。
       - uses: actions/cache@v4
         with:
           path: |
@@ -65,14 +66,26 @@ jobs:
       - name: Install vox-radio
         run: curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
 
-      # 2. 番組生成
+      # 2. 旧レイアウト（v1.0.5 以前）のキャッシュを新レイアウトへ移す。自動移行は行われないため
+      # このステップが無いと、旧パスを復元しても回番号が 1 に戻る。
+      # 何度実行しても安全（移行済みなら何もしない）。
+      - name: Migrate cache layout
+        run: |
+          for f in .vox-radio/cache/*.jsonl; do
+            [ -e "$f" ] || continue
+            id=$(basename "$f" .jsonl)
+            mkdir -p ".vox-radio/programs/$id"
+            mv "$f" ".vox-radio/programs/$id/cache.jsonl"
+          done
+
+      # 3. 番組生成
       - name: Generate episode
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           VOX_RADIO_VOICEVOX_URL: http://127.0.0.1:50021
         run: vox-radio episodegen --spec episode-spec.yaml --out-dir output
 
-      # 3. Slack 投稿
+      # 4. Slack 投稿
       - name: Post to Slack
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -85,10 +98,11 @@ jobs:
 ## 仕組み
 
 1. **キャッシュ復元** — 過去回の履歴（`.vox-radio/programs/`）を `actions/cache` で復元し、前回までの内容を踏まえた番組を生成します。初回（キャッシュ無し）でも動作し、回番号は 1 から始まります。
-2. **番組生成** — `episodegen` が記事収集から音声合成までを一括実行し（詳細は[README の番組生成](../../README.md#番組生成)）、`output/` に mp3 とマニフェストを出力します。
-3. **Slack 投稿** — `slackpost` がマニフェストをもとに mp3 を Slack へ直接アップロードします。GitHub Release など公開 URL の準備は不要です。
-4. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/programs/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。移行が済んだらワークフローから `.vox-radio/cache` の指定を外してください。
-5. **VOICEVOX NEMO などを併用する場合** — `services` にサービスを追加してポートをマップし、`vox-radio.yaml` の `voicevox.engines` でエンジンを定義したうえで、エンジンごとに `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し - を _ に置換した名前>` 環境変数を設定します（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
+2. **キャッシュレイアウトの移行** — 旧パス（`.vox-radio/cache`）に復元されたファイルがあれば `.vox-radio/programs/` へ移します。旧パスの併記も本ステップも不要になった（＝すべての履歴が新パスにある）ことを確認したら、ワークフローから両方をまとめて外してください。
+3. **番組生成** — `episodegen` が記事収集から音声合成までを一括実行し（詳細は[README の番組生成](../../README.md#番組生成)）、`output/` に mp3 とマニフェストを出力します。
+4. **Slack 投稿** — `slackpost` がマニフェストをもとに mp3 を Slack へ直接アップロードします。GitHub Release など公開 URL の準備は不要です。
+5. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/programs/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。
+6. **VOICEVOX NEMO などを併用する場合** — `services` にサービスを追加してポートをマップし、`vox-radio.yaml` の `voicevox.engines` でエンジンを定義したうえで、エンジンごとに `VOX_RADIO_VOICEVOX_URL_<エンジン名を大文字化し - を _ に置換した名前>` 環境変数を設定します（詳細は[vox-radio.md](../../internal/cli/skills/vox-radio/references/vox-radio.md)）。
 
 ## 注意事項
 
