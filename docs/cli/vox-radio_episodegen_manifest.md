@@ -10,6 +10,9 @@
 マニフェストは別の配信サービスが RSS フィードを生成する際に使用することを想定しており、
 フルパイプラインを再実行せずに済みます。
 
+--rundown を指定すると、各コーナーの記事情報が付与され、実際に放送されたコーナー
+（記事なしでスキップされたコーナー・その回に出ないコーナーを除く）だけがマニフェストに載ります。
+
 --lines を指定すると、共通設定ファイルの LLM 設定を使って
 LLM が 03_lines.json（元表記のセリフ）から番組要約・会話メモ・コーナー単位要約を生成してマニフェストに追加します。
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
@@ -37,7 +40,7 @@ vox-radio episodegen manifest [flags]
   -h, --help              help for manifest
       --lines string      03_lines.json のパス（任意）。指定すると LLM が元表記のセリフから番組要約・会話メモ・コーナー単位要約を生成する
       --out string        manifest.json の出力先パス（必須）
-      --rundown string    02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる
+      --rundown string    02_rundown.json のパス（任意）。指定すると実際に放送されたコーナーだけに絞られる。省略するとコーナーの記事は空になり、仕様のコーナーがすべて並ぶ
       --script string     04_script.json のパス（任意）。指定すると SE アセットのクレジットを自動収集する
       --spec string       エピソード仕様 YAML ファイルのパス（必須）
       --timeline string   06_timeline.json のパス（任意）。指定するとコーナー別の duration_sec をマニフェストに追加する
