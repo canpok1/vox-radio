@@ -193,14 +193,27 @@ func resolveLocation(program config.ProgramConfig, logger *slog.Logger) *time.Lo
 	return loc
 }
 
+// resolveCornersBy は成果物のコーナー並び items の id 順に spec のコーナーを再構成する。
+// 中間ファイルの型ごとにヘルパーが増えても解決ロジックが分岐しないよう、id の取り出し方だけを
+// 呼び出し側から受け取る。
+func resolveCornersBy[T any](corners []config.CornerConfig, items []T, id func(T) string) ([]config.CornerConfig, error) {
+	ids := make([]string, len(items))
+	for i, item := range items {
+		ids[i] = id(item)
+	}
+	return config.ResolveCornersByIDs(corners, ids)
+}
+
 // resolveCornersByRundown は rundown のコーナー id 順に spec のコーナーを再構成する。
 // script 系で採用コーナーを再現するために使う（回番号不要・再実行で不変・タイトル変更に頑健）。
 func resolveCornersByRundown(corners []config.CornerConfig, rd model.Rundown) ([]config.CornerConfig, error) {
-	ids := make([]string, len(rd.Corners))
-	for i, c := range rd.Corners {
-		ids[i] = c.ID
-	}
-	return config.ResolveCornersByIDs(corners, ids)
+	return resolveCornersBy(corners, rd.Corners, func(c model.RundownCorner) string { return c.ID })
+}
+
+// resolveCornersByLines は台本のコーナー id 順に spec のコーナーを再構成する。
+// analyze 系でスキップされたコーナーを分析対象から外すために使う。
+func resolveCornersByLines(corners []config.CornerConfig, lines model.ScriptLines) ([]config.CornerConfig, error) {
+	return resolveCornersBy(corners, lines.Corners, func(c model.CornerLines) string { return c.ID })
 }
 
 // resolveCorners は回番号で採用コーナーを絞り込む。
