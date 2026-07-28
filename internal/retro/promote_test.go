@@ -212,6 +212,90 @@ func TestApplyCounts_NewProblemNotInPrevIsAdded(t *testing.T) {
 	}
 }
 
+func TestApplyCounts_SkipsProposedProblemDuplicatingTrackedTryProblemText(t *testing.T) {
+	// Simulates assignIDs failing to resolve a continuing problem to its existing id (e.g. a future
+	// regression): the guard in ApplyCounts must still refuse to add a second entry for the same
+	// problem text rather than trusting the fresh id at face value.
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが説明調", Action: "崩す", ClearStreak: 1},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems: prevTry,
+		ProposedProblems: []retro.Problem{
+			{ID: "p1", Problem: "掛け合いが説明調", Action: "崩す"},
+			{ID: "p9", Problem: "掛け合いが説明調", Action: "別施策", FirstSeenEpisode: 1, LastSeenEpisode: 1},
+		},
+		NewEpisodes:   []int{1},
+		KeepThreshold: 100,
+		LatestEpisode: 1,
+	})
+
+	if len(result.NextTry) != 1 {
+		t.Fatalf("NextTry = %+v, want exactly 1 entry (p9 duplicates p1's problem text)", result.NextTry)
+	}
+	if result.NextTry[0].ID != "p1" {
+		t.Errorf("ID = %q, want p1 (the tracked entry, not the duplicate p9)", result.NextTry[0].ID)
+	}
+}
+
+func TestApplyCounts_SkipsProposedProblemDuplicatingTrackedKeepProblemText(t *testing.T) {
+	prevKeeps := []retro.Keep{
+		{ID: "k1", Problem: "定着済みの問題", Action: "実証済み施策", ProvenAtEpisode: 5},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevKeeps: prevKeeps,
+		ProposedProblems: []retro.Problem{
+			{ID: "p9", Problem: "定着済みの問題", Action: "新施策", FirstSeenEpisode: 1, LastSeenEpisode: 1},
+		},
+		NewEpisodes:   []int{1},
+		KeepThreshold: 100,
+		LatestEpisode: 1,
+	})
+
+	if len(result.NextTry) != 0 {
+		t.Errorf("NextTry = %+v, want empty (p9 duplicates keep entry k1's problem text)", result.NextTry)
+	}
+	if len(result.NextKeep) != 1 || result.NextKeep[0].ID != "k1" {
+		t.Fatalf("NextKeep = %+v, want k1 unchanged", result.NextKeep)
+	}
+}
+
+func TestApplyCounts_DuplicateGuardPreventsTruncationFromDroppingGenuineNewProblems(t *testing.T) {
+	// Without the guard, a duplicate (p9, same text as tracked p1) would occupy one of the
+	// MaxTries slots ahead of a genuinely new problem (p3), silently dropping p3 at truncation.
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "継続問題", Action: "施策1"},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems: prevTry,
+		ProposedProblems: []retro.Problem{
+			{ID: "p1", Problem: "継続問題", Action: "施策1"},
+			{ID: "p9", Problem: "継続問題", Action: "別施策", FirstSeenEpisode: 1, LastSeenEpisode: 1},
+			{ID: "p2", Problem: "新規問題A", Action: "施策A", FirstSeenEpisode: 1, LastSeenEpisode: 1},
+			{ID: "p3", Problem: "新規問題B", Action: "施策B", FirstSeenEpisode: 1, LastSeenEpisode: 1},
+		},
+		NewEpisodes:   []int{1},
+		KeepThreshold: 100,
+		MaxTries:      3,
+		LatestEpisode: 1,
+	})
+
+	gotIDs := make([]string, len(result.NextTry))
+	for i, p := range result.NextTry {
+		gotIDs[i] = p.ID
+	}
+	want := []string{"p1", "p2", "p3"}
+	if len(gotIDs) != len(want) {
+		t.Fatalf("NextTry ids = %v, want %v", gotIDs, want)
+	}
+	for i := range want {
+		if gotIDs[i] != want[i] {
+			t.Errorf("NextTry ids = %v, want %v", gotIDs, want)
+			break
+		}
+	}
+}
+
 func TestApplyCounts_TruncatesFinalTryToMaxTries(t *testing.T) {
 	prevTry := []retro.Problem{
 		{ID: "p1", Problem: "1", Action: "a"},
