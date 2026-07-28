@@ -21,3 +21,7 @@
     かつ JSONファイル "out/e2e-radio_ep001_manifest.json" のキー "episode_number" は数値 1 である
     かつ JSONファイル "out/e2e-radio_ep001_manifest.json" のキー "audio_file" は文字列 "e2e-radio_ep001.mp3" である
     かつ ファイル ".vox-radio/programs/e2e-radio/cache.jsonl" の行数は 1 である
+    かつ ファイル "out/intermediate/e2e-radio_ep001/07_analysis.json" が存在する
+    かつ JSONファイル "out/intermediate/e2e-radio_ep001/07_analysis.json" の配列 "findings" の要素数は 1 以上である
+    かつ JSONファイル "out/intermediate/e2e-radio_ep001/07_analysis.json" の配列 "patterns" の要素数は 1 以上である
+    かつ ファイル ".vox-radio/programs/e2e-radio/cache.jsonl" に "analysis" を含む

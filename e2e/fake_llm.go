@@ -29,6 +29,8 @@ var llmRoutes = []llmStepRoute{
 	{step: "proofread", header: "# [C] 発音校正プロンプト"},
 	{step: "summary", header: "# [D] 番組要約プロンプト"},
 	{step: "corner_summary", header: "# [D] コーナー要約プロンプト"},
+	{step: "analyze", header: "# [D] 番組分析プロンプト"},
+	{step: "retro", header: "# [D] 振り返り（retro）プロンプト"},
 }
 
 var idInPromptRe = regexp.MustCompile(`"id":\s*"([^"]+)"`)
@@ -140,6 +142,16 @@ func cannedResponse(step, prompt string) (string, error) {
 			`"conversation_notes":[{"category":"雑談","character_ids":["zundamon"],"note":"テスト用の会話メモ"}]}`, nil
 	case "corner_summary":
 		return `{"summary":"コーナー内容のまとめです。","points":["コーナー要点1"]}`, nil
+	case "analyze":
+		return `{"findings":[` +
+			`{"aspect":"掛け合い","severity":"low","detail":"テスト用の固定分析結果です。","evidence":"ずんだもん「テストなのだ」"}` +
+			`],"patterns":[` +
+			`{"aspect":"つかみ","detail":"テスト用の固定パターンです。"}` +
+			`]}`, nil
+	case "retro":
+		return `{"problems":[` +
+			`{"id":"","problem":"テスト用の固定問題です。","action":"テスト用の固定施策です。","first_seen_episode":1,"last_seen_episode":1}` +
+			`],"recurrences":[]}`, nil
 	}
 	return "", fmt.Errorf("no canned response for step %q", step)
 }
