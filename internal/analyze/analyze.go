@@ -26,7 +26,8 @@ var validSeverities = map[string]bool{"high": true, "medium": true, "low": true}
 
 // ComputeMetrics aggregates indicators that need no LLM judgement: per-corner target vs actual
 // length and line count, per-speaker line/character counts, and the proofread correction count.
-// cornerDurations missing an entry (e.g. a corner skipped by mix) yields ActualLengthSec 0.
+// corners must contain only the corners that actually aired: a corner missing from
+// cornerDurations yields ActualLengthSec 0, which the LLM reads as a large shortfall.
 func ComputeMetrics(corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerDurations map[string]float64) model.AnalysisMetrics {
 	lineCountByCornerID := make(map[string]int, len(lines.Corners))
 	speakerOrder := make([]string, 0)

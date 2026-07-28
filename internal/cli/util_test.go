@@ -140,6 +140,47 @@ func TestResolveCornersByRundown_UnknownID(t *testing.T) {
 	}
 }
 
+func TestResolveCornersByLines(t *testing.T) {
+	corners := []config.CornerConfig{
+		{ID: "a", Title: "A", LengthSec: 30},
+		{ID: "b", Title: "B", LengthSec: 60},
+		{ID: "c", Title: "C", LengthSec: 90},
+	}
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{ID: "c"},
+			{ID: "a"},
+		},
+	}
+
+	got, err := resolveCornersByLines(corners, lines)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d corners, want 2", len(got))
+	}
+	if got[0].Title != "C" || got[1].Title != "A" {
+		t.Errorf("titles = [%s %s], want [C A]", got[0].Title, got[1].Title)
+	}
+}
+
+func TestResolveCornersByLines_UnknownID(t *testing.T) {
+	corners := []config.CornerConfig{
+		{ID: "a", Title: "A", LengthSec: 30},
+	}
+	lines := model.ScriptLines{
+		Corners: []model.CornerLines{
+			{ID: "x"},
+		},
+	}
+
+	_, err := resolveCornersByLines(corners, lines)
+	if err == nil {
+		t.Error("expected error for unknown id, got nil")
+	}
+}
+
 func TestProgramDir(t *testing.T) {
 	got := programDir("morning-news")
 	want := filepath.Join(".vox-radio", "programs", "morning-news")

@@ -34,7 +34,12 @@ func runAndSaveAnalysis(ctx context.Context, cfg *config.Config, prompts map[str
 		return fmt.Errorf("read timeline: %w", err)
 	}
 
-	a, err := runAnalyzeStep(ctx, cfg, prompts, llmClient, p.Program, p.Corners, lines, pr, tl.Map(), logger)
+	corners, err := resolveCornersByLines(p.Corners, lines)
+	if err != nil {
+		return fmt.Errorf("resolve corners: %w", err)
+	}
+
+	a, err := runAnalyzeStep(ctx, cfg, prompts, llmClient, p.Program, corners, lines, pr, tl.Map(), logger)
 	if err != nil {
 		return fmt.Errorf("analyze: %w", err)
 	}
@@ -125,11 +130,7 @@ episodegen 本体は番組生成の一部として analyze を自動実行しキ
 				cornerDurations = tl.Map()
 			}
 
-			ids := make([]string, len(lines.Corners))
-			for i, c := range lines.Corners {
-				ids[i] = c.ID
-			}
-			corners, err := config.ResolveCornersByIDs(p.Corners, ids)
+			corners, err := resolveCornersByLines(p.Corners, lines)
 			if err != nil {
 				return fmt.Errorf("resolve corners: %w", err)
 			}
