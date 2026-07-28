@@ -56,6 +56,7 @@ vox-radio episodegen [flags]
 ### SEE ALSO
 
 * [vox-radio](vox-radio.md)	 - AI を使ったポッドキャスト制作ツール
+* [vox-radio episodegen analyze](vox-radio_episodegen_analyze.md)	 - 台本とタイミング情報から回の分析（07_analysis.json）を生成する
 * [vox-radio episodegen check](vox-radio_episodegen_check.md)	 - エピソード仕様ファイルを strict モードでフル検証する
 * [vox-radio episodegen gather](vox-radio_episodegen_gather.md)	 - コーナーごとに RSS/Atom フィードと URL から記事を収集する
 * [vox-radio episodegen manifest](vox-radio_episodegen_manifest.md)	 - エピソードのコンテンツマニフェスト JSON を生成する

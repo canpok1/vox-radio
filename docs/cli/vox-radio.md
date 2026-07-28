@@ -27,5 +27,6 @@ vox-radio は AI を活用したポッドキャストエピソード制作 CLI �
 * [vox-radio init](vox-radio_init.md)	 - テンプレート設定ファイルを生成する
 * [vox-radio install](vox-radio_install.md)	 - vox-radio のエージェントスキルやリソースをインストールする
 * [vox-radio render](vox-radio_render.md)	 - manifest を text/template でレンダリングして出力する
+* [vox-radio retro](vox-radio_retro.md)	 - 過去回の分析から課題と施策を抽出し try ファイルを更新する（自動改善ループ）
 * [vox-radio slackpost](vox-radio_slackpost.md)	 - manifest を入力に mp3 を Slack へ投稿する
 

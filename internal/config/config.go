@@ -7,6 +7,7 @@ type Config struct {
 	Voicevox   VoicevoxConfig             `yaml:"voicevox"`
 	Characters map[string]CharacterConfig `yaml:"characters"`
 	Cache      CacheConfig                `yaml:"cache"`
+	Retro      RetroConfig                `yaml:"retro,omitempty"`
 	Slack      SlackConfig                `yaml:"slack"`
 	Security   SecurityConfig             `yaml:"security,omitempty"`
 	// Pronunciation is a global proper-noun reading dictionary (written form -> reading).

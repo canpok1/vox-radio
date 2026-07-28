@@ -10,7 +10,7 @@
 
 | フィールド | 型 | 必須/任意 | 説明 |
 |---|---|---|---|
-| `id` | string | 必須 | 番組を識別するID。キャッシュファイル名（`.vox-radio/cache/{id}.jsonl`）とキャッシュエントリの記録キーに使用。日替わりコーナーやゲストの登場回もこのIDをキーに数える |
+| `id` | string | 必須 | 番組を識別するID。番組ごとの状態ディレクトリ名（`.vox-radio/programs/{id}/`。キャッシュは `cache.jsonl`）とキャッシュエントリの記録キーに使用。日替わりコーナーやゲストの登場回もこのIDをキーに数える |
 | `title` | string | 任意 | 番組タイトル |
 | `author` | string | 任意 | 番組の作者名。生成 MP3 のアーティストタグ（ID3 TPE1）と RSS フィードの channel `itunes:author` に使われる。空の場合はそれぞれ省略される |
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用）。RSSフィード・Slack通知にも露出する公開フィールド |

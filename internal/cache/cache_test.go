@@ -345,7 +345,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 		},
 	}
 
-	got := cache.BuildEntryFromManifest("prog-id", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("prog-id", m, rd, 0, 0, nil)
 
 	if got.ProgramID != "prog-id" {
 		t.Errorf("ProgramID: got %q, want %q", got.ProgramID, "prog-id")
@@ -398,7 +398,7 @@ func TestBuildEntryFromManifest_EmptyCorners(t *testing.T) {
 	m := model.Manifest{Title: "空", Datetime: "2026-06-01T00:00:00Z"}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 	if got.Corners == nil {
 		t.Error("Corners should be non-nil for empty manifest")
 	}
@@ -421,7 +421,7 @@ func TestBuildEntryFromManifest_CornerSummaryAndPointsIncluded(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -448,7 +448,7 @@ func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -469,7 +469,7 @@ func TestBuildEntryFromManifest_ConversationNotesCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if len(got.ConversationNotes) != 1 {
 		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
@@ -496,7 +496,7 @@ func TestBuildEntryFromManifest_EpisodeNumberAndTitleCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if got.EpisodeNumber != 7 {
 		t.Errorf("EpisodeNumber: got %d, want 7", got.EpisodeNumber)
@@ -546,7 +546,7 @@ func TestBuildEntryFromManifest_NewFields_Populated(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 12345678, 1800)
+	got := cache.BuildEntryFromManifest("p", m, rd, 12345678, 1800, nil)
 
 	if got.Description != "番組説明テキスト" {
 		t.Errorf("Description: got %q, want %q", got.Description, "番組説明テキスト")
@@ -683,6 +683,68 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 	}
 }
 
+func TestCompact_NilsAnalysisForEntriesOutsideMaxEntries(t *testing.T) {
+	corner := cache.CornerEntry{Title: "コーナー"}
+	analysis := &model.Analysis{Findings: []model.AnalysisFinding{{Aspect: "a", Severity: "low", Detail: "d"}}}
+	entries := []cache.Entry{
+		{Datetime: "2026-01-01T00:00:00Z", Title: "e1", Corners: []cache.CornerEntry{corner}, Analysis: analysis},
+		{Datetime: "2026-01-02T00:00:00Z", Title: "e2", Corners: []cache.CornerEntry{corner}, Analysis: analysis},
+		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}, Analysis: analysis},
+	}
+
+	got := cache.Compact(entries, 2, 9999)
+
+	if got[0].Analysis != nil {
+		t.Errorf("Compact: entry[0].Analysis should be nil (outside detailed window), got %+v", got[0].Analysis)
+	}
+	if got[1].Analysis == nil || got[2].Analysis == nil {
+		t.Error("Compact: entries within detailed window should keep Analysis")
+	}
+}
+
+func TestManager_Load_BackwardCompat_MissingAnalysisKeyIsNil(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.jsonl")
+	if err := os.WriteFile(path, []byte(`{"program_id":"p","datetime":"2026-01-01T00:00:00Z","title":"t","summary":"s","corners":[],"conversation_notes":[],"casts":[]}`+"\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	m := cache.New(path)
+	got, err := m.Load()
+	if err != nil {
+		t.Fatalf("Load: unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d entries, want 1", len(got))
+	}
+	if got[0].Analysis != nil {
+		t.Errorf("Analysis: got %+v, want nil for legacy entry without analysis key", got[0].Analysis)
+	}
+}
+
+func TestBuildEntryFromManifest_AnalysisCopied(t *testing.T) {
+	m := model.Manifest{Corners: []model.ManifestCorner{}}
+	rd := model.Rundown{}
+	analysis := &model.Analysis{Findings: []model.AnalysisFinding{{Aspect: "a", Severity: "low", Detail: "d"}}}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, analysis)
+
+	if got.Analysis == nil || len(got.Analysis.Findings) != 1 {
+		t.Errorf("Analysis: got %+v, want copied analysis", got.Analysis)
+	}
+}
+
+func TestBuildEntryFromManifest_NilAnalysis(t *testing.T) {
+	m := model.Manifest{Corners: []model.ManifestCorner{}}
+	rd := model.Rundown{}
+
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+
+	if got.Analysis != nil {
+		t.Errorf("Analysis: got %+v, want nil", got.Analysis)
+	}
+}
+
 func TestCompact_PreservesCasts(t *testing.T) {
 	casts := []cache.CastEntry{
 		{CharacterID: "zundamon", Type: "regular"},
@@ -805,7 +867,7 @@ func TestBuildEntryFromManifest_CornerIDCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -827,7 +889,7 @@ func TestBuildEntryFromManifest_CastsCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if len(got.Casts) != 2 {
 		t.Fatalf("BuildEntryFromManifest: Casts: got %d, want 2", len(got.Casts))
@@ -852,7 +914,7 @@ func TestBuildEntryFromManifest_CastsNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 
 	if got.Casts == nil {
 		t.Error("BuildEntryFromManifest: Casts must be [] not nil")
@@ -935,7 +997,7 @@ func TestBuildEntryFromManifest_AuthorCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 	if got.Author != "テスト配信者" {
 		t.Errorf("Author: got %q, want %q", got.Author, "テスト配信者")
 	}
@@ -949,7 +1011,7 @@ func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 	if len(got.Credits) != 2 {
 		t.Fatalf("Credits: got %d, want 2", len(got.Credits))
 	}
@@ -968,7 +1030,7 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
 	// Credits が nil のままだと JSON で "null" になるため non-nil を保証
 	if got.Credits == nil {
 		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")

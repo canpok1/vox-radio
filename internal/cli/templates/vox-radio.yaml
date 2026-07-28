@@ -96,6 +96,24 @@ cache:
   retention_days: 90       # 記憶を残す日数（超えた古いものは消す）
   llm_context_entries: 10  # AIに参考として渡す直近エピソード数
 
+# retro コマンド（過去回の分析から課題と施策を抽出し番組生成へ注入する自動改善ループ）の設定。
+retro:
+  max_tries: 3          # 同時に試す施策の上限（多すぎると何が効いたか分からなくなる）
+  analysis_entries: 5   # retro が参照する直近の分析件数
+  keep_threshold: 3     # 実証済み（keep）へ昇格させるのに必要な、問題が連続で発生しなかった回数
+  keep_length: 600      # keep の分量の警告しきい値（文字数）。超えても切り捨てず警告のみ
+
+# セキュリティ設定（外部フィード・Webページからのプロンプトインジェクション対策）。
+# 省略するとすべて既定値（exclude モード・本文 3000 文字まで）が適用されます。
+security:
+  prompt_injection:
+    # 命令文が検出されたときの挙動。省略すると exclude が適用されます。
+    # exclude: 該当記事を丸ごと除外してパイプラインを継続する（既定）
+    # error:   パイプラインをエラーで停止する
+    on_detect: exclude
+    # 記事本文の最大ルーン数。超えた部分は切り詰めます。0 または省略で 3000 文字。
+    max_body_chars: 3000
+
 # Slack へ配信するときの設定（slackpost コマンドで使用）。
 slack:
   # Slack の Bot トークン（xoxb-... ）を入れておく環境変数の名前。

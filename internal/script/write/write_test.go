@@ -345,6 +345,97 @@ func TestLLMWriter_Write_DirectionNotInPrompt(t *testing.T) {
 	}
 }
 
+func TestLLMWriter_Write_RetroTryInjectedInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "try={{retro_try}}", 0, nil)
+	w.SetRetroTry(write.FormatRetroTry([]write.RetroTryItem{
+		{Problem: "掛け合いが説明調", Action: "疑問形で崩す"},
+	}))
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "掛け合いが説明調") || !strings.Contains(prompt, "疑問形で崩す") {
+		t.Errorf("prompt should contain the retro try text, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_RetroTryDefaultsToNone(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "try={{retro_try}}", 0, nil)
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "try=（なし）") {
+		t.Errorf("prompt should render （なし） when SetRetroTry was never called, got: %s", prompt)
+	}
+}
+
+func TestFormatRetroTry_EmptyReturnsEmptyString(t *testing.T) {
+	if got := write.FormatRetroTry(nil); got != "" {
+		t.Errorf("FormatRetroTry(nil) = %q, want empty string", got)
+	}
+}
+
+func TestFormatRetroTry_FormatsProblemAndAction(t *testing.T) {
+	got := write.FormatRetroTry([]write.RetroTryItem{
+		{Problem: "P1", Action: "A1"},
+		{Problem: "P2", Action: "A2"},
+	})
+	if !strings.Contains(got, "P1") || !strings.Contains(got, "A1") || !strings.Contains(got, "P2") || !strings.Contains(got, "A2") {
+		t.Errorf("FormatRetroTry should contain all problems/actions, got: %q", got)
+	}
+}
+
+func TestLLMWriter_Write_RetroKeepInjectedInPrompt(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "keep={{retro_keep}}", 0, nil)
+	w.SetRetroKeep(write.FormatRetroKeep([]write.RetroTryItem{
+		{Problem: "掛け合いが説明調", Action: "疑問形で崩す"},
+	}))
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "掛け合いが説明調") || !strings.Contains(prompt, "疑問形で崩す") {
+		t.Errorf("prompt should contain the retro keep text, got: %s", prompt)
+	}
+}
+
+func TestLLMWriter_Write_RetroKeepDefaultsToNone(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "keep={{retro_keep}}", 0, nil)
+
+	_, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "keep=（なし）") {
+		t.Errorf("prompt should render （なし） when SetRetroKeep was never called, got: %s", prompt)
+	}
+}
+
+func TestFormatRetroKeep_EmptyReturnsEmptyString(t *testing.T) {
+	if got := write.FormatRetroKeep(nil); got != "" {
+		t.Errorf("FormatRetroKeep(nil) = %q, want empty string", got)
+	}
+}
+
+func TestFormatRetroKeep_FormatsProblemAndAction(t *testing.T) {
+	got := write.FormatRetroKeep([]write.RetroTryItem{{Problem: "P1", Action: "A1"}})
+	if !strings.Contains(got, "P1") || !strings.Contains(got, "A1") {
+		t.Errorf("FormatRetroKeep should contain problem/action, got: %q", got)
+	}
+}
+
 func TestLLMWriter_Write_PastEpisodesInjectedInPrompt(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "past={{past_episodes}}", 0, nil)
