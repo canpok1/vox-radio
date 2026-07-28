@@ -21,7 +21,8 @@ corners:
     length_sec: 60
 `
 
-// runManifestCmd は 2 コーナー（c1, c2）の spec で manifest コマンドを実行し、生成された manifest を返す。
+// runManifestCmd は manifestTestSpec を spec として manifest コマンドを実行し、生成された manifest を返す。
+// ログ出力先が cwd 相対のため、dir には chdirTemp の戻り値を渡すこと。
 func runManifestCmd(t *testing.T, dir string, extraArgs ...string) model.Manifest {
 	t.Helper()
 
@@ -32,13 +33,14 @@ func runManifestCmd(t *testing.T, dir string, extraArgs ...string) model.Manifes
 	outPath := filepath.Join(dir, "manifest.json")
 
 	args := []string{
+		"episodegen", "manifest",
 		"--spec", specPath,
 		"--audio", filepath.Join(dir, "episode.mp3"),
 		"--out", outPath,
 	}
 	args = append(args, extraArgs...)
 
-	cmd := newManifestCmd()
+	cmd := NewRootCmd()
 	cmd.SetArgs(args)
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)

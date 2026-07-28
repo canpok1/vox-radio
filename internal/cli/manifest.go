@@ -65,10 +65,17 @@ rundown（記事の事実）に含まれない会話情報を幅広く記録し�
 			}
 
 			var rd model.Rundown
+			corners := p.Corners
 			if rundownPath != "" {
 				rd, err = readJSON[model.Rundown](rundownPath)
 				if err != nil {
 					return fmt.Errorf("read rundown: %w", err)
+				}
+				// rundown は condition による除外もスキップも反映済みなので、実際に放送された
+				// コーナーを判断する正とする。
+				corners, err = resolveCornersByRundown(p.Corners, rd)
+				if err != nil {
+					return fmt.Errorf("resolve corners: %w", err)
 				}
 			}
 
@@ -143,19 +150,9 @@ rundown（記事の事実）に含まれない会話情報を幅広く記録し�
 				cornerDurations = tl.Map()
 			}
 
-			// rundown は condition による除外もスキップも反映済みなので、実際に放送された
-			// コーナーだけを載せるための正とする。未指定時は絞り込めないため spec 全件を維持する。
-			manifestCorners := p.Corners
-			if rundownPath != "" {
-				manifestCorners, err = resolveCornersByRundown(p.Corners, rd)
-				if err != nil {
-					return fmt.Errorf("resolve corners: %w", err)
-				}
-			}
-
 			m := manifest.Build(manifest.BuildParams{
 				Program:           p.Program,
-				Corners:           manifestCorners,
+				Corners:           corners,
 				Rundown:           rd,
 				AudioFile:         filepath.Base(audioPath),
 				GeneratedAt:       time.Now().UTC(),
