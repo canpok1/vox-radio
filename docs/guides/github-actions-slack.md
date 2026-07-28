@@ -18,6 +18,7 @@ GitHub Actions のスケジュール実行で、定期的に番組を生成し�
   | 投稿先チャンネル ID | Variable | `SLACK_CHANNEL_ID` | `slack-spec.yaml` の `slack.channel_env` |
 
   環境変数名は設定ファイル側で変更できます。変えた場合はワークフローの `env:` の名前も合わせてください。
+- v1.0.5 以前からアップグレードした場合、キャッシュは旧パス（`.vox-radio/cache`）に保存されています。サンプルワークフローの旧パス併記と移行ステップは、この履歴を新パスへ引き継ぐためのものです（新規導入時は不要ですが、入れておいても無害です）。
 
 ## サンプルワークフロー
 
@@ -49,9 +50,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # 1. キャッシュ復元。実行ごとに新しいキーで保存し、直近のキャッシュを引き継ぐ書き方。
-      # 旧パス（.vox-radio/cache）は移行期の併記。自動移行は行われないため、次の
-      # 「Migrate cache layout」ステップが旧ファイルを見つけられるよう、移行が済むまでは
-      # 両方を指定すること（併記だけでは履歴は引き継がれない）。
+      # 旧パス（.vox-radio/cache）は移行期の併記（理由は次のステップのコメントを参照）。
       - uses: actions/cache@v4
         with:
           path: |
@@ -59,12 +58,6 @@ jobs:
             .vox-radio/programs
           key: vox-radio-cache-${{ github.run_id }}
           restore-keys: vox-radio-cache-
-
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      - name: Install vox-radio
-        run: curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
 
       # 2. 旧レイアウト（v1.0.5 以前）のキャッシュを新レイアウトへ移す。自動移行は行われないため
       # このステップが無いと、旧パスを復元しても回番号が 1 に戻る。
@@ -77,6 +70,12 @@ jobs:
             mkdir -p ".vox-radio/programs/$id"
             mv "$f" ".vox-radio/programs/$id/cache.jsonl"
           done
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install vox-radio
+        run: curl -fsSL https://github.com/canpok1/vox-radio/releases/latest/download/install.sh | bash
 
       # 3. 番組生成
       - name: Generate episode
@@ -98,7 +97,7 @@ jobs:
 ## 仕組み
 
 1. **キャッシュ復元** — 過去回の履歴（`.vox-radio/programs/`）を `actions/cache` で復元し、前回までの内容を踏まえた番組を生成します。初回（キャッシュ無し）でも動作し、回番号は 1 から始まります。
-2. **キャッシュレイアウトの移行** — 旧パス（`.vox-radio/cache`）に復元されたファイルがあれば `.vox-radio/programs/` へ移します。旧パスの併記も本ステップも不要になった（＝すべての履歴が新パスにある）ことを確認したら、ワークフローから両方をまとめて外してください。
+2. **キャッシュレイアウトの移行** — 旧パス（`.vox-radio/cache`）に復元されたファイルがあれば `.vox-radio/programs/` へ移します。
 3. **番組生成** — `episodegen` が記事収集から音声合成までを一括実行し（詳細は[README の番組生成](../../README.md#番組生成)）、`output/` に mp3 とマニフェストを出力します。
 4. **Slack 投稿** — `slackpost` がマニフェストをもとに mp3 を Slack へ直接アップロードします。GitHub Release など公開 URL の準備は不要です。
 5. **キャッシュ保存** — 新しい履歴を含む `.vox-radio/programs/` は、復元に使った `actions/cache` の post 処理で自動保存されます。専用ステップは要りません。
@@ -108,3 +107,4 @@ jobs:
 
 - **キャッシュの保持期間** — `actions/cache` は 7 日間アクセスのないキャッシュを自動削除します。実行間隔が空くと過去回の文脈（番組の連続性）が失われます。日次など定期実行のサンプル用途では問題になりません。連続性を確実に保ちたい場合は、専用ブランチへコミットして永続化する方式もあります（その分ワークフローは長くなります）。
 - **クレジット表記・利用規約** — 合成音声を公開する際の VOICEVOX のクレジット表記など、規約まわりの責任は利用者にあります。詳細は[DISCLAIMER.md](../../DISCLAIMER.md)を参照してください。
+- **移行完了後の片付け** — 旧パスの併記と「Migrate cache layout」ステップは、すべての履歴が新パスへ移った後は不要です（残しても無害ですが）。確認できたらワークフローから両方をまとめて外してください。
