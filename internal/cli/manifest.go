@@ -32,6 +32,9 @@ func newManifestCmd() *cobra.Command {
 マニフェストは別の配信サービスが RSS フィードを生成する際に使用することを想定しており、
 フルパイプラインを再実行せずに済みます。
 
+--rundown を指定すると、各コーナーの記事情報が付与され、実際に放送されたコーナー
+（記事なしでスキップされたコーナー・その回に出ないコーナーを除く）だけがマニフェストに載ります。
+
 --lines を指定すると、共通設定ファイルの LLM 設定を使って
 LLM が 03_lines.json（元表記のセリフ）から番組要約・会話メモ・コーナー単位要約を生成してマニフェストに追加します。
 共通設定ファイルのパスは --config フラグで指定します（省略時は vox-radio.yaml）。
@@ -62,10 +65,17 @@ rundown（記事の事実）に含まれない会話情報を幅広く記録し�
 			}
 
 			var rd model.Rundown
+			corners := p.Corners
 			if rundownPath != "" {
 				rd, err = readJSON[model.Rundown](rundownPath)
 				if err != nil {
 					return fmt.Errorf("read rundown: %w", err)
+				}
+				// rundown は condition による除外もスキップも反映済みなので、実際に放送された
+				// コーナーを判断する正とする。
+				corners, err = resolveCornersByRundown(p.Corners, rd)
+				if err != nil {
+					return fmt.Errorf("resolve corners: %w", err)
 				}
 			}
 
@@ -142,7 +152,7 @@ rundown（記事の事実）に含まれない会話情報を幅広く記録し�
 
 			m := manifest.Build(manifest.BuildParams{
 				Program:           p.Program,
-				Corners:           p.Corners,
+				Corners:           corners,
 				Rundown:           rd,
 				AudioFile:         filepath.Base(audioPath),
 				GeneratedAt:       time.Now().UTC(),
@@ -169,7 +179,7 @@ rundown（記事の事実）に含まれない会話情報を幅広く記録し�
 	}
 
 	registerSpecFlag(cmd, &specPath)
-	cmd.Flags().StringVar(&rundownPath, "rundown", "", "02_rundown.json のパス（任意）。省略するとコーナーの記事は空になる")
+	cmd.Flags().StringVar(&rundownPath, "rundown", "", "02_rundown.json のパス（任意）。指定すると実際に放送されたコーナーだけに絞られる。省略するとコーナーの記事は空になり、仕様のコーナーがすべて並ぶ")
 	cmd.Flags().StringVar(&audioPath, "audio", "", "音声ファイルのパス。ファイル名のみマニフェストに記録される（必須）")
 	cmd.Flags().StringVar(&out, "out", "", "manifest.json の出力先パス（必須）")
 	cmd.Flags().StringVar(&linesPath, "lines", "", "03_lines.json のパス（任意）。指定すると LLM が元表記のセリフから番組要約・会話メモ・コーナー単位要約を生成する")
