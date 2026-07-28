@@ -391,8 +391,14 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 // continuation of a current problem or keep entry, preserving the id only when it matches one of
 // their ids. IDs are assigned by Go, not trusted from the LLM: even if the LLM echoes back a
 // non-empty id for what is actually a new problem (hallucinated or copied from elsewhere), it is
-// not in currentIDs and gets overridden here, avoiding duplicate or invented ids. The result is
-// truncated to maxTries.
+// not in currentIDs and gets overridden here, avoiding duplicate or invented ids.
+//
+// When the LLM's id does not resolve to a tracked one (empty or unknown), the problem text
+// (normalized) is matched against current/currentKeeps as a fallback: retro.md asks the LLM to
+// reuse the same id for a continuing problem, but has no way to enforce it, so a continuing
+// problem whose id comes back empty would otherwise be assigned a fresh id and duplicate the
+// existing entry (same problem/action pair appearing twice, splitting its ClearStreak). The result
+// is truncated to maxTries.
 func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTries int) []Problem {
 	currentIDs := trackedIDs(current, currentKeeps)
 	used := make(map[int]bool, len(currentIDs))
@@ -401,6 +407,8 @@ func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTrie
 			used[n] = true
 		}
 	}
+
+	idByProblemText := problemTextIndex(current, currentKeeps)
 
 	next := 1
 	nextID := func() string {
@@ -417,7 +425,11 @@ func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTrie
 	for _, p := range raw {
 		id := p.ID
 		if id == "" || !currentIDs[id] {
-			id = nextID()
+			if matched, ok := idByProblemText[normalizeProblemText(p.Problem)]; ok {
+				id = matched
+			} else {
+				id = nextID()
+			}
 		}
 		result = append(result, Problem{
 			ID:               id,
@@ -432,6 +444,36 @@ func assignIDs(current []Problem, currentKeeps []Keep, raw []llmProblem, maxTrie
 		result = result[:maxTries]
 	}
 	return result
+}
+
+// normalizeProblemText is the matching key used to recognize a continuing problem when the LLM's
+// id does not resolve to a tracked one: leading/trailing whitespace trimmed and any run of
+// whitespace (half-width space, full-width space, tab, newline) collapsed to a single half-width
+// space. Nothing else (case, punctuation, similarity) is normalized — misidentifying two distinct
+// problems as the same one is worse than leaving a real duplicate for the next retro round to
+// reconcile once the LLM returns a matching id.
+func normalizeProblemText(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
+// problemTextIndex maps each tracked problem's normalized text to its id, scanning current problems
+// before currentKeeps and keeping the first id seen for a given text, so a duplicate text among
+// tracked entries resolves deterministically.
+func problemTextIndex(current []Problem, currentKeeps []Keep) map[string]string {
+	idx := make(map[string]string, len(current)+len(currentKeeps))
+	for _, p := range current {
+		key := normalizeProblemText(p.Problem)
+		if _, exists := idx[key]; !exists {
+			idx[key] = p.ID
+		}
+	}
+	for _, k := range currentKeeps {
+		key := normalizeProblemText(k.Problem)
+		if _, exists := idx[key]; !exists {
+			idx[key] = k.ID
+		}
+	}
+	return idx
 }
 
 // trackedIDs returns the set of ids already tracked by either a try problem or a keep entry.

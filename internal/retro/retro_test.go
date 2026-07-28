@@ -277,6 +277,248 @@ func TestLLMRetro_Run_IgnoresHallucinatedIDForNewProblem(t *testing.T) {
 	}
 }
 
+func TestLLMRetro_Run_MatchesContinuingProblemByTextWhenIDMissing(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "掛け合いが説明調", "action": "改善版の施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが説明調", Action: "旧施策", FirstSeenEpisode: 10, LastSeenEpisode: 14},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p1" {
+		t.Errorf("got = %+v, want single problem matched to p1 by text (no duplicate created)", got)
+	}
+}
+
+func TestLLMRetro_Run_MatchesContinuingProblemDespiteWhitespaceDifferences(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "掛け合いが　記事の要点を\t並べる説明に寄りがち", "action": "施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが 記事の要点を 並べる説明に寄りがち", Action: "旧施策"},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p1" {
+		t.Errorf("got = %+v, want matched to p1 despite full-width space/tab vs half-width space", got)
+	}
+}
+
+func TestLLMRetro_Run_UnknownIDFallsBackToProblemTextMatch(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"id": "p99", "problem": "掛け合いが説明調", "action": "改善版の施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが説明調", Action: "旧施策"},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p1" {
+		t.Errorf("got = %+v, want matched to p1 via text fallback despite unknown id p99", got)
+	}
+}
+
+func TestLLMRetro_Run_KnownIDTakesPriorityOverProblemTextMatch(t *testing.T) {
+	// current has two entries; the LLM's id (p2) and the problem text (matches p1's text) disagree.
+	// A known id must win outright, without falling back to text matching.
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"id": "p2", "problem": "問題A", "action": "施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "問題A", Action: "施策1"},
+		{ID: "p2", Problem: "問題B", Action: "施策2"},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p2" {
+		t.Errorf("got = %+v, want id p2 (LLM id takes priority even though problem text matches p1)", got)
+	}
+}
+
+func TestLLMRetro_Run_MatchesKeepEntryByProblemTextWhenIDMissing(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "定着済みの問題", "action": "再発時の新施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	currentKeeps := []retro.Keep{{ID: "p3", Problem: "定着済みの問題", Action: "実証済み施策"}}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p3" {
+		t.Errorf("got = %+v, want matched to keep id p3", got)
+	}
+}
+
+func TestLLMRetro_Run_KeepProblemEchoedWithoutRecurrence_DoesNotDuplicateIntoTry(t *testing.T) {
+	// If the LLM mistakenly echoes a keep entry back in "problems" with no id, matching it to the
+	// keep's id (rather than minting a fresh try id) must not create a second, try-side copy of an
+	// already-kept problem when nothing recurred.
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "定着済みの問題", "action": "実証済み施策", "first_seen_episode": 3, "last_seen_episode": 6}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	currentKeeps := []retro.Keep{{ID: "p3", Problem: "定着済みの問題", Action: "実証済み施策", ProvenAtEpisode: 5}}
+	entries := []cache.Entry{{EpisodeNumber: 6, Analysis: &model.Analysis{}}}
+
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(proposed) != 1 || proposed[0].ID != "p3" {
+		t.Fatalf("proposed = %+v, want matched to keep id p3", proposed)
+	}
+
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevKeeps:        currentKeeps,
+		ProposedProblems: proposed,
+		NewEpisodes:      []int{6},
+		KeepThreshold:    5,
+		LatestEpisode:    6,
+	})
+
+	if len(result.NextTry) != 0 {
+		t.Errorf("NextTry = %+v, want empty (no duplicate of the kept problem)", result.NextTry)
+	}
+	if len(result.NextKeep) != 1 || result.NextKeep[0].ID != "p3" {
+		t.Fatalf("NextKeep = %+v, want p3 unchanged", result.NextKeep)
+	}
+}
+
+func TestLLMRetro_Run_ProblemTextMatchPrefersTryOverKeep(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "共通の問題文", "action": "施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{{ID: "p1", Problem: "共通の問題文", Action: "施策1"}}
+	currentKeeps := []retro.Keep{{ID: "p9", Problem: "共通の問題文", Action: "施策9"}}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, currentKeeps, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != "p1" {
+		t.Errorf("got = %+v, want try's id p1 preferred over keep's id p9 for a duplicated problem text", got)
+	}
+}
+
+func TestLLMRetro_Run_ContinuingProblemWithMissingID_PreservesClearStreakThroughApplyCounts(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "掛け合いが説明調", "action": "旧施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが説明調", Action: "旧施策", FirstSeenEpisode: 10, LastSeenEpisode: 14, ClearStreak: 2},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(proposed) != 1 || proposed[0].ID != "p1" {
+		t.Fatalf("proposed = %+v, want matched to p1 by text", proposed)
+	}
+
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  current,
+		ProposedProblems: proposed,
+		NewEpisodes:      []int{15, 16},
+		KeepThreshold:    5,
+		LatestEpisode:    16,
+	})
+
+	if len(result.NextTry) != 1 {
+		t.Fatalf("NextTry = %+v, want exactly 1 entry (missing id must not create a duplicate)", result.NextTry)
+	}
+	if result.NextTry[0].ID != "p1" {
+		t.Errorf("ID = %q, want p1", result.NextTry[0].ID)
+	}
+	if result.NextTry[0].ClearStreak != 4 {
+		t.Errorf("ClearStreak = %d, want 4 (2 + 2 non-recurring new episodes, carried over rather than reset)", result.NextTry[0].ClearStreak)
+	}
+}
+
+func TestLLMRetro_Run_ContinuingProblemWithMissingID_RecurrenceRewritesAction(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{
+		"problems": [
+			{"problem": "掛け合いが説明調", "action": "改善版の施策", "first_seen_episode": 10, "last_seen_episode": 16}
+		]
+	}`)}
+	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
+	current := []retro.Problem{
+		{ID: "p1", Problem: "掛け合いが説明調", Action: "旧施策", FirstSeenEpisode: 10, LastSeenEpisode: 14, ClearStreak: 2},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
+
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(proposed) != 1 || proposed[0].ID != "p1" {
+		t.Fatalf("proposed = %+v, want matched to p1 by text", proposed)
+	}
+
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  current,
+		ProposedProblems: proposed,
+		Recurrences:      []retro.Recurrence{{ID: "p1", Episodes: []int{16}}},
+		NewEpisodes:      []int{16},
+		KeepThreshold:    5,
+		LatestEpisode:    16,
+	})
+
+	if len(result.NextTry) != 1 || result.NextTry[0].ID != "p1" {
+		t.Fatalf("NextTry = %+v, want single entry p1", result.NextTry)
+	}
+	if result.NextTry[0].Action != "改善版の施策" {
+		t.Errorf("Action = %q, want rewritten from the matched proposed problem", result.NextTry[0].Action)
+	}
+	if result.NextTry[0].ClearStreak != 0 {
+		t.Errorf("ClearStreak = %d, want 0 (reset by recurrence)", result.NextTry[0].ClearStreak)
+	}
+}
+
 func TestLLMRetro_Run_TruncatesToMaxTries(t *testing.T) {
 	mc := &mockClient{response: json.RawMessage(`{
 		"problems": [

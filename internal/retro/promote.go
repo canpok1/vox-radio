@@ -93,6 +93,7 @@ func ApplyCounts(in ApplyCountsInput) ApplyCountsResult {
 	}
 
 	existingIDs := trackedIDs(in.PrevTryProblems, in.PrevKeeps)
+	existingProblemTexts := problemTextIndex(in.PrevTryProblems, in.PrevKeeps)
 
 	for _, k := range in.PrevKeeps {
 		episodes := recurredEpisodesByID[k.ID]
@@ -111,9 +112,16 @@ func ApplyCounts(in ApplyCountsInput) ApplyCountsResult {
 	}
 
 	for _, lp := range in.ProposedProblems {
-		if !existingIDs[lp.ID] {
-			nextTry = append(nextTry, lp)
+		if existingIDs[lp.ID] {
+			continue
 		}
+		// Backstop for assignIDs: a proposed problem whose text matches a tracked problem/keep is
+		// a continuation retro.go failed to resolve to an existing id, not a genuine new problem.
+		// Appending it here would duplicate the entry and split its ClearStreak across two ids.
+		if _, seen := existingProblemTexts[normalizeProblemText(lp.Problem)]; seen {
+			continue
+		}
+		nextTry = append(nextTry, lp)
 	}
 
 	if in.MaxTries > 0 && len(nextTry) > in.MaxTries {
