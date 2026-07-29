@@ -122,7 +122,7 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			}
 
 			r := retro.NewLLMRetro(llmClient, prompts["retro"], stepTemp(cfg.LLM, "retro"), retro.WithLogger(logger))
-			proposed, recurrences, lastEvaluated, err := r.Run(context.Background(), p.Program, analyzed, tf.Problems, kf.Keeps, cfg.Retro.EffectiveMaxTries())
+			proposed, recurrences, lastEvaluated, err := r.Run(context.Background(), p.Program, analyzed, tf.Problems, kf.Keeps, tf.Dropped, cfg.Retro.EffectiveMaxTries())
 			if err != nil {
 				return fmt.Errorf("retro: %w", err)
 			}
@@ -131,16 +131,18 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			result := retro.ApplyCounts(retro.ApplyCountsInput{
 				PrevTryProblems:  tf.Problems,
 				PrevKeeps:        kf.Keeps,
+				PrevDropped:      tf.Dropped,
 				ProposedProblems: proposed,
 				Recurrences:      recurrences,
 				NewEpisodes:      newEpisodes,
 				KeepThreshold:    cfg.Retro.EffectiveKeepThreshold(),
 				MaxTries:         cfg.Retro.EffectiveMaxTries(),
+				MaxFails:         cfg.Retro.EffectiveMaxFails(),
 				LatestEpisode:    lastEvaluated,
 			})
 
 			generatedAt := time.Now().UTC().Format(time.RFC3339)
-			newTF := retro.NewTryFile(result.NextTry, lastEvaluated, generatedAt)
+			newTF := retro.NewTryFile(result.NextTry, result.NextDropped, lastEvaluated, generatedAt)
 			newKF := retro.NewKeepFile(result.NextKeep, generatedAt)
 
 			if len(result.PromotedIDs) > 0 {
@@ -148,6 +150,17 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			}
 			if len(result.DemotedIDs) > 0 {
 				logger.Info("tryへ降格", "ids", result.DemotedIDs)
+			}
+			if len(result.DroppedIDs) > 0 {
+				droppedByID := make(map[string]retro.Dropped, len(result.NextDropped))
+				for _, d := range result.NextDropped {
+					droppedByID[d.ID] = d
+				}
+				for _, id := range result.DroppedIDs {
+					d := droppedByID[id]
+					logger.Warn("繰り返し再発したため問題を破棄しました。コーナーの目標分量・direction・アセット構成の見直しや script_note への移行を検討してください",
+						"id", d.ID, "problem", d.Problem, "first_seen_episode", d.FirstSeenEpisode, "fail_streak", d.FailStreak)
+				}
 			}
 
 			keepLength := cfg.Retro.EffectiveKeepLength()
@@ -175,7 +188,7 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			if err := retro.SaveKeepFile(keepPath, newKF); err != nil {
 				return err
 			}
-			logger.Info("try/keepファイルを更新", "try_problems", len(newTF.Problems), "keeps", len(newKF.Keeps))
+			logger.Info("try/keepファイルを更新", "try_problems", len(newTF.Problems), "keeps", len(newKF.Keeps), "dropped", len(newTF.Dropped))
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "try file written to %s (%d problems)\n", tryPath, len(newTF.Problems))
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "keep file written to %s (%d keeps)\n", keepPath, len(newKF.Keeps))
 			return nil
