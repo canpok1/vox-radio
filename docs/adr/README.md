@@ -105,3 +105,4 @@
 | [0097](0097-anonymous-character-via-optional-name.md) | `characters.<id>.name` を任意化し空欄で匿名キャラクターを表現する | 採用 | 2026-07-05 |
 | [0098](0098-episode-analysis-and-retro-hint-loop.md) | 回ごとの分析と振り返りによる自動改善ループを導入する | 採用 | 2026-07-27 |
 | [0099](0099-per-program-state-directory.md) | 番組ごとの状態を `.vox-radio/programs/{program_id}/` へ集約する | 採用 | 2026-07-27 |
+| [0100](0100-deprecate-length-sec-for-target-chars.md) | corners[].target_chars を新設し、length_sec / chars_per_minute を段階的に非推奨化する | 採用 | 2026-07-29 |
