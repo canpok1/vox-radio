@@ -321,6 +321,22 @@ func TestLLMWriter_Write_PromptContainsConvertedTargetChars(t *testing.T) {
 	}
 }
 
+func TestLLMWriter_Write_PromptContainsDirectTargetChars(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
+	w := write.NewLLMWriter(mc, "c={{corner}}", 0, nil)
+
+	corner := config.CornerConfig{Title: "Test", Content: "内容", TargetChars: 150}
+	_, _ = w.Write(context.Background(), config.ProgramConfig{}, corner, nil, nil, nil, nil, "", nil)
+
+	if len(mc.captured) == 0 {
+		t.Fatal("LLM was not called")
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, `"target_chars":150`) {
+		t.Errorf("prompt should contain target_chars:150 (直接指定、換算なし), got: %s", prompt)
+	}
+}
+
 func TestLLMWriter_Write_DirectionNotInPrompt(t *testing.T) {
 	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "c={{corner}} p={{program}}", 0, nil)
