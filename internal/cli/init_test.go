@@ -273,23 +273,23 @@ func TestInitCmd_Sample_Loadable(t *testing.T) {
 		t.Fatalf("Validate failed on sample: %v", err)
 	}
 
-	// 毎回の放送コーナーの length_sec 合計が 300 秒（尺不変）であること。
-	// 固定コーナー（condition なし）＋ ローテ枠どれか1つ = 15+180+90+15 = 300。
+	// 毎回の放送コーナーの target_chars 合計が 2100 文字（尺不変、300秒*7文字/秒）であること。
+	// 固定コーナー（condition なし）＋ ローテ枠どれか1つ = 105+1260+630+105 = 2100。
 	fixed := 0
 	var rotation []int
 	for _, c := range spec.Corners {
 		if c.Condition == nil {
-			fixed += c.LengthSec
+			fixed += c.TargetChars
 		} else {
-			rotation = append(rotation, c.LengthSec)
+			rotation = append(rotation, c.TargetChars)
 		}
 	}
 	if len(rotation) == 0 {
 		t.Fatal("rotation corners (with condition) not found")
 	}
 	for _, r := range rotation {
-		if total := fixed + r; total != 300 {
-			t.Errorf("放送コーナーの length_sec 合計 = %d, want 300", total)
+		if total := fixed + r; total != 2100 {
+			t.Errorf("放送コーナーの target_chars 合計 = %d, want 2100", total)
 		}
 	}
 

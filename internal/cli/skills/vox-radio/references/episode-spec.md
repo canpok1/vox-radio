@@ -18,7 +18,7 @@
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
 | `timezone` | string | 任意 | 番組内で日時を整形するときのIANAタイムゾーン名（例: `Asia/Tokyo`）。記事公開日時の変換、収録日時（台本生成プロンプトに渡す）、生成 MP3 の日付メタデータ（ID3）の整形に使用。未指定時はデフォルト `Asia/Tokyo`。不正なタイムゾーン名は警告のうえ UTC にフォールバックする |
-| `chars_per_minute` | int | 任意 | 台本の文字数換算に使用する1分あたりの目安文字数。台本生成時の `length_sec` → 目標文字数換算に使用。未指定時はデフォルト 420（= 7文字/秒×60） |
+| `chars_per_minute` | int | 任意・**非推奨** | 台本の文字数換算に使用する1分あたりの目安文字数。`corners[].length_sec`（非推奨）使用時のみ効力を持つ換算係数。新規は `corners[].target_chars` を使用してください（詳細: `references/deprecated.md`） |
 | `audio_quality` | string | 任意 | 生成 MP3 の音質プリセット。`high`（約245kbps）/ `standard`（約190kbps、**既定**）/ `low`（約130kbps）。未指定または空は `standard` として扱われる |
 | `credits` | []string | 任意 | 番組固定クレジット。データソース帰属など番組全体に適用するクレジットをリストで記入する。各エピソードの `<description>` 末尾クレジット節へアセット・キャラクターのクレジットとともに自動追記される（重複排除あり） |
 | `single_shot` | bool | 任意 | 単発番組モード。`true` で回番号（第N回）を採番・露出せず、出力ファイル名をサフィックス無し（`{program.id}.mp3` / `{program.id}_manifest.json`）にし、キャッシュにも保存しない（=過去回履歴・RSS連載に載らない）。連続性のない単発番組（デモ等）向け。未指定時は `false`（従来どおり採番・後方互換）。回番号ベースの出現条件（`corners[].condition` / `casts[].condition`）とは併用不可（設定するとバリデーションエラー） |
@@ -35,7 +35,8 @@
 | `direction` | string | 任意 | コーナーの演出方針（direct ステップのみに渡る）。SE の挿入タイミングなど。台本生成 LLM へは渡されない |
 | `script_note` | string | 任意 | コーナー個別の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。このコーナーのやり取りの細かい指示を記述する |
 | `cast` | map[string]string | 任意 | キャラID → 役割説明のマップ（キーは `vox-radio.yaml` の `characters` のキーと一致させること） |
-| `length_sec` | int | 任意 | このコーナーの目標収録時間（秒）。台本生成時に `program.chars_per_minute`（既定 420/分）で文字数へ換算される |
+| `target_chars` | int | 任意 | このコーナーの目標セリフ文字数。`length_sec` と同時指定はバリデーションエラー（詳細: `references/deprecated.md`） |
+| `length_sec` | int | 任意・**非推奨** | このコーナーの目標収録時間（秒）。台本生成時に `program.chars_per_minute`（既定 420/分）で文字数へ換算される。新規は `target_chars` を使用してください（詳細: `references/deprecated.md`） |
 | `summary_length` | int | 任意 | コーナーサマリーの目安文字数。未指定時はデフォルト 100 文字 |
 | `source` | SourceConfig | 任意 | データソース（省略するとこのコーナーの収集はスキップ） |
 | `start_audio` | AudioRef | 任意 | コーナー開始境界音声。`type` に `jingle`（BGM停止後再生）または `se`（BGMの下で再生）を指定し、`id` に `assets` の該当マップのキーを指定する。コーナー本編の前に確定的に挿入される |
@@ -56,13 +57,13 @@ corners:
     title: "オープニング"       # condition なし → 毎回必須
     content: "挨拶と自己紹介"
     cast: { zundamon: "MC" }
-    length_sec: 30
+    target_chars: 210
 
   - id: "monthly-special"
     title: "月いちスペシャル"
     content: "5回に1回だけやるスペシャル企画"
     cast: { zundamon: "MC", metan: "MC" }
-    length_sec: 120
+    target_chars: 840
     condition:
       every: 5                  # 5の倍数回（5,10,15,…）に採用
 
@@ -70,7 +71,7 @@ corners:
     title: "通常トーク"
     content: "月いちスペシャルを行わない回の通常コーナー"
     cast: { zundamon: "MC", metan: "MC" }
-    length_sec: 120
+    target_chars: 840
     condition:
       not:
         every: 5               # 5の倍数でない回（1,2,3,4,6,…）に採用
@@ -79,7 +80,7 @@ corners:
     title: "今週の一冊"
     content: "おすすめの本を紹介"
     cast: { zundamon: "ボケ", metan: "解説" }
-    length_sec: 120
+    target_chars: 840
     condition:
       every: 2                  # 偶数回に採用
       not:
@@ -89,7 +90,7 @@ corners:
     title: "エンディング"        # condition なし → 毎回必須
     content: "締めの挨拶"
     cast: { zundamon: "MC" }
-    length_sec: 30
+    target_chars: 210
 ```
 
 | フィールド | 型 | 必須/任意 | 説明 |
