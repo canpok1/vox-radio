@@ -54,6 +54,11 @@ func newRetroCmd() *cobra.Command {
 .vox-radio/programs/{program.id}/keep.yaml へ昇格し、try からは外れて常に適用されます。
 keep の問題が再発した場合は try へ降格します。
 
+問題が retro.max_fails 回連続で再発した場合は、施策を変えても直らない問題とみなして
+try から破棄し、try.yaml の dropped セクションへ記録します。破棄された問題は以後 retro に
+再提案されません。抑制を解除したい場合は、dropped から該当行を手で削除してください
+（次回の retro から再び提案の対象になります）。
+
 try/keep ファイルの内容は episodegen 実行時に write（台本生成）プロンプトへ自動的に注入されます。
 retro を実行しなくても、既存の try/keep ファイルは注入され続けます。適用を止めたいときは
 該当するファイルを削除してください。
