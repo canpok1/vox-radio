@@ -122,6 +122,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 		),
 		assetCatalog,
 		script.WithLogger(logger),
+		script.WithRegenConfig(cfg.Script.EffectiveRegenThreshold(), cfg.Script.EffectiveRegenMaxRetries()),
 	)
 
 	scr, lines, pr, err := gen.Generate(ctx, p.Program, rd, corners, cfg.Characters)
