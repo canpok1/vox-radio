@@ -467,6 +467,42 @@ func TestCornerConfig_EffectiveSummaryLength(t *testing.T) {
 	}
 }
 
+func TestCornerConfig_EffectiveTargetChars(t *testing.T) {
+	tests := []struct {
+		name           string
+		corner         config.CornerConfig
+		charsPerMinute int
+		want           int
+	}{
+		{
+			name:           "target_chars が設定されていればそのまま使う",
+			corner:         config.CornerConfig{TargetChars: 100},
+			charsPerMinute: 420,
+			want:           100,
+		},
+		{
+			name:           "target_chars 未設定なら length_sec から換算する",
+			corner:         config.CornerConfig{LengthSec: 14},
+			charsPerMinute: 420,
+			want:           98, // 14 * 420 / 60
+		},
+		{
+			name:           "両方未設定なら0",
+			corner:         config.CornerConfig{},
+			charsPerMinute: 420,
+			want:           0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.corner.EffectiveTargetChars(tt.charsPerMinute)
+			if got != tt.want {
+				t.Errorf("EffectiveTargetChars() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEpisodeSpec_CornerSummaryLength(t *testing.T) {
 	p := &config.EpisodeSpec{
 		Corners: []config.CornerConfig{

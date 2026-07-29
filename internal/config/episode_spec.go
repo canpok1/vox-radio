@@ -126,6 +126,9 @@ func (p *EpisodeSpec) ValidateCorners() error {
 			return fmt.Errorf("corners[%d]: title %q is duplicated", i, c.Title)
 		}
 		seenTitle[c.Title] = true
+		if c.TargetChars != 0 && c.LengthSec != 0 {
+			return fmt.Errorf("corners[%d]: target_chars と length_sec は同時に設定できません（target_chars のみを使用してください。length_sec は非推奨: references/deprecated.md）", i)
+		}
 		if c.Condition != nil {
 			if err := validateEpisodeCondition(*c.Condition, fmt.Sprintf("corners[%d].condition", i)); err != nil {
 				return err
