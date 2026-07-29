@@ -11,7 +11,7 @@ func TestAnalysis_JSONRoundTrip(t *testing.T) {
 	a := model.Analysis{
 		Metrics: model.AnalysisMetrics{
 			Corners: []model.AnalysisCornerMetrics{
-				{ID: "c1", TargetLengthSec: 60, ActualLengthSec: 58.5, LineCount: 10},
+				{ID: "c1", TargetChars: 420, ActualChars: 410, LineCount: 10, ActualLengthSec: 58.5, SpeechLengthSec: 50.0, NonSpeechLengthSec: 8.5, CharsPerSec: 8.2},
 			},
 			Speakers: []model.AnalysisSpeakerMetrics{
 				{CharacterID: "zundamon", LineCount: 5, CharCount: 120},

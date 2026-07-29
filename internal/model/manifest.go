@@ -81,10 +81,15 @@ func NewManifestCorner(id, title, summary string, points []string, articles []Ar
 	}
 }
 
-// CornerTiming holds the total playback duration for a single corner.
+// CornerTiming holds the playback duration for a single corner, split into the speech
+// (dialogue clips only) and non-speech (jingle/sequential SE/pause) components that sum to
+// DurationSec. The split lets analyze compute an effective speech rate (chars_per_sec) without
+// diluting it with non-speech time.
 type CornerTiming struct {
-	ID          string  `json:"id"`
-	DurationSec float64 `json:"duration_sec"`
+	ID           string  `json:"id"`
+	DurationSec  float64 `json:"duration_sec"`
+	SpeechSec    float64 `json:"speech_sec"`
+	NonSpeechSec float64 `json:"non_speech_sec"`
 }
 
 // Timeline holds per-corner timing information produced by the mix step.
@@ -93,11 +98,21 @@ type Timeline struct {
 	Corners []CornerTiming `json:"corners"`
 }
 
-// Map converts the ordered Corners slice to a map keyed by CornerID for fast lookup.
+// Map converts the ordered Corners slice to a map of total DurationSec keyed by CornerID.
 func (t Timeline) Map() map[string]float64 {
 	m := make(map[string]float64, len(t.Corners))
 	for _, c := range t.Corners {
 		m[c.ID] = c.DurationSec
+	}
+	return m
+}
+
+// CornerMap converts the ordered Corners slice to a map keyed by CornerID, preserving the full
+// speech/non-speech breakdown (unlike Map, which keeps only the total).
+func (t Timeline) CornerMap() map[string]CornerTiming {
+	m := make(map[string]CornerTiming, len(t.Corners))
+	for _, c := range t.Corners {
+		m[c.ID] = c
 	}
 	return m
 }
