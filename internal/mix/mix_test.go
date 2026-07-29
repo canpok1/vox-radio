@@ -109,6 +109,10 @@ func TestMixer_Run_ReturnsCornerDurations(t *testing.T) {
 	if result.CornerDurations["tech"] == 0 {
 		t.Error("tech corner duration should be non-zero")
 	}
+	if result.SpeechDurations["op"] != result.CornerDurations["op"]-result.NonSpeechDurations["op"] {
+		t.Errorf("op: SpeechDurations+NonSpeechDurations should equal CornerDurations, got speech=%.3f nonSpeech=%.3f total=%.3f",
+			result.SpeechDurations["op"], result.NonSpeechDurations["op"], result.CornerDurations["op"])
+	}
 }
 
 func TestMixer_Run_FFmpegError(t *testing.T) {

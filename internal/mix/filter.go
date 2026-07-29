@@ -564,7 +564,10 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 	return concatLabel
 }
 
-// computeCornerDurations calculates the estimated playback duration per corner.
+// computeCornerDurations calculates the estimated playback duration per corner, split into
+// speech (dialogue clips only) and non-speech (pauseAfter, explicit pause, jingle, sequential SE)
+// components; total[id] always equals speech[id]+nonSpeech[id]. The split lets analyze compute
+// an effective speech rate without the pacing/演出 time diluting it.
 // Speech durations come from clips metadata; pauseAfter (defaultPauseSec) is added after each
 // clip unless the next speech segment has the same speaker role.
 // Explicit pause, sequential SE (non-overlay), and jingle durations are attributed by CornerID.
@@ -573,34 +576,39 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 // EffectiveTrimSilence(); trimmed silence is not reflected here, so corners using trimmed
 // jingle/SE assets are over-counted by the trimmed amount. Reflecting the actual post-trim
 // length would need an extra ffprobe pass after mixing.
-func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64, seSequentialDurations map[string]float64) map[string]float64 {
-	durations := make(map[string]float64)
+func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64, seSequentialDurations map[string]float64) (total, speech, nonSpeech map[string]float64) {
+	total = make(map[string]float64)
+	speech = make(map[string]float64)
+	nonSpeech = make(map[string]float64)
+	add := func(m map[string]float64, cornerID string, d float64) {
+		m[cornerID] += d
+		total[cornerID] += d
+	}
 	clipIdx := 0
 	for i, seg := range script.Segments {
 		switch seg.Type {
 		case model.SegmentTypeSpeech:
 			if clipIdx < len(clips) {
-				d := clips[clipIdx].DurationSec
+				add(speech, seg.CornerID, clips[clipIdx].DurationSec)
 				nextRole, hasNext := nextClipSpeakerRole(script.Segments, i)
 				if !hasNext || nextRole != seg.SpeakerRole {
-					d += pauseSec
+					add(nonSpeech, seg.CornerID, pauseSec)
 				}
-				durations[seg.CornerID] += d
 				clipIdx++
 			}
 		case model.SegmentTypePause:
-			durations[seg.CornerID] += seg.DurationSec
+			add(nonSpeech, seg.CornerID, seg.DurationSec)
 		case model.SegmentTypeJingle:
 			if jingleDurations != nil {
-				durations[seg.CornerID] += jingleDurations[seg.AssetName]
+				add(nonSpeech, seg.CornerID, jingleDurations[seg.AssetName])
 			}
 		case model.SegmentTypeSE:
 			if seSequentialDurations != nil {
-				durations[seg.CornerID] += seSequentialDurations[seg.AssetName]
+				add(nonSpeech, seg.CornerID, seSequentialDurations[seg.AssetName])
 			}
 		}
 	}
-	return durations
+	return total, speech, nonSpeech
 }
 
 // bgmAloopSize is the aloop `size` (in samples) used when looping a BGM unit in the
