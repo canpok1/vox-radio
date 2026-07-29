@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/spf13/cobra"
@@ -40,6 +41,9 @@ func newEpisodegenCheckCmd() *cobra.Command {
 			if err := p.Validate(cfg.Characters); err != nil {
 				return err
 			}
+
+			logger := slog.New(slog.NewTextHandler(cmd.ErrOrStderr(), nil))
+			logDeprecationWarnings(logger, p.Deprecations())
 
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "OK: %s\n", path)
 			return nil

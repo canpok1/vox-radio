@@ -36,7 +36,7 @@ func newRundownCmd() *cobra.Command {
 			}
 			defer func() { _ = logFile.Close() }()
 
-			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
+			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath, logger)
 			if err != nil {
 				return err
 			}

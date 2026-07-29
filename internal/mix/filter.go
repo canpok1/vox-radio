@@ -569,6 +569,10 @@ func buildSpeechConcat(b *filterBuilder, items []speechItem, clipInputIdx []int,
 // clip unless the next speech segment has the same speaker role.
 // Explicit pause, sequential SE (non-overlay), and jingle durations are attributed by CornerID.
 // Overlay SE and BGM are excluded because they play concurrently with other audio.
+// jingleDurations/seSequentialDurations are the assets' configured lengths, not measured after
+// EffectiveTrimSilence(); trimmed silence is not reflected here, so corners using trimmed
+// jingle/SE assets are over-counted by the trimmed amount. Reflecting the actual post-trim
+// length would need an extra ffprobe pass after mixing.
 func computeCornerDurations(clips []model.ClipMeta, script model.Script, pauseSec float64, jingleDurations map[string]float64, seSequentialDurations map[string]float64) map[string]float64 {
 	durations := make(map[string]float64)
 	clipIdx := 0

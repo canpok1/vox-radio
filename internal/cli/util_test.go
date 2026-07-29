@@ -355,6 +355,31 @@ func TestResolveLocation_ValidTimezone(t *testing.T) {
 	}
 }
 
+func TestLogDeprecationWarnings_LogsOncePerWarning(t *testing.T) {
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	logDeprecationWarnings(logger, []config.DeprecationWarning{
+		{Field: "corners[].length_sec", Message: "corners[].length_sec は非推奨です"},
+	})
+
+	out := buf.String()
+	if !strings.Contains(out, "WARN") || !strings.Contains(out, "corners[].length_sec は非推奨です") {
+		t.Errorf("expected WARN log with deprecation message, got: %q", out)
+	}
+}
+
+func TestLogDeprecationWarnings_NoWarnings_NoOutput(t *testing.T) {
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	logDeprecationWarnings(logger, nil)
+
+	if buf.String() != "" {
+		t.Errorf("expected no output, got: %q", buf.String())
+	}
+}
+
 func TestResolveLocation_InvalidTimezone_FallsBackToUTC(t *testing.T) {
 	var buf strings.Builder
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))

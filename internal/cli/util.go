@@ -193,6 +193,15 @@ func resolveLocation(program config.ProgramConfig, logger *slog.Logger) *time.Lo
 	return loc
 }
 
+// logDeprecationWarnings logs one WARN line per deprecated config field currently in use.
+// Callers invoke this once at command startup (not once per corner) so repeated fields don't
+// flood the log.
+func logDeprecationWarnings(logger *slog.Logger, warnings []config.DeprecationWarning) {
+	for _, w := range warnings {
+		logger.Warn(w.Message, "field", w.Field)
+	}
+}
+
 // resolveCornersBy は成果物のコーナー並び items の id 順に spec のコーナーを再構成する。
 // 中間ファイルの型ごとにヘルパーが増えても解決ロジックが分岐しないよう、id の取り出し方だけを
 // 呼び出し側から受け取る。
@@ -264,7 +273,7 @@ func loadCacheEntries(programID string) ([]cache.Entry, int, error) {
 	return entries, cache.NextEpisodeNumber(entries), nil
 }
 
-func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.EpisodeSpec, error) {
+func loadConfigAndSpec(cfgPath, specPath string, logger *slog.Logger) (*config.Config, *config.EpisodeSpec, error) {
 	cfg, err := config.LoadConfig(cfgPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load config: %w", err)
@@ -276,5 +285,6 @@ func loadConfigAndSpec(cfgPath, specPath string) (*config.Config, *config.Episod
 	if err := p.Validate(cfg.Characters); err != nil {
 		return nil, nil, fmt.Errorf("spec validation: %w", err)
 	}
+	logDeprecationWarnings(logger, p.Deprecations())
 	return cfg, p, nil
 }

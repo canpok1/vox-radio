@@ -27,6 +27,7 @@ vox-radio の番組制作・設定編集・相談に対応するスキルです�
 
 - 設定ファイルを変更したら、必ず該当の検証コマンドで確認すること。
 - フィールド値を SKILL.md 本体に直接記載せず、常に `references/*.md` を参照すること。
+- 実行時に非推奨設定の警告ログが出た場合や、設定を新しいフィールドへ移行したい場合は `references/deprecated.md` を参照すること。
 
 `render` / `slackpost` テンプレートのデータ文脈（manifest フィールド）と関数については、`references/manifest.md` を参照してください（check コマンドはありません）。
 
@@ -73,9 +74,9 @@ vox-radio の番組制作・設定編集・相談に対応するスキルです�
 | 番組のテーマ・ジャンル | `episode-spec.yaml` の `program.description` |
 | 番組タイトル | `program.title` / `program.id` |
 | 出演キャラと役割 | `vox-radio.yaml` の `characters`、`episode-spec.yaml` の `casts` |
-| コーナー構成（話題・流れ） | `corners[]`（title / content / cast / length_sec） |
+| コーナー構成（話題・流れ） | `corners[]`（title / content / cast / target_chars） |
 | 各コーナーのネタ元（RSS / 記事 URL の有無） | `corners[].source` |
-| 番組のおよその長さ | 各 `corners[].length_sec` |
+| 番組のおよその長さ | 各 `corners[].target_chars` |
 | BGM・ジングル・効果音を入れるか | `assets/assets.yaml` ＋ `corners[]`（下記「5. アセットを設定する」で扱う） |
 
 - 出演キャラには VOICEVOX の話者を割り当てる（`characters` の `styles` に話者ID、`default_style` に既定スタイル名）。

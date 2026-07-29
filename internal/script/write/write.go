@@ -31,7 +31,8 @@ type castEntryForPrompt struct {
 }
 
 // cornerForPrompt is the subset of corner data passed to the LLM.
-// TargetChars is computed from LengthSec via config.DurationSecToTargetChars.
+// TargetChars is resolved via config.CornerConfig.EffectiveTargetChars (corner.TargetChars
+// directly, or converted from the deprecated LengthSec).
 // ScriptNote holds the corner-specific script instruction (write-only, non-public).
 type cornerForPrompt struct {
 	Title             string               `json:"title"`
@@ -166,7 +167,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		Content:           corner.Content,
 		ScriptNote:        corner.ScriptNote,
 		Cast:              castEntries,
-		TargetChars:       config.DurationSecToTargetChars(corner.LengthSec, program.EffectiveCharsPerMinute()),
+		TargetChars:       corner.EffectiveTargetChars(program.EffectiveCharsPerMinute()),
 		AppearanceCount:   w.cornerAppearanceCount,
 		LastEpisodeNumber: w.cornerLastEpisodeNumber,
 	}

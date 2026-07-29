@@ -85,7 +85,7 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 			}
 			defer func() { _ = logFile.Close() }()
 
-			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
+			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath, logger)
 			if err != nil {
 				return err
 			}

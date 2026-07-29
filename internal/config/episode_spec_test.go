@@ -83,6 +83,27 @@ func TestEpisodeSpec_ValidateCorners(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "target_chars のみ設定はエラーなし",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{ID: "c1", Title: "Corner 1", TargetChars: 100}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "length_sec のみ設定はエラーなし（非推奨だが従来通り動作）",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{ID: "c1", Title: "Corner 1", LengthSec: 14}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "target_chars と length_sec の両方設定はエラー",
+			spec: &config.EpisodeSpec{
+				Corners: []config.CornerConfig{{ID: "c1", Title: "Corner 1", TargetChars: 100, LengthSec: 14}},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -25,8 +25,7 @@ program:
   summary_length: 200
   # 番組のタイムゾーン（IANA tz名）。省略時は Asia/Tokyo。
   # timezone: "Asia/Tokyo"
-  # 台本生成時の1分あたり目安文字数。話速や BGM で実再生時間が前後する場合に調整する。省略時は 420（= 7文字/秒）。
-  # chars_per_minute: 420
+  # 台本の分量はコーナーごとの target_chars（目標セリフ文字数）で指定します（下記 corners 参照）。
   # 生成 MP3 の音質プリセット。省略時は standard（約190kbps VBR V2）。
   #   high → 約245kbps / standard → 約190kbps（既定）/ low → 約130kbps
   # audio_quality: "standard"
@@ -71,7 +70,7 @@ casts:
 #   start_pause_sec: 1.0       # 全コーナーのデフォルト開始前の無音（秒）
 #   end_pause_sec: 2.0         # 全コーナーのデフォルト終了後の無音（秒）
 
-# コーナーは書いた順に放送されます。length_sec は各コーナーのおおよその長さ（秒）です。
+# コーナーは書いた順に放送されます。target_chars は各コーナーの目標セリフ文字数（目安）です。
 # 各コーナーには id【必須・番組内で一意】を付けます。過去回をまたいでコーナーを同定し、
 # 「新コーナーです」「久しぶりの復活コーナー」などの扱い回数の演出に使います（タイトルを変えても id で履歴を追えます）。
 corners:
@@ -85,7 +84,7 @@ corners:
     cast:
       zundamon: "MC。元気に挨拶する進行役。ボケ担当。"
       metan: "MC。ずんだもんに軽くツッコむ相棒。"
-    length_sec: 15
+    target_chars: 105
     summary_length: 60
     end_pause_sec: 2.0               # このコーナーの後に入れる無音（秒）。コーナーの切れ目に2秒の間。
 
@@ -96,7 +95,7 @@ corners:
     cast:
       metan: "MC。お天気キャスター役。気象情報を選んで紹介・解説する主担当。"
       zundamon: "MC。素朴な疑問やリアクションを返す聞き役。ボケ担当。"
-    length_sec: 180
+    target_chars: 1260
     summary_length: 120
     end_pause_sec: 2.0
     # 気象情報の取得元（気象庁 防災情報XMLの随時フィード。警報・注意報など）。
@@ -114,7 +113,7 @@ corners:
     cast:
       metan: "MC。地震・火山情報を紹介・解説。"
       zundamon: "MC。驚いたり備えを考えたりする聞き役。ボケ担当。"
-    length_sec: 90
+    target_chars: 630
     summary_length: 80
     end_pause_sec: 2.0
     # 3回おきに放送、初回は1回目。→ 第1,4,7,…回に放送。
@@ -134,7 +133,7 @@ corners:
     cast:
       metan: "MC。お天気の雑学をやさしく紹介・解説。"
       zundamon: "MC。驚いたり感心したりする聞き役。ボケ担当。"
-    length_sec: 90
+    target_chars: 630
     summary_length: 80
     end_pause_sec: 2.0
     # 3回おきに放送、初回は2回目。→ 第2,5,8,…回に放送。
@@ -149,7 +148,7 @@ corners:
     cast:
       metan: "MC。防災の備えをやさしく解説。"
       zundamon: "MC。実践したい気持ちになる聞き役。ボケ担当。"
-    length_sec: 90
+    target_chars: 630
     summary_length: 80
     end_pause_sec: 2.0
     # 3回おきに放送、初回は3回目。→ 第3,6,9,…回に放送。
@@ -165,7 +164,7 @@ corners:
     cast:
       zundamon: "MC。進行役。ボケ担当。"
       metan: "MC。相棒。ツッコミ担当。"
-    length_sec: 15
+    target_chars: 105
     summary_length: 60
     # 末尾コーナーなので、この後の無音（end_pause_sec）は入れません。
 

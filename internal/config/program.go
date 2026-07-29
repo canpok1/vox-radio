@@ -76,7 +76,8 @@ type CornerConfig struct {
 	Direction        string            `yaml:"direction,omitempty"`
 	ScriptNote       string            `yaml:"script_note,omitempty"` // コーナー個別の台本指示（write専用・非公開）
 	Cast             map[string]string `yaml:"cast"`
-	LengthSec        int               `yaml:"length_sec"`
+	LengthSec        int               `yaml:"length_sec"`             // 非推奨: target_chars を使用（references/deprecated.md）
+	TargetChars      int               `yaml:"target_chars,omitempty"` // このコーナーの目標セリフ文字数。length_sec と併用不可
 	SummaryLength    int               `yaml:"summary_length,omitempty"`
 	Source           SourceConfig      `yaml:"source,omitempty"`
 	StartAudio       *AudioRef         `yaml:"start_audio,omitempty"`
@@ -94,6 +95,16 @@ func (c CornerConfig) EffectiveSummaryLength() int {
 		return DefaultCornerSummaryLength
 	}
 	return c.SummaryLength
+}
+
+// EffectiveTargetChars returns the corner's target character count: TargetChars directly when
+// set, otherwise converted from the deprecated LengthSec via charsPerMinute (DurationSecToTargetChars).
+// ValidateCorners rejects specs with both set, so this is a plain either/or resolution.
+func (c CornerConfig) EffectiveTargetChars(charsPerMinute int) int {
+	if c.TargetChars > 0 {
+		return c.TargetChars
+	}
+	return DurationSecToTargetChars(c.LengthSec, charsPerMinute)
 }
 
 // EffectiveBGM returns the BGM key, or "" when nil (not set) or explicitly empty (disabled).

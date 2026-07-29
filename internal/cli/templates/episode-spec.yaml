@@ -88,8 +88,8 @@ corners:
     # 省略すると番組全体の役割（casts[].role）だけが使われます。
     cast:
       zundamon: "このコーナーでの役割（省略可）"
-    # このコーナーのおおよその長さ（秒）。
-    length_sec: 30
+    # このコーナーの目標セリフ文字数（目安）。
+    target_chars: 210
     # コーナーまとめ文のおおよその文字数（省略すると 100 文字）。
     # summary_length: 100
     # コーナーの始まりに鳴らす音（不要なら行ごと削除）。
@@ -107,7 +107,7 @@ corners:
     cast:
       zundamon: "ボケ担当。あまり詳しくない設定。"
       metan: "解説役。ツッコミ担当。"
-    length_sec: 180
+    target_chars: 1260
     # コーナーまとめ文のおおよその文字数（省略すると 100 文字）。
     # summary_length: 100
     # コーナー中ずっと流す背景音楽（assets.bgm のキー名。不要なら行ごと削除）。
@@ -152,7 +152,7 @@ corners:
     content: "まとめと締め"
     cast:
       zundamon: "進行役"
-    length_sec: 30
+    target_chars: 210
     # コーナーまとめ文のおおよその文字数（省略すると 100 文字）。
     # summary_length: 100
     # コーナーの終わりに鳴らす音（不要なら行ごと削除）。
