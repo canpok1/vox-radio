@@ -40,6 +40,24 @@ func TestEpisodegenCheck_ValidSpec_Success(t *testing.T) {
 	}
 }
 
+func TestEpisodegenCheck_DeprecatedLengthSec_WarnsOnStderr(t *testing.T) {
+	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
+
+	cmd := cli.NewRootCmd()
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
+	// episode_spec.yaml (testdata) uses the deprecated corners[].length_sec.
+	cmd.SetArgs([]string{"episodegen", "check", configTestdataPath("episode_spec.yaml")})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stderr.String(), "corners[].length_sec") {
+		t.Errorf("expected length_sec deprecation warning on stderr, got: %s", stderr.String())
+	}
+}
+
 func TestEpisodegenCheck_UnknownKey_Error(t *testing.T) {
 	setupEpisodegenCheckDir(t, configTestdataPath("config.yaml"))
 

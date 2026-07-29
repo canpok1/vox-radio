@@ -74,7 +74,7 @@ retro は毎回 try ファイルを全置換します（個別項目の承認は
 			}
 			defer func() { _ = logFile.Close() }()
 
-			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath)
+			cfg, p, err := loadConfigAndSpec(configPath(cmd), specPath, logger)
 			if err != nil {
 				return err
 			}
