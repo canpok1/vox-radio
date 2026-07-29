@@ -42,7 +42,7 @@ func TestLoadTryFile_MissingFileReturnsEmpty(t *testing.T) {
 }
 
 func TestNewTryFile_NonNilProblemsAndFields(t *testing.T) {
-	tf := retro.NewTryFile(nil, 5, "2026-07-27T10:00:00Z")
+	tf := retro.NewTryFile(nil, nil, 5, "2026-07-27T10:00:00Z")
 	if tf.GeneratedAt != "2026-07-27T10:00:00Z" || tf.LastEvaluatedEpisode != 5 {
 		t.Errorf("NewTryFile fields = %+v, unexpected", tf)
 	}
@@ -87,6 +87,39 @@ func TestSaveTryFile_RoundTrip(t *testing.T) {
 	}
 	if got.Problems[0].Action != "疑問形で崩す" {
 		t.Errorf("Action = %q, want 疑問形で崩す", got.Problems[0].Action)
+	}
+}
+
+func TestSaveTryFile_RoundTrip_PreservesDroppedAndFailStreak(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "try.yaml")
+	want := retro.TryFile{
+		GeneratedAt:          "2026-07-29T10:00:00Z",
+		LastEvaluatedEpisode: 83,
+		Problems: []retro.Problem{
+			{ID: "p2", Problem: "議論が単調", Action: "役割を固定しない", ClearStreak: 0, FailStreak: 2},
+		},
+		Dropped: []retro.Dropped{
+			{ID: "p1", Problem: "尺超過", Action: "旧施策", FirstSeenEpisode: 79, DroppedAtEpisode: 83, FailStreak: 6},
+		},
+	}
+
+	if err := retro.SaveTryFile(path, want); err != nil {
+		t.Fatalf("SaveTryFile: %v", err)
+	}
+
+	got, err := retro.LoadTryFile(path)
+	if err != nil {
+		t.Fatalf("LoadTryFile: %v", err)
+	}
+	if len(got.Problems) != 1 || got.Problems[0].FailStreak != 2 {
+		t.Fatalf("Problems = %+v, want 1 entry with FailStreak 2", got.Problems)
+	}
+	if len(got.Dropped) != 1 {
+		t.Fatalf("Dropped = %+v, want 1 entry", got.Dropped)
+	}
+	d := got.Dropped[0]
+	if d.ID != "p1" || d.Problem != "尺超過" || d.FirstSeenEpisode != 79 || d.DroppedAtEpisode != 83 || d.FailStreak != 6 {
+		t.Errorf("Dropped[0] = %+v, unexpected", d)
 	}
 }
 
@@ -200,7 +233,7 @@ func TestLLMRetro_Run_SingleCallAssignsNewIDs(t *testing.T) {
 		{EpisodeNumber: 12, Analysis: &model.Analysis{}},
 	}
 
-	got, _, lastEvaluated, err := r.Run(context.Background(), config.ProgramConfig{Title: "テスト"}, entries, nil, nil, 3)
+	got, _, lastEvaluated, err := r.Run(context.Background(), config.ProgramConfig{Title: "テスト"}, entries, nil, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -218,6 +251,30 @@ func TestLLMRetro_Run_SingleCallAssignsNewIDs(t *testing.T) {
 	}
 }
 
+func TestLLMRetro_Run_PromptContainsCurrentDropped(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "dropped={{current_dropped}}", 0)
+	currentDropped := []retro.Dropped{
+		{ID: "p1", Problem: "尺超過の課題", Action: "旧施策", FirstSeenEpisode: 79, DroppedAtEpisode: 83, FailStreak: 6},
+	}
+	entries := []cache.Entry{{EpisodeNumber: 90, Analysis: &model.Analysis{}}}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, currentDropped, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mc.captured) != 1 {
+		t.Fatalf("expected exactly 1 LLM call, got %d", len(mc.captured))
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "尺超過の課題") {
+		t.Errorf("prompt should contain the dropped problem text, got: %s", prompt)
+	}
+	if strings.Contains(prompt, "旧施策") {
+		t.Errorf("prompt should not expose the dropped entry's action (irrelevant once dropped), got: %s", prompt)
+	}
+}
+
 func TestLLMRetro_Run_PreservesExistingIDAndAssignsNextForNew(t *testing.T) {
 	mc := &mockClient{response: json.RawMessage(`{
 		"problems": [
@@ -232,7 +289,7 @@ func TestLLMRetro_Run_PreservesExistingIDAndAssignsNextForNew(t *testing.T) {
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -262,7 +319,7 @@ func TestLLMRetro_Run_IgnoresHallucinatedIDForNewProblem(t *testing.T) {
 	current := []retro.Problem{{ID: "p1", Problem: "既存", Action: "a", FirstSeenEpisode: 1, LastSeenEpisode: 1}}
 	entries := []cache.Entry{{EpisodeNumber: 5, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -289,7 +346,7 @@ func TestLLMRetro_Run_MatchesContinuingProblemByTextWhenIDMissing(t *testing.T) 
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -310,7 +367,7 @@ func TestLLMRetro_Run_MatchesContinuingProblemDespiteWhitespaceDifferences(t *te
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -331,7 +388,7 @@ func TestLLMRetro_Run_UnknownIDFallsBackToProblemTextMatch(t *testing.T) {
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -355,7 +412,7 @@ func TestLLMRetro_Run_KnownIDTakesPriorityOverProblemTextMatch(t *testing.T) {
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -374,7 +431,7 @@ func TestLLMRetro_Run_MatchesKeepEntryByProblemTextWhenIDMissing(t *testing.T) {
 	currentKeeps := []retro.Keep{{ID: "p3", Problem: "定着済みの問題", Action: "実証済み施策"}}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -396,7 +453,7 @@ func TestLLMRetro_Run_KeepProblemEchoedWithoutRecurrence_DoesNotDuplicateIntoTry
 	currentKeeps := []retro.Keep{{ID: "p3", Problem: "定着済みの問題", Action: "実証済み施策", ProvenAtEpisode: 5}}
 	entries := []cache.Entry{{EpisodeNumber: 6, Analysis: &model.Analysis{}}}
 
-	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, 3)
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, currentKeeps, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -431,7 +488,7 @@ func TestLLMRetro_Run_ProblemTextMatchPrefersTryOverKeep(t *testing.T) {
 	currentKeeps := []retro.Keep{{ID: "p9", Problem: "共通の問題文", Action: "施策9"}}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, currentKeeps, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, currentKeeps, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -452,7 +509,7 @@ func TestLLMRetro_Run_ContinuingProblemWithMissingID_PreservesClearStreakThrough
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -491,7 +548,7 @@ func TestLLMRetro_Run_ContinuingProblemWithMissingID_RecurrenceRewritesAction(t 
 	}
 	entries := []cache.Entry{{EpisodeNumber: 16, Analysis: &model.Analysis{}}}
 
-	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, 3)
+	proposed, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, current, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -531,7 +588,7 @@ func TestLLMRetro_Run_TruncatesToMaxTries(t *testing.T) {
 	r := retro.NewLLMRetro(mc, "{{analyses}}", 0)
 	entries := []cache.Entry{{EpisodeNumber: 1, Analysis: &model.Analysis{}}}
 
-	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, 3)
+	got, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, nil, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

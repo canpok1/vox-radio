@@ -28,11 +28,14 @@ const tryFileHeader = `# vox-radio retro が生成する。手で編集しても
 // TryFile holds the problems retro is currently working on, each paired with the action being
 // tried. LastEvaluatedEpisode is the newest episode already reflected in the counters; the
 // keep-promotion loop counts only episodes beyond it so re-running retro without new episodes
-// cannot inflate ClearStreak.
+// cannot inflate ClearStreak. Dropped holds problems retired for chronic recurrence (FailStreak
+// exceeded retro.max_fails); retro reads it back and only appends, so a human can un-suppress a
+// problem by deleting its entry (ADR-0098 addendum).
 type TryFile struct {
 	GeneratedAt          string    `yaml:"generated_at"`
 	LastEvaluatedEpisode int       `yaml:"last_evaluated_episode"`
 	Problems             []Problem `yaml:"problems"`
+	Dropped              []Dropped `yaml:"dropped"`
 }
 
 // Problem is one in-progress issue and the action being tried against it.
@@ -43,12 +46,25 @@ type Problem struct {
 	FirstSeenEpisode int    `yaml:"first_seen_episode"`
 	LastSeenEpisode  int    `yaml:"last_seen_episode"`
 	ClearStreak      int    `yaml:"clear_streak"` // consecutive newly-evaluated episodes without recurrence; promoted to keep at retro.keep_threshold
+	FailStreak       int    `yaml:"fail_streak"`  // consecutive newly-evaluated episodes with recurrence; dropped at retro.max_fails. Exclusive with ClearStreak: each newly-evaluated episode resets exactly one of the two to 0
+}
+
+// Dropped is a problem retired after recurring retro.max_fails times in a row: it stopped
+// occupying a max_tries slot without being resolved. retro never re-proposes a problem whose text
+// matches an entry here; deleting the entry (by hand) is how a human un-suppresses it.
+type Dropped struct {
+	ID               string `yaml:"id"`
+	Problem          string `yaml:"problem"`
+	Action           string `yaml:"action"`
+	FirstSeenEpisode int    `yaml:"first_seen_episode"`
+	DroppedAtEpisode int    `yaml:"dropped_at_episode"`
+	FailStreak       int    `yaml:"fail_streak"` // FailStreak at the moment of drop (> retro.max_fails)
 }
 
 // NewTryFile builds a TryFile from a retro run's result. generatedAt is an RFC3339 timestamp
 // (the caller's "now"; retro has no need to observe wall-clock time itself).
-func NewTryFile(problems []Problem, lastEvaluatedEpisode int, generatedAt string) TryFile {
-	return TryFile{GeneratedAt: generatedAt, LastEvaluatedEpisode: lastEvaluatedEpisode, Problems: model.NonNil(problems)}
+func NewTryFile(problems []Problem, dropped []Dropped, lastEvaluatedEpisode int, generatedAt string) TryFile {
+	return TryFile{GeneratedAt: generatedAt, LastEvaluatedEpisode: lastEvaluatedEpisode, Problems: model.NonNil(problems), Dropped: model.NonNil(dropped)}
 }
 
 // LoadTryFile reads the try file at path. A missing file is not an error: it returns an empty
@@ -56,7 +72,7 @@ func NewTryFile(problems []Problem, lastEvaluatedEpisode int, generatedAt string
 func LoadTryFile(path string) (TryFile, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return TryFile{Problems: make([]Problem, 0)}, nil
+		return TryFile{Problems: make([]Problem, 0), Dropped: make([]Dropped, 0)}, nil
 	}
 	if err != nil {
 		return TryFile{}, fmt.Errorf("read try file: %w", err)
@@ -66,6 +82,7 @@ func LoadTryFile(path string) (TryFile, error) {
 		return TryFile{}, fmt.Errorf("unmarshal try file: %w", err)
 	}
 	tf.Problems = model.NonNil(tf.Problems)
+	tf.Dropped = model.NonNil(tf.Dropped)
 	return tf, nil
 }
 
@@ -277,6 +294,14 @@ type idProblemActionForPrompt struct {
 	Action  string `json:"action"`
 }
 
+// droppedForPrompt is the {id, problem} shape for current_dropped: only enough to recognize a
+// dropped problem and avoid re-proposing it. The action is irrelevant since dropped problems are
+// not being tried anymore.
+type droppedForPrompt struct {
+	ID      string `json:"id"`
+	Problem string `json:"problem"`
+}
+
 // llmProblem is one entry of the LLM's raw response, before Go-side ID assignment.
 type llmProblem struct {
 	ID               string `json:"id"`
@@ -311,7 +336,7 @@ type retroResponse struct {
 // entries is empty). entries must already be filtered to Analysis != nil (see FilterAnalyzed) and
 // are passed to the LLM in the given order (oldest to newest, matching cache.Recent's natural
 // order) so it can compare patterns across episodes.
-func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entries []cache.Entry, current []Problem, currentKeeps []Keep, maxTries int) ([]Problem, []Recurrence, int, error) {
+func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entries []cache.Entry, current []Problem, currentKeeps []Keep, currentDropped []Dropped, maxTries int) ([]Problem, []Recurrence, int, error) {
 	programJSON, err := json.Marshal(programForPrompt{
 		Title:       program.Title,
 		Description: program.Description,
@@ -357,11 +382,21 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 		return nil, nil, 0, fmt.Errorf("marshal current keeps: %w", err)
 	}
 
+	currentDroppedForPrompt := make([]droppedForPrompt, len(currentDropped))
+	for i, d := range currentDropped {
+		currentDroppedForPrompt[i] = droppedForPrompt{ID: d.ID, Problem: d.Problem}
+	}
+	currentDroppedJSON, err := json.Marshal(currentDroppedForPrompt)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("marshal current dropped: %w", err)
+	}
+
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{analyses}}", string(analysesJSON),
 		"{{current_problems}}", string(currentJSON),
 		"{{current_keeps}}", string(currentKeepsJSON),
+		"{{current_dropped}}", string(currentDroppedJSON),
 		"{{max_tries}}", strconv.Itoa(maxTries),
 	).Replace(r.promptTemplate)
 
