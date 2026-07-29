@@ -20,9 +20,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const tryFileHeader = `# vox-radio retro が生成する。手で編集しても次回の retro で全置換される。
+const tryFileHeader = `# vox-radio retro が生成する。problems は手で編集しても次回の retro で全置換される。
 # 恒久的に固定したい方針は episode-spec.yaml の script_note に書くこと。
 # 適用を止めたいときはこのファイルを削除する（retro を実行しないだけでは注入は止まらない）。
+#
+# dropped は、繰り返し再発して施策を変えても直らなかった問題の破棄済みリスト。problems と違い
+# retro は追記のみ行い（既存項目は書き換えない）、ここにある問題は再提案されない。抑制を
+# 解除したい場合は該当行を手で削除すること（次回の retro から再び提案の対象になる）。
 `
 
 // TryFile holds the problems retro is currently working on, each paired with the action being
