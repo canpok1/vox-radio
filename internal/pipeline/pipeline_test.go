@@ -72,14 +72,14 @@ func (s *stubSynther) Run(_ context.Context, _ model.Script, outDir string) (*mo
 
 type stubMixer struct {
 	err              error
-	cornerDurations  map[string]float64
+	cornerDurations  map[string]model.CornerTiming
 	called           bool
 	capturedClipsDir string
 	capturedOutPath  string
 	capturedMeta     model.EpisodeMeta
 }
 
-func (s *stubMixer) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
+func (s *stubMixer) Run(_ context.Context, _ model.Script, _ model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]model.CornerTiming, error) {
 	s.called = true
 	s.capturedClipsDir = clipsDir
 	s.capturedOutPath = outPath
@@ -632,7 +632,10 @@ func TestRunner_Run_WritesTimeline(t *testing.T) {
 			{ID: "tech", Title: "技術", Articles: make([]model.RundownArticle, 0)},
 		},
 	}
-	s.asm.cornerDurations = map[string]float64{"op": 12.5, "tech": 30.0}
+	s.asm.cornerDurations = map[string]model.CornerTiming{
+		"op":   {DurationSec: 12.5, SpeechSec: 10.0, NonSpeechSec: 2.5},
+		"tech": {DurationSec: 30.0, SpeechSec: 27.0, NonSpeechSec: 3.0},
+	}
 
 	r := newRunner(s)
 	r.Spec = &config.EpisodeSpec{
@@ -660,6 +663,9 @@ func TestRunner_Run_WritesTimeline(t *testing.T) {
 	}
 	if tl.Corners[0].ID != "op" || tl.Corners[0].DurationSec != 12.5 {
 		t.Errorf("Corners[0]: got {%s %.1f}, want {op 12.5}", tl.Corners[0].ID, tl.Corners[0].DurationSec)
+	}
+	if tl.Corners[0].SpeechSec != 10.0 || tl.Corners[0].NonSpeechSec != 2.5 {
+		t.Errorf("Corners[0] speech/non-speech: got %.1f/%.1f, want 10.0/2.5", tl.Corners[0].SpeechSec, tl.Corners[0].NonSpeechSec)
 	}
 	if tl.Corners[1].ID != "tech" || tl.Corners[1].DurationSec != 30.0 {
 		t.Errorf("Corners[1]: got {%s %.1f}, want {tech 30.0}", tl.Corners[1].ID, tl.Corners[1].DurationSec)
@@ -697,7 +703,10 @@ func TestRunner_Run_SkippedCornersFilteredFromDownstream(t *testing.T) {
 			{ID: "ending", Title: "エンディング", Articles: make([]model.RundownArticle, 0)},
 		},
 	}
-	s.asm.cornerDurations = map[string]float64{"opening": 10.0, "ending": 15.0}
+	s.asm.cornerDurations = map[string]model.CornerTiming{
+		"opening": {DurationSec: 10.0},
+		"ending":  {DurationSec: 15.0},
+	}
 
 	r := newRunner(s)
 	r.Spec = &config.EpisodeSpec{

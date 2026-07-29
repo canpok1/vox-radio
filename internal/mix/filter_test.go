@@ -2332,17 +2332,23 @@ func TestComputeCornerDurations_BasicSpeech(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "guest", Text: "C"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
+	total, speech, nonSpeech := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
 
 	// op: 2.0 (clip) + 0 pause (next speech seg has same speaker "host") = 2.0
 	wantOP := 2.0
-	if got["op"] != wantOP {
-		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	if total["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", total["op"], wantOP)
+	}
+	if speech["op"] != 2.0 || nonSpeech["op"] != 0 {
+		t.Errorf("op speech/nonSpeech: got %.3f/%.3f, want 2.0/0", speech["op"], nonSpeech["op"])
 	}
 	// tech: 3.0 (clip) + 0.3 (pauseAfter, next speaker "guest" differs) + 1.5 (clip) + 0.3 (last clip, no next) = 5.1
 	wantTech := 3.0 + defaultPauseSec + 1.5 + defaultPauseSec
-	if got["tech"] != wantTech {
-		t.Errorf("tech: got %.3f, want %.3f", got["tech"], wantTech)
+	if total["tech"] != wantTech {
+		t.Errorf("tech: got %.3f, want %.3f", total["tech"], wantTech)
+	}
+	if speech["tech"] != 4.5 || nonSpeech["tech"] != 2*defaultPauseSec {
+		t.Errorf("tech speech/nonSpeech: got %.3f/%.3f, want 4.5/%.3f", speech["tech"], nonSpeech["tech"], 2*defaultPauseSec)
 	}
 }
 
@@ -2356,12 +2362,15 @@ func TestComputeCornerDurations_WithPauseSegment(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
+	total, speech, nonSpeech := computeCornerDurations(clips, script, defaultPauseSec, nil, nil)
 
 	// op: 0.5 (pause) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 2.8
 	wantOP := 0.5 + 2.0 + defaultPauseSec
-	if got["op"] != wantOP {
-		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	if total["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", total["op"], wantOP)
+	}
+	if speech["op"] != 2.0 || nonSpeech["op"] != 0.5+defaultPauseSec {
+		t.Errorf("op speech/nonSpeech: got %.3f/%.3f, want 2.0/%.3f", speech["op"], nonSpeech["op"], 0.5+defaultPauseSec)
 	}
 }
 
@@ -2376,15 +2385,18 @@ func TestComputeCornerDurations_WithJingle(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "tech", SpeakerRole: "host", Text: "A"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, jingleDurations, nil)
+	total, speech, nonSpeech := computeCornerDurations(clips, script, defaultPauseSec, jingleDurations, nil)
 
-	if got["op"] != 5.0 {
-		t.Errorf("op: got %.3f, want 5.0", got["op"])
+	if total["op"] != 5.0 {
+		t.Errorf("op: got %.3f, want 5.0", total["op"])
+	}
+	if speech["op"] != 0 || nonSpeech["op"] != 5.0 {
+		t.Errorf("op speech/nonSpeech: got %.3f/%.3f, want 0/5.0", speech["op"], nonSpeech["op"])
 	}
 	// tech: 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 2.3
 	wantTech := 2.0 + defaultPauseSec
-	if got["tech"] != wantTech {
-		t.Errorf("tech: got %.3f, want %.3f", got["tech"], wantTech)
+	if total["tech"] != wantTech {
+		t.Errorf("tech: got %.3f, want %.3f", total["tech"], wantTech)
 	}
 }
 
@@ -2400,11 +2412,14 @@ func TestComputeCornerDurations_WithSequentialSE(t *testing.T) {
 			{Type: model.SegmentTypeSpeech, CornerID: "op", SpeakerRole: "host", Text: "A"},
 		},
 	}
-	got := computeCornerDurations(clips, script, defaultPauseSec, nil, seSequentialDurations)
+	total, speech, nonSpeech := computeCornerDurations(clips, script, defaultPauseSec, nil, seSequentialDurations)
 
 	// op: 1.0 (SE) + 2.0 (clip) + 0.3 (pauseAfter: last clip, no next) = 3.3
 	wantOP := 1.0 + 2.0 + defaultPauseSec
-	if got["op"] != wantOP {
-		t.Errorf("op: got %.3f, want %.3f", got["op"], wantOP)
+	if total["op"] != wantOP {
+		t.Errorf("op: got %.3f, want %.3f", total["op"], wantOP)
+	}
+	if speech["op"] != 2.0 || nonSpeech["op"] != 1.0+defaultPauseSec {
+		t.Errorf("op speech/nonSpeech: got %.3f/%.3f, want 2.0/%.3f", speech["op"], nonSpeech["op"], 1.0+defaultPauseSec)
 	}
 }

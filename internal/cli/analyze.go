@@ -39,7 +39,7 @@ func runAndSaveAnalysis(ctx context.Context, cfg *config.Config, prompts map[str
 		return fmt.Errorf("resolve corners: %w", err)
 	}
 
-	a, err := runAnalyzeStep(ctx, cfg, prompts, llmClient, p.Program, corners, lines, pr, tl.Map(), logger)
+	a, err := runAnalyzeStep(ctx, cfg, prompts, llmClient, p.Program, corners, lines, pr, tl.CornerMap(), logger)
 	if err != nil {
 		return fmt.Errorf("analyze: %w", err)
 	}
@@ -53,9 +53,9 @@ func runAndSaveAnalysis(ctx context.Context, cfg *config.Config, prompts map[str
 
 // runAnalyzeStep builds an LLMAnalyzer from cfg/prompts and computes the episode's analysis.
 // Shared by the standalone `episodegen analyze` command and the main episodegen pipeline.
-func runAnalyzeStep(ctx context.Context, cfg *config.Config, prompts map[string]string, llmClient llm.Client, program config.ProgramConfig, corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerDurations map[string]float64, logger *slog.Logger) (model.Analysis, error) {
+func runAnalyzeStep(ctx context.Context, cfg *config.Config, prompts map[string]string, llmClient llm.Client, program config.ProgramConfig, corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerTimings map[string]model.CornerTiming, logger *slog.Logger) (model.Analysis, error) {
 	analyzer := analyze.NewLLMAnalyzer(llmClient, prompts["analyze"], stepTemp(cfg.LLM, "analyze"), analyze.WithLogger(logger))
-	return analyzer.Analyze(ctx, program, corners, lines, pr, cornerDurations)
+	return analyzer.Analyze(ctx, program, corners, lines, pr, cornerTimings)
 }
 
 // readOptionalJSON reads a JSON file at path into a new T. It returns (nil, nil) when path is
@@ -85,8 +85,8 @@ func newAnalyzeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "analyze",
 		Short: "台本とタイミング情報から回の分析（07_analysis.json）を生成する",
-		Long: `コーナーの目標尺・実測尺・話者別セリフ数などの機械集計指標に加え、
-LLM でこの回の課題（findings）と会話の型（patterns）を抽出し、07_analysis.json を生成します。
+		Long: `コーナーの目標文字数・実測尺（セリフ/非セリフ内訳）・実効発話レート・話者別セリフ数などの
+機械集計指標に加え、LLM でこの回の課題（findings）と会話の型（patterns）を抽出し、07_analysis.json を生成します。
 
 episodegen 本体は番組生成の一部として analyze を自動実行しキャッシュへ蓄積します。
 このコマンドは既存回の中間ファイルから分析を作り直したいとき（抽出観点を変えた場合など）に使います。
@@ -121,13 +121,13 @@ episodegen 本体は番組生成の一部として analyze を自動実行しキ
 				return fmt.Errorf("read proofread: %w", err)
 			}
 
-			var cornerDurations map[string]float64
+			var cornerTimings map[string]model.CornerTiming
 			if timelinePath != "" {
 				tl, err := readJSON[model.Timeline](timelinePath)
 				if err != nil {
 					return fmt.Errorf("read timeline: %w", err)
 				}
-				cornerDurations = tl.Map()
+				cornerTimings = tl.CornerMap()
 			}
 
 			corners, err := resolveCornersByLines(p.Corners, lines)
@@ -141,7 +141,7 @@ episodegen 本体は番組生成の一部として analyze を自動実行しキ
 				return fmt.Errorf("load prompts: %w", err)
 			}
 
-			a, err := runAnalyzeStep(context.Background(), cfg, prompts, llmClient, p.Program, corners, lines, pr, cornerDurations, logger)
+			a, err := runAnalyzeStep(context.Background(), cfg, prompts, llmClient, p.Program, corners, lines, pr, cornerTimings, logger)
 			if err != nil {
 				return fmt.Errorf("analyze: %w", err)
 			}

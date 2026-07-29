@@ -14,12 +14,18 @@ type AnalysisMetrics struct {
 	ProofreadCorrections int                      `json:"proofread_corrections"`
 }
 
-// AnalysisCornerMetrics compares a corner's target length against its actual length and line count.
+// AnalysisCornerMetrics compares a corner's target character count against what was actually
+// written, and breaks the actual length down into speech vs non-speech so an effective speech
+// rate (CharsPerSec) can be read directly instead of inferred from a length polluted by jingles/SE/pauses.
 type AnalysisCornerMetrics struct {
-	ID              string  `json:"id"`
-	TargetLengthSec int     `json:"target_length_sec"`
-	ActualLengthSec float64 `json:"actual_length_sec"`
-	LineCount       int     `json:"line_count"`
+	ID                 string  `json:"id"`
+	TargetChars        int     `json:"target_chars"`
+	ActualChars        int     `json:"actual_chars"`
+	LineCount          int     `json:"line_count"`
+	ActualLengthSec    float64 `json:"actual_length_sec"`
+	SpeechLengthSec    float64 `json:"speech_length_sec"`
+	NonSpeechLengthSec float64 `json:"non_speech_length_sec"`
+	CharsPerSec        float64 `json:"chars_per_sec"` // ActualChars / SpeechLengthSec; 0 when SpeechLengthSec is 0
 }
 
 // AnalysisSpeakerMetrics holds per-character line and character counts for the episode.

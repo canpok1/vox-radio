@@ -962,7 +962,7 @@ func TestManifestCorner_DurationFields_OmittedWhenZero(t *testing.T) {
 func TestTimeline_RoundTrip(t *testing.T) {
 	tl := model.Timeline{
 		Corners: []model.CornerTiming{
-			{ID: "opening", DurationSec: 30.5},
+			{ID: "opening", DurationSec: 30.5, SpeechSec: 25.0, NonSpeechSec: 5.5},
 			{ID: "tech", DurationSec: 65.2},
 		},
 	}
@@ -983,8 +983,30 @@ func TestTimeline_RoundTrip(t *testing.T) {
 	if got.Corners[0].DurationSec != 30.5 {
 		t.Errorf("Corners[0].DurationSec: got %f, want 30.5", got.Corners[0].DurationSec)
 	}
+	if got.Corners[0].SpeechSec != 25.0 || got.Corners[0].NonSpeechSec != 5.5 {
+		t.Errorf("Corners[0] speech/non-speech: got %f/%f, want 25.0/5.5", got.Corners[0].SpeechSec, got.Corners[0].NonSpeechSec)
+	}
 	if got.Corners[1].ID != "tech" {
 		t.Errorf("Corners[1].ID: got %q, want tech", got.Corners[1].ID)
+	}
+}
+
+func TestTimeline_CornerMap(t *testing.T) {
+	tl := model.Timeline{
+		Corners: []model.CornerTiming{
+			{ID: "opening", DurationSec: 30.5, SpeechSec: 25.0, NonSpeechSec: 5.5},
+			{ID: "tech", DurationSec: 65.2, SpeechSec: 60.0, NonSpeechSec: 5.2},
+		},
+	}
+	got := tl.CornerMap()
+	if len(got) != 2 {
+		t.Fatalf("len: got %d, want 2", len(got))
+	}
+	if got["opening"].SpeechSec != 25.0 || got["opening"].NonSpeechSec != 5.5 || got["opening"].DurationSec != 30.5 {
+		t.Errorf("opening: got %+v, unexpected", got["opening"])
+	}
+	if got["tech"].SpeechSec != 60.0 {
+		t.Errorf("tech.SpeechSec: got %f, want 60.0", got["tech"].SpeechSec)
 	}
 }
 

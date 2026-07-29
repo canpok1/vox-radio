@@ -24,8 +24,14 @@
 
 ## 機械集計指標
 
-コーナーごとの目標尺（`target_length_sec`）・実測尺（`actual_length_sec`）・セリフ数（`line_count`）、
+コーナーごとの目標文字数（`target_chars`）・実際に書かれた文字数（`actual_chars`）・セリフ数（`line_count`）、
+実測尺の内訳（`actual_length_sec` = `speech_length_sec`（セリフのみ）+ `non_speech_length_sec`（ジングル・SE・ポーズ））、
+実効発話レート（`chars_per_sec` = `actual_chars` ÷ `speech_length_sec`。Go側で計算済み）、
 話者別のセリフ数・文字数、校正での修正件数（`proofread_corrections`）です。
+
+尺の乖離を指摘する際は、`target_chars` と `actual_chars` の差（指示追従の問題）と、`chars_per_sec`
+（発話速度の見積もりの問題）を区別してください。演出音（ジングル・SE・ポーズ）による超過は
+`non_speech_length_sec` に現れるため、セリフの書きすぎだと誤って指摘しないでください。
 
 ```json
 {{metrics}}

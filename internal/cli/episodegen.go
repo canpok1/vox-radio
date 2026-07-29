@@ -33,12 +33,21 @@ type mixerAdapter struct {
 	inner *mix.Mixer
 }
 
-func (a *mixerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error) {
+func (a *mixerAdapter) Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]model.CornerTiming, error) {
 	result, err := a.inner.Run(ctx, scr, clips, clipsDir, outPath, meta)
 	if err != nil {
 		return nil, err
 	}
-	return result.CornerDurations, nil
+	timings := make(map[string]model.CornerTiming, len(result.CornerDurations))
+	for id, total := range result.CornerDurations {
+		timings[id] = model.CornerTiming{
+			ID:           id,
+			DurationSec:  total,
+			SpeechSec:    result.SpeechDurations[id],
+			NonSpeechSec: result.NonSpeechDurations[id],
+		}
+	}
+	return timings, nil
 }
 
 func newEpisodegenCmd() *cobra.Command {

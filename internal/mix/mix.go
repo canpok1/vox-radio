@@ -20,9 +20,11 @@ const defaultPauseSec = 0.3
 
 // Result holds the output metrics for an assembled episode.
 type Result struct {
-	DurationSec     float64
-	Bytes           int64
-	CornerDurations map[string]float64
+	DurationSec        float64
+	Bytes              int64
+	CornerDurations    map[string]float64 // total per corner; equals SpeechDurations[id]+NonSpeechDurations[id]
+	SpeechDurations    map[string]float64 // dialogue clips only
+	NonSpeechDurations map[string]float64 // pauseAfter/explicit pause/jingle/sequential SE
 }
 
 // Mixer assembles speech clips and assets into a final mp3.
@@ -135,9 +137,15 @@ func (a *Mixer) Run(ctx context.Context, script model.Script, clips model.ClipsM
 			seSequentialDurations[name] = dur
 		}
 	}
-	cornerDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations, seSequentialDurations)
+	cornerDurations, speechDurations, nonSpeechDurations := computeCornerDurations(clips.Clips, script, defaultPauseSec, jingleDurations, seSequentialDurations)
 
-	return &Result{DurationSec: dur, Bytes: size, CornerDurations: cornerDurations}, nil
+	return &Result{
+		DurationSec:        dur,
+		Bytes:              size,
+		CornerDurations:    cornerDurations,
+		SpeechDurations:    speechDurations,
+		NonSpeechDurations: nonSpeechDurations,
+	}, nil
 }
 
 // collectAssetDurations fetches the playback duration for each unique asset of segType

@@ -42,9 +42,9 @@ type Synther interface {
 }
 
 // Mixer produces an MP3 episode from clips and a script.
-// Returns per-corner estimated durations (seconds) keyed by CornerID.
+// Returns per-corner estimated timing (speech/non-speech breakdown) keyed by CornerID.
 type Mixer interface {
-	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]float64, error)
+	Run(ctx context.Context, scr model.Script, clips model.ClipsMeta, clipsDir, outPath string, meta model.EpisodeMeta) (map[string]model.CornerTiming, error)
 }
 
 // Options configures a single pipeline run.
@@ -69,14 +69,13 @@ type Runner struct {
 	ExcludedDedupKeys []string          // DedupKeys to exclude from feed collection (past-used articles)
 }
 
-// writeTimeline builds a model.Timeline from per-corner durations and writes it to 06_timeline.json.
-func writeTimeline(layout fileio.EpisodeLayout, corners []config.CornerConfig, cornerDurations map[string]float64) error {
+// writeTimeline builds a model.Timeline from per-corner timing and writes it to 06_timeline.json.
+func writeTimeline(layout fileio.EpisodeLayout, corners []config.CornerConfig, cornerDurations map[string]model.CornerTiming) error {
 	timings := make([]model.CornerTiming, 0, len(corners))
 	for _, c := range corners {
-		timings = append(timings, model.CornerTiming{
-			ID:          c.ID,
-			DurationSec: cornerDurations[c.ID],
-		})
+		ct := cornerDurations[c.ID]
+		ct.ID = c.ID
+		timings = append(timings, ct)
 	}
 	return fileio.WriteJSON(layout.Timeline(), model.Timeline{Corners: timings})
 }
@@ -184,6 +183,11 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("write timeline: %w", err)
 	}
 
+	totalDurations := make(map[string]float64, len(cornerDurations))
+	for id, ct := range cornerDurations {
+		totalDurations[id] = ct.DurationSec
+	}
+
 	m := manifest.Build(manifest.BuildParams{
 		Program:           r.Spec.Program,
 		Corners:           corners,
@@ -200,7 +204,7 @@ func (r *Runner) Run(ctx context.Context, opts Options) error {
 		Lines:             &scriptLines,
 		Script:            &scr,
 		Clips:             clips,
-		CornerDurations:   cornerDurations,
+		CornerDurations:   totalDurations,
 	})
 	if err := fileio.WriteJSON(layout.Manifest(), m); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
