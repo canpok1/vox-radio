@@ -25,11 +25,15 @@ const (
 var validSeverities = map[string]bool{"high": true, "medium": true, "low": true}
 
 // ComputeMetrics aggregates indicators that need no LLM judgement: per-corner target vs actual
-// length and line count, per-speaker line/character counts, and the proofread correction count.
+// chars, actual vs speech-only length, line count, per-speaker line/character counts, and the
+// proofread correction count.
 // corners must contain only the corners that actually aired: a corner missing from
-// cornerDurations yields ActualLengthSec 0, which the LLM reads as a large shortfall.
-func ComputeMetrics(corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerDurations map[string]float64) model.AnalysisMetrics {
+// cornerTimings yields zero-valued length fields, which the LLM reads as a large shortfall.
+// charsPerMinute resolves target_chars for corners still using the deprecated length_sec
+// (config.CornerConfig.EffectiveTargetChars); pass program.EffectiveCharsPerMinute().
+func ComputeMetrics(corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerTimings map[string]model.CornerTiming, charsPerMinute int) model.AnalysisMetrics {
 	lineCountByCornerID := make(map[string]int, len(lines.Corners))
+	charCountByCornerID := make(map[string]int, len(lines.Corners))
 	speakerOrder := make([]string, 0)
 	lineCountBySpeaker := make(map[string]int)
 	charCountBySpeaker := make(map[string]int)
@@ -40,17 +44,29 @@ func ComputeMetrics(corners []config.CornerConfig, lines model.ScriptLines, pr *
 				speakerOrder = append(speakerOrder, line.SpeakerRole)
 			}
 			lineCountBySpeaker[line.SpeakerRole]++
-			charCountBySpeaker[line.SpeakerRole] += len([]rune(line.Text))
+			n := len([]rune(line.Text))
+			charCountBySpeaker[line.SpeakerRole] += n
+			charCountByCornerID[c.ID] += n
 		}
 	}
 
 	cornerMetrics := make([]model.AnalysisCornerMetrics, len(corners))
 	for i, c := range corners {
+		ct := cornerTimings[c.ID]
+		actualChars := charCountByCornerID[c.ID]
+		var charsPerSec float64
+		if ct.SpeechSec > 0 {
+			charsPerSec = float64(actualChars) / ct.SpeechSec
+		}
 		cornerMetrics[i] = model.AnalysisCornerMetrics{
-			ID:              c.ID,
-			TargetLengthSec: c.LengthSec,
-			ActualLengthSec: cornerDurations[c.ID],
-			LineCount:       lineCountByCornerID[c.ID],
+			ID:                 c.ID,
+			TargetChars:        c.EffectiveTargetChars(charsPerMinute),
+			ActualChars:        actualChars,
+			LineCount:          lineCountByCornerID[c.ID],
+			ActualLengthSec:    ct.DurationSec,
+			SpeechLengthSec:    ct.SpeechSec,
+			NonSpeechLengthSec: ct.NonSpeechSec,
+			CharsPerSec:        charsPerSec,
 		}
 	}
 
@@ -144,9 +160,9 @@ type programInfo struct {
 }
 
 type cornerInfo struct {
-	ID              string `json:"id"`
-	Title           string `json:"title"`
-	TargetLengthSec int    `json:"target_length_sec"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	TargetChars int    `json:"target_chars"`
 }
 
 type speechEntry struct {
@@ -163,11 +179,12 @@ type analysisResponse struct {
 // Analyze computes metrics, asks the LLM for findings and patterns in a single call, and returns
 // the combined result. Findings and patterns beyond maxFindings/maxPatterns are dropped, and any
 // finding severity outside {high, medium, low} is normalized to "medium".
-func (a *LLMAnalyzer) Analyze(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerDurations map[string]float64) (model.Analysis, error) {
+func (a *LLMAnalyzer) Analyze(ctx context.Context, program config.ProgramConfig, corners []config.CornerConfig, lines model.ScriptLines, pr *model.ProofreadResult, cornerTimings map[string]model.CornerTiming) (model.Analysis, error) {
 	done := logging.StartStep(ctx, a.logger, "開始")
 	defer func() { done("") }()
 
-	metrics := ComputeMetrics(corners, lines, pr, cornerDurations)
+	charsPerMinute := program.EffectiveCharsPerMinute()
+	metrics := ComputeMetrics(corners, lines, pr, cornerTimings, charsPerMinute)
 
 	programJSON, err := json.Marshal(programInfo{Title: program.Title, Description: program.Description})
 	if err != nil {
@@ -176,7 +193,7 @@ func (a *LLMAnalyzer) Analyze(ctx context.Context, program config.ProgramConfig,
 
 	cornerInfos := make([]cornerInfo, len(corners))
 	for i, c := range corners {
-		cornerInfos[i] = cornerInfo{ID: c.ID, Title: c.Title, TargetLengthSec: c.LengthSec}
+		cornerInfos[i] = cornerInfo{ID: c.ID, Title: c.Title, TargetChars: c.EffectiveTargetChars(charsPerMinute)}
 	}
 	cornersJSON, err := json.Marshal(cornerInfos)
 	if err != nil {

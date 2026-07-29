@@ -118,7 +118,7 @@ gather → rundown → script → synth → mix → manifest
 | mix | クリップにイントロ・アウトロ・SE を ffmpeg で合成し MP3 化 |
 | manifest | 配信用の番組情報（タイトル・要約・記事など）を JSON 出力 |
 
-上記6ステップの完了後、`episodegen` はこの回の分析（`analyze`）も自動実行します。コーナーの目標尺と実測尺のズレ・話者別セリフ数などの機械集計指標に加え、LLM がこの回の課題（findings）と会話の型（patterns）を抽出し、`07_analysis.json` としてキャッシュに蓄積します。分析に失敗しても番組生成自体は継続します。既存回の中間ファイルから分析を作り直したい場合は `vox-radio episodegen analyze` を単独実行できます。
+上記6ステップの完了後、`episodegen` はこの回の分析（`analyze`）も自動実行します。コーナーの目標文字数と実際に書かれた文字数のズレ・実効発話レート・話者別セリフ数などの機械集計指標に加え、LLM がこの回の課題（findings）と会話の型（patterns）を抽出し、`07_analysis.json` としてキャッシュに蓄積します。分析に失敗しても番組生成自体は継続します。既存回の中間ファイルから分析を作り直したい場合は `vox-radio episodegen analyze` を単独実行できます。
 
 `episodegen` で全ステップを一括実行します。
 
