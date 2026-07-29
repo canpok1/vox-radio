@@ -206,6 +206,7 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 				),
 				assetCatalog,
 				script.WithLogger(logger),
+				script.WithRegenConfig(cfg.Script.EffectiveRegenThreshold(), cfg.Script.EffectiveRegenMaxRetries()),
 			)
 
 			runner := &pipeline.Runner{

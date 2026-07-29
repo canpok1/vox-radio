@@ -236,6 +236,98 @@ func TestLLMScriptGenerator_Generate_NoRegenWhenAllCornersHaveZeroTarget(t *test
 	}
 }
 
+func TestLLMScriptGenerator_Generate_RegeneratesEachCornerExceedingIndividuallyEvenWhenTotalWithinThreshold(t *testing.T) {
+	// c1 way over target and c2 way under target cancel out in the episode total (total deviation
+	// stays within the 20% threshold), but each corner individually deviates far past it. A
+	// total-based check would wrongly skip regeneration for both; the per-corner check must not.
+	corners := []config.CornerConfig{
+		{ID: "c1", Title: "C1", Content: "内容1", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15}, // target 105 chars
+		{ID: "c2", Title: "C2", Content: "内容2", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15}, // target 105 chars
+	}
+	rundown := model.Rundown{
+		Corners: []model.RundownCorner{
+			{ID: "c1", Title: "C1", Flow: "f", Articles: []model.RundownArticle{{URL: "https://example.com/1"}}},
+			{ID: "c2", Title: "C2", Flow: "f", Articles: []model.RundownArticle{{URL: "https://example.com/2"}}},
+		},
+		Casts: make([]model.RundownCast, 0),
+	}
+
+	line := func(n int) []model.Line {
+		return []model.Line{{SpeakerRole: "zundamon", Text: strings.Repeat("あ", n)}}
+	}
+	// initial: c1=200 (dev +90%), c2=20 (dev -81%); total=220 vs target 210 → total dev ~4.8% (would
+	// pass an old total-based check). regen: both corrected to exactly 105 (dev 0).
+	mw := &mockWriter{
+		responses: [][]model.Line{line(200), line(20), line(105), line(105)},
+	}
+
+	gen := script.NewLLMScriptGenerator(
+		mw,
+		&mockDirector{},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+	)
+
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mw.callCount != 4 {
+		t.Errorf("expected writer called 4 times (2 initial + 2 regen, one per exceeding corner), got %d", mw.callCount)
+	}
+}
+
+func TestLLMScriptGenerator_Generate_GivesUpAfterMaxRetriesAndWarns(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15}, // target 105 chars
+	}
+	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
+	// Always far short of target: default max_retries=1 should still give up after exactly 1 retry.
+	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "短い"}}}
+
+	var buf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	gen := script.NewLLMScriptGenerator(mw, &mockDirector{}, model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)}, script.WithLogger(logger))
+
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mw.callCount != 2 {
+		t.Errorf("expected writer called 2 times (1 initial + 1 retry, default max_retries=1), got %d", mw.callCount)
+	}
+	if !strings.Contains(buf.String(), "WARN") || !strings.Contains(buf.String(), "打ち切りました") {
+		t.Errorf("expected a warn log about giving up after max retries, got: %s", buf.String())
+	}
+}
+
+func TestLLMScriptGenerator_Generate_RetriesUpToConfiguredMaxRetries(t *testing.T) {
+	corners := []config.CornerConfig{
+		{Title: "C", Content: "内容", Cast: map[string]string{"zundamon": "司会"}, LengthSec: 15}, // target 105 chars
+	}
+	rundown := corneredRundown("C", model.RundownArticle{URL: "https://example.com/1"})
+	line := func(n int) []model.Line {
+		return []model.Line{{SpeakerRole: "zundamon", Text: strings.Repeat("あ", n)}}
+	}
+	// initial short, still short after 1st retry, corrected on the 2nd retry.
+	mw := &mockWriter{responses: [][]model.Line{line(1), line(2), line(105)}}
+
+	gen := script.NewLLMScriptGenerator(
+		mw,
+		&mockDirector{},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+		script.WithRegenConfig(0.20, 2),
+	)
+
+	_, _, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, corners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mw.callCount != 3 {
+		t.Errorf("expected writer called 3 times (1 initial + 2 retries, max_retries=2), got %d", mw.callCount)
+	}
+}
+
 func TestLLMScriptGenerator_Generate_LogsProgress(t *testing.T) {
 	mw := &mockWriter{lines: []model.Line{{SpeakerRole: "zundamon", Text: "テスト"}}}
 	md := &mockDirector{script: model.Script{Segments: []model.ScriptSegment{{Type: model.SegmentTypeSpeech, Text: "テスト"}}}}
