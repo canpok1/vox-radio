@@ -12,6 +12,10 @@ const (
 	// DefaultRetroKeepLength is the default warning threshold (characters) for the keep file's
 	// total content; exceeding it does not truncate or rewrite keep, only warns (ADR-0098).
 	DefaultRetroKeepLength = 600
+	// DefaultRetroMaxFails is the default number of consecutive recurrences allowed before a try
+	// problem is dropped: a problem that keeps recurring despite repeated actions is chronic and
+	// should stop occupying a max_tries slot (ADR-0098 addendum).
+	DefaultRetroMaxFails = 5
 )
 
 // RetroConfig controls the retro command's automatic improvement loop (ADR-0098).
@@ -20,6 +24,7 @@ type RetroConfig struct {
 	AnalysisEntries int `yaml:"analysis_entries"`
 	KeepThreshold   int `yaml:"keep_threshold"`
 	KeepLength      int `yaml:"keep_length"`
+	MaxFails        int `yaml:"max_fails"`
 }
 
 // EffectiveMaxTries returns the configured MaxTries, falling back to DefaultRetroMaxTries.
@@ -52,4 +57,12 @@ func (c RetroConfig) EffectiveKeepLength() int {
 		return DefaultRetroKeepLength
 	}
 	return c.KeepLength
+}
+
+// EffectiveMaxFails returns the configured MaxFails, falling back to DefaultRetroMaxFails.
+func (c RetroConfig) EffectiveMaxFails() int {
+	if c.MaxFails <= 0 {
+		return DefaultRetroMaxFails
+	}
+	return c.MaxFails
 }

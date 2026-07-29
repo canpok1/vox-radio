@@ -296,6 +296,197 @@ func TestApplyCounts_DuplicateGuardPreventsTruncationFromDroppingGenuineNewProbl
 	}
 }
 
+func TestApplyCounts_RecurrenceAccumulatesFailStreakAndResetsClearStreak(t *testing.T) {
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "説明調", Action: "崩す", ClearStreak: 2, FailStreak: 0},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  prevTry,
+		ProposedProblems: []retro.Problem{{ID: "p1", Problem: "説明調", Action: "新施策"}},
+		Recurrences:      []retro.Recurrence{{ID: "p1", Episodes: []int{5, 6}}},
+		NewEpisodes:      []int{5, 6},
+		KeepThreshold:    100,
+		MaxFails:         5,
+		LatestEpisode:    6,
+	})
+
+	if len(result.NextTry) != 1 {
+		t.Fatalf("NextTry = %+v, want 1 entry", result.NextTry)
+	}
+	got := result.NextTry[0]
+	if got.FailStreak != 2 {
+		t.Errorf("FailStreak = %d, want 2 (recurred at both ep5 and ep6)", got.FailStreak)
+	}
+	if got.ClearStreak != 0 {
+		t.Errorf("ClearStreak = %d, want 0 (reset by recurrence)", got.ClearStreak)
+	}
+}
+
+func TestApplyCounts_NonRecurrenceResetsFailStreak(t *testing.T) {
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "説明調", Action: "崩す", ClearStreak: 0, FailStreak: 3},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  prevTry,
+		ProposedProblems: []retro.Problem{{ID: "p1", Problem: "説明調", Action: "崩す"}},
+		Recurrences:      nil, // did not recur this round
+		NewEpisodes:      []int{7},
+		KeepThreshold:    100,
+		MaxFails:         5,
+		LatestEpisode:    7,
+	})
+
+	if result.NextTry[0].FailStreak != 0 {
+		t.Errorf("FailStreak = %d, want 0 (reset by non-recurrence)", result.NextTry[0].FailStreak)
+	}
+	if result.NextTry[0].ClearStreak != 1 {
+		t.Errorf("ClearStreak = %d, want 1", result.NextTry[0].ClearStreak)
+	}
+}
+
+func TestApplyCounts_DropsProblemWhenFailStreakExceedsMaxFails(t *testing.T) {
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "尺超過", Action: "現行施策", FailStreak: 5, FirstSeenEpisode: 79},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  prevTry,
+		ProposedProblems: []retro.Problem{{ID: "p1", Problem: "尺超過", Action: "新施策"}},
+		Recurrences:      []retro.Recurrence{{ID: "p1", Episodes: []int{83}}},
+		NewEpisodes:      []int{83},
+		KeepThreshold:    100,
+		MaxFails:         5,
+		LatestEpisode:    83,
+	})
+
+	if len(result.NextTry) != 0 {
+		t.Errorf("NextTry = %+v, want empty (dropped)", result.NextTry)
+	}
+	if len(result.NextDropped) != 1 {
+		t.Fatalf("NextDropped = %+v, want 1 entry", result.NextDropped)
+	}
+	d := result.NextDropped[0]
+	if d.ID != "p1" || d.Problem != "尺超過" || d.FirstSeenEpisode != 79 || d.DroppedAtEpisode != 83 || d.FailStreak != 6 {
+		t.Errorf("NextDropped[0] = %+v, unexpected", d)
+	}
+	if len(result.DroppedIDs) != 1 || result.DroppedIDs[0] != "p1" {
+		t.Errorf("DroppedIDs = %v, want [p1]", result.DroppedIDs)
+	}
+}
+
+func TestApplyCounts_FailStreakAtExactlyMaxFailsDoesNotDrop(t *testing.T) {
+	prevTry := []retro.Problem{
+		{ID: "p1", Problem: "尺超過", Action: "施策", FailStreak: 4},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevTryProblems:  prevTry,
+		ProposedProblems: []retro.Problem{{ID: "p1", Problem: "尺超過", Action: "施策"}},
+		Recurrences:      []retro.Recurrence{{ID: "p1", Episodes: []int{10}}},
+		NewEpisodes:      []int{10},
+		KeepThreshold:    100,
+		MaxFails:         5, // FailStreak becomes exactly 5, must not drop (only > 5 drops)
+		LatestEpisode:    10,
+	})
+
+	if len(result.NextTry) != 1 || result.NextTry[0].FailStreak != 5 {
+		t.Errorf("NextTry = %+v, want 1 entry with FailStreak 5 (not dropped)", result.NextTry)
+	}
+	if len(result.NextDropped) != 0 {
+		t.Errorf("NextDropped = %+v, want empty", result.NextDropped)
+	}
+}
+
+func TestApplyCounts_DemotedKeepDroppedImmediatelyIfChronicallyFailing(t *testing.T) {
+	// A keep entry recurring at every one of several new episodes in the same round demotes with
+	// a FailStreak that can already exceed MaxFails; it must go straight to dropped, not try.
+	prevKeeps := []retro.Keep{
+		{ID: "k1", Problem: "定着済みの問題", Action: "実証済み施策", ProvenAtEpisode: 10},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevKeeps: prevKeeps,
+		ProposedProblems: []retro.Problem{
+			{ID: "k1", Problem: "定着済みの問題", Action: "新施策", FirstSeenEpisode: 11, LastSeenEpisode: 16},
+		},
+		Recurrences:   []retro.Recurrence{{ID: "k1", Episodes: []int{11, 12, 13, 14, 15, 16}}},
+		NewEpisodes:   []int{11, 12, 13, 14, 15, 16},
+		KeepThreshold: 100,
+		MaxFails:      5,
+		LatestEpisode: 16,
+	})
+
+	if len(result.NextTry) != 0 {
+		t.Errorf("NextTry = %+v, want empty (demoted problem was chronically failing, dropped instead)", result.NextTry)
+	}
+	if len(result.NextKeep) != 0 {
+		t.Errorf("NextKeep = %+v, want empty (k1 demoted, not surviving)", result.NextKeep)
+	}
+	if len(result.NextDropped) != 1 || result.NextDropped[0].ID != "k1" {
+		t.Fatalf("NextDropped = %+v, want k1 dropped", result.NextDropped)
+	}
+	if len(result.DroppedIDs) != 1 || result.DroppedIDs[0] != "k1" {
+		t.Errorf("DroppedIDs = %v, want [k1]", result.DroppedIDs)
+	}
+	if len(result.DemotedIDs) != 1 || result.DemotedIDs[0] != "k1" {
+		t.Errorf("DemotedIDs = %v, want [k1] (demotion is still logged even though it lands in dropped)", result.DemotedIDs)
+	}
+}
+
+func TestApplyCounts_PrevDroppedCarriedForwardUnchanged(t *testing.T) {
+	prevDropped := []retro.Dropped{
+		{ID: "p1", Problem: "過去に破棄された問題", Action: "旧施策", FirstSeenEpisode: 1, DroppedAtEpisode: 5, FailStreak: 6},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevDropped:   prevDropped,
+		NewEpisodes:   []int{10},
+		KeepThreshold: 100,
+		LatestEpisode: 10,
+	})
+
+	if len(result.NextDropped) != 1 || result.NextDropped[0].ID != "p1" {
+		t.Fatalf("NextDropped = %+v, want prevDropped carried forward unchanged", result.NextDropped)
+	}
+}
+
+func TestApplyCounts_SkipsProposedProblemMatchingDroppedText(t *testing.T) {
+	prevDropped := []retro.Dropped{
+		{ID: "p1", Problem: "尺超過の課題", Action: "旧施策", FirstSeenEpisode: 1, DroppedAtEpisode: 5},
+	}
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevDropped: prevDropped,
+		ProposedProblems: []retro.Problem{
+			// The LLM proposed this despite being told about current_dropped; must not be resurrected.
+			{ID: "", Problem: "尺超過の課題", Action: "新施策", FirstSeenEpisode: 10, LastSeenEpisode: 10},
+		},
+		NewEpisodes:   []int{10},
+		KeepThreshold: 100,
+		LatestEpisode: 10,
+	})
+
+	if len(result.NextTry) != 0 {
+		t.Errorf("NextTry = %+v, want empty (proposed problem matches a dropped entry's text)", result.NextTry)
+	}
+	if len(result.NextDropped) != 1 {
+		t.Errorf("NextDropped = %+v, want the original dropped entry to remain the only one", result.NextDropped)
+	}
+}
+
+func TestApplyCounts_ProblemRemovedFromDroppedCanBeReproposed(t *testing.T) {
+	// Simulates a human deleting the dropped entry by hand to un-suppress the problem:
+	// PrevDropped is empty, so the same problem text is free to be added as new again.
+	result := retro.ApplyCounts(retro.ApplyCountsInput{
+		PrevDropped: nil,
+		ProposedProblems: []retro.Problem{
+			{ID: "", Problem: "尺超過の課題", Action: "新施策", FirstSeenEpisode: 10, LastSeenEpisode: 10},
+		},
+		NewEpisodes:   []int{10},
+		KeepThreshold: 100,
+		LatestEpisode: 10,
+	})
+
+	if len(result.NextTry) != 1 || result.NextTry[0].Problem != "尺超過の課題" {
+		t.Errorf("NextTry = %+v, want the problem re-added now that it's no longer in dropped", result.NextTry)
+	}
+}
+
 func TestApplyCounts_TruncatesFinalTryToMaxTries(t *testing.T) {
 	prevTry := []retro.Problem{
 		{ID: "p1", Problem: "1", Action: "a"},

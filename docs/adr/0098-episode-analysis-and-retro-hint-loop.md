@@ -18,7 +18,7 @@
 | 段 | 実行契機 | 処理 | 出力 |
 |---|---|---|---|
 | analyze | 番組生成の直後 | 実セリフから課題（findings）と会話の型（patterns）を抽出し、機械メトリクス（目標尺 `length_sec` と実測尺の乖離・校正修正件数・話者別セリフ量）と合成 | `07_analysis.json` とキャッシュの `analysis` フィールド |
-| retro | `vox-radio retro`（定期実行） | 直近 N 件の分析から問題と施策を組にして記録し、効果が確認された施策を実証済みへ昇格 | `programs/{program_id}/try.yaml`（試行中）/ `programs/{program_id}/keep.yaml`（実証済み、ADR-0099） |
+| retro | `vox-radio retro`（定期実行） | 直近 N 件の分析から問題と施策を組にして記録し、効果が確認された施策を実証済みへ昇格。連続再発が続く問題は破棄（後述） | `programs/{program_id}/try.yaml`（試行中・破棄済み）/ `programs/{program_id}/keep.yaml`（実証済み、ADR-0099） |
 | 注入 | `episodegen` 起動時 | `write` プロンプトの `{{retro_keep}}`（守る）と `{{retro_try}}`（今回試す）へ注入 | — |
 
 工程名は1回分の `analyze` と複数回の `retro`（レトロスペクティブの語義）に対応させた。
@@ -37,8 +37,11 @@ analyze は `internal/analyze` に新設し、呼び出しは `cli` 層に置く
 | keep は retro が書き換えない | 実証済み方針の安定性を守るため、統合や一般化をしない。`retro.keep_length`（既定 600 文字）超過時は警告のみ出し `script_note` への移行を促す |
 | 停止手段 | 生成を止めるなら retro を実行しない。適用を止めるなら try / keep ファイルを削除する（専用の設定フラグは置かない） |
 | 参照範囲の限定 | `retro.analysis_entries`（既定 5）。古い課題を引きずらない |
+| 停滞した問題を打ち切る | `retro.max_fails`（既定 5）。施策を書き換えても連続 `max_fails` 回再発する問題は `try` から破棄し `dropped` へ記録する（2026-07-29 追記）。書き換え続けても直らない問題が `max_tries` の枠を占有し続けるのを防ぐ |
 
 機械メトリクスの併走は自己評価バイアスの緩和に必須とする。
+
+**追記（2026-07-29）**: `try.yaml` の各問題は再発と表裏一体の `fail_streak`（連続再発回数。`clear_streak` と排他的に増減）を持つ。`fail_streak` が `retro.max_fails` を超えると `try.yaml` の `dropped` セクションへ移し、以後 retro に再提案させない（プロンプトへの明示指示に加え、同じ問題文が提案されても機械的に無視する）。`dropped` は `keep` と同様 retro が追記のみ行い、人が該当行を削除すれば抑制を解除できる。
 
 会話の型を analyze 時点で記録するのは、型の固定化が1回分の課題や要約からは見えず複数回の実セリフを並べないと検出できないため。retro はキャッシュ集約された型を比較する（ADR-0018 / 0019 踏襲）。
 
