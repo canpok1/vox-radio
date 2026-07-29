@@ -61,3 +61,17 @@ func TestRetroConfig_EffectiveKeepLength_Configured(t *testing.T) {
 		t.Errorf("EffectiveKeepLength() = %d, want 1000", got)
 	}
 }
+
+func TestRetroConfig_EffectiveMaxFails_Default(t *testing.T) {
+	c := config.RetroConfig{}
+	if got := c.EffectiveMaxFails(); got != config.DefaultRetroMaxFails {
+		t.Errorf("EffectiveMaxFails() = %d, want %d", got, config.DefaultRetroMaxFails)
+	}
+}
+
+func TestRetroConfig_EffectiveMaxFails_Configured(t *testing.T) {
+	c := config.RetroConfig{MaxFails: 10}
+	if got := c.EffectiveMaxFails(); got != 10 {
+		t.Errorf("EffectiveMaxFails() = %d, want 10", got)
+	}
+}
