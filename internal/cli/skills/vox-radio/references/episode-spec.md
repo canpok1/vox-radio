@@ -16,6 +16,7 @@
 | `description` | string | 任意 | 番組の説明（LLM への指示に使用）。RSSフィード・Slack通知にも露出する公開フィールド |
 | `direction` | string | 任意 | 番組全体の演出方針（direct ステップのみに渡る）。SE・pause の挿入タイミングに関する指示。台本生成・manifest・feed・Slack には渡されない |
 | `script_note` | string | 任意 | 番組全体の台本指示（write ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。コーナーを問わず全台本に適用したいルールや注意事項を記述する |
+| `retro_note` | string | 任意 | 番組全体の retro 指示（retro ステップのみに渡る）。非公開フィールド。manifest・feed・Slack には露出しない。`direction`/`script_note` が「矛盾する施策を提案しない」という制約であるのに対し、`retro_note` は次に試す問題・施策の方向性を能動的に誘導する（例:「〇〇に注力してほしい」「〇〇は出さないでほしい」）。指定時は retro が最優先で反映する |
 | `summary_length` | int | 任意 | 番組全体サマリーの目安文字数。未指定時はデフォルト 200 文字 |
 | `timezone` | string | 任意 | 番組内で日時を整形するときのIANAタイムゾーン名（例: `Asia/Tokyo`）。記事公開日時の変換、収録日時（台本生成プロンプトに渡す）、生成 MP3 の日付メタデータ（ID3）の整形に使用。未指定時はデフォルト `Asia/Tokyo`。不正なタイムゾーン名は警告のうえ UTC にフォールバックする |
 | `chars_per_minute` | int | 任意・**非推奨** | 台本の文字数換算に使用する1分あたりの目安文字数。`corners[].length_sec`（非推奨）使用時のみ効力を持つ換算係数。新規は `corners[].target_chars` を使用してください（詳細: `references/deprecated.md`） |
