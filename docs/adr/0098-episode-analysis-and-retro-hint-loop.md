@@ -43,6 +43,8 @@ analyze は `internal/analyze` に新設し、呼び出しは `cli` 層に置く
 
 **追記（2026-07-29）**: `try.yaml` の各問題は再発と表裏一体の `fail_streak`（連続再発回数。`clear_streak` と排他的に増減）を持つ。`fail_streak` が `retro.max_fails` を超えると `try.yaml` の `dropped` セクションへ移し、以後 retro に再提案させない（プロンプトへの明示指示に加え、同じ問題文が提案されても機械的に無視する）。`dropped` は `keep` と同様 retro が追記のみ行い、人が該当行を削除すれば抑制を解除できる。
 
+**追記（2026-07-30）**: retro が提案する問題・施策の方向性を番組ごとに誘導するため、`episode-spec.yaml` の `program` セクションに `retro_note`（番組全体の retro 指示・非公開フィールド）を追加した。既存の `direction`/`script_note` はプロンプト上「矛盾する施策を提案しない」という制約としてのみ働くのに対し、`retro_note` は次に試す問題・施策を能動的に誘導する入力である点が異なる。適用範囲を番組ごと（`episode-spec.yaml`）としたのは、`retro` が `try.yaml`/`keep.yaml` を番組ごと（`program.id`）に持つ既存の設計と整合させるため。`vox-radio.yaml` 側の `retro` セクション（全番組共通の `max_tries` 等の件数・閾値設定）には置かない。
+
 会話の型を analyze 時点で記録するのは、型の固定化が1回分の課題や要約からは見えず複数回の実セリフを並べないと検出できないため。retro はキャッシュ集約された型を比較する（ADR-0018 / 0019 踏襲）。
 
 ## 結果

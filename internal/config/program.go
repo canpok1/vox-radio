@@ -140,6 +140,7 @@ type ProgramConfig struct {
 	Description    string   `yaml:"description"`
 	Direction      string   `yaml:"direction,omitempty"`   // 番組全体の演出指示（direct専用）
 	ScriptNote     string   `yaml:"script_note,omitempty"` // 番組全体の台本指示（write専用・非公開）
+	RetroNote      string   `yaml:"retro_note,omitempty"`  // 番組全体のretro指示（retro専用・非公開）
 	SummaryLength  int      `yaml:"summary_length,omitempty"`
 	Timezone       string   `yaml:"timezone,omitempty"`         // IANA tz名。未設定時は DefaultProgramTimezone
 	CharsPerMinute int      `yaml:"chars_per_minute,omitempty"` // 台本の文字数換算に使用する1分あたりの文字数。未設定時は DefaultCharsPerMinute

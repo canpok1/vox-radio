@@ -117,6 +117,12 @@ func TestLoadEpisodeSpec(t *testing.T) {
 		}
 	})
 
+	t.Run("ProgramRetroNote", func(t *testing.T) {
+		if spec.Program.RetroNote == "" {
+			t.Error("Program.RetroNote must not be empty")
+		}
+	})
+
 	t.Run("CornerScriptNote", func(t *testing.T) {
 		if len(spec.Corners) == 0 {
 			t.Fatal("Corners must not be empty")

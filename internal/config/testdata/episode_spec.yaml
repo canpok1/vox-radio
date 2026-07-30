@@ -4,6 +4,7 @@ program:
   description: "テスト用"
   direction: "番組全体の演出方針テスト"
   script_note: "番組台本指示テスト"
+  retro_note: "番組retro指示テスト"
 
 casts:
   zundamon:

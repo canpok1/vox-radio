@@ -282,6 +282,7 @@ type programForPrompt struct {
 	Description string `json:"description"`
 	Direction   string `json:"direction"`
 	ScriptNote  string `json:"script_note"`
+	RetroNote   string `json:"retro_note"`
 }
 
 type analysisForPrompt struct {
@@ -346,6 +347,7 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 		Description: program.Description,
 		Direction:   program.Direction,
 		ScriptNote:  program.ScriptNote,
+		RetroNote:   program.RetroNote,
 	})
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("marshal program: %w", err)

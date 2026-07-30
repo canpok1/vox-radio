@@ -275,6 +275,40 @@ func TestLLMRetro_Run_PromptContainsCurrentDropped(t *testing.T) {
 	}
 }
 
+func TestLLMRetro_Run_PromptContainsProgramRetroNote(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "{{program}}", 0)
+	program := config.ProgramConfig{RetroNote: "尺の乖離ではなく掛け合いの質に注力してほしい"}
+	entries := []cache.Entry{{EpisodeNumber: 1, Analysis: &model.Analysis{}}}
+
+	_, _, _, err := r.Run(context.Background(), program, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mc.captured) != 1 {
+		t.Fatalf("expected exactly 1 LLM call, got %d", len(mc.captured))
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "尺の乖離ではなく掛け合いの質に注力してほしい") {
+		t.Errorf("prompt should contain program.RetroNote, got: %s", prompt)
+	}
+}
+
+func TestLLMRetro_Run_EmptyProgramRetroNote_BackwardCompatible(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "{{program}}", 0)
+	entries := []cache.Entry{{EpisodeNumber: 1, Analysis: &model.Analysis{}}}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{Title: "テスト"}, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, `"retro_note":""`) {
+		t.Errorf("empty RetroNote should marshal as an empty retro_note field (unchanged behavior), got: %s", prompt)
+	}
+}
+
 func TestLLMRetro_Run_PreservesExistingIDAndAssignsNextForNew(t *testing.T) {
 	mc := &mockClient{response: json.RawMessage(`{
 		"problems": [
