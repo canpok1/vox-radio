@@ -107,3 +107,4 @@
 | [0099](0099-per-program-state-directory.md) | 番組ごとの状態を `.vox-radio/programs/{program_id}/` へ集約する | 採用 | 2026-07-27 |
 | [0100](0100-deprecate-length-sec-for-target-chars.md) | corners[].target_chars を新設し、length_sec / chars_per_minute を段階的に非推奨化する | 採用 | 2026-07-29 |
 | [0101](0101-honor-server-retry-delay-and-per-attempt-timeout.md) | 429 のサーバー指示待機時間を尊重し、リトライのタイムアウトを試行単位にする（ADR-0051 改訂） | 採用 | 2026-08-02 |
+| [0102](0102-golangci-lint-install-without-github-api.md) | golangci-lint のインストールを GitHub API 非依存にする | 採用 | 2026-08-03 |

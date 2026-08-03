@@ -12,8 +12,9 @@ GOBIN ?= $(shell go env GOPATH)/bin
 
 setup:
 	# go install（ソースからビルド）は遅いため、ビルド済みバイナリを取得する。
-	# golangci-lint: 公式 install.sh がチェックサム検証込みでバイナリを配置する。
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
+	# golangci-lint: GitHub Releases のバイナリを取得する（公式 install.sh は api.github.com
+	#   経由のタグ解決に依存し、GitHub API アクセスがリポジトリ単位に制限された環境では失敗するため使わない）。
+	./scripts/install-golangci-lint.sh $(GOLANGCI_LINT_VERSION) $(GOBIN)
 	# lefthook: GitHub Releases のバイナリを取得する（goreleaser は release-check で都度取得）。
 	./scripts/install-lefthook.sh $(LEFTHOOK_VERSION) $(GOBIN)
 	$(GOBIN)/lefthook install
