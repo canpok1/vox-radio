@@ -199,17 +199,245 @@ func TestRoundTrip_ContextCancelledDuringBackoff(t *testing.T) {
 	}
 }
 
-func TestNewClient_AttachesRetryTransportAndTimeout(t *testing.T) {
-	c := NewClient(5 * time.Second)
-	if c.Timeout != 5*time.Second {
-		t.Fatalf("timeout = %v, want 5s", c.Timeout)
+func TestRoundTrip_HonorsRetryAfterHeaderSeconds(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr := NewTransport(nil)
+	// Backoff is deliberately slow; a fast response proves the header (not
+	// the backoff) governed the wait.
+	tr.baseDelay = time.Second
+	tr.maxDelay = time.Second
+
+	start := time.Now()
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := c.Transport.(*Transport); !ok {
-		t.Fatalf("transport type = %T, want *Transport", c.Transport)
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("calls = %d, want 2", got)
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("took %v, want well under the 1s backoff (Retry-After: 0 should have governed the wait)", elapsed)
+	}
+}
+
+func TestRoundTrip_HonorsRetryAfterHeaderHTTPDate(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.Header().Set("Retry-After", time.Now().Add(50*time.Millisecond).UTC().Format(http.TimeFormat))
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr := NewTransport(nil)
+	tr.baseDelay = time.Second
+	tr.maxDelay = time.Second
+
+	start := time.Now()
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("took %v, want well under the 1s backoff (Retry-After date should have governed the wait)", elapsed)
+	}
+}
+
+func TestRoundTrip_HonorsRetryInfoInBody(t *testing.T) {
+	const body = `{"error":{"code":429,"message":"rate limited","details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"0.05s"}]}}`
+
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = io.WriteString(w, body)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr := NewTransport(nil)
+	tr.baseDelay = time.Second
+	tr.maxDelay = time.Second
+
+	start := time.Now()
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("took %v, want well under the 1s backoff (body RetryInfo should have governed the wait)", elapsed)
+	}
+}
+
+func TestRoundTrip_HonorsRetryInfoInArrayWrappedBody(t *testing.T) {
+	const body = `[{"error":{"code":429,"message":"rate limited","details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"0.05s"}]}}]`
+
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = io.WriteString(w, body)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tr := NewTransport(nil)
+	tr.baseDelay = time.Second
+	tr.maxDelay = time.Second
+
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf("calls = %d, want 2", got)
+	}
+}
+
+func TestRoundTrip_DoesNotRetryWhenServerDelayExceedsLimit(t *testing.T) {
+	const body = `{"error":{"code":429,"message":"rate limited","details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"61s"}]}}`
+
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = io.WriteString(w, body)
+	}))
+	defer srv.Close()
+
+	client := &http.Client{Transport: newFastTransport()}
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", resp.StatusCode)
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("calls = %d, want 1 (no retry once the instructed delay exceeds the limit)", got)
 	}
 
-	if c0 := NewClient(0); c0.Timeout != 0 {
-		t.Fatalf("timeout = %v, want 0 (unset)", c0.Timeout)
+	got, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if string(got) != body {
+		t.Fatalf("body = %q, want %q (body must be restored for the caller)", got, body)
+	}
+}
+
+func TestRoundTrip_PerAttemptTimeoutAppliesToEachAttempt(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := NewClient(10 * time.Millisecond)
+	c.Transport.(*Transport).maxRetries = 0 // isolate a single attempt
+
+	_, err := c.Get(srv.URL)
+	if err == nil {
+		t.Fatal("expected a timeout error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want context.DeadlineExceeded", err)
+	}
+}
+
+func TestRoundTrip_PerAttemptTimeoutExcludesRetryWait(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	c := NewClient(80 * time.Millisecond)
+	tr := c.Transport.(*Transport)
+	tr.baseDelay = 60 * time.Millisecond
+	tr.maxDelay = 60 * time.Millisecond
+	tr.maxRetries = 2
+
+	start := time.Now()
+	resp, err := c.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", resp.StatusCode)
+	}
+	if got := atomic.LoadInt32(&calls); got != 3 {
+		t.Fatalf("calls = %d, want 3", got)
+	}
+	// Total retry wait (2 * 60ms = 120ms) exceeds perAttemptTimeout (80ms);
+	// this must still succeed because the timeout bounds each attempt, not the whole call.
+	if elapsed := time.Since(start); elapsed < 100*time.Millisecond {
+		t.Fatalf("elapsed = %v, want >= 100ms (retry waits should not be cut short)", elapsed)
+	}
+}
+
+func TestNewClient_AttachesRetryTransportWithPerAttemptTimeout(t *testing.T) {
+	c := NewClient(5 * time.Second)
+	if c.Timeout != 0 {
+		t.Fatalf("client.Timeout = %v, want 0 (timeout applies per attempt, not to the whole call)", c.Timeout)
+	}
+	tr, ok := c.Transport.(*Transport)
+	if !ok {
+		t.Fatalf("transport type = %T, want *Transport", c.Transport)
+	}
+	if tr.perAttemptTimeout != 5*time.Second {
+		t.Fatalf("perAttemptTimeout = %v, want 5s", tr.perAttemptTimeout)
+	}
+
+	c0 := NewClient(0)
+	if got := c0.Transport.(*Transport).perAttemptTimeout; got != 0 {
+		t.Fatalf("perAttemptTimeout = %v, want 0 (unset)", got)
 	}
 }
 
