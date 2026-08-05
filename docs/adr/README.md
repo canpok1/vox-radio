@@ -109,3 +109,4 @@
 | [0101](0101-honor-server-retry-delay-and-per-attempt-timeout.md) | 429 のサーバー指示待機時間を尊重し、リトライのタイムアウトを試行単位にする（ADR-0051 改訂） | 採用 | 2026-08-02 |
 | [0102](0102-golangci-lint-install-without-github-api.md) | golangci-lint のインストールを GitHub API 非依存にする | 採用 | 2026-08-03 |
 | [0103](0103-drop-llm-kanji-kana-conversion-rely-on-voicevox.md) | 読み変換における漢字のLLMかな化を廃止し、VOICEVOXの読み推定に一本化する（ADR-0045・0094 改訂） | 採用 | 2026-08-05 |
+| [0104](0104-split-lines-per-sentence-and-move-voice-params-to-direct.md) | セリフを機械的に1文単位へ分割し、抑揚パラメータの付与を write から direct へ移す | 採用 | 2026-08-05 |
