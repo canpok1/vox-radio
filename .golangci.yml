@@ -157,17 +157,6 @@ linters:
           allow:
             - "github.com/canpok1/vox-radio/internal/model"
             - "github.com/canpok1/vox-radio/internal/config"
-        # ドメイン層: eval は config/script/llm のみ
-        domain-eval:
-          list-mode: lax
-          files:
-            - "**/internal/eval/**"
-          deny:
-            - pkg: "github.com/canpok1/vox-radio/internal"
-              desc: "evalはconfig/script/llm以外のinternalパッケージに依存できません"
-          allow:
-            - "github.com/canpok1/vox-radio/internal/config"
-            - "github.com/canpok1/vox-radio/internal/script/llm"
         # ドメイン層: feed は model/fileio/cache のみ
         domain-feed:
           list-mode: lax

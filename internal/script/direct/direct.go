@@ -41,7 +41,7 @@ var correctionsSchema = json.RawMessage(`{
 //
 // Every response array is listed in required: the schema is sent as a strict structured
 // output, where a property left optional is simply never generated no matter what the
-// prompt asks for (ADR-0105).
+// prompt asks for (ADR-0106).
 //
 // Built via map[string]any + json.Marshal (not string interpolation) so the preset names
 // are JSON-escaped by construction rather than substituted into a raw string template.
