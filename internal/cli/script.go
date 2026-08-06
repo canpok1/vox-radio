@@ -79,7 +79,7 @@ func newScriptCmd() *cobra.Command {
 			case "write":
 				return runScriptWrite(context.Background(), in, workDir, llmClient, cfg, p, prompts, logger)
 			case "direct":
-				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, cfg.EffectivePronunciation(), prompts, assetCatalog)
+				return runScriptDirect(context.Background(), workDir, out, llmClient, cfg.LLM, cfg.Voicevox.EffectivePresets(), cfg.EffectivePronunciation(), prompts, assetCatalog)
 			default:
 				return fmt.Errorf("unknown step %q: use write|direct", step)
 			}
@@ -116,7 +116,7 @@ func runScriptFull(ctx context.Context, in, out, workDir string, c llm.Client, c
 
 	gen := script.NewLLMScriptGenerator(
 		w,
-		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct"),
+		direct.NewLLMDirector(c, prompts["direct"], stepTemp(cfg.LLM, "direct"), cfg.Voicevox.EffectivePresets(),
 			direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
 			direct.WithPronunciation(cfg.EffectivePronunciation()),
 		),
@@ -182,14 +182,14 @@ func runScriptWrite(ctx context.Context, in, workDir string, c llm.Client, cfg *
 	return nil
 }
 
-func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, pronunciation map[string]string, prompts map[string]string, assetCatalog model.AssetCatalog) error {
+func runScriptDirect(ctx context.Context, workDir, out string, c llm.Client, llmCfg config.LLMConfig, presets config.VoicevoxPresets, pronunciation map[string]string, prompts map[string]string, assetCatalog model.AssetCatalog) error {
 	linesPath := filepath.Join(workDir, fileio.FileLines)
 	scriptLines, err := readJSON[model.ScriptLines](linesPath)
 	if err != nil {
 		return err
 	}
 
-	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"),
+	d := direct.NewLLMDirector(c, prompts["direct"], stepTemp(llmCfg, "direct"), presets,
 		direct.WithProofread(prompts["proofread"], stepTemp(llmCfg, "proofread")),
 		direct.WithPronunciation(pronunciation),
 	)

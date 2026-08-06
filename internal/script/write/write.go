@@ -197,9 +197,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		return nil, fmt.Errorf("marshal program: %w", err)
 	}
 
-	presets := w.effectivePresets()
 	castInfo := buildCastInfo(assignments, chars)
-	presetInfo := buildPresetInfo(presets)
 
 	castOverviewStr := formatCastInfo(w.casts)
 	pastEpisodesStr := formatPastEpisodes(w.pastEpisodes)
@@ -239,7 +237,6 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{articles}}", string(articlesJSON),
 		"{{flow}}", flow,
 		"{{cast_info}}", castInfo,
-		"{{preset_info}}", presetInfo,
 		"{{past_episodes}}", pastEpisodesStr,
 		"{{previous_corners}}", previousCornersStr,
 		"{{episode_section}}", episodeSection,
@@ -251,7 +248,7 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 		"{{retro_keep}}", retroKeepStr,
 	).Replace(w.promptTemplate)
 
-	schema := BuildLinesSchema(sortedKeys(presets.Intonation), sortedKeys(presets.Pitch), sortedKeys(presets.Speed))
+	schema := BuildLinesSchema()
 
 	raw, err := w.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
@@ -270,21 +267,10 @@ func (w *LLMWriter) Write(ctx context.Context, program config.ProgramConfig, cor
 	return resp.Lines, nil
 }
 
-func (w *LLMWriter) effectivePresets() config.VoicevoxPresets {
-	if w.config == nil {
-		return config.VoicevoxConfig{}.EffectivePresets()
-	}
-	return w.config.Voicevox.EffectivePresets()
-}
-
-// BuildLinesSchema generates a JSON Schema for the lines response, with intonation/pitch/speed
-// enum values derived from the given slices. Input slices are sorted before embedding.
-func BuildLinesSchema(intonation, pitch, speed []string) json.RawMessage {
-	intonationEnumJSON, _ := json.Marshal(sortedStringsCopy(intonation))
-	pitchEnumJSON, _ := json.Marshal(sortedStringsCopy(pitch))
-	speedEnumJSON, _ := json.Marshal(sortedStringsCopy(speed))
-
-	return json.RawMessage(fmt.Sprintf(`{
+// linesSchema is the JSON Schema for the write step's lines response. Static because
+// intonation/pitch/speed selection was moved to the direct step (ADR-0104); write only
+// selects speaker_role/style/text.
+var linesSchema = json.RawMessage(`{
   "type": "object",
   "required": ["lines"],
   "properties": {
@@ -297,9 +283,6 @@ func BuildLinesSchema(intonation, pitch, speed []string) json.RawMessage {
         "properties": {
           "speaker_role": {"type": "string"},
           "style":        {"type": "string"},
-          "intonation":   {"type": "string", "enum": %s},
-          "pitch":        {"type": "string", "enum": %s},
-          "speed":        {"type": "string", "enum": %s},
           "text":         {"type": "string"}
         },
         "additionalProperties": false
@@ -307,16 +290,11 @@ func BuildLinesSchema(intonation, pitch, speed []string) json.RawMessage {
     }
   },
   "additionalProperties": false
-}`, intonationEnumJSON, pitchEnumJSON, speedEnumJSON))
-}
+}`)
 
-// buildPresetInfo formats available preset names for each axis for the prompt.
-func buildPresetInfo(presets config.VoicevoxPresets) string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "抑揚（intonation）: [%s]\n", strings.Join(sortedKeys(presets.Intonation), ", "))
-	fmt.Fprintf(&sb, "音高（pitch）: [%s]\n", strings.Join(sortedKeys(presets.Pitch), ", "))
-	fmt.Fprintf(&sb, "話速（speed）: [%s]\n", strings.Join(sortedKeys(presets.Speed), ", "))
-	return sb.String()
+// BuildLinesSchema returns the JSON Schema for the write step's lines response.
+func BuildLinesSchema() json.RawMessage {
+	return linesSchema
 }
 
 // buildCastInfo formats cast assignments with character catalog features for the prompt.
@@ -407,20 +385,4 @@ func stringOrNone(s string) string {
 		return "（なし）"
 	}
 	return s
-}
-
-func sortedKeys(m map[string]float64) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func sortedStringsCopy(s []string) []string {
-	c := make([]string, len(s))
-	copy(c, s)
-	sort.Strings(c)
-	return c
 }

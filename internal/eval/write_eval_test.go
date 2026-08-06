@@ -67,16 +67,12 @@ type writeCase struct {
 	Articles          []writeArticle      `json:"articles"`
 	Flow              string              `json:"flow"`
 	CastInfo          string              `json:"cast_info"`
-	PresetInfo        string              `json:"preset_info"`
 	GuestInfo         string              `json:"guest_info"`
 	ProgramScriptNote string              `json:"program_script_note"`
 	PreviousCorners   string              `json:"previous_corners"`
 	PastEpisodes      string              `json:"past_episodes"`
 	ValidSpeakerRoles []string            `json:"valid_speaker_roles"`
 	ValidStyles       map[string][]string `json:"valid_styles"`
-	ValidIntonation   []string            `json:"valid_intonation"`
-	ValidPitch        []string            `json:"valid_pitch"`
-	ValidSpeed        []string            `json:"valid_speed"`
 	Expectation       string              `json:"expectation,omitempty"`
 }
 
@@ -84,9 +80,6 @@ type writeCase struct {
 type writeLine struct {
 	SpeakerRole string `json:"speaker_role"`
 	Style       string `json:"style,omitempty"`
-	Intonation  string `json:"intonation,omitempty"`
-	Pitch       string `json:"pitch,omitempty"`
-	Speed       string `json:"speed,omitempty"`
 	Text        string `json:"text"`
 }
 
@@ -129,7 +122,6 @@ func runWrite(ctx context.Context, t *testing.T, client llm.Client, promptTempla
 		"{{articles}}", articlesJSON,
 		"{{flow}}", ec.Flow,
 		"{{cast_info}}", ec.CastInfo,
-		"{{preset_info}}", ec.PresetInfo,
 		"{{guest_info}}", ec.GuestInfo,
 		"{{program_script_note}}", ec.ProgramScriptNote,
 		"{{previous_corners}}", ec.PreviousCorners,
@@ -139,7 +131,7 @@ func runWrite(ctx context.Context, t *testing.T, client llm.Client, promptTempla
 		"{{timezone}}", ec.Timezone,
 	).Replace(promptTemplate)
 
-	schema := write.BuildLinesSchema(ec.ValidIntonation, ec.ValidPitch, ec.ValidSpeed)
+	schema := write.BuildLinesSchema()
 
 	return client.Complete(ctx, llm.CompletionRequest{
 		Messages:   []llm.Message{{Role: "user", Content: prompt}},

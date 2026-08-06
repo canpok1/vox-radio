@@ -398,6 +398,41 @@ func TestLLMScriptGenerator_Generate_ReturnsScriptLines(t *testing.T) {
 	}
 }
 
+func TestLLMScriptGenerator_Generate_SplitsLinesIntoSentences(t *testing.T) {
+	rundown := corneredRundown("AIコーナー",
+		model.RundownArticle{URL: "https://example.com/1", Title: "AI", Body: "AI記事の本文", Points: []string{"p1"}},
+	)
+	lines := []model.Line{{SpeakerRole: "zundamon", Style: "ノーマル", Text: "文1です。文2です。"}}
+
+	gen := script.NewLLMScriptGenerator(
+		&mockWriter{lines: lines},
+		&mockDirector{},
+		model.AssetCatalog{SE: make([]model.AssetCatalogEntry, 0)},
+	)
+
+	_, sl, _, err := gen.Generate(context.Background(), config.ProgramConfig{}, rundown, testCorners, testChars)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sl.Corners) != 1 {
+		t.Fatalf("expected 1 corner, got %d", len(sl.Corners))
+	}
+
+	want := []model.Line{
+		{SpeakerRole: "zundamon", Style: "ノーマル", Text: "文1です。"},
+		{SpeakerRole: "zundamon", Style: "ノーマル", Text: "文2です。"},
+	}
+	got := sl.Corners[0].Lines
+	if len(got) != len(want) {
+		t.Fatalf("got %d lines, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i].Text != want[i].Text || got[i].SpeakerRole != want[i].SpeakerRole || got[i].Style != want[i].Style {
+			t.Errorf("line[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
 func TestBuildScriptLines(t *testing.T) {
 	corners := []config.CornerConfig{
 		{Title: "C1", Direction: "演出1", Content: "内容1"},

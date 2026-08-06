@@ -198,106 +198,20 @@ func TestLLMWriter_Write_LineStyleParsed(t *testing.T) {
 	}
 }
 
-func TestLLMWriter_Write_LinePresetFieldsParsed(t *testing.T) {
-	linesWithPresetsJSON := json.RawMessage(`{
-		"lines": [
-			{"speaker_role": "zundamon", "intonation": "表現豊か", "pitch": "高め", "speed": "早口", "text": "テスト"}
-		]
-	}`)
-	mc := &mockClient{response: linesWithPresetsJSON}
+func TestLLMWriter_Write_SchemaExcludesPresetFields(t *testing.T) {
+	mc := &mockClient{response: linesJSON}
 	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil)
 
-	got, err := w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 1 {
-		t.Fatalf("Lines: got %d, want 1", len(got))
-	}
-	if got[0].Intonation != "表現豊か" {
-		t.Errorf("Intonation: got %q, want 表現豊か", got[0].Intonation)
-	}
-	if got[0].Pitch != "高め" {
-		t.Errorf("Pitch: got %q, want 高め", got[0].Pitch)
-	}
-	if got[0].Speed != "早口" {
-		t.Errorf("Speed: got %q, want 早口", got[0].Speed)
-	}
-}
-
-func TestLLMWriter_Write_SchemaIncludesPresetEnums(t *testing.T) {
-	mc := &mockClient{response: linesJSON}
-	cfg := &config.Config{
-		Voicevox: config.VoicevoxConfig{
-			Presets: &config.VoicevoxPresets{
-				Intonation: map[string]float64{"棒読み": 0.0, "標準": 1.0},
-				Pitch:      map[string]float64{"低め": -0.05, "標準": 0.0},
-				Speed:      map[string]float64{"ゆっくり": 0.8, "標準": 1.0},
-			},
-		},
-	}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0, cfg)
-
 	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
 
 	if len(mc.captured) == 0 {
 		t.Fatal("LLM was not called")
 	}
 	schemaStr := string(mc.captured[0].JSONSchema)
-	if !strings.Contains(schemaStr, "棒読み") {
-		t.Errorf("schema should contain intonation preset name '棒読み', got: %s", schemaStr)
-	}
-	if !strings.Contains(schemaStr, "低め") {
-		t.Errorf("schema should contain pitch preset name '低め', got: %s", schemaStr)
-	}
-	if !strings.Contains(schemaStr, "ゆっくり") {
-		t.Errorf("schema should contain speed preset name 'ゆっくり', got: %s", schemaStr)
-	}
-}
-
-func TestLLMWriter_Write_PromptContainsPresetInfo(t *testing.T) {
-	mc := &mockClient{response: linesJSON}
-	cfg := &config.Config{
-		Voicevox: config.VoicevoxConfig{
-			Presets: &config.VoicevoxPresets{
-				Intonation: map[string]float64{"棒読み": 0.0, "標準": 1.0},
-				Pitch:      map[string]float64{"低め": -0.05, "標準": 0.0},
-				Speed:      map[string]float64{"ゆっくり": 0.8, "標準": 1.0},
-			},
-		},
-	}
-	w := write.NewLLMWriter(mc, "preset={{preset_info}}", 0, cfg)
-
-	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
-
-	if len(mc.captured) == 0 {
-		t.Fatal("LLM was not called")
-	}
-	prompt := mc.captured[0].Messages[0].Content
-	if !strings.Contains(prompt, "棒読み") {
-		t.Errorf("prompt should contain intonation preset info, got: %s", prompt)
-	}
-	if !strings.Contains(prompt, "低め") {
-		t.Errorf("prompt should contain pitch preset info, got: %s", prompt)
-	}
-	if !strings.Contains(prompt, "ゆっくり") {
-		t.Errorf("prompt should contain speed preset info, got: %s", prompt)
-	}
-}
-
-func TestLLMWriter_Write_NoConfigUsesDefaultPresetSchema(t *testing.T) {
-	mc := &mockClient{response: linesJSON}
-	w := write.NewLLMWriter(mc, "{{corner}}", 0, nil) // no config
-
-	_, _ = w.Write(context.Background(), config.ProgramConfig{}, config.CornerConfig{}, nil, nil, nil, nil, "", nil)
-
-	if len(mc.captured) == 0 {
-		t.Fatal("LLM was not called")
-	}
-	schemaStr := string(mc.captured[0].JSONSchema)
-	// Default presets should include 標準
-	if !strings.Contains(schemaStr, "標準") {
-		t.Errorf("schema should contain default preset name '標準', got: %s", schemaStr)
+	for _, field := range []string{"intonation", "pitch", "speed"} {
+		if strings.Contains(schemaStr, field) {
+			t.Errorf("schema should not contain %q (moved to direct step, ADR-0104), got: %s", field, schemaStr)
+		}
 	}
 }
 
@@ -567,7 +481,7 @@ func TestLLMWriter_Write_PreviousCornersInjectedInPrompt(t *testing.T) {
 		{
 			Title: "オープニング",
 			Lines: []model.Line{
-				{SpeakerRole: "zundamon", Text: "こんにちは！今日もよろしくのだ！", Style: "ノーマル", Intonation: "標準"},
+				{SpeakerRole: "zundamon", Text: "こんにちは！今日もよろしくのだ！", Style: "ノーマル"},
 				{SpeakerRole: "metan", Text: "よろしくお願いします。"},
 			},
 		},
@@ -593,9 +507,6 @@ func TestLLMWriter_Write_PreviousCornersInjectedInPrompt(t *testing.T) {
 	}
 	if strings.Contains(prompt, "ノーマル") {
 		t.Errorf("prompt should NOT contain style field from previous corner, got: %s", prompt)
-	}
-	if strings.Contains(prompt, "標準") {
-		t.Errorf("prompt should NOT contain intonation field from previous corner, got: %s", prompt)
 	}
 }
 
@@ -980,37 +891,19 @@ func TestLLMWriter_Write_ProgramDirectionNotInPrompt(t *testing.T) {
 	}
 }
 
-func TestBuildLinesSchema_EnumValuesMatchInput(t *testing.T) {
-	schema := write.BuildLinesSchema(
-		[]string{"表現豊か", "棒読み"},
-		[]string{"高め", "低め"},
-		[]string{"早口", "ゆっくり"},
-	)
+func TestBuildLinesSchema_ExcludesPresetFields(t *testing.T) {
+	schema := write.BuildLinesSchema()
 
 	schemaStr := string(schema)
-	for _, want := range []string{"表現豊か", "棒読み", "高め", "低め", "早口", "ゆっくり"} {
+	for _, field := range []string{"intonation", "pitch", "speed"} {
+		if strings.Contains(schemaStr, field) {
+			t.Errorf("schema should not contain %q (moved to direct step, ADR-0104), got: %s", field, schemaStr)
+		}
+	}
+	for _, want := range []string{"speaker_role", "style", "text"} {
 		if !strings.Contains(schemaStr, want) {
 			t.Errorf("schema should contain %q, got: %s", want, schemaStr)
 		}
-	}
-}
-
-func TestBuildLinesSchema_SortsEnumValues(t *testing.T) {
-	schema := write.BuildLinesSchema(
-		[]string{"z値", "a値"},
-		[]string{"b値"},
-		[]string{"c値"},
-	)
-
-	schemaStr := string(schema)
-	// "a値" must appear before "z値" in the JSON
-	aPos := strings.Index(schemaStr, "a値")
-	zPos := strings.Index(schemaStr, "z値")
-	if aPos == -1 || zPos == -1 {
-		t.Fatalf("schema should contain 'a値' and 'z値', got: %s", schemaStr)
-	}
-	if aPos > zPos {
-		t.Errorf("enum values should be sorted: 'a値' should appear before 'z値', got: %s", schemaStr)
 	}
 }
 

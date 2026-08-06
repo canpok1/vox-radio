@@ -203,14 +203,24 @@ linters:
           allow:
             - "github.com/canpok1/vox-radio/internal/httpretry"
         # ドメイン層: script/direct・script/summarize は model/script/llm のみ（同一ルール）
-        domain-script-direct-summarize:
+        domain-script-direct:
           list-mode: lax
           files:
             - "**/internal/script/direct/**"
+          deny:
+            - pkg: "github.com/canpok1/vox-radio/internal"
+              desc: "script/directはmodel/config/script/llm以外のinternalパッケージに依存できません"
+          allow:
+            - "github.com/canpok1/vox-radio/internal/model"
+            - "github.com/canpok1/vox-radio/internal/config"
+            - "github.com/canpok1/vox-radio/internal/script/llm"
+        domain-script-summarize:
+          list-mode: lax
+          files:
             - "**/internal/script/summarize/**"
           deny:
             - pkg: "github.com/canpok1/vox-radio/internal"
-              desc: "script/direct・script/summarizeはmodel/script/llm以外のinternalパッケージに依存できません"
+              desc: "script/summarizeはmodel/script/llm以外のinternalパッケージに依存できません"
           allow:
             - "github.com/canpok1/vox-radio/internal/model"
             - "github.com/canpok1/vox-radio/internal/script/llm"

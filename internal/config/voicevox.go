@@ -54,6 +54,30 @@ func (p VoicevoxPresets) ResolveSpeed(name string) (float64, bool) {
 	return resolvePreset(p.Speed, name)
 }
 
+func presetNames(m map[string]float64) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// IntonationNames returns the sorted preset names in Intonation.
+func (p VoicevoxPresets) IntonationNames() []string {
+	return presetNames(p.Intonation)
+}
+
+// PitchNames returns the sorted preset names in Pitch.
+func (p VoicevoxPresets) PitchNames() []string {
+	return presetNames(p.Pitch)
+}
+
+// SpeedNames returns the sorted preset names in Speed.
+func (p VoicevoxPresets) SpeedNames() []string {
+	return presetNames(p.Speed)
+}
+
 var defaultIntonationPresets = map[string]float64{
 	"棒読み":    0.0,
 	"かなり控えめ": 0.3,
