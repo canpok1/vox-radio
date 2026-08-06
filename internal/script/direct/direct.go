@@ -38,75 +38,77 @@ var correctionsSchema = json.RawMessage(`{
 // buildInsertionsSchema returns the JSON Schema for the direct step's LLM response.
 // line_voices' intonation/pitch/speed enums are derived from presets so the LLM can only
 // select names that actually resolve to a VOICEVOX scale value (ADR-0104).
+//
+// Built via map[string]any + json.Marshal (not string interpolation) so the preset names
+// are JSON-escaped by construction rather than substituted into a raw string template.
 func buildInsertionsSchema(presets config.VoicevoxPresets) json.RawMessage {
-	intonationEnumJSON, _ := json.Marshal(presets.IntonationNames())
-	pitchEnumJSON, _ := json.Marshal(presets.PitchNames())
-	speedEnumJSON, _ := json.Marshal(presets.SpeedNames())
+	schema := map[string]any{
+		"type":     "object",
+		"required": []string{"insertions"},
+		"properties": map[string]any{
+			"insertions": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type":     "object",
+					"required": []string{"corner_index", "after_line_index", "type", "asset_name"},
+					"properties": map[string]any{
+						"corner_index":     map[string]any{"type": "integer", "minimum": 0},
+						"after_line_index": map[string]any{"type": "integer", "minimum": 0},
+						"type":             map[string]any{"type": "string", "enum": []string{"se"}},
+						"asset_name":       map[string]any{"type": "string"},
+						"reason":           map[string]any{"type": "string"},
+					},
+					"additionalProperties": false,
+				},
+			},
+			"pause_insertions": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type":     "object",
+					"required": []string{"corner_index", "after_line_index", "duration_sec"},
+					"properties": map[string]any{
+						"corner_index":     map[string]any{"type": "integer", "minimum": 0},
+						"after_line_index": map[string]any{"type": "integer", "minimum": 0},
+						"duration_sec":     map[string]any{"type": "number", "exclusiveMinimum": 0, "maximum": 5.0},
+						"reason":           map[string]any{"type": "string"},
+					},
+					"additionalProperties": false,
+				},
+			},
+			"line_conversions": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type":     "object",
+					"required": []string{"corner_index", "line_index", "text"},
+					"properties": map[string]any{
+						"corner_index": map[string]any{"type": "integer", "minimum": 0},
+						"line_index":   map[string]any{"type": "integer", "minimum": 0},
+						"text":         map[string]any{"type": "string"},
+					},
+					"additionalProperties": false,
+				},
+			},
+			"line_voices": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type":     "object",
+					"required": []string{"corner_index", "line_index"},
+					"properties": map[string]any{
+						"corner_index": map[string]any{"type": "integer", "minimum": 0},
+						"line_index":   map[string]any{"type": "integer", "minimum": 0},
+						"intonation":   map[string]any{"type": "string", "enum": presets.IntonationNames()},
+						"pitch":        map[string]any{"type": "string", "enum": presets.PitchNames()},
+						"speed":        map[string]any{"type": "string", "enum": presets.SpeedNames()},
+					},
+					"additionalProperties": false,
+				},
+			},
+		},
+		"additionalProperties": false,
+	}
 
-	return json.RawMessage(fmt.Sprintf(`{
-  "type": "object",
-  "required": ["insertions"],
-  "properties": {
-    "insertions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["corner_index", "after_line_index", "type", "asset_name"],
-        "properties": {
-          "corner_index":     {"type": "integer", "minimum": 0},
-          "after_line_index": {"type": "integer", "minimum": 0},
-          "type":             {"type": "string", "enum": ["se"]},
-          "asset_name":       {"type": "string"},
-          "reason":           {"type": "string"}
-        },
-        "additionalProperties": false
-      }
-    },
-    "pause_insertions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["corner_index", "after_line_index", "duration_sec"],
-        "properties": {
-          "corner_index":     {"type": "integer", "minimum": 0},
-          "after_line_index": {"type": "integer", "minimum": 0},
-          "duration_sec":     {"type": "number", "exclusiveMinimum": 0, "maximum": 5.0},
-          "reason":           {"type": "string"}
-        },
-        "additionalProperties": false
-      }
-    },
-    "line_conversions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["corner_index", "line_index", "text"],
-        "properties": {
-          "corner_index": {"type": "integer", "minimum": 0},
-          "line_index":   {"type": "integer", "minimum": 0},
-          "text":         {"type": "string"}
-        },
-        "additionalProperties": false
-      }
-    },
-    "line_voices": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["corner_index", "line_index"],
-        "properties": {
-          "corner_index": {"type": "integer", "minimum": 0},
-          "line_index":   {"type": "integer", "minimum": 0},
-          "intonation":   {"type": "string", "enum": %s},
-          "pitch":        {"type": "string", "enum": %s},
-          "speed":        {"type": "string", "enum": %s}
-        },
-        "additionalProperties": false
-      }
-    }
-  },
-  "additionalProperties": false
-}`, intonationEnumJSON, pitchEnumJSON, speedEnumJSON))
+	b, _ := json.Marshal(schema)
+	return json.RawMessage(b)
 }
 
 // cornerLLMPayload is the subset of CornerLines sent to the LLM.
