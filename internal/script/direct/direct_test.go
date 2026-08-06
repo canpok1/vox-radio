@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -36,7 +37,7 @@ type capturingClient struct {
 }
 
 func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
-	if len(req.Messages) > 0 {
+	if c.capturedPrompt != nil && len(req.Messages) > 0 {
 		*c.capturedPrompt = req.Messages[0].Content
 	}
 	if c.capturedSchema != nil {
@@ -810,6 +811,47 @@ func TestLLMDirector_Direct_SchemaLineVoicesEnumFromPresets(t *testing.T) {
 		if !strings.Contains(schemaStr, want) {
 			t.Errorf("schema should contain preset name %q, got: %s", want, schemaStr)
 		}
+	}
+}
+
+// 構造化出力（strict）では required に無いプロパティが生成されない。プロンプトで
+// 「全セリフを対象にする」と指示しても、スキーマ側が任意のままだとキーごと欠落する。
+func TestLLMDirector_Direct_SchemaRequiresEveryResponseArray(t *testing.T) {
+	var capturedSchema json.RawMessage
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedSchema: &capturedSchema,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
+
+	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テスト"})
+	if _, _, err := d.Direct(context.Background(), corners, emptyCatalog(), ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var schema struct {
+		Required   []string `json:"required"`
+		Properties struct {
+			LineVoices struct {
+				Items struct {
+					Required []string `json:"required"`
+				} `json:"items"`
+			} `json:"line_voices"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(capturedSchema, &schema); err != nil {
+		t.Fatalf("unmarshal schema: %v", err)
+	}
+
+	for _, want := range []string{"insertions", "pause_insertions", "line_conversions", "line_voices"} {
+		if !slices.Contains(schema.Required, want) {
+			t.Errorf("top-level required should contain %q, got: %v", want, schema.Required)
+		}
+	}
+	// intonation はユーザーが求めた抑揚切り替えの主役なので必須にする。pitch/speed は
+	// 任意のままでもモデルが返すことを実機で確認済みで、必須にすると出力が途中で尽きる。
+	if !slices.Contains(schema.Properties.LineVoices.Items.Required, "intonation") {
+		t.Errorf("line_voices items required should contain intonation, got: %v", schema.Properties.LineVoices.Items.Required)
 	}
 }
 

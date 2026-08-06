@@ -39,12 +39,16 @@ var correctionsSchema = json.RawMessage(`{
 // line_voices' intonation/pitch/speed enums are derived from presets so the LLM can only
 // select names that actually resolve to a VOICEVOX scale value (ADR-0104).
 //
+// Every response array is listed in required: the schema is sent as a strict structured
+// output, where a property left optional is simply never generated no matter what the
+// prompt asks for (ADR-0105).
+//
 // Built via map[string]any + json.Marshal (not string interpolation) so the preset names
 // are JSON-escaped by construction rather than substituted into a raw string template.
 func buildInsertionsSchema(presets config.VoicevoxPresets) json.RawMessage {
 	schema := map[string]any{
 		"type":     "object",
-		"required": []string{"insertions"},
+		"required": []string{"insertions", "pause_insertions", "line_conversions", "line_voices"},
 		"properties": map[string]any{
 			"insertions": map[string]any{
 				"type": "array",
@@ -91,8 +95,10 @@ func buildInsertionsSchema(presets config.VoicevoxPresets) json.RawMessage {
 			"line_voices": map[string]any{
 				"type": "array",
 				"items": map[string]any{
-					"type":     "object",
-					"required": []string{"corner_index", "line_index"},
+					"type": "object",
+					// intonation だけを必須にする。3つとも必須にすると出力が最初のコーナーで
+					// 尽きて残りのセリフが返らない一方、任意のままの pitch/speed は生成される。
+					"required": []string{"corner_index", "line_index", "intonation"},
 					"properties": map[string]any{
 						"corner_index": map[string]any{"type": "integer", "minimum": 0},
 						"line_index":   map[string]any{"type": "integer", "minimum": 0},
@@ -146,8 +152,8 @@ type lineConversion struct {
 }
 
 // lineVoice is the direct step's per-line intonation/pitch/speed assignment (ADR-0104).
-// Presence of corner_index/line_index is required; the voice fields are optional and
-// fall back to the VOICEVOX default when omitted.
+// corner_index/line_index/intonation are required; pitch/speed are optional and fall back
+// to the VOICEVOX default when omitted.
 type lineVoice struct {
 	CornerIndex int    `json:"corner_index"`
 	LineIndex   int    `json:"line_index"`
