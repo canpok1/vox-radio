@@ -35,6 +35,47 @@ var llmRoutes = []llmStepRoute{
 
 var idInPromptRe = regexp.MustCompile(`"id":\s*"([^"]+)"`)
 
+// cornersInPromptRe は演出プロンプトに差し込まれたコーナー別セリフ列（{{corners}}）の
+// JSON 配列を切り出す。
+var cornersInPromptRe = regexp.MustCompile(`(?s)## コーナー別セリフ列\s*` + "```" + `json\s*(\[.*?\])\s*` + "```")
+
+// directLineEntries は演出ステップの line_voices / line_conversions を、プロンプトに
+// 含まれる実際のセリフ列から組み立てる。実プロンプトは全セリフ分の出力を要求するため、
+// 固定件数を返すモックだと本番で起きない「一部の行だけ無指定」を検証してしまう。
+func directLineEntries(prompt string) (voices, conversions []map[string]any, err error) {
+	m := cornersInPromptRe.FindStringSubmatch(prompt)
+	if m == nil {
+		return nil, nil, fmt.Errorf("direct prompt contains no corners JSON")
+	}
+
+	var corners []struct {
+		Lines []struct {
+			Text string `json:"text"`
+		} `json:"lines"`
+	}
+	if err := json.Unmarshal([]byte(m[1]), &corners); err != nil {
+		return nil, nil, fmt.Errorf("unmarshal corners in direct prompt: %w", err)
+	}
+
+	voices = make([]map[string]any, 0)
+	conversions = make([]map[string]any, 0)
+	for ci, c := range corners {
+		for li, line := range c.Lines {
+			voices = append(voices, map[string]any{
+				"corner_index": ci,
+				"line_index":   li,
+				"intonation":   "標準",
+			})
+			conversions = append(conversions, map[string]any{
+				"corner_index": ci,
+				"line_index":   li,
+				"text":         line.Text,
+			})
+		}
+	}
+	return voices, conversions, nil
+}
+
 // fakeLLM は OpenAI 互換 /chat/completions を模倣するモックサーバー。
 // レスポンスは各ステップの JSON Schema（クライアント側で検証される）に適合する固定値を返す。
 type fakeLLM struct {
@@ -133,7 +174,17 @@ func cannedResponse(step, prompt string) (string, error) {
 			`{"speaker_role":"metan","text":"四国めたんですわ。今日も始めましょう。"}` +
 			`]}`, nil
 	case "direct":
-		return `{"insertions":[]}`, nil
+		voices, conversions, err := directLineEntries(prompt)
+		if err != nil {
+			return "", err
+		}
+		b, _ := json.Marshal(map[string]any{
+			"insertions":       []any{},
+			"pause_insertions": []any{},
+			"line_conversions": conversions,
+			"line_voices":      voices,
+		})
+		return string(b), nil
 	case "proofread":
 		return `{"corrections":[]}`, nil
 	case "summary":
