@@ -200,7 +200,7 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 
 			scripter := script.NewLLMScriptGenerator(
 				writer,
-				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct"),
+				direct.NewLLMDirector(llmClient, prompts["direct"], stepTemp(cfg.LLM, "direct"), cfg.Voicevox.EffectivePresets(),
 					direct.WithProofread(prompts["proofread"], stepTemp(cfg.LLM, "proofread")),
 					direct.WithPronunciation(cfg.EffectivePronunciation()),
 				),

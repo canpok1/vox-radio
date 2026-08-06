@@ -7,10 +7,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/direct"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
+
+var testPresets = config.VoicevoxPresets{
+	Intonation: map[string]float64{"標準": 1.0, "表現豊か": 1.5, "控えめ": 0.6},
+	Pitch:      map[string]float64{"標準": 0.0, "高め": 0.05, "低め": -0.05},
+	Speed:      map[string]float64{"標準": 1.0, "早口": 1.2, "ゆっくり": 0.8},
+}
 
 type mockClient struct {
 	response json.RawMessage
@@ -25,20 +32,25 @@ type capturingClient struct {
 	response       json.RawMessage
 	err            error
 	capturedPrompt *string
+	capturedSchema *json.RawMessage
 }
 
 func (c *capturingClient) Complete(_ context.Context, req llm.CompletionRequest) (json.RawMessage, error) {
 	if len(req.Messages) > 0 {
 		*c.capturedPrompt = req.Messages[0].Content
 	}
+	if c.capturedSchema != nil {
+		*c.capturedSchema = req.JSONSchema
+	}
 	return c.response, c.err
 }
 
-// echoConversionClient simulates the real direct LLM under direct.md's instruction
-// "全セリフを変換対象にする": it returns a line_conversion for EVERY line, echoing back the
-// text it received (an identity conversion). This makes tests reflect production, where no line
-// is left unconverted — the very state that hid the pronunciation-dictionary bug (empty/partial
-// line_conversions in tests never happens in real runs).
+// echoConversionClient simulates the real direct LLM under direct.md's instructions
+// "全セリフを変換対象にする" / "全セリフを対象にする"（line_voices）: it returns a
+// line_conversion AND a line_voices entry for EVERY line (conversion echoes back the text
+// received; voice is a fixed "標準" preset). This makes tests reflect production, where no
+// line is left unconverted or unvoiced — the very state that hid the pronunciation-dictionary
+// bug (empty/partial line_conversions in tests never happens in real runs).
 //
 // Content-level tests (readings, kana conversion) should prefer this client over a hand-written
 // fixed response so they cannot accidentally assert on an impossible "unconverted line" state.
@@ -70,16 +82,24 @@ func (c *echoConversionClient) Complete(_ context.Context, req llm.CompletionReq
 		LineIndex   int    `json:"line_index"`
 		Text        string `json:"text"`
 	}
+	type lineVoiceEcho struct {
+		CornerIndex int    `json:"corner_index"`
+		LineIndex   int    `json:"line_index"`
+		Intonation  string `json:"intonation"`
+	}
 	convs := make([]lineConv, 0)
+	voices := make([]lineVoiceEcho, 0)
 	for ci, corner := range payload {
 		for li, line := range corner.Lines {
 			convs = append(convs, lineConv{CornerIndex: ci, LineIndex: li, Text: line.Text})
+			voices = append(voices, lineVoiceEcho{CornerIndex: ci, LineIndex: li, Intonation: "標準"})
 		}
 	}
 	resp := struct {
-		Insertions      []struct{} `json:"insertions"`
-		LineConversions []lineConv `json:"line_conversions"`
-	}{Insertions: []struct{}{}, LineConversions: convs}
+		Insertions      []struct{}      `json:"insertions"`
+		LineConversions []lineConv      `json:"line_conversions"`
+		LineVoices      []lineVoiceEcho `json:"line_voices"`
+	}{Insertions: []struct{}{}, LineConversions: convs, LineVoices: voices}
 	return json.Marshal(resp)
 }
 
@@ -98,14 +118,14 @@ func emptyCatalog() model.AssetCatalog {
 // helper: director that returns no insertions (common setup for structural tests)
 func noInsertionDirector() *direct.LLMDirector {
 	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	return direct.NewLLMDirector(mc, "{{corners}}", 0)
+	return direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 }
 
 func TestLLMDirector_Direct_NoInsertions(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "corners={{corners}} catalog={{asset_catalog}}", 0)
+	d := direct.NewLLMDirector(mc, "corners={{corners}} catalog={{asset_catalog}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "こんにちは"},
@@ -133,7 +153,7 @@ func TestLLMDirector_Direct_WithSEInsertion(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"se","asset_name":"chime","reason":"コーナー開始"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "開始"},
@@ -169,7 +189,7 @@ func TestLLMDirector_Direct_CornerBGMWrapsContent(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title: "C1",
@@ -199,7 +219,7 @@ func TestLLMDirector_Direct_StartAudio_Jingle_PrependedFirst(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title:      "C1",
@@ -224,7 +244,7 @@ func TestLLMDirector_Direct_EndAudio_Jingle_AppendedLast(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title:    "C1",
@@ -249,7 +269,7 @@ func TestLLMDirector_Direct_CornerAllAssets_Jingle_CorrectOrder(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title:      "C1",
@@ -285,7 +305,7 @@ func TestLLMDirector_Direct_StartAudio_SE_AfterBGM_BGMContinues(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	// type:se → BGM先行 → SE（activeBGM維持）
 	corners := []model.CornerLines{
@@ -330,7 +350,7 @@ func TestLLMDirector_Direct_EndAudio_SE_BGMContinues(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	// type:se の end_audio → SE後もactiveBGM維持
 	corners := []model.CornerLines{
@@ -375,7 +395,7 @@ func TestLLMDirector_Direct_NoAssets_OnlySpeech(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title: "C1",
@@ -398,7 +418,7 @@ func TestLLMDirector_Direct_CornerAssetFields_NotInLLMPayload(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{{
 		Title:      "C1",
@@ -455,7 +475,7 @@ func TestLLMDirector_Direct_InsertionAfterLastLine(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":1,"type":"se","asset_name":"transition"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "A"},
@@ -482,7 +502,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "zundamon", Style: "なみだめ", Text: "ぐすん"},
@@ -506,7 +526,7 @@ func TestLLMDirector_Direct_StylePropagated(t *testing.T) {
 
 func TestLLMDirector_Direct_LLMError(t *testing.T) {
 	mc := &mockClient{err: context.Canceled}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	_, _, err := d.Direct(context.Background(), nil, emptyCatalog(), "")
 	if err == nil {
@@ -518,7 +538,7 @@ func TestLLMDirector_Direct_SpeechSegmentFields(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テストテキスト"})
 
@@ -678,7 +698,7 @@ func TestLLMDirector_Direct_CatalogDescriptionPassedToPrompt(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
+	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0, testPresets)
 
 	catalog := model.AssetCatalog{
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "コーナー開始時のチャイム音"}},
@@ -700,7 +720,7 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0)
+	d := direct.NewLLMDirector(mc, "{{asset_catalog}}", 0, testPresets)
 
 	catalog := model.AssetCatalog{
 		SE: []model.AssetCatalogEntry{{Name: "chime", Description: "テスト"}},
@@ -718,14 +738,19 @@ func TestLLMDirector_Direct_CatalogNoInternalFieldsInPrompt(t *testing.T) {
 	}
 }
 
-func TestBuildScript_CopiesPresetFields(t *testing.T) {
+func TestBuildScript_AppliesLineVoicesFromLLM(t *testing.T) {
 	mc := &mockClient{
-		response: json.RawMessage(`{"insertions":[]}`),
+		response: json.RawMessage(`{
+			"insertions": [],
+			"line_voices": [
+				{"corner_index": 0, "line_index": 0, "intonation": "表現豊か", "pitch": "高め", "speed": "早口"}
+			]
+		}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
-		model.Line{SpeakerRole: "host", Text: "テスト", Intonation: "表現豊か", Pitch: "高め", Speed: "早口"},
+		model.Line{SpeakerRole: "host", Text: "テスト"},
 		model.Line{SpeakerRole: "guest", Text: "応答"},
 	)
 
@@ -749,6 +774,7 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 		t.Errorf("Segment[0].Speed: got %q, want 早口", seg0.Speed)
 	}
 
+	// Line without a matching line_voices entry falls back to empty (VOICEVOX default).
 	seg1 := got.Segments[1]
 	if seg1.Intonation != "" {
 		t.Errorf("Segment[1].Intonation: got %q, want empty", seg1.Intonation)
@@ -761,11 +787,57 @@ func TestBuildScript_CopiesPresetFields(t *testing.T) {
 	}
 }
 
+func TestLLMDirector_Direct_SchemaLineVoicesEnumFromPresets(t *testing.T) {
+	var capturedPrompt string
+	var capturedSchema json.RawMessage
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+		capturedSchema: &capturedSchema,
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
+
+	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テスト"})
+	if _, _, err := d.Direct(context.Background(), corners, emptyCatalog(), ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	schemaStr := string(capturedSchema)
+	if !strings.Contains(schemaStr, `"line_voices"`) {
+		t.Fatalf("schema should contain line_voices, got: %s", schemaStr)
+	}
+	for _, want := range []string{"標準", "表現豊か", "控えめ", "高め", "低め", "早口", "ゆっくり"} {
+		if !strings.Contains(schemaStr, want) {
+			t.Errorf("schema should contain preset name %q, got: %s", want, schemaStr)
+		}
+	}
+}
+
+func TestLLMDirector_Direct_PromptContainsPresetInfo(t *testing.T) {
+	var capturedPrompt string
+	mc := &capturingClient{
+		response:       json.RawMessage(`{"insertions":[]}`),
+		capturedPrompt: &capturedPrompt,
+	}
+	d := direct.NewLLMDirector(mc, "preset={{preset_info}}", 0, testPresets)
+
+	corners := oneCorner("C1", model.Line{SpeakerRole: "host", Text: "テスト"})
+	if _, _, err := d.Direct(context.Background(), corners, emptyCatalog(), ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, want := range []string{"標準", "表現豊か", "高め", "早口"} {
+		if !strings.Contains(capturedPrompt, want) {
+			t.Errorf("prompt should contain preset info %q, got: %s", want, capturedPrompt)
+		}
+	}
+}
+
 func TestLLMDirector_Direct_WithPauseInsertion(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":1.2,"reason":"オチの前の溜め"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "オチの前"},
@@ -798,7 +870,7 @@ func TestLLMDirector_Direct_SEAndPauseAtSameIndex_SEFirst(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[{"corner_index":0,"after_line_index":0,"type":"se","asset_name":"chime"}],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":1.0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "A"},
@@ -825,7 +897,7 @@ func TestLLMDirector_Direct_PauseZeroDurationIgnored(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "A"},
@@ -845,7 +917,7 @@ func TestLLMDirector_Direct_PauseNegativeDurationIgnored(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"pause_insertions":[{"corner_index":0,"after_line_index":0,"duration_sec":-1.0}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "A"},
@@ -867,7 +939,7 @@ func TestLLMDirector_Direct_MultiCorner(t *testing.T) {
 		// Insert SE after line 0 of corner 1 (second corner)
 		response: json.RawMessage(`{"insertions":[{"corner_index":1,"after_line_index":0,"type":"se","asset_name":"chime"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{
 		{Title: "C1", Lines: []model.Line{
@@ -1060,7 +1132,7 @@ func TestLLMDirector_Direct_DirectionInPrompt(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{
 		{
@@ -1084,7 +1156,7 @@ func TestLLMDirector_Direct_LineConversionApplied(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えーあい"},{"corner_index":0,"line_index":1,"text":"りどみーどっとえむでぃー"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "AI"},
@@ -1111,7 +1183,7 @@ func TestLLMDirector_Direct_LineConversionFallback_MissingEntry(t *testing.T) {
 		// line_conversions has only line 0; line 1 is missing → fallback to original
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えーあい"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "AI"},
@@ -1137,7 +1209,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConversions(t *testing.T
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "AI"},
@@ -1160,7 +1232,7 @@ func TestLLMDirector_Direct_LineConversionFallback_EmptyConvertedText(t *testing
 		// converted text is empty string → fallback to original
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":""}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "AI"},
@@ -1209,7 +1281,7 @@ func TestLLMDirector_Direct_WithProofread_CorrectsMisreading(t *testing.T) {
 		},
 		errs: []error{nil, nil},
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithProofread("{{lines}}", 0),
 	)
 
@@ -1241,7 +1313,7 @@ func TestLLMDirector_Direct_WithProofread_FallbackOnLLMError(t *testing.T) {
 		},
 		errs: []error{nil, fmt.Errorf("proofread llm error")},
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithProofread("{{lines}}", 0),
 	)
 
@@ -1277,7 +1349,7 @@ func TestLLMDirector_Direct_WithProofread_SkipWhenNotSet(t *testing.T) {
 		errs: []error{nil},
 	}
 	// No WithProofread option
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "頭突きするのだ"},
@@ -1313,7 +1385,7 @@ func TestLLMDirector_Direct_WithProofread_EmptyCorrections(t *testing.T) {
 		},
 		errs: []error{nil, nil},
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithProofread("{{lines}}", 0),
 	)
 
@@ -1349,7 +1421,7 @@ func TestLLMDirector_Direct_ProgramDirectionInPrompt(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
+	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0, testPresets)
 
 	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "番組全体の演出方針")
 	if err != nil {
@@ -1366,7 +1438,7 @@ func TestLLMDirector_Direct_ProgramDirectionEmptyUsesNone(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0)
+	d := direct.NewLLMDirector(mc, "{{program_direction}}", 0, testPresets)
 
 	_, _, err := d.Direct(context.Background(), []model.CornerLines{}, emptyCatalog(), "")
 	if err != nil {
@@ -1389,7 +1461,7 @@ func TestLLMDirector_Direct_WithProofread_ReturnsProofreadResultWithBeforeAfter(
 		},
 		errs: []error{nil, nil},
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithProofread("{{lines}}", 0),
 	)
 
@@ -1432,7 +1504,7 @@ func TestLLMDirector_Direct_WithProofread_ReturnsBeforeFromOriginalWhenNoDirectC
 		},
 		errs: []error{nil, nil},
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithProofread("{{lines}}", 0),
 	)
 
@@ -1458,7 +1530,7 @@ func TestLLMDirector_Direct_WithProofread_ReturnsBeforeFromOriginalWhenNoDirectC
 
 func TestLLMDirector_Direct_PropagatesCornerID(t *testing.T) {
 	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{
 		{ID: "opening", Title: "OP", Lines: []model.Line{{SpeakerRole: "host", Text: "こんにちは"}}},
@@ -1483,7 +1555,7 @@ func TestLLMDirector_Direct_PropagatesCornerID(t *testing.T) {
 
 func TestLLMDirector_Direct_PropagatesCornerID_WithBoundaryAudio(t *testing.T) {
 	mc := &mockClient{response: json.RawMessage(`{"insertions":[]}`)}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := []model.CornerLines{
 		{
@@ -1515,7 +1587,7 @@ func TestLLMDirector_Direct_Pronunciation_ReplacesRegisteredWord(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
 	)
 
@@ -1546,7 +1618,7 @@ func TestLLMDirector_Direct_Pronunciation_AppliedBeforeLLM(t *testing.T) {
 		response:       json.RawMessage(`{"insertions":[]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
 	)
 
@@ -1578,7 +1650,7 @@ func TestLLMDirector_Direct_Pronunciation_SurvivesFullLineConversion(t *testing.
 		response:       json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"キョウはみやもとむさしについて話します"}]}`),
 		capturedPrompt: &capturedPrompt,
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
 	)
 
@@ -1610,7 +1682,7 @@ func TestLLMDirector_Direct_Pronunciation_SurvivesFullLineConversion(t *testing.
 func TestLLMDirector_Direct_Pronunciation_SurvivesRealisticLLM(t *testing.T) {
 	var capturedPrompt string
 	mc := &echoConversionClient{capturedPrompt: &capturedPrompt}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
 	)
 
@@ -1646,7 +1718,7 @@ func TestLLMDirector_Direct_Pronunciation_LeavesUnregisteredWord(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{"宮本武蔵": "みやもとむさし"}),
 	)
 
@@ -1674,7 +1746,7 @@ func TestLLMDirector_Direct_Pronunciation_WithLineConversion(t *testing.T) {
 		// Only line 0 is converted by the LLM; line 1 is left to the dictionary.
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"えぬえいちけーのにゅーす"}]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{
 			"NHK":  "えぬえいちけー",
 			"宮本武蔵": "みやもとむさし",
@@ -1709,7 +1781,7 @@ func TestLLMDirector_Direct_Pronunciation_LongestKeyFirst(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0,
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets,
 		direct.WithPronunciation(map[string]string{
 			"東":   "ひがし",
 			"東京":  "とうきょう",
@@ -1736,7 +1808,7 @@ func TestLLMDirector_Direct_Pronunciation_NotSet(t *testing.T) {
 	mc := &mockClient{
 		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
 	}
-	d := direct.NewLLMDirector(mc, "{{corners}}", 0)
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
 
 	corners := oneCorner("C1",
 		model.Line{SpeakerRole: "host", Text: "宮本武蔵の話"},

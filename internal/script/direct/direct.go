@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/canpok1/vox-radio/internal/config"
 	"github.com/canpok1/vox-radio/internal/model"
 	"github.com/canpok1/vox-radio/internal/script/llm"
 )
@@ -34,7 +35,15 @@ var correctionsSchema = json.RawMessage(`{
   "additionalProperties": false
 }`)
 
-var insertionsSchema = json.RawMessage(`{
+// buildInsertionsSchema returns the JSON Schema for the direct step's LLM response.
+// line_voices' intonation/pitch/speed enums are derived from presets so the LLM can only
+// select names that actually resolve to a VOICEVOX scale value (ADR-0104).
+func buildInsertionsSchema(presets config.VoicevoxPresets) json.RawMessage {
+	intonationEnumJSON, _ := json.Marshal(presets.IntonationNames())
+	pitchEnumJSON, _ := json.Marshal(presets.PitchNames())
+	speedEnumJSON, _ := json.Marshal(presets.SpeedNames())
+
+	return json.RawMessage(fmt.Sprintf(`{
   "type": "object",
   "required": ["insertions"],
   "properties": {
@@ -79,10 +88,26 @@ var insertionsSchema = json.RawMessage(`{
         },
         "additionalProperties": false
       }
+    },
+    "line_voices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["corner_index", "line_index"],
+        "properties": {
+          "corner_index": {"type": "integer", "minimum": 0},
+          "line_index":   {"type": "integer", "minimum": 0},
+          "intonation":   {"type": "string", "enum": %s},
+          "pitch":        {"type": "string", "enum": %s},
+          "speed":        {"type": "string", "enum": %s}
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false
-}`)
+}`, intonationEnumJSON, pitchEnumJSON, speedEnumJSON))
+}
 
 // cornerLLMPayload is the subset of CornerLines sent to the LLM.
 // Asset fields (StartAudio, EndAudio, BGM) are excluded because
@@ -118,10 +143,22 @@ type lineConversion struct {
 	Text        string `json:"text"`
 }
 
+// lineVoice is the direct step's per-line intonation/pitch/speed assignment (ADR-0104).
+// Presence of corner_index/line_index is required; the voice fields are optional and
+// fall back to the VOICEVOX default when omitted.
+type lineVoice struct {
+	CornerIndex int    `json:"corner_index"`
+	LineIndex   int    `json:"line_index"`
+	Intonation  string `json:"intonation,omitempty"`
+	Pitch       string `json:"pitch,omitempty"`
+	Speed       string `json:"speed,omitempty"`
+}
+
 type insertionsResponse struct {
 	Insertions      []insertion      `json:"insertions"`
 	PauseInsertions []pauseInsertion `json:"pause_insertions"`
 	LineConversions []lineConversion `json:"line_conversions"`
+	LineVoices      []lineVoice      `json:"line_voices"`
 }
 
 type correction struct {
@@ -152,6 +189,7 @@ type LLMDirector struct {
 	client         llm.Client
 	promptTemplate string
 	temperature    float64
+	presets        config.VoicevoxPresets
 	proofread      *proofreadConfig
 	pronunciation  map[string]string
 }
@@ -173,8 +211,8 @@ func WithPronunciation(dict map[string]string) func(*LLMDirector) {
 	}
 }
 
-func NewLLMDirector(client llm.Client, promptTemplate string, temperature float64, opts ...func(*LLMDirector)) *LLMDirector {
-	d := &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature}
+func NewLLMDirector(client llm.Client, promptTemplate string, temperature float64, presets config.VoicevoxPresets, opts ...func(*LLMDirector)) *LLMDirector {
+	d := &LLMDirector{client: client, promptTemplate: promptTemplate, temperature: temperature, presets: presets}
 	for _, opt := range opts {
 		opt(d)
 	}
@@ -211,11 +249,12 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		"{{corners}}", string(cornersJSON),
 		"{{asset_catalog}}", string(catalogJSON),
 		"{{program_direction}}", stringOrNone(programDirection),
+		"{{preset_info}}", buildPresetInfo(d.presets),
 	).Replace(d.promptTemplate)
 
 	raw, err := d.client.Complete(ctx, llm.CompletionRequest{
 		Messages:    []llm.Message{{Role: "user", Content: prompt}},
-		JSONSchema:  insertionsSchema,
+		JSONSchema:  buildInsertionsSchema(d.presets),
 		Temperature: d.temperature,
 	})
 	if err != nil {
@@ -255,7 +294,16 @@ func (d *LLMDirector) Direct(ctx context.Context, corners []model.CornerLines, c
 		}
 	}
 
-	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions), pr, nil
+	return buildScript(corners, resp.Insertions, resp.PauseInsertions, lineConversions, resp.LineVoices), pr, nil
+}
+
+// buildPresetInfo formats available preset names for each voice axis for the prompt.
+func buildPresetInfo(presets config.VoicevoxPresets) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "抑揚（intonation）: [%s]\n", strings.Join(presets.IntonationNames(), ", "))
+	fmt.Fprintf(&sb, "音高（pitch）: [%s]\n", strings.Join(presets.PitchNames(), ", "))
+	fmt.Fprintf(&sb, "話速（speed）: [%s]\n", strings.Join(presets.SpeedNames(), ", "))
+	return sb.String()
 }
 
 func (d *LLMDirector) runProofread(ctx context.Context, corners []model.CornerLines, lineConversions []lineConversion) ([]correction, map[insertKey]string, error) {
@@ -327,6 +375,16 @@ func buildConversionMap(lineConversions []lineConversion) map[insertKey]string {
 	return m
 }
 
+// buildVoiceMap indexes lineVoices by corner/line. A missing key yields the zero lineVoice
+// (all fields empty), which synth resolves to the VOICEVOX default.
+func buildVoiceMap(lineVoices []lineVoice) map[insertKey]lineVoice {
+	m := make(map[insertKey]lineVoice, len(lineVoices))
+	for _, lv := range lineVoices {
+		m[insertKey{lv.CornerIndex, lv.LineIndex}] = lv
+	}
+	return m
+}
+
 // applyPronunciation replaces registered proper-noun notations in text with their
 // readings. Entries are applied longest-key-first so a longer term is not partially
 // clobbered by a shorter overlapping one. Go map iteration order is not stable, so the
@@ -376,7 +434,7 @@ func applyPronunciationToCorners(corners []model.CornerLines, dict map[string]st
 	return out
 }
 
-func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion) model.Script {
+func buildScript(corners []model.CornerLines, insertions []insertion, pauseInsertions []pauseInsertion, lineConversions []lineConversion, lineVoices []lineVoice) model.Script {
 	insertionMap := make(map[insertKey][]insertion, len(insertions))
 	for _, ins := range insertions {
 		key := insertKey{ins.CornerIndex, ins.AfterLineIndex}
@@ -392,6 +450,7 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 	}
 
 	conversionMap := buildConversionMap(lineConversions)
+	voiceMap := buildVoiceMap(lineVoices)
 
 	segments := make([]model.ScriptSegment, 0, len(insertions)+len(pauseInsertions)+len(corners)*4)
 
@@ -426,14 +485,15 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
 				text = converted
 			}
+			voice := voiceMap[insertKey{ci, li}]
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,
 				CornerID:    cornerID,
 				SpeakerRole: line.SpeakerRole,
 				Style:       line.Style,
-				Intonation:  line.Intonation,
-				Pitch:       line.Pitch,
-				Speed:       line.Speed,
+				Intonation:  voice.Intonation,
+				Pitch:       voice.Pitch,
+				Speed:       voice.Speed,
 				Text:        text,
 			})
 			key := insertKey{ci, li}

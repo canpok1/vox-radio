@@ -82,6 +82,7 @@ func (g *LLMScriptGenerator) Generate(ctx context.Context, program config.Progra
 		return model.Script{}, model.ScriptLines{}, nil, err
 	}
 	cornerLines = g.regenIfNeeded(ctx, program, cornerLines, corners, allAssignments, cornerMap, chars)
+	cornerLines = splitCornerLines(cornerLines)
 	scriptLines := model.ScriptLines{Direction: program.Direction, Corners: BuildScriptLines(corners, cornerLines)}
 	writeDone(fmt.Sprintf("%dコーナー", len(corners)))
 
@@ -209,6 +210,17 @@ func (g *LLMScriptGenerator) regenIfNeeded(ctx context.Context, program config.P
 			}
 		}
 	}
+}
+
+// splitCornerLines applies SplitLinesIntoSentences to each corner's lines so that
+// 03_lines.json persists sentence-level lines (ADR-0104). Run after regenIfNeeded,
+// which judges regeneration against the write step's unsplit line count.
+func splitCornerLines(cornerLines [][]model.Line) [][]model.Line {
+	result := make([][]model.Line, len(cornerLines))
+	for i, lines := range cornerLines {
+		result[i] = SplitLinesIntoSentences(lines)
+	}
+	return result
 }
 
 // BuildScriptLines converts per-corner config and line slices into a []model.CornerLines.

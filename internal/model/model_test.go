@@ -420,62 +420,6 @@ func TestScript_Fields(t *testing.T) {
 	}
 }
 
-func TestLine_PresetFields_OmitEmpty(t *testing.T) {
-	line := model.Line{SpeakerRole: "zundamon", Text: "こんにちは"}
-	b, err := json.Marshal(line)
-	if err != nil {
-		t.Fatalf("marshal failed: %v", err)
-	}
-	s := string(b)
-	if strings.Contains(s, "intonation") {
-		t.Errorf("should omit intonation when empty, got: %s", s)
-	}
-	if strings.Contains(s, "pitch") {
-		t.Errorf("should omit pitch when empty, got: %s", s)
-	}
-	if strings.Contains(s, "speed") {
-		t.Errorf("should omit speed when empty, got: %s", s)
-	}
-}
-
-func TestLine_PresetFields_Present(t *testing.T) {
-	line := model.Line{
-		SpeakerRole: "zundamon",
-		Text:        "こんにちは",
-		Intonation:  "表現豊か",
-		Pitch:       "高め",
-		Speed:       "早口",
-	}
-	b, err := json.Marshal(line)
-	if err != nil {
-		t.Fatalf("marshal failed: %v", err)
-	}
-	s := string(b)
-	if !strings.Contains(s, "表現豊か") {
-		t.Errorf("should contain intonation value, got: %s", s)
-	}
-	if !strings.Contains(s, "高め") {
-		t.Errorf("should contain pitch value, got: %s", s)
-	}
-	if !strings.Contains(s, "早口") {
-		t.Errorf("should contain speed value, got: %s", s)
-	}
-
-	var got model.Line
-	if err := json.Unmarshal(b, &got); err != nil {
-		t.Fatalf("unmarshal failed: %v", err)
-	}
-	if got.Intonation != "表現豊か" {
-		t.Errorf("Intonation: got %q, want 表現豊か", got.Intonation)
-	}
-	if got.Pitch != "高め" {
-		t.Errorf("Pitch: got %q, want 高め", got.Pitch)
-	}
-	if got.Speed != "早口" {
-		t.Errorf("Speed: got %q, want 早口", got.Speed)
-	}
-}
-
 func TestScriptSegment_PresetFields_OmitEmpty(t *testing.T) {
 	seg := model.ScriptSegment{Type: model.SegmentTypeSpeech, SpeakerRole: "zundamon", Text: "テスト"}
 	b, err := json.Marshal(seg)

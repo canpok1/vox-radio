@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1299,6 +1300,38 @@ func TestVoicevoxPresets_Resolve_UnknownName(t *testing.T) {
 	}
 	if _, ok := p.ResolveSpeed("存在しない"); ok {
 		t.Error("ResolveSpeed(\"存在しない\") should return ok=false for unknown name")
+	}
+}
+
+func TestVoicevoxPresets_Names_SortedAscending(t *testing.T) {
+	p := config.VoicevoxPresets{
+		Intonation: map[string]float64{"標準": 1.0, "控えめ": 0.6, "表現豊か": 1.5},
+		Pitch:      map[string]float64{"標準": 0.0, "低め": -0.05},
+		Speed:      map[string]float64{"標準": 1.0, "早口": 1.2, "ゆっくり": 0.8},
+	}
+
+	if got, want := p.IntonationNames(), []string{"控えめ", "標準", "表現豊か"}; !slices.Equal(got, want) {
+		t.Errorf("IntonationNames() = %v, want %v", got, want)
+	}
+	if got, want := p.PitchNames(), []string{"低め", "標準"}; !slices.Equal(got, want) {
+		t.Errorf("PitchNames() = %v, want %v", got, want)
+	}
+	if got, want := p.SpeedNames(), []string{"ゆっくり", "早口", "標準"}; !slices.Equal(got, want) {
+		t.Errorf("SpeedNames() = %v, want %v", got, want)
+	}
+}
+
+func TestVoicevoxPresets_Names_EmptyReturnsEmptySlice(t *testing.T) {
+	p := config.VoicevoxPresets{}
+
+	if got := p.IntonationNames(); len(got) != 0 {
+		t.Errorf("IntonationNames() = %v, want empty", got)
+	}
+	if got := p.PitchNames(); len(got) != 0 {
+		t.Errorf("PitchNames() = %v, want empty", got)
+	}
+	if got := p.SpeedNames(); len(got) != 0 {
+		t.Errorf("SpeedNames() = %v, want empty", got)
 	}
 }
 
