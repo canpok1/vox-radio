@@ -13,7 +13,7 @@ internal/cli（CLI層: 唯一の合成点。ロード・検証・依存注入）
     ↓
 internal/pipeline（オーケストレーション層: interface 経由でステップを実行）
     ↓
-ドメイン層（gather / rundown / script / synth / mix / manifest / slack / feed / cache / cast / eval / render）
+ドメイン層（gather / rundown / script / synth / mix / manifest / slack / feed / cache / cast / render）
     ↓
 internal/config（設定層: 共有設定のロード・検証・Effective値）
     ↓
@@ -31,7 +31,7 @@ internal/model（データ層: 型定義と純粋関数のみ）
 | 基盤 | `fileio` `httpretry` `logging` `mediainfo` `testutil` | なし（標準ライブラリのみ） |
 | データ | `model` | **なし**（型定義と純粋関数のみ。ファイルI/O・YAML/JSONロード・環境変数参照を置かない） |
 | 設定 | `config` | `fileio` のみ |
-| ドメイン | `gather` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `mix` `manifest` `slack` `feed` `cache` `cast` `eval` `render` `analyze` `retro` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
+| ドメイン | `gather` `rundown(+flow/select/prompt)` `script(+write/direct/llm/summarize/summary)` `synth` `mix` `manifest` `slack` `feed` `cache` `cast` `render` `analyze` `retro` | `model` `config` と基盤層。ドメイン間の横断依存は下記の許容リストのみ |
 | オーケストレーション | `pipeline` | `model` `config` `fileio` `manifest` のみ。**ステップ実装パッケージ（gather/rundown/script/synth/mix 等）の import 禁止**（interface 経由で扱う） |
 | CLI | `cli` | すべて可（唯一の合成点） |
 
@@ -47,7 +47,6 @@ internal/model（データ層: 型定義と純粋関数のみ）
 - `script/write` → `script/llm`（LLMクライアントの利用）
 - `script/direct` `script/summarize` `script/summary` → `script/llm`
 - `feed` → `cache`（エピソード履歴がフィードの正データ）
-- `eval` → `script/llm`（LLM-as-judge）
 - `slack` → `render`（メッセージレンダリング）
 - `analyze` → `script/llm`（LLMクライアントの利用）
 - `retro` → `cache`（分析履歴の参照）

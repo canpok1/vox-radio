@@ -61,12 +61,9 @@ release-check:
 	# goreleaser を setup でインストールせず、公式 run スクリプトで都度取得して実行する。
 	curl -sfL https://goreleaser.com/static/run | VERSION=$(GORELEASER_VERSION) bash -s -- check
 
-eval:
-	go test -tags=eval -count=1 -v -timeout 30m ./internal/eval/...
-
 e2e:
 	go test -tags=e2e -count=1 -v -timeout 10m ./e2e/...
 
 all: build
 
-.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check eval e2e
+.PHONY: all setup build clean test fmt lint install docs check-samples run-sample release-check e2e
