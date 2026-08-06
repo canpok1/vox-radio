@@ -111,3 +111,4 @@
 | [0103](0103-drop-llm-kanji-kana-conversion-rely-on-voicevox.md) | 読み変換における漢字のLLMかな化を廃止し、VOICEVOXの読み推定に一本化する（ADR-0045・0094 改訂） | 採用 | 2026-08-05 |
 | [0104](0104-split-lines-per-sentence-and-move-voice-params-to-direct.md) | セリフを機械的に1文単位へ分割し、抑揚パラメータの付与を write から direct へ移す | 採用 | 2026-08-05 |
 | [0105](0105-remove-prompt-eval-framework.md) | プロンプト品質評価フレームワーク（internal/eval, ADR-0049）を廃止する | 採用 | 2026-08-06 |
+| [0106](0106-require-all-structured-output-fields-in-schema.md) | 構造化出力で必ず得たいフィールドは JSON Schema の required に明示する（ADR-0104 改訂） | 採用 | 2026-08-06 |
