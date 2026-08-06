@@ -1,6 +1,6 @@
 # 0049. 組み込みプロンプトの品質を LLM-as-judge で評価するフレームワークを導入する
 
-- ステータス: 採用
+- ステータス: 廃止 → [0105-remove-prompt-eval-framework.md](0105-remove-prompt-eval-framework.md)
 - 日付: 2026-06-07
 
 ## コンテキスト

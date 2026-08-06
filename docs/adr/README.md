@@ -54,7 +54,7 @@
 | [0046](0046-article-source-attribution-to-llm.md) | 記事の出典（サイト名・著者名）を rundown 経由で生成 LLM に渡す | 採用 | 2026-06-06 |
 | [0047](0047-program-timezone-and-temporal-context-to-llm.md) | 番組タイムゾーン設定の導入と時間文脈（記事配信日時・収録日時）の生成 LLM への伝達 | 採用 | 2026-06-06 |
 | [0048](0048-program-level-direction-and-non-public-script-note.md) | 番組全体の演出指示（direct専用）と台本指示 script_note（write専用・非公開、番組/コーナー両レベル）を追加する | 採用 | 2026-06-06 |
-| [0049](0049-prompt-eval-llm-as-judge-framework.md) | 組み込みプロンプトの品質を LLM-as-judge で評価するフレームワークを導入する | 採用 | 2026-06-07 |
+| [0049](0049-prompt-eval-llm-as-judge-framework.md) | 組み込みプロンプトの品質を LLM-as-judge で評価するフレームワークを導入する | 廃止 | 2026-06-07 |
 | [0050](0050-fail-on-cache-corruption-instead-of-degraded-mode.md) | キャッシュ破損時は degraded mode ではなくエラー停止する | 採用 | 2026-06-07 |
 | [0051](0051-http-retry-with-exponential-backoff.md) | 外部 HTTP API 呼び出しに指数バックオフのリトライを導入する | 採用 | 2026-06-08 |
 | [0052](0052-corner-id-and-appearance-context-to-llm.md) | コーナーに ID を導入し扱い回数・前回出演回番号を生成 LLM に渡す | 採用 | 2026-06-08 |
@@ -110,3 +110,4 @@
 | [0102](0102-golangci-lint-install-without-github-api.md) | golangci-lint のインストールを GitHub API 非依存にする | 採用 | 2026-08-03 |
 | [0103](0103-drop-llm-kanji-kana-conversion-rely-on-voicevox.md) | 読み変換における漢字のLLMかな化を廃止し、VOICEVOXの読み推定に一本化する（ADR-0045・0094 改訂） | 採用 | 2026-08-05 |
 | [0104](0104-split-lines-per-sentence-and-move-voice-params-to-direct.md) | セリフを機械的に1文単位へ分割し、抑揚パラメータの付与を write から direct へ移す | 採用 | 2026-08-05 |
+| [0105](0105-remove-prompt-eval-framework.md) | プロンプト品質評価フレームワーク（internal/eval, ADR-0049）を廃止する | 採用 | 2026-08-06 |
