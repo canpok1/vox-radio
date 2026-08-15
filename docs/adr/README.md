@@ -112,4 +112,4 @@
 | [0104](0104-split-lines-per-sentence-and-move-voice-params-to-direct.md) | セリフを機械的に1文単位へ分割し、抑揚パラメータの付与を write から direct へ移す | 採用 | 2026-08-05 |
 | [0105](0105-remove-prompt-eval-framework.md) | プロンプト品質評価フレームワーク（internal/eval, ADR-0049）を廃止する | 採用 | 2026-08-06 |
 | [0106](0106-require-all-structured-output-fields-in-schema.md) | 構造化出力で必ず得たいフィールドは JSON Schema の required に明示する（ADR-0104 改訂） | 採用 | 2026-08-06 |
-| [0107](0107-retro-reads-episode-script-from-cache.md) | retro へ台本を渡し、台本をキャッシュに保存する | 採用 | 2026-08-15 |
+| [0107](0107-retro-reads-episode-script-from-cache.md) | retro へ台本と機械メトリクスを渡し、台本をキャッシュに保存する | 採用 | 2026-08-15 |
