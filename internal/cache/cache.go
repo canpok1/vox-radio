@@ -19,6 +19,13 @@ type ArticleEntry struct {
 	Points   []string `json:"points"`
 }
 
+// LineEntry is one spoken line of a corner, kept so retro can read the actual script instead of
+// only analyze's summary (ADR-0107). Style is deliberately omitted: retro does not judge delivery.
+type LineEntry struct {
+	SpeakerRole string `json:"speaker_role"`
+	Text        string `json:"text"`
+}
+
 // CornerEntry holds corner data for a single episode history entry.
 type CornerEntry struct {
 	ID       string         `json:"id"`
@@ -26,6 +33,9 @@ type CornerEntry struct {
 	Summary  string         `json:"summary"`
 	Points   []string       `json:"points"`
 	Articles []ArticleEntry `json:"articles"`
+	// Lines is dropped by Compact outside the (narrower) script window, so it is absent on most
+	// entries; omitempty also keeps pre-ADR-0107 entries readable.
+	Lines []LineEntry `json:"lines,omitempty"`
 }
 
 // CastEntry holds cast data for a single episode history entry.
@@ -97,13 +107,13 @@ func (m *Manager) Load() ([]Entry, error) {
 }
 
 // Append loads existing entries, adds the new entry, compacts if needed, and writes back.
-func (m *Manager) Append(entry Entry, maxEntries int, retentionDays int) error {
+func (m *Manager) Append(entry Entry, maxEntries int, retentionDays int, scriptEntries int) error {
 	entries, err := m.Load()
 	if err != nil {
 		return err
 	}
 	entries = append(entries, entry)
-	entries = Compact(entries, maxEntries, retentionDays)
+	entries = Compact(entries, maxEntries, retentionDays, scriptEntries)
 	return m.write(entries)
 }
 
@@ -141,7 +151,12 @@ func stripCornerHeavyFields(corners []CornerEntry) []CornerEntry {
 // ConversationNotes, and Analysis for entries outside the detailed window (most recent maxEntries
 // entries that are within retentionDays). Corner identity (ID, Title) is preserved so appearance
 // counting works.
-func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
+//
+// Scripts (CornerEntry.Lines) get a second, narrower window of scriptEntries entries nested inside
+// the detailed one: they are by far the heaviest field but only retro reads them, and only for the
+// few most recent episodes (ADR-0107). Callers pass retro.analysis_entries so the retained range
+// matches what retro actually reads; scriptEntries <= 0 keeps no scripts at all.
+func Compact(entries []Entry, maxEntries int, retentionDays int, scriptEntries int) []Entry {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
 	// Find indices of entries within retention window
@@ -163,16 +178,40 @@ func Compact(entries []Entry, maxEntries int, retentionDays int) []Entry {
 		detailed[idx] = true
 	}
 
+	// The script window is nested inside the detailed one, so it is measured over the same
+	// recent-entry list rather than over entries as a whole.
+	scriptStart := len(recentIndices)
+	if scriptEntries > 0 {
+		scriptStart = max(0, len(recentIndices)-scriptEntries)
+	}
+	scripted := make(map[int]bool, len(recentIndices)-scriptStart)
+	for _, idx := range recentIndices[scriptStart:] {
+		scripted[idx] = true
+	}
+
 	result := make([]Entry, len(entries))
 	for i, e := range entries {
 		if !detailed[i] {
 			e.Corners = stripCornerHeavyFields(e.Corners)
 			e.ConversationNotes = make([]model.ConversationNote, 0)
 			e.Analysis = nil
+		} else if !scripted[i] {
+			e.Corners = stripCornerLines(e.Corners)
 		}
 		result[i] = e
 	}
 	return result
+}
+
+// stripCornerLines returns a copy of corners with Lines dropped and every other field kept, for
+// entries inside the detailed window but outside the narrower script window.
+func stripCornerLines(corners []CornerEntry) []CornerEntry {
+	stripped := make([]CornerEntry, len(corners))
+	for i, c := range corners {
+		c.Lines = nil
+		stripped[i] = c
+	}
+	return stripped
 }
 
 // Recent returns the last n entries (most recent).
@@ -189,8 +228,9 @@ func Recent(entries []Entry, n int) []Entry {
 // BuildEntryFromManifest constructs a cache Entry from a program ID, manifest, rundown, and media info.
 // Rundown data (summary, points) is merged into the manifest's article references by DedupKey.
 // bytes and durationSec are from mediainfo (0 if not available). analysis is nil when the analyze
-// step's output file was not available (analyze failure does not block the cache append).
-func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int, analysis *model.Analysis) Entry {
+// step's output file was not available (analyze failure does not block the cache append). lines is
+// the episode's script, matched to corners by ID; a zero value yields corners without lines.
+func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown, bytes int64, durationSec int, analysis *model.Analysis, lines model.ScriptLines) Entry {
 	rdArticleByDedupKey := make(map[string]model.RundownArticle)
 	for _, c := range rd.Corners {
 		for _, a := range c.Articles {
@@ -198,6 +238,18 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 				rdArticleByDedupKey[a.DedupKey] = a
 			}
 		}
+	}
+
+	linesByCornerID := make(map[string][]LineEntry, len(lines.Corners))
+	for _, lc := range lines.Corners {
+		if lc.ID == "" {
+			continue
+		}
+		entries := make([]LineEntry, len(lc.Lines))
+		for i, l := range lc.Lines {
+			entries[i] = LineEntry{SpeakerRole: l.SpeakerRole, Text: l.Text}
+		}
+		linesByCornerID[lc.ID] = entries
 	}
 
 	corners := make([]CornerEntry, len(m.Corners))
@@ -215,7 +267,7 @@ func BuildEntryFromManifest(programID string, m model.Manifest, rd model.Rundown
 			}
 			articles[j] = ae
 		}
-		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: mc.Points, Articles: articles}
+		corners[i] = CornerEntry{ID: mc.ID, Title: mc.Title, Summary: mc.Summary, Points: mc.Points, Articles: articles, Lines: linesByCornerID[mc.ID]}
 	}
 
 	casts := make([]CastEntry, len(m.Casts))

@@ -240,7 +240,7 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 			// single_shot は連続性のない単発番組のためキャッシュへ保存しない
 			// （次回の採番・past_episodes・feed 連載のいずれにも載せない）。
 			if !p.Program.SingleShot {
-				if err := appendToCache(cacheMgr, layout, cfg.Cache, logger); err != nil {
+				if err := appendToCache(cacheMgr, layout, cfg.Cache, cfg.Retro.EffectiveAnalysisEntries(), logger); err != nil {
 					logger.Warn("キャッシュ追記に失敗（処理は継続）", "err", err)
 				}
 			}
@@ -268,7 +268,9 @@ characters.<id>.engine でキャラクターごとに使用サーバーを指定
 	return cmd
 }
 
-func appendToCache(mgr *cache.Manager, layout fileio.EpisodeLayout, cacheCfg config.CacheConfig, logger *slog.Logger) error {
+// scriptEntries is how many of the most recent entries keep their script (retro.analysis_entries;
+// see cache.Compact).
+func appendToCache(mgr *cache.Manager, layout fileio.EpisodeLayout, cacheCfg config.CacheConfig, scriptEntries int, logger *slog.Logger) error {
 	var m model.Manifest
 	if err := fileio.ReadJSON(layout.Manifest(), &m); err != nil {
 		return fmt.Errorf("read manifest: %w", err)
@@ -297,8 +299,14 @@ func appendToCache(mgr *cache.Manager, layout fileio.EpisodeLayout, cacheCfg con
 		logger.Warn("分析ファイルの読み込みに失敗（処理は継続）", "err", err)
 	}
 
-	entry := cache.BuildEntryFromManifest(layout.ProgramID, m, rd, bytes, durationSec, analysis)
-	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays()); err != nil {
+	var lines model.ScriptLines
+	if err := fileio.ReadJSON(layout.Lines(), &lines); err != nil {
+		logger.Warn("台本ファイルの読み込みに失敗（処理は継続）", "err", err)
+		lines = model.ScriptLines{}
+	}
+
+	entry := cache.BuildEntryFromManifest(layout.ProgramID, m, rd, bytes, durationSec, analysis, lines)
+	if err := mgr.Append(entry, cacheCfg.EffectiveMaxEntries(), cacheCfg.EffectiveRetentionDays(), scriptEntries); err != nil {
 		return err
 	}
 	logger.Info("キャッシュに追記", "program_id", layout.ProgramID)

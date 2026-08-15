@@ -292,3 +292,26 @@ func TestFormatPastEpisodes_NewTechnicalFields_NotLeakedToLLM(t *testing.T) {
 		t.Errorf("formatPastEpisodes() should contain 'エピソード概要'")
 	}
 }
+
+// 台本（cache.CornerEntry.Lines、ADR-0107）は retro 専用で、write の過去回文脈には載せない。
+// 直近数回ぶんの全セリフがプロンプトへ流れ込むのを防ぐ。
+func TestFormatPastEpisodes_DoesNotLeakScriptLines(t *testing.T) {
+	eps := []cache.Entry{{
+		Summary: "概要",
+		Corners: []cache.CornerEntry{{
+			ID:      "opening",
+			Title:   "オープニング",
+			Summary: "コーナー要約",
+			Lines:   []cache.LineEntry{{SpeakerRole: "zundamon", Text: "台本のセリフなのだ"}},
+		}},
+	}}
+
+	got := formatPastEpisodes(eps)
+
+	if strings.Contains(got, "台本のセリフなのだ") {
+		t.Errorf("formatPastEpisodes() should not contain script lines\ngot:\n%s", got)
+	}
+	if !strings.Contains(got, "コーナー要約") {
+		t.Errorf("formatPastEpisodes() should still contain the corner summary\ngot:\n%s", got)
+	}
+}
