@@ -630,3 +630,96 @@ func TestLLMRetro_Run_TruncatesToMaxTries(t *testing.T) {
 		t.Errorf("got %d problems, want 3 (truncated to max_tries)", len(got))
 	}
 }
+
+func TestLLMRetro_Run_PromptContainsScripts(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "scripts={{scripts}}", 0)
+	entries := []cache.Entry{{
+		EpisodeNumber: 90,
+		Analysis:      &model.Analysis{},
+		Corners: []cache.CornerEntry{{
+			ID:    "opening",
+			Title: "オープニング",
+			Lines: []cache.LineEntry{{SpeakerRole: "zundamon", Text: "今日は記事がないのだ"}},
+		}},
+	}}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if !strings.Contains(prompt, "今日は記事がないのだ") {
+		t.Errorf("prompt should contain the actual line, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"speaker":"zundamon"`) {
+		t.Errorf("prompt should use the speaker key (matching analyze.md), got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"corner_id":"opening"`) {
+		t.Errorf("prompt should carry the corner id, got: %s", prompt)
+	}
+}
+
+func TestLLMRetro_Run_ScriptsExcludeEpisodesWithoutLines(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "scripts={{scripts}}", 0)
+	entries := []cache.Entry{
+		// 台本を持たない回（機能追加前・保持期間外）は {{scripts}} に現れない
+		{EpisodeNumber: 89, Analysis: &model.Analysis{}, Corners: []cache.CornerEntry{{ID: "opening", Title: "オープニング"}}},
+		{EpisodeNumber: 90, Analysis: &model.Analysis{}, Corners: []cache.CornerEntry{{
+			ID:    "opening",
+			Title: "オープニング",
+			Lines: []cache.LineEntry{{SpeakerRole: "metan", Text: "はじめるわよ"}},
+		}}},
+	}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	if strings.Contains(prompt, `"episode_number":89`) {
+		t.Errorf("episode 89 has no lines and should be omitted from scripts, got: %s", prompt)
+	}
+	if !strings.Contains(prompt, `"episode_number":90`) {
+		t.Errorf("episode 90 has lines and should be present in scripts, got: %s", prompt)
+	}
+}
+
+func TestLLMRetro_Run_NoScripts_RendersEmptyArray(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "scripts={{scripts}}", 0)
+	entries := []cache.Entry{{EpisodeNumber: 1, Analysis: &model.Analysis{}}}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if prompt := mc.captured[0].Messages[0].Content; prompt != "scripts=[]" {
+		t.Errorf("scripts should render as an empty array when no entry has lines, got: %s", prompt)
+	}
+}
+
+func TestLLMRetro_Run_PromptContainsMetrics(t *testing.T) {
+	mc := &mockClient{response: json.RawMessage(`{"problems": []}`)}
+	r := retro.NewLLMRetro(mc, "analyses={{analyses}}", 0)
+	entries := []cache.Entry{{
+		EpisodeNumber: 90,
+		Analysis: &model.Analysis{Metrics: model.AnalysisMetrics{
+			Corners:              []model.AnalysisCornerMetrics{{ID: "tech_news", TargetChars: 1280, ActualChars: 1257, CharsPerSec: 6.19}},
+			Speakers:             []model.AnalysisSpeakerMetrics{{CharacterID: "zundamon", LineCount: 33, CharCount: 816}},
+			ProofreadCorrections: 6,
+		}},
+	}}
+
+	_, _, _, err := r.Run(context.Background(), config.ProgramConfig{}, entries, nil, nil, nil, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	prompt := mc.captured[0].Messages[0].Content
+	for _, want := range []string{`"target_chars":1280`, `"actual_chars":1257`, `"char_count":816`, `"proofread_corrections":6`} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("prompt should contain metrics field %s, got: %s", want, prompt)
+		}
+	}
+}

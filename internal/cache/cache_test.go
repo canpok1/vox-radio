@@ -98,7 +98,7 @@ func TestManager_Append_CreatesFileAndAppends(t *testing.T) {
 		Corners:   []cache.CornerEntry{},
 	}
 
-	if err := m.Append(entry, 100, 90); err != nil {
+	if err := m.Append(entry, 100, 90, 5); err != nil {
 		t.Fatalf("Append: unexpected error: %v", err)
 	}
 
@@ -133,7 +133,7 @@ func TestManager_Append_CompactsWhenExceedsMaxEntries(t *testing.T) {
 		Corners:   []cache.CornerEntry{corner},
 	}
 
-	if err := m.Append(newEntry, 2, 9999); err != nil {
+	if err := m.Append(newEntry, 2, 9999, 5); err != nil {
 		t.Fatalf("Append: %v", err)
 	}
 
@@ -192,7 +192,7 @@ func TestManager_Append_CompactsOldEntriesByRetentionDays(t *testing.T) {
 		Corners:   []cache.CornerEntry{corner},
 	}
 
-	if err := m.Append(newEntry, 100, 90); err != nil {
+	if err := m.Append(newEntry, 100, 90, 5); err != nil {
 		t.Fatalf("Append: %v", err)
 	}
 
@@ -345,7 +345,7 @@ func TestBuildEntryFromManifest_BasicMapping(t *testing.T) {
 		},
 	}
 
-	got := cache.BuildEntryFromManifest("prog-id", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("prog-id", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if got.ProgramID != "prog-id" {
 		t.Errorf("ProgramID: got %q, want %q", got.ProgramID, "prog-id")
@@ -398,7 +398,7 @@ func TestBuildEntryFromManifest_EmptyCorners(t *testing.T) {
 	m := model.Manifest{Title: "空", Datetime: "2026-06-01T00:00:00Z"}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 	if got.Corners == nil {
 		t.Error("Corners should be non-nil for empty manifest")
 	}
@@ -421,7 +421,7 @@ func TestBuildEntryFromManifest_CornerSummaryAndPointsIncluded(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -448,7 +448,7 @@ func TestBuildEntryFromManifest_CornerPointsNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -469,7 +469,7 @@ func TestBuildEntryFromManifest_ConversationNotesCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if len(got.ConversationNotes) != 1 {
 		t.Fatalf("ConversationNotes: got %d, want 1", len(got.ConversationNotes))
@@ -496,7 +496,7 @@ func TestBuildEntryFromManifest_EpisodeNumberAndTitleCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if got.EpisodeNumber != 7 {
 		t.Errorf("EpisodeNumber: got %d, want 7", got.EpisodeNumber)
@@ -546,7 +546,7 @@ func TestBuildEntryFromManifest_NewFields_Populated(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 12345678, 1800, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 12345678, 1800, nil, model.ScriptLines{})
 
 	if got.Description != "番組説明テキスト" {
 		t.Errorf("Description: got %q, want %q", got.Description, "番組説明テキスト")
@@ -570,7 +570,7 @@ func TestCompact_KeepsAllEntries(t *testing.T) {
 		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}},
 	}
 
-	got := cache.Compact(entries, 2, 9999)
+	got := cache.Compact(entries, 2, 9999, 5)
 
 	if len(got) != 3 {
 		t.Fatalf("Compact: got %d entries, want 3 (all kept)", len(got))
@@ -586,7 +586,7 @@ func TestCompact_StripsCornerHeavyFieldsAndEmptiesNotes_ForEntriesOutsideMaxEntr
 		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}, ConversationNotes: []model.ConversationNote{note}},
 	}
 
-	got := cache.Compact(entries, 2, 9999)
+	got := cache.Compact(entries, 2, 9999, 5)
 
 	// entry[0] is outside maxEntries=2 window: identity kept, heavy fields stripped
 	if len(got[0].Corners) != 1 {
@@ -620,7 +620,7 @@ func TestCompact_StripsCornerHeavyFields_ForOldEntries(t *testing.T) {
 		{Datetime: recentDatetime, Title: "recent", Corners: []cache.CornerEntry{corner}},
 	}
 
-	got := cache.Compact(entries, 100, 90)
+	got := cache.Compact(entries, 100, 90, 5)
 
 	// old entry (outside retention_days=90): identity kept, heavy fields stripped
 	if len(got[0].Corners) != 1 || got[0].Corners[0].ID != "c1" {
@@ -652,7 +652,7 @@ func TestCompact_KeepsLightweightFields(t *testing.T) {
 		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}},
 	}
 
-	got := cache.Compact(entries, 2, 9999)
+	got := cache.Compact(entries, 2, 9999, 5)
 
 	// entry[0] is compacted, but lightweight fields must be preserved
 	e0 := got[0]
@@ -692,7 +692,7 @@ func TestCompact_NilsAnalysisForEntriesOutsideMaxEntries(t *testing.T) {
 		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Corners: []cache.CornerEntry{corner}, Analysis: analysis},
 	}
 
-	got := cache.Compact(entries, 2, 9999)
+	got := cache.Compact(entries, 2, 9999, 5)
 
 	if got[0].Analysis != nil {
 		t.Errorf("Compact: entry[0].Analysis should be nil (outside detailed window), got %+v", got[0].Analysis)
@@ -727,7 +727,7 @@ func TestBuildEntryFromManifest_AnalysisCopied(t *testing.T) {
 	rd := model.Rundown{}
 	analysis := &model.Analysis{Findings: []model.AnalysisFinding{{Aspect: "a", Severity: "low", Detail: "d"}}}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, analysis)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, analysis, model.ScriptLines{})
 
 	if got.Analysis == nil || len(got.Analysis.Findings) != 1 {
 		t.Errorf("Analysis: got %+v, want copied analysis", got.Analysis)
@@ -738,7 +738,7 @@ func TestBuildEntryFromManifest_NilAnalysis(t *testing.T) {
 	m := model.Manifest{Corners: []model.ManifestCorner{}}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if got.Analysis != nil {
 		t.Errorf("Analysis: got %+v, want nil", got.Analysis)
@@ -757,7 +757,7 @@ func TestCompact_PreservesCasts(t *testing.T) {
 		{Datetime: "2026-01-03T00:00:00Z", Title: "e3", Casts: casts, Corners: []cache.CornerEntry{corner}},
 	}
 
-	got := cache.Compact(entries, 2, 9999)
+	got := cache.Compact(entries, 2, 9999, 5)
 
 	// entry[0] is compacted (Corners emptied) but Casts must be preserved
 	if len(got[0].Casts) != 2 {
@@ -867,7 +867,7 @@ func TestBuildEntryFromManifest_CornerIDCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if len(got.Corners) != 1 {
 		t.Fatalf("Corners: got %d, want 1", len(got.Corners))
@@ -889,7 +889,7 @@ func TestBuildEntryFromManifest_CastsCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if len(got.Casts) != 2 {
 		t.Fatalf("BuildEntryFromManifest: Casts: got %d, want 2", len(got.Casts))
@@ -914,7 +914,7 @@ func TestBuildEntryFromManifest_CastsNeverNil(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 
 	if got.Casts == nil {
 		t.Error("BuildEntryFromManifest: Casts must be [] not nil")
@@ -997,7 +997,7 @@ func TestBuildEntryFromManifest_AuthorCopied(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 	if got.Author != "テスト配信者" {
 		t.Errorf("Author: got %q, want %q", got.Author, "テスト配信者")
 	}
@@ -1011,7 +1011,7 @@ func TestBuildEntryFromManifest_CreditsIncluded(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 	if len(got.Credits) != 2 {
 		t.Fatalf("Credits: got %d, want 2", len(got.Credits))
 	}
@@ -1030,7 +1030,7 @@ func TestBuildEntryFromManifest_CreditsNonNilWhenEmpty(t *testing.T) {
 	}
 	rd := model.Rundown{}
 
-	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil)
+	got := cache.BuildEntryFromManifest("p", m, rd, 0, 0, nil, model.ScriptLines{})
 	// Credits が nil のままだと JSON で "null" になるため non-nil を保証
 	if got.Credits == nil {
 		t.Error("Credits should be non-nil (empty slice) when manifest has no credits")
@@ -1064,5 +1064,161 @@ func TestLast(t *testing.T) {
 				t.Errorf("EpisodeNumber got %d, want %d", got.EpisodeNumber, tc.wantEpisodeNumber)
 			}
 		})
+	}
+}
+
+func TestBuildEntryFromManifest_LinesMatchedByCornerID(t *testing.T) {
+	m := model.Manifest{
+		Title:    "台本あり",
+		Datetime: "2026-08-15T07:00:00+09:00",
+		Corners: []model.ManifestCorner{
+			{ID: "opening", Title: "オープニング"},
+			{ID: "tech_news", Title: "今日のテックニュース"},
+		},
+	}
+	lines := model.ScriptLines{Corners: []model.CornerLines{
+		// 順序をマニフェストと入れ替えて、ID で突き合わせていることを確かめる
+		{ID: "tech_news", Lines: []model.Line{{SpeakerRole: "metan", Text: "記事を紹介するわ"}}},
+		{ID: "opening", Lines: []model.Line{{SpeakerRole: "zundamon", Text: "こんにちはなのだ", Style: "happy"}}},
+	}}
+
+	got := cache.BuildEntryFromManifest("prog-id", m, model.Rundown{}, 0, 0, nil, lines)
+
+	if len(got.Corners) != 2 {
+		t.Fatalf("Corners: got %d, want 2", len(got.Corners))
+	}
+	if len(got.Corners[0].Lines) != 1 || got.Corners[0].Lines[0].Text != "こんにちはなのだ" {
+		t.Errorf("Corners[0].Lines: got %+v, want opening lines", got.Corners[0].Lines)
+	}
+	if got.Corners[0].Lines[0].SpeakerRole != "zundamon" {
+		t.Errorf("Corners[0].Lines[0].SpeakerRole: got %q, want zundamon", got.Corners[0].Lines[0].SpeakerRole)
+	}
+	if len(got.Corners[1].Lines) != 1 || got.Corners[1].Lines[0].Text != "記事を紹介するわ" {
+		t.Errorf("Corners[1].Lines: got %+v, want tech_news lines", got.Corners[1].Lines)
+	}
+}
+
+func TestBuildEntryFromManifest_LinesEmptyWhenScriptMissing(t *testing.T) {
+	m := model.Manifest{
+		Title:    "台本なし",
+		Datetime: "2026-08-15T07:00:00+09:00",
+		Corners:  []model.ManifestCorner{{ID: "opening", Title: "オープニング"}},
+	}
+
+	got := cache.BuildEntryFromManifest("prog-id", m, model.Rundown{}, 0, 0, nil, model.ScriptLines{})
+
+	if len(got.Corners[0].Lines) != 0 {
+		t.Errorf("Corners[0].Lines: got %+v, want empty", got.Corners[0].Lines)
+	}
+}
+
+// linesEntry builds an entry carrying one corner with one line, for the script-window tests.
+func linesEntry(datetime, title string) cache.Entry {
+	return cache.Entry{
+		Datetime: datetime,
+		Title:    title,
+		Corners: []cache.CornerEntry{{
+			ID:      "c1",
+			Title:   "コーナー",
+			Summary: "要約",
+			Lines:   []cache.LineEntry{{SpeakerRole: "zundamon", Text: "セリフ"}},
+		}},
+	}
+}
+
+func TestCompact_KeepsLinesOnlyWithinScriptWindow(t *testing.T) {
+	entries := []cache.Entry{
+		linesEntry("2026-01-01T00:00:00Z", "e1"),
+		linesEntry("2026-01-02T00:00:00Z", "e2"),
+		linesEntry("2026-01-03T00:00:00Z", "e3"),
+	}
+
+	got := cache.Compact(entries, 100, 9999, 2)
+
+	if len(got[0].Corners[0].Lines) != 0 {
+		t.Errorf("entry[0] is outside the script window: Lines should be empty, got %+v", got[0].Corners[0].Lines)
+	}
+	// 台本の窓から外れても、詳細ウィンドウ内なら他のフィールドは残る
+	if got[0].Corners[0].Summary != "要約" || got[0].Corners[0].ID != "c1" {
+		t.Errorf("entry[0] is inside the detailed window: other fields should survive, got %+v", got[0].Corners[0])
+	}
+	if len(got[1].Corners[0].Lines) != 1 || len(got[2].Corners[0].Lines) != 1 {
+		t.Errorf("entry[1] and entry[2] are inside the script window: Lines should survive, got %+v / %+v",
+			got[1].Corners[0].Lines, got[2].Corners[0].Lines)
+	}
+}
+
+func TestCompact_ScriptEntriesZero_DropsAllLines(t *testing.T) {
+	entries := []cache.Entry{
+		linesEntry("2026-01-01T00:00:00Z", "e1"),
+		linesEntry("2026-01-02T00:00:00Z", "e2"),
+	}
+
+	got := cache.Compact(entries, 100, 9999, 0)
+
+	for i, e := range got {
+		if len(e.Corners[0].Lines) != 0 {
+			t.Errorf("entry[%d].Lines: got %+v, want empty", i, e.Corners[0].Lines)
+		}
+	}
+}
+
+func TestCompact_StripsLines_ForEntriesOutsideDetailedWindow(t *testing.T) {
+	entries := []cache.Entry{
+		linesEntry("2026-01-01T00:00:00Z", "e1"),
+		linesEntry("2026-01-02T00:00:00Z", "e2"),
+	}
+
+	// scriptEntries が maxEntries より大きくても、詳細ウィンドウ外の台本は残さない
+	got := cache.Compact(entries, 1, 9999, 99)
+
+	if len(got[0].Corners[0].Lines) != 0 {
+		t.Errorf("entry[0] is outside the detailed window: Lines should be empty, got %+v", got[0].Corners[0].Lines)
+	}
+	if len(got[1].Corners[0].Lines) != 1 {
+		t.Errorf("entry[1].Lines: got %+v, want kept", got[1].Corners[0].Lines)
+	}
+}
+
+func TestManager_Load_BackwardCompat_MissingLinesKeyIsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.jsonl")
+	// 台本フィールド追加前に書かれた行を模す
+	raw := `{"program_id":"p","datetime":"2026-01-01T00:00:00Z","title":"t","summary":"s","corners":[{"id":"c1","title":"コーナー","summary":"要約","points":[],"articles":[]}],"conversation_notes":[],"casts":[]}` + "\n"
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	entries, err := cache.New(path).Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("Load: got %d entries, want 1", len(entries))
+	}
+	if len(entries[0].Corners[0].Lines) != 0 {
+		t.Errorf("Lines: got %+v, want empty for a pre-lines entry", entries[0].Corners[0].Lines)
+	}
+}
+
+func TestManager_Append_PersistsLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.jsonl")
+	m := cache.New(path)
+
+	if err := m.Append(linesEntry("2026-01-01T00:00:00Z", "e1"), 100, 9999, 5); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	entries, err := m.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("Load: got %d entries, want 1", len(entries))
+	}
+	got := entries[0].Corners[0].Lines
+	if len(got) != 1 || got[0].SpeakerRole != "zundamon" || got[0].Text != "セリフ" {
+		t.Errorf("Lines round-trip: got %+v", got)
 	}
 }

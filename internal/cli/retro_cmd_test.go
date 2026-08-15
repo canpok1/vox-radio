@@ -81,7 +81,7 @@ func TestRetroCmd_NoAnalyzedEntries_ExitsCleanlyWithoutLLMCall(t *testing.T) {
 	// (as if produced before analyze was introduced).
 	cachePath := filepath.Join(dir, ".vox-radio", "programs", "my-tech-radio", "cache.jsonl")
 	mgr := cache.New(cachePath)
-	if err := mgr.Append(cache.Entry{ProgramID: "my-tech-radio", EpisodeNumber: 1, Datetime: "2026-01-01T00:00:00Z"}, 100, 90); err != nil {
+	if err := mgr.Append(cache.Entry{ProgramID: "my-tech-radio", EpisodeNumber: 1, Datetime: "2026-01-01T00:00:00Z"}, 100, 90, 5); err != nil {
 		t.Fatalf("append cache: %v", err)
 	}
 

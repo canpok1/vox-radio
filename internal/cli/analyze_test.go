@@ -132,7 +132,7 @@ func TestAppendToCache_MissingAnalysisFile_Succeeds(t *testing.T) {
 	// layout.Analysis() intentionally not written.
 
 	mgr := cache.New(programCachePath("prog"))
-	if err := appendToCache(mgr, layout, config.CacheConfig{}, testLogger()); err != nil {
+	if err := appendToCache(mgr, layout, config.CacheConfig{}, 5, testLogger()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestAppendToCache_ReadsAnalysisFile(t *testing.T) {
 	}
 
 	mgr := cache.New(programCachePath("prog"))
-	if err := appendToCache(mgr, layout, config.CacheConfig{}, testLogger()); err != nil {
+	if err := appendToCache(mgr, layout, config.CacheConfig{}, 5, testLogger()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

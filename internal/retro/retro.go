@@ -287,8 +287,51 @@ type programForPrompt struct {
 
 type analysisForPrompt struct {
 	EpisodeNumber int                     `json:"episode_number"`
+	Metrics       model.AnalysisMetrics   `json:"metrics"`
 	Findings      []model.AnalysisFinding `json:"findings"`
 	Patterns      []model.AnalysisPattern `json:"patterns"`
+}
+
+// scriptForPrompt carries one episode's actual lines. The speaker key matches analyze.md's
+// {{lines}} rather than the cache's speaker_role, so both prompts describe scripts the same way.
+type scriptForPrompt struct {
+	EpisodeNumber int                     `json:"episode_number"`
+	Corners       []scriptCornerForPrompt `json:"corners"`
+}
+
+type scriptCornerForPrompt struct {
+	CornerID string                `json:"corner_id"`
+	Title    string                `json:"title"`
+	Lines    []scriptLineForPrompt `json:"lines"`
+}
+
+type scriptLineForPrompt struct {
+	Speaker string `json:"speaker"`
+	Text    string `json:"text"`
+}
+
+// buildScripts converts entries into the {{scripts}} payload, skipping episodes with no lines at
+// all: entries written before ADR-0107, and older ones whose scripts Compact has already dropped.
+func buildScripts(entries []cache.Entry) []scriptForPrompt {
+	scripts := make([]scriptForPrompt, 0, len(entries))
+	for _, e := range entries {
+		corners := make([]scriptCornerForPrompt, 0, len(e.Corners))
+		for _, c := range e.Corners {
+			if len(c.Lines) == 0 {
+				continue
+			}
+			lines := make([]scriptLineForPrompt, len(c.Lines))
+			for i, l := range c.Lines {
+				lines[i] = scriptLineForPrompt{Speaker: l.SpeakerRole, Text: l.Text}
+			}
+			corners = append(corners, scriptCornerForPrompt{CornerID: c.ID, Title: c.Title, Lines: lines})
+		}
+		if len(corners) == 0 {
+			continue
+		}
+		scripts = append(scripts, scriptForPrompt{EpisodeNumber: e.EpisodeNumber, Corners: corners})
+	}
+	return scripts
 }
 
 // idProblemActionForPrompt is the {id, problem, action} shape shared by current try problems and
@@ -361,6 +404,7 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 		}
 		analyses = append(analyses, analysisForPrompt{
 			EpisodeNumber: e.EpisodeNumber,
+			Metrics:       e.Analysis.Metrics,
 			Findings:      e.Analysis.Findings,
 			Patterns:      e.Analysis.Patterns,
 		})
@@ -368,6 +412,11 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 	analysesJSON, err := json.Marshal(analyses)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("marshal analyses: %w", err)
+	}
+
+	scriptsJSON, err := json.Marshal(buildScripts(entries))
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("marshal scripts: %w", err)
 	}
 
 	currentForPrompt := make([]idProblemActionForPrompt, len(current))
@@ -400,6 +449,7 @@ func (r *LLMRetro) Run(ctx context.Context, program config.ProgramConfig, entrie
 	prompt := strings.NewReplacer(
 		"{{program}}", string(programJSON),
 		"{{analyses}}", string(analysesJSON),
+		"{{scripts}}", string(scriptsJSON),
 		"{{current_problems}}", string(currentJSON),
 		"{{current_keeps}}", string(currentKeepsJSON),
 		"{{current_dropped}}", string(currentDroppedJSON),
