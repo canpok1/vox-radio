@@ -61,6 +61,22 @@ func TestSanitizeSpeechText(t *testing.T) {
 			want: "シンクレット と エーピーアイ の話ですわ。",
 		},
 		{
+			// The LLM writes the text; nothing keeps the bracket widths consistent.
+			name: "全角開き・半角閉じの混在も落とす",
+			in:   "キータ（Qiita)の人気記事です。",
+			want: "キータの人気記事です。",
+		},
+		{
+			name: "半角開き・全角閉じの混在も落とす",
+			in:   "キータ(Qiita）の人気記事です。",
+			want: "キータの人気記事です。",
+		},
+		{
+			name: "読める文字が残らない行は合成できなくなるため元のまま",
+			in:   "（笑）。",
+			want: "（笑）。",
+		},
+		{
 			name: "全体が括弧だけの行は合成できなくなるため元のまま",
 			in:   "（笑）",
 			want: "（笑）",

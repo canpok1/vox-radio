@@ -1,14 +1,20 @@
 package direct
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
-// annotationBrackets maps an opening round bracket to its closing counterpart.
+// Round brackets mark eye-only annotations. Full-width and half-width forms are pooled
+// rather than paired, so a mixed pair (「キータ(Qiita）」) is removed too — the LLM writes
+// the text, and nothing guarantees it keeps the widths consistent.
+//
 // Quotation brackets (「」『』) are deliberately absent: they carry article titles and
 // quoted speech that are meant to be read aloud.
-var annotationBrackets = map[rune]rune{
-	'（': '）',
-	'(': ')',
-}
+var (
+	annotationOpeners = map[rune]bool{'（': true, '(': true}
+	annotationClosers = map[rune]bool{'）': true, ')': true}
+)
 
 // sanitizeSpeechText removes eye-only annotations from a line that is about to be
 // synthesized.
@@ -21,20 +27,19 @@ var annotationBrackets = map[rune]rune{
 // only what should be heard; supplementary information has to be written as dialogue.
 //
 // Only balanced pairs are removed, so an unmatched bracket cannot swallow the rest of the
-// line. A line that would become empty is returned unchanged, since an empty clip has no
-// text to synthesize.
+// line. A line left with nothing pronounceable is returned unchanged, since a clip of pure
+// punctuation is near-silent audio that still costs a synthesis and an inter-clip pause.
 func sanitizeSpeechText(text string) string {
 	runes := []rune(text)
 	var b strings.Builder
 	stripped := false
 
 	for i := 0; i < len(runes); i++ {
-		closer, isOpen := annotationBrackets[runes[i]]
-		if !isOpen {
+		if !annotationOpeners[runes[i]] {
 			b.WriteRune(runes[i])
 			continue
 		}
-		end := matchingBracket(runes, i, runes[i], closer)
+		end := matchingCloser(runes, i)
 		if end < 0 {
 			b.WriteRune(runes[i])
 			continue
@@ -47,21 +52,21 @@ func sanitizeSpeechText(text string) string {
 		return text
 	}
 	out := strings.TrimSpace(collapseSpaces(b.String()))
-	if out == "" {
+	if !hasPronounceable(out) {
 		return text
 	}
 	return out
 }
 
-// matchingBracket returns the index of the closer that matches the bracket opened at start,
-// honoring nesting of that same bracket kind, or -1 when it is never closed.
-func matchingBracket(runes []rune, start int, opener, closer rune) int {
+// matchingCloser returns the index of the closer that matches the bracket opened at start,
+// honoring nested round brackets, or -1 when it is never closed.
+func matchingCloser(runes []rune, start int) int {
 	depth := 0
 	for i := start; i < len(runes); i++ {
-		switch runes[i] {
-		case opener:
+		switch {
+		case annotationOpeners[runes[i]]:
 			depth++
-		case closer:
+		case annotationClosers[runes[i]]:
 			depth--
 			if depth == 0 {
 				return i
@@ -69,6 +74,17 @@ func matchingBracket(runes []rune, start int, opener, closer rune) int {
 		}
 	}
 	return -1
+}
+
+// hasPronounceable reports whether s holds anything that becomes speech. Punctuation and
+// spaces alone do not.
+func hasPronounceable(s string) bool {
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
 
 // collapseSpaces squeezes runs of spaces left behind by a removal into a single space.
