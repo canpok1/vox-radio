@@ -1864,3 +1864,53 @@ func TestLLMDirector_Direct_Pronunciation_NotSet(t *testing.T) {
 		t.Errorf("Segment[0].Text: got %q, want 宮本武蔵の話 (unchanged)", got.Segments[0].Text)
 	}
 }
+
+// TestLLMDirector_Direct_StripsAnnotationFromConversion is an observable-effect regression test
+// for the duplicate-pronunciation defect: the reading-conversion LLM emitted the screen-oriented
+// 「読み（原綴り）」 form, and OpenJTalk read the bracketed part too, so the listener heard the same
+// word twice (エーダブリューエス（AWS） → エーダブリューエス エーダブリューエス). The prompt forbids it,
+// but the LLM broke that rule in production, so the final script must not carry it either.
+func TestLLMDirector_Direct_StripsAnnotationFromConversion(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[{"corner_index":0,"line_index":0,"text":"最後はキータ（Qiita）から、エーダブリューエス（AWS）の話です"}]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "最後はQiitaから、AWSの話です"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.Segments) != 1 {
+		t.Fatalf("Segments: got %d, want 1", len(got.Segments))
+	}
+	want := "最後はキータから、エーダブリューエスの話です"
+	if got.Segments[0].Text != want {
+		t.Errorf("Segment[0].Text: got %q, want %q", got.Segments[0].Text, want)
+	}
+}
+
+// TestLLMDirector_Direct_StripsAnnotationFromUnconvertedLine verifies the same guarantee on the
+// fallback path, where the LLM returned no conversion for the line and the script keeps the
+// original script text.
+func TestLLMDirector_Direct_StripsAnnotationFromUnconvertedLine(t *testing.T) {
+	mc := &mockClient{
+		response: json.RawMessage(`{"insertions":[],"line_conversions":[]}`),
+	}
+	d := direct.NewLLMDirector(mc, "{{corners}}", 0, testPresets)
+
+	corners := oneCorner("C1",
+		model.Line{SpeakerRole: "host", Text: "大規模言語モデル（LLM）の話をします"},
+	)
+
+	got, _, err := d.Direct(context.Background(), corners, emptyCatalog(), "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Segments[0].Text != "大規模言語モデルの話をします" {
+		t.Errorf("Segment[0].Text: got %q, want 大規模言語モデルの話をします", got.Segments[0].Text)
+	}
+}

@@ -493,6 +493,10 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
 				text = converted
 			}
+			// Last line of defence for the invariant that synthesized text contains only
+			// what should be heard: the prompt forbids eye-only annotations, but the LLM
+			// does emit them.
+			text = sanitizeSpeechText(text)
 			voice := voiceMap[insertKey{ci, li}]
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,

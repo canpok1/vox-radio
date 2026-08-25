@@ -113,3 +113,4 @@
 | [0105](0105-remove-prompt-eval-framework.md) | プロンプト品質評価フレームワーク（internal/eval, ADR-0049）を廃止する | 採用 | 2026-08-06 |
 | [0106](0106-require-all-structured-output-fields-in-schema.md) | 構造化出力で必ず得たいフィールドは JSON Schema の required に明示する（ADR-0104 改訂） | 採用 | 2026-08-06 |
 | [0107](0107-retro-reads-episode-script-from-cache.md) | retro へ台本と機械メトリクスを渡し、台本をキャッシュに保存する | 採用 | 2026-08-15 |
+| [0108](0108-strip-eye-only-annotations-before-synth.md) | 合成テキストから読み上げ対象外の注釈（丸括弧の中身）をコードで除去する | 採用 | 2026-08-25 |
