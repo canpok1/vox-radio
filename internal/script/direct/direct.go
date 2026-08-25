@@ -493,6 +493,16 @@ func buildScript(corners []model.CornerLines, insertions []insertion, pauseInser
 			if converted, ok := conversionMap[insertKey{ci, li}]; ok && converted != "" {
 				text = converted
 			}
+			// Last line of defence for the invariant that synthesized text contains only
+			// what should be heard: the prompt forbids eye-only annotations, but the LLM
+			// does emit them. Log every removal — the LLM's raw line_conversions are not
+			// persisted, so this is the only record that the defence fired (and the only
+			// way to notice it over-removing).
+			if sanitized := sanitizeSpeechText(text); sanitized != text {
+				slog.Default().Info("読み上げ対象外の注釈を除去しました",
+					"corner_index", ci, "line_index", li, "before", text, "after", sanitized)
+				text = sanitized
+			}
 			voice := voiceMap[insertKey{ci, li}]
 			segments = append(segments, model.ScriptSegment{
 				Type:        model.SegmentTypeSpeech,
