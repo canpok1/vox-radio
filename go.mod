@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	github.com/cucumber/godog v0.16.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mmcdole/gofeed v1.4.2
+	github.com/mmcdole/gofeed v1.5.0
 	github.com/safejob/dify-sdk-go v1.7.0-rc.1
 	github.com/slack-go/slack v0.29.0
 	github.com/spf13/cobra v1.10.2
@@ -30,6 +30,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )
